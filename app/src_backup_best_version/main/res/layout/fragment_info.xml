@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#7A6AB5">
+
+        <TextView
+            android:id="@+id/title"
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:text="РАДИО МЯТА - РАДИО,\nКОТОРОЕ НЕ ШИПИТ"
+            android:gravity="center"
+            android:textColor="#FFFFFF"
+            android:fontFamily="@font/mullerregular"
+            android:textSize="26.5sp"
+            android:layout_marginTop="90dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <GridLayout
+            android:id="@+id/grid"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            android:columnCount="4"
+            android:rowCount="2"
+            android:layout_marginTop="30dp"
+            app:layout_constraintTop_toBottomOf="@id/title"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <ImageView
+                android:id="@+id/yandex"
+                android:layout_width="75dp"
+                android:layout_height="75dp"
+                android:src="@drawable/ic_yandex"
+                android:layout_margin="4dp" />
+
+            <ImageView
+                android:id="@+id/instagram"
+                android:layout_width="75dp"
+                android:layout_height="75dp"
+                android:src="@drawable/ic_insta"
+                android:layout_margin="4dp" />
+
+            <ImageView
+                android:id="@+id/boosty"
+                android:layout_width="75dp"
+                android:layout_height="75dp"
+                android:src="@drawable/ic_boosty"
+                android:layout_margin="4dp" />
+
+            <ImageView
+                android:id="@+id/vk"
+                android:layout_width="75dp"
+                android:layout_height="75dp"
+                android:src="@drawable/ic_tiktok"
+                android:layout_margin="4dp" />
+
+            <ImageView
+                android:id="@+id/youtube"
+                android:layout_width="75dp"
+                android:layout_height="75dp"
+                android:src="@drawable/ic_youtube"
+                android:layout_margin="4dp" />
+
+            <ImageView
+                android:id="@+id/twitter"
+                android:layout_width="75dp"
+                android:layout_height="75dp"
+                android:src="@drawable/ic_twitter"
+                android:layout_margin="4dp" />
+
+            <ImageView
+                android:id="@+id/telegram"
+                android:layout_width="75dp"
+                android:layout_height="75dp"
+                android:src="@drawable/ic_telegram"
+                android:layout_margin="4dp" />
+
+            <ImageView
+                android:id="@+id/spotify"
+                android:layout_width="75dp"
+                android:layout_height="75dp"
+                android:src="@drawable/ic_spotify"
+                android:layout_margin="4dp" />
+
+        </GridLayout>
+
+        <TextView
+            android:id="@+id/description"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:layout_marginStart="30dp"
+            android:layout_marginEnd="30dp"
+            android:text="Радио Мята — российская интернет-радиостанция, ориентированная на инди-музыку и альтернативный рок.\n\nЭто «инди-эклектичное» медиа, предлагающее ироничный взгляд на массовую культуру и оригинальный подход к современной музыке. Станция начала вещание в ночь с 27 на 28 сентября 2017 года.\n\nДополнительно доступны тематические потоки:\nGOLD — «золотые» танцевальные хиты;\nXTRA — новая локальная российская инди-музыка;\n\n«Твоя музыка. Твоя станция — Радио Мята»."
+            android:textColor="#FFFFFF"
+            android:fontFamily="@font/mullerlight"
+            android:textSize="14sp"
+            android:gravity="start"
+            android:lineSpacingExtra="4dp"
+            app:layout_constraintTop_toBottomOf="@id/grid"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintVertical_bias="0" />
+
+<!--        <LinearLayout-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:gravity="center"-->
+<!--            android:layout_height="60dp"-->
+<!--            android:orientation="horizontal"-->
+<!--            android:id="@+id/bottom_streams"-->
+<!--            android:layout_marginBottom="30dp"-->
+<!--            app:layout_constraintBottom_toBottomOf="parent"-->
+<!--            app:layout_constraintStart_toStartOf="parent"-->
+<!--            app:layout_constraintEnd_toEndOf="parent">-->
+
+<!--            <ImageView-->
+<!--                android:id="@+id/home_btn"-->
+<!--                android:layout_weight="1"-->
+<!--                android:layout_width="40dp"-->
+<!--                android:layout_height="40dp"-->
+<!--                android:src="@drawable/home_btn" />-->
+
+<!--            <ImageView-->
+<!--                android:id="@+id/player_btn"-->
+<!--                android:layout_weight="1"-->
+<!--                android:layout_width="40dp"-->
+<!--                android:layout_height="40dp"-->
+<!--                android:src="@drawable/player_btn" />-->
+
+<!--            <ImageView-->
+<!--                android:id="@+id/donate_btn"-->
+<!--                android:layout_weight="1"-->
+<!--                android:layout_width="40dp"-->
+<!--                android:layout_height="40dp"-->
+<!--                android:src="@drawable/donate_btn" />-->
+<!--        </LinearLayout>-->
+
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>

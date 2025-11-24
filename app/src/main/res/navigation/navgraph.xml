@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/navgraph"
+    app:startDestination="@id/splashFragment">
+
+
+    <fragment
+        android:id="@+id/splashFragment"
+        android:name="com.example.musicplayerapp.fragments.SplashFragment"
+        android:label="SplashFragment" >
+        <action
+            android:id="@+id/action_splashFragment_to_mainFragment"
+            app:destination="@id/home" />
+    </fragment>
+    <fragment
+        android:id="@+id/home"
+        android:name="com.example.musicplayerapp.fragments.MainFragment"
+        android:label="MainFragment" >
+        <action
+            android:id="@+id/action_mainFragment_to_playerFragment"
+            app:destination="@id/player" />
+        <action
+            android:id="@+id/action_mainFragment_to_infoFragment"
+            app:destination="@id/info" />
+        <action
+            android:id="@+id/action_mainFragment_to_donateFragment"
+            app:destination="@id/donate" />
+        <action
+            android:id="@+id/action_mainFragment_to_streamsFragment"
+            app:destination="@id/streams" />
+    </fragment>
+    <fragment
+        android:id="@+id/player"
+        android:name="com.example.musicplayerapp.fragments.PlayerFragment"
+        android:label="PlayerFragment" >
+        <action
+            android:id="@+id/action_playerFragment_to_streamsFragment"
+            app:destination="@id/streams" />
+        <action
+            android:id="@+id/action_playerFragment_to_mainFragment"
+            app:destination="@id/home" />
+        <action
+            android:id="@+id/action_playerFragment_to_infoFragment"
+            app:destination="@id/info" />
+        <action
+            android:id="@+id/action_playerFragment_to_donateFragment"
+            app:destination="@id/donate" />
+    </fragment>
+    <fragment
+        android:id="@+id/info"
+        android:name="com.example.musicplayerapp.fragments.InfoFragment"
+        android:label="InfoFragment" >
+        <action
+            android:id="@+id/action_infoFragment_to_playerFragment"
+            app:destination="@id/player" />
+        <action
+            android:id="@+id/action_infoFragment_to_mainFragment"
+            app:destination="@id/home" />
+        <action
+            android:id="@+id/action_infoFragment_to_streamsFragment"
+            app:destination="@id/streams" />
+        <action
+            android:id="@+id/action_infoFragment_to_donateFragment"
+            app:destination="@id/donate" />
+    </fragment>
+    <fragment
+        android:id="@+id/donate"
+        android:name="com.example.musicplayerapp.fragments.DonateFragment"
+        android:label="DonateFragment" >
+        <action
+            android:id="@+id/action_donateFragment_to_playerFragment"
+            app:destination="@id/player" />
+        <action
+            android:id="@+id/action_donateFragment_to_streamsFragment"
+            app:destination="@id/streams" />
+        <action
+            android:id="@+id/action_donateFragment_to_infoFragment"
+            app:destination="@id/info" />
+        <action
+            android:id="@+id/action_donateFragment_to_mainFragment"
+            app:destination="@id/home" />
+    </fragment>
+</navigation>

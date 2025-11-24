@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:src="#5FD9B4"/>
+
+        <LinearLayout
+            android:id="@+id/main_content_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            tools:context=".fragments.MainFragment">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Наши потоки"
+                android:textSize="25sp"
+                android:fontFamily="@font/muller_regular"
+                android:layout_marginStart="22dp"
+                android:layout_marginTop="60dp"
+                android:textColor="@color/black" />
+
+            <HorizontalScrollView
+                android:layout_height="0dp"
+                android:layout_width="match_parent"
+                android:layout_marginTop="20dp"
+                android:orientation="horizontal"
+                android:layout_weight="7"
+                android:id="@+id/streams"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent">
+
+                    <ImageView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:layout_marginStart="21dp"
+                        android:layout_marginEnd="7dp"
+                        android:src="@drawable/myata_banner_new"
+                        android:id="@+id/myata_stream_banner"
+                        android:clipToOutline="true"
+                        android:outlineProvider="background"
+                        android:background="@drawable/rounded_banner_bg"
+                        android:elevation="4dp"/>
+
+                    <ImageView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:layout_marginStart="7dp"
+                        android:layout_marginEnd="7dp"
+                        android:src="@drawable/gold_banner_new"
+                        android:id="@+id/gold_stream_banner"
+                        android:clipToOutline="true"
+                        android:outlineProvider="background"
+                        android:background="@drawable/rounded_banner_bg"
+                        android:elevation="4dp"/>
+
+                    <ImageView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:layout_marginStart="7dp"
+                        android:layout_marginEnd="7dp"
+                        android:src="@drawable/xtra_banner_new"
+                        android:id="@+id/xtra_stream_banner"
+                        android:clipToOutline="true"
+                        android:outlineProvider="background"
+                        android:background="@drawable/rounded_banner_bg"
+                        android:elevation="4dp"/>
+
+                </LinearLayout>
+
+            </HorizontalScrollView>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:text="Мятные плейлисты"
+                android:id="@+id/playlistString"
+                android:textSize="25sp"
+                android:gravity=""
+                android:fontFamily="@font/muller_regular"
+                android:layout_marginStart="22dp"
+                android:layout_marginBottom="20dp"
+                android:textColor="@color/black"
+                android:layout_weight="1" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="6"
+                tools:listitem="@layout/rw_playlist_item"
+                android:id="@+id/playlists"
+                android:layout_marginBottom="55dp">
+            </androidx.recyclerview.widget.RecyclerView>
+
+        </LinearLayout>
+
+    </FrameLayout>
+
+</layout>

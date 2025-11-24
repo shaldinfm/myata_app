@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Радио Мята</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="channel_name">channel_name</string>
+    <string name="channel_desc">channel_desc</string>
+    <string name="donate_url">https://yoomoney.ru/to/410015757768507</string>>
+    <drawable name="exo_notification_stop">@drawable/dismiss_cross</drawable>
+</resources>

@@ -1,18 +1,20 @@
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
+    id 'com.google.gms.google-services'
+    id 'com.google.firebase.crashlytics'
 }
 
 android {
-    compileSdk 34
+    compileSdk 35
     namespace 'com.example.musicplayerapp'
 
     defaultConfig {
-        applicationId "com.example.musicplayerapp"
-        minSdk 24
-        targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        applicationId "dlinemedia.radioplayer.myata"
+        minSdk 21
+        targetSdk 35
+        versionCode 202567
+        versionName "3.5"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -25,9 +27,20 @@ android {
         enabled = true
     }
 
+    signingConfigs {
+        release {
+            storeFile file("D:\\Мята\\Ш_Приложение\\DLineMedia.jks")
+            storePassword "erty3489GoroDL00"
+            keyAlias "dline_media"
+            keyPassword "erty3489GoroDL00"
+        }
+    }
+
     buildTypes {
         release {
-            minifyEnabled false
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -50,9 +63,7 @@ dependencies {
     implementation("androidx.viewpager2:viewpager2:1.0.0")
     implementation 'com.squareup.picasso:picasso:2.8'
     implementation 'jp.wasabeef:picasso-transformations:2.4.0'
-    implementation "com.squareup.retrofit2:retrofit:$retrofitVersion"
-    implementation "com.squareup.retrofit2:converter-gson:$retrofitVersion"
-    implementation "com.squareup.retrofit2:adapter-rxjava2:$retrofitVersion"
+    implementation 'com.google.code.gson:gson:2.10.1'
     implementation "com.squareup.okhttp3:logging-interceptor:4.12.0"
 
     implementation("androidx.navigation:navigation-fragment-ktx:2.7.7")
@@ -67,11 +78,18 @@ dependencies {
     implementation "androidx.media3:media3-exoplayer-dash:$exoplayerVersion"
     implementation "androidx.media3:media3-ui:$exoplayerVersion"
     implementation "androidx.media3:media3-session:$exoplayerVersion"
+    implementation "androidx.media3:media3-datasource-okhttp:$exoplayerVersion"
     
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'androidx.palette:palette-ktx:1.0.0'
     
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    
+    // Firebase
+    implementation platform('com.google.firebase:firebase-bom:32.7.0')
+    implementation 'com.google.firebase:firebase-crashlytics-ktx'
+    implementation 'com.google.firebase:firebase-analytics-ktx'
 }

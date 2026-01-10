@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="106dp"
+    android:height="106dp"
+    android:viewportWidth="106"
+    android:viewportHeight="106">
+
+    <!-- Simple path derived from btn_pause_tv.svg, standardized to 106x106 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M53 0C25.9373 0 4 21.9373 4 49C4 76.0627 25.9373 98 53 98C80.0627 98 102 76.0627 102 49C102 21.9373 80.0627 0 53 0ZM48.1 68.6H38.3V29.4H48.1V68.6ZM67.7 68.6H57.9V29.4H67.7V68.6Z" />
+</vector>

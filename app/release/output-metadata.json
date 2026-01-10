@@ -4,15 +4,15 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "com.example.radiomyata",
+  "applicationId": "dlinemedia.radioplayer.myata",
   "variantName": "release",
   "elements": [
     {
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 1,
-      "versionName": "1.0",
+      "versionCode": 202511,
+      "versionName": "3.1",
       "outputFile": "app-release.apk"
     }
   ],

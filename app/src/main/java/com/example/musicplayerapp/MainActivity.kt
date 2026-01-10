@@ -16,6 +16,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.findNavController
 import com.example.musicplayerapp.databinding.ActivityMainBinding
 import com.example.musicplayerapp.service.MediaPlayerService
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 
 class MainActivity : AppCompatActivity() {
@@ -23,7 +24,31 @@ class MainActivity : AppCompatActivity() {
     lateinit var viewModel: StreamsViewModel
     lateinit var binding: ActivityMainBinding
 
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent) // Update the intent stored in this activity
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        if (intent == null) return
+        
+        if (intent.action != Intent.ACTION_MAIN && intent.action != null) {
+            // Only update if stream actually changed
+            if (viewModel.currentStreamLive.value != intent.action) {
+                viewModel.currentStreamLive.value = intent.action
+            }
+            
+            // Navigate to player tab if not already there
+            val navController = findNavController(R.id.navHostFragment)
+            if (navController.currentDestination?.id != R.id.player) {
+                navController.navigate(R.id.player)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
         val theme = (0..9).random()
 
@@ -39,16 +64,44 @@ class MainActivity : AppCompatActivity() {
             8->{ setTheme(R.style.AppTheme8) }
             9->{ setTheme(R.style.AppTheme9) }
         }
-
-        super.onCreate(savedInstanceState)
+        
+        // Projector/TV Detection Hack:
+        // If we are on a device that identifies as a TV OR has no touchscreen, 
+        // redirect to the TV UI immediately.
+        val uiModeManager = getSystemService(UI_MODE_SERVICE) as android.app.UiModeManager
+        val isTvMode = uiModeManager.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
+        val hasTouchScreen = packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_TOUCHSCREEN)
+        
+        if (isTvMode || !hasTouchScreen) {
+             Log.d("MainActivity", "Device detected as TV (Mode: $isTvMode, Touch: $hasTouchScreen). Redirecting to TvMainActivity.")
+             startActivity(Intent(this, TvMainActivity::class.java))
+             finish()
+             return
+        }
 
         val receiver = closeBroadcastReceiver()
         LocalBroadcastManager.getInstance(this).registerReceiver(receiver, IntentFilter("Dismiss"))
 
-        val viewModelProviderFactory = StreamsViewModelFactory(application)
+        val viewModelProviderFactory = StreamsViewModelFactory(application, this)
         viewModel = ViewModelProvider(this, viewModelProviderFactory).get(StreamsViewModel ::class.java)
 
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
+        
+        // Ensure bottom navigation is hidden on startup (splash screen)
+        binding.bottomNavView.visibility = android.view.View.GONE
+
+        // Handle window insets for accessibility (lift bottom menu above system navigation)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.bottomNavView) { v, insets ->
+            val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            val params = v.layoutParams as android.view.ViewGroup.MarginLayoutParams
+            // 10dp default margin converted to pixels
+            val density = resources.displayMetrics.density
+            val defaultMargin = (10 * density).toInt()
+            
+            params.bottomMargin = defaultMargin + bars.bottom
+            v.layoutParams = params
+            insets
+        }
 
         viewModel.currentFragmentLiveData.observe(this, Observer {
             when(it){
@@ -69,11 +122,7 @@ class MainActivity : AppCompatActivity() {
                     binding.donateBtn.setColorFilter(Color.parseColor("#67686D"))
                     binding.homeBtn.setColorFilter(Color.parseColor("#67686D"))
                     binding.playerBtn.setColorFilter(Color.parseColor("#FFFFFF"))
-//                    when(viewModel.currentStreamLive.value){
-//                        "myata"->{binding.playerBtn.setColorFilter(Color.parseColor("#FFCCFF"))}
-//                        "gold"->{binding.playerBtn.setColorFilter(Color.parseColor("#FF3F7B"))}
-//                        "myata_hits"->{binding.playerBtn.setColorFilter(Color.parseColor("#FF3F7B"))}
-//                    }
+                    // binding code commented out
                 }
                 "donate"->{
                     binding.infoBtn.setColorFilter(Color.parseColor("#67686D"))
@@ -91,10 +140,7 @@ class MainActivity : AppCompatActivity() {
         })
 
 
-        if(intent.action != Intent.ACTION_MAIN){
-            viewModel.currentStreamLive.value = intent.action
-            viewModel.ifNeedToNavigateStraightToPlayer = true
-        }
+        handleIntent(intent)
 
 
         supportActionBar?.hide()
@@ -104,6 +150,27 @@ class MainActivity : AppCompatActivity() {
                 requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
             }
         }
+
+        // Centralized Navigation Handling
+        binding.homeBtn.setOnClickListener {
+            findNavController(R.id.navHostFragment).navigate(R.id.home)
+        }
+        binding.infoBtn.setOnClickListener {
+            findNavController(R.id.navHostFragment).navigate(R.id.info)
+        }
+        binding.donateBtn.setOnClickListener {
+            findNavController(R.id.navHostFragment).navigate(R.id.donate)
+        }
+        binding.playerBtn.setOnClickListener {
+            findNavController(R.id.navHostFragment).navigate(R.id.player)
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Ensure UI is marked active and refresh status for instant sync
+        viewModel.isUIActive = true
+        viewModel.refreshPlayerStatus()
     }
 
     override fun onStop() {
@@ -128,17 +195,13 @@ class MainActivity : AppCompatActivity() {
     override fun onRestart() {
         Log.d("MainActivity", "Restart")
         viewModel.isUIActive = true
-        viewModel.getStreamJson()
+
         super.onRestart()
     }
 
     override fun onDestroy() {
-        this.stopService(Intent(this, MediaPlayerService::class.java))
         super.onDestroy()
-        finishAffinity()
-
-        this@MainActivity.finish()
-        System.exit(0)
+        Log.d("MainActivity", "Destroyed")
     }
 
     inner class closeBroadcastReceiver : BroadcastReceiver() {

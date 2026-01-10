@@ -35,6 +35,7 @@ class MyataStreamFragment() : Fragment() {
     lateinit var binding: FragmentMyataStreamBinding
     var stream: String = "myata"
     private var currentImageUrl: String? = null  // Track currently displayed image
+    private var currentBackgroundUrl: String? = null // Track currently displayed background
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -56,8 +57,18 @@ class MyataStreamFragment() : Fragment() {
         )
 
         // Handle window insets for safe area
+        if (vm.cachedTopInset != null) {
+            binding.streamContentContainer.setPadding(
+                binding.streamContentContainer.paddingLeft,
+                vm.cachedTopInset!!,
+                binding.streamContentContainer.paddingRight,
+                binding.streamContentContainer.paddingBottom
+            )
+        }
+
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.streamContentContainer) { v, insets ->
             val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            vm.cachedTopInset = bars.top
             v.setPadding(v.paddingLeft, bars.top, v.paddingRight, v.paddingBottom)
             insets
         }
@@ -68,25 +79,37 @@ class MyataStreamFragment() : Fragment() {
         binding.mainSong.setOnClickListener { copyTrackInfoToClipboard() }
 
         vm.isPlaying.observe(viewLifecycleOwner, Observer {
-            // Hide loading spinner and show button when state changes
-            binding.loadingSpinner.visibility = View.GONE
-            binding.btnPlay.visibility = View.VISIBLE
-            
+            // Only change button image, let isBuffering control visibility
             if(it){
                 when(stream){
-                    "myata"->{binding.btnPlay.setImageResource(R.drawable.pause_btn)}
-                    "gold"->{binding.btnPlay.setImageResource(R.drawable.pause_btn_yellow)}
-                    "myata_hits"->{binding.btnPlay.setImageResource(R.drawable.pause_btn_pink)}
+                    "myata"-> binding.btnPlay.setImageResource(R.drawable.pause_btn)
+                    "gold"-> binding.btnPlay.setImageResource(R.drawable.pause_btn_yellow)
+                    "myata_hits"-> binding.btnPlay.setImageResource(R.drawable.pause_btn_pink)
                 }
             }
             else{
                 when(stream){
-                    "myata"->{binding.btnPlay.setImageResource(R.drawable.btn_play)}
-                    "gold"->{binding.btnPlay.setImageResource(R.drawable.btn_play_yellow)}
-                    "myata_hits"->{binding.btnPlay.setImageResource(R.drawable.btn_play_pink)}
+                    "myata"-> binding.btnPlay.setImageResource(R.drawable.btn_play)
+                    "gold"-> binding.btnPlay.setImageResource(R.drawable.btn_play_yellow)
+                    "myata_hits"-> binding.btnPlay.setImageResource(R.drawable.btn_play_pink)
                 }
             }
         })
+        
+        vm.isBuffering.observe(viewLifecycleOwner, Observer {
+            if(it == true){
+                // Show loading spinner, hide button
+                binding.btnPlay.visibility = View.INVISIBLE
+                binding.loadingSpinner.visibility = View.VISIBLE
+            }
+            else{
+                // Hide loading spinner, show button
+                binding.loadingSpinner.visibility = View.GONE
+                binding.btnPlay.visibility = View.VISIBLE
+            }
+        })
+        
+        // Sync state logic removed - handled by improved observer
 
         when(stream){
             "myata"->{
@@ -119,9 +142,10 @@ class MyataStreamFragment() : Fragment() {
         }
 
         binding.btnPlay.setOnClickListener {
-            // Show loading spinner immediately
-            binding.btnPlay.visibility = View.INVISIBLE
-            binding.loadingSpinner.visibility = View.VISIBLE
+            // Show loading spinner only when starting playback, not when pausing
+            if (vm.isPlaying.value == false) {
+                vm.isBuffering.value = true
+            }
             
             vm.ifNeedToListenReciever = true
             (activity as MainActivity).startService(
@@ -131,6 +155,21 @@ class MyataStreamFragment() : Fragment() {
                 ).also {
                     it.putExtra("STREAM", vm.currentStreamLive.value)
                     it.putExtra("ACTION", "startStop")
+                    // Include current track metadata for notification
+                    when(vm.currentStreamLive.value) {
+                        "myata" -> {
+                            it.putExtra("SONG", vm.currentMyataState.value?.song ?: "Radio Myata")
+                            it.putExtra("ARTIST", vm.currentMyataState.value?.artist ?: "You are listening to")
+                        }
+                        "gold" -> {
+                            it.putExtra("SONG", vm.currentGoldState.value?.song ?: "Radio Myata")
+                            it.putExtra("ARTIST", vm.currentGoldState.value?.artist ?: "You are listening to")
+                        }
+                        "myata_hits" -> {
+                            it.putExtra("SONG", vm.currentXtraState.value?.song ?: "Radio Myata")
+                            it.putExtra("ARTIST", vm.currentXtraState.value?.artist ?: "You are listening to")
+                        }
+                    }
                 })
         }
 
@@ -141,7 +180,15 @@ class MyataStreamFragment() : Fragment() {
             }
         })
 
+        // Remove previous sync fix as it is handled by the improved observer logic below
+        
         vm.currentStreamLive.observe(viewLifecycleOwner, Observer {
+            
+            // Show buffering indicator ONLY when switching to a DIFFERENT stream if already playing
+            if (vm.isPlaying.value == true && vm.lastObservedStream != it && vm.lastObservedStream != null) {
+                vm.isBuffering.value = true
+            }
+            vm.lastObservedStream = it
 
             var intent = Intent()
             intent.setAction("switch_track")
@@ -180,15 +227,9 @@ class MyataStreamFragment() : Fragment() {
             }
         })
 
-        (activity as MainActivity).binding.homeBtn.setOnClickListener {
-            findNavController().navigate(R.id.home)
-        }
-        (activity as MainActivity).binding.infoBtn.setOnClickListener {
-            findNavController().navigate(R.id.info)
-        }
-        (activity as MainActivity).binding.donateBtn.setOnClickListener {
-            findNavController().navigate(R.id.donate)
-        }
+
+
+        // Navigation listeners are now handled in MainActivity
 
         return binding.root
     }
@@ -265,6 +306,12 @@ class MyataStreamFragment() : Fragment() {
 
     fun updateUI(it: StreamsViewModel.PlayerState){
         if (it != null) {
+            // Background Image Logic - Static Only
+            if (currentBackgroundUrl != "STATIC") {
+                currentBackgroundUrl = "STATIC"
+                binding.backgroundImage.setImageResource(getStaticBackgroundRes())
+            }
+
             if(it.artist!=null) {
                 if(!it.artist!!.isBlank()) {
                     if (it.img != null && !it.img!!.isBlank() && it.img != "NO_IMAGE") {
@@ -275,45 +322,28 @@ class MyataStreamFragment() : Fragment() {
                         // Only animate if we haven't animated this URL yet
                         if (vm.lastAnimatedImageUrl != it.img) {
                             vm.lastAnimatedImageUrl = it.img
-                            // Fade out before loading new image
-                            binding.photo.animate()
-                                .alpha(0f)
-                                .setDuration(300)
-                                .withEndAction {
-                                    Picasso.get()
-                                        .load(Uri.parse(it.img))
-                                        .placeholder(R.drawable.zaglushka_white)
-                                        .error(R.drawable.zaglushka_logo)
-                                        .fit()
-                                        .centerCrop()
-                                        .into(binding.photo, object : com.squareup.picasso.Callback {
-                                            override fun onSuccess() {
-                                                // Fade in after image loads
-                                                binding.photo.animate()
-                                                    .alpha(1f)
-                                                    .setDuration(300)
-                                                    .start()
-                                                Log.d("Picasso", "Image loaded successfully: ${it.img}")
-                                            }
-                                            override fun onError(e: Exception?) {
-                                                // Fade in the logo placeholder on error
-                                                currentImageUrl = "NO_IMAGE"
-                                                binding.photo.setImageResource(R.drawable.zaglushka_logo)
-                                                binding.photo.animate()
-                                                    .alpha(1f)
-                                                    .setDuration(300)
-                                                    .start()
-                                                Log.e("Picasso", "Error loading image: ${it.img}", e)
-                                            }
-                                        })
-                                }
-                                .start()
-                        } else {
-                            // Already animated this URL - just load without animation
+                            // Load new image directly without placeholder to keep old image visible
                             binding.photo.alpha = 1f
                             Picasso.get()
                                 .load(Uri.parse(it.img))
-                                .placeholder(R.drawable.zaglushka_white)
+                                .error(R.drawable.zaglushka_logo)
+                                .fit()
+                                .centerCrop()
+                                .into(binding.photo, object : com.squareup.picasso.Callback {
+                                    override fun onSuccess() {
+                                        Log.d("Picasso", "Image loaded successfully: ${it.img}")
+                                    }
+                                    override fun onError(e: Exception?) {
+                                        currentImageUrl = "NO_IMAGE"
+                                        binding.photo.setImageResource(R.drawable.zaglushka_logo)
+                                        Log.e("Picasso", "Error loading image: ${it.img}", e)
+                                    }
+                                })
+                        } else {
+                            // Already animated this URL - just load without placeholder
+                            binding.photo.alpha = 1f
+                            Picasso.get()
+                                .load(Uri.parse(it.img))
                                 .error(R.drawable.zaglushka_logo)
                                 .fit()
                                 .centerCrop()
@@ -335,19 +365,15 @@ class MyataStreamFragment() : Fragment() {
                     }
                     } else if (it.img == "NO_IMAGE") {
                          // No image found by API - show logo placeholder
+                         // Always force update if current is not NO_IMAGE or if it's null
                          if (currentImageUrl != "NO_IMAGE") {
                              currentImageUrl = "NO_IMAGE"
                              binding.photo.setImageResource(R.drawable.zaglushka_logo)
                              binding.photo.alpha = 1f
                          }
-                    } else {
-                        // Null or blank (Loading state) - show white placeholder
-                        if (currentImageUrl != null) {
-                            currentImageUrl = null
-                            binding.photo.setImageResource(R.drawable.zaglushka_white)
-                            binding.photo.alpha = 1f
-                        }
                     }
+                    // For null/blank img during track transitions, keep existing image
+                    // Picasso will handle placeholder during loading
 
                     binding.mainSong.text = it.song
                     binding.mainAuthor.text = it.artist
@@ -356,8 +382,8 @@ class MyataStreamFragment() : Fragment() {
                     currentImageUrl = null
                     binding.mainAuthor.text = "YOU ARE LISTENING"
                     binding.mainSong.text = "RADIO MYATA"
-                    // Show white placeholder immediately without animation
-                    binding.photo.setImageResource(R.drawable.zaglushka_white)
+                    // Show logo placeholder immediately without animation
+                    binding.photo.setImageResource(R.drawable.zaglushka_logo)
                     binding.photo.alpha = 1f
                 }
             }
@@ -366,7 +392,7 @@ class MyataStreamFragment() : Fragment() {
             currentImageUrl = null
             binding.mainAuthor.text = "YOU ARE LISTENING"
             binding.mainSong.text = "RADIO MYATA"
-            binding.photo.setImageResource(R.drawable.zaglushka_white)
+            binding.photo.setImageResource(R.drawable.zaglushka_logo)
             binding.photo.alpha = 1f
         }
     }
@@ -380,6 +406,14 @@ class MyataStreamFragment() : Fragment() {
             val clip = ClipData.newPlainText("Track Info", textToCopy)
             clipboard.setPrimaryClip(clip)
             Toast.makeText(requireContext(), "Скопировано: $textToCopy", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun getStaticBackgroundRes(): Int {
+        return when(stream) {
+            "gold" -> R.drawable.gold_bg
+            "myata_hits" -> R.drawable.xtra_bg
+            else -> R.drawable.myata_bg
         }
     }
 }

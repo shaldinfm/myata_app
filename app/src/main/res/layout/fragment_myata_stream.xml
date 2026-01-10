@@ -5,13 +5,14 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="#1C4771"
         >
 
         <ImageView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:src="@drawable/myata_bg"
-            android:scaleType="center"
+            android:scaleType="centerCrop"
             android:id="@+id/backgroundImage"/>
 
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -31,6 +32,7 @@
                 app:layout_constraintTop_toTopOf="parent"
                 android:layout_marginTop="50dp"
                 app:layout_constraintBottom_toBottomOf="parent"
+                android:visibility="visible"
                 android:gravity="center">
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
@@ -59,7 +61,7 @@
                                 android:id="@+id/photo"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
-                                android:src="@drawable/zaglushka_white"
+                                android:src="@drawable/zaglushka_logo"
                                 android:scaleType="centerCrop"/>
                         </androidx.cardview.widget.CardView>
 

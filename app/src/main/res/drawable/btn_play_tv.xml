@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="106dp"
+    android:height="106dp"
+    android:viewportWidth="106"
+    android:viewportHeight="106">
+
+    <!-- Simple path derived from btn_play_tv.svg, standardized to 106x106 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M53 0C80.062 0 102 21.938 102 49C102 76.062 80.062 98 53 98C25.938 98 4 76.062 4 49C4 21.938 25.938 0 53 0ZM40.75 67.9092L74.9658 48.1543L40.75 28.4004V67.9092Z" />
+</vector>

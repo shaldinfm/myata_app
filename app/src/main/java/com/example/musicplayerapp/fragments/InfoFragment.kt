@@ -103,22 +103,7 @@ class InfoFragment : Fragment() {
             }
         })
 
-        (activity as MainActivity).binding.playerBtn.setOnClickListener {
-            findNavController().navigate(R.id.player, Bundle().apply {
-                when(vm.currentStreamLive.value){
-                    "myata"->putInt(CURRENT_ITEM, 0)
-                    "gold"->putInt(CURRENT_ITEM, 1)
-                    "myata_hits"->putInt(CURRENT_ITEM, 2)
-                }
-            })
-        }
 
-        (activity as MainActivity).binding.donateBtn.setOnClickListener {
-            findNavController().navigate(R.id.donate)
-        }
-        (activity as MainActivity).binding.homeBtn.setOnClickListener {
-            findNavController().navigate(R.id.home)
-        }
 
         return binding.root
     }

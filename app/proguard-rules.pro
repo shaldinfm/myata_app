@@ -14,8 +14,20 @@
 
 # Uncomment this to preserve the line number information for
 # debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+-keepattributes SourceFile,LineNumberTable
 
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep ViewModel classes
+-keep class * extends androidx.lifecycle.ViewModel { *; }
+-keep class * extends androidx.lifecycle.AndroidViewModel { *; }
+
+# Keep DataBinding classes
+-keep class androidx.databinding.** { *; }
+-keep class * extends androidx.databinding.ViewDataBinding { *; }
+-keep class com.example.musicplayerapp.databinding.** { *; }
+
+# Keep GSON models if used via reflection (though we removed Retrofit, Gson might still be used manually)
+-keep class com.example.musicplayerapp.** { *; }

@@ -31,7 +31,6 @@ class MainFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        (activity as MainActivity).binding.bottomNavView.visibility = View.VISIBLE
         vm = (activity as MainActivity).viewModel
 
         vm.currentFragmentLiveData.value = "main"
@@ -60,22 +59,16 @@ class MainFragment : Fragment() {
         binding.playlists.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         binding.playlists.adapter = vm.playlistList.value?.let { PlaylistAdapter(it, { position -> onItemClick(position)}) }
 
-        (activity as MainActivity).binding.infoBtn.setOnClickListener {
-            findNavController().navigate(R.id.info)
-        }
-
-        (activity as MainActivity).binding.playerBtn.setOnClickListener {
-            findNavController().navigate(R.id.player, Bundle().apply {
-                when(vm.currentStreamLive.value){
-                    "myata"->putInt(CURRENT_ITEM, 0)
-                    "gold"->putInt(CURRENT_ITEM, 1)
-                    "myata_hits"->putInt(CURRENT_ITEM, 2)
-                }
-            })
-        }
+        // Navigation listeners are now handled in MainActivity
 
         binding.myataStreamBanner.setOnClickListener {
+            // Check if already playing this stream to avoid infinite spinner
+            if (vm.currentStreamLive.value != "myata" || vm.isPlaying.value != true) {
+                vm.isBuffering.value = true
+            }
+            
             vm.currentStreamLive.value = "myata"
+            vm.triggerMetadataUpdate()
             (activity as MainActivity).startService(
                 Intent(context, MediaPlayerService::class.java).also {
                     it.putExtra("STREAM", "myata")
@@ -87,7 +80,13 @@ class MainFragment : Fragment() {
         }
 
         binding.goldStreamBanner.setOnClickListener {
+            // Check if already playing this stream
+            if (vm.currentStreamLive.value != "gold" || vm.isPlaying.value != true) {
+                 vm.isBuffering.value = true
+            }
+
             vm.currentStreamLive.value = "gold"
+            vm.triggerMetadataUpdate()
             (activity as MainActivity).startService(
                 Intent(context, MediaPlayerService::class.java).also {
                     it.putExtra("STREAM", "gold")
@@ -99,7 +98,13 @@ class MainFragment : Fragment() {
         }
 
         binding.xtraStreamBanner.setOnClickListener {
+            // Check if already playing this stream
+            if (vm.currentStreamLive.value != "myata_hits" || vm.isPlaying.value != true) {
+                 vm.isBuffering.value = true
+            }
+
             vm.currentStreamLive.value = "myata_hits"
+            vm.triggerMetadataUpdate()
             (activity as MainActivity).startService(
                 Intent(context, MediaPlayerService::class.java).also {
                     it.putExtra("STREAM", "myata_hits")
@@ -118,9 +123,7 @@ class MainFragment : Fragment() {
             }
         })
 
-        (activity as MainActivity).binding.donateBtn.setOnClickListener {
-            findNavController().navigate(R.id.donate)
-        }
+        // Donate button listener handled in MainActivity
 
         return binding.root
     }
@@ -134,6 +137,10 @@ class MainFragment : Fragment() {
             (activity as MainActivity).binding.bottomNavView.visibility = View.VISIBLE
             binding.playlistString.visibility = View.VISIBLE
         }
+        
+        // Force refresh of player status (including metadata) when returning to foreground
+        // This fixes the issue where TV home screen idle time makes UI stale
+        vm.refreshPlayerStatus()
 
         super.onResume()
     }

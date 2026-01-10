@@ -37,52 +37,74 @@ class PlayerFragment : Fragment() {
         )
 
         // Handle window insets for safe area
+        if (vm.cachedTopInset != null) {
+            binding.dotsIndicator.setPadding(
+                binding.dotsIndicator.paddingLeft,
+                vm.cachedTopInset!!,
+                binding.dotsIndicator.paddingRight,
+                binding.dotsIndicator.paddingBottom
+            )
+        }
+
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.dotsIndicator) { v, insets ->
             val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            vm.cachedTopInset = bars.top
             v.setPadding(v.paddingLeft, bars.top, v.paddingRight, v.paddingBottom)
             insets
         }
 
         binding.viewPager.adapter = adapter
+        binding.viewPager.offscreenPageLimit = 2  // Pre-load all pages to avoid UI delay
 
         // Determine initial position from arguments or currentStreamLive
-        val initialPosition = arguments?.takeIf { it.containsKey(CURRENT_ITEM) }?.getInt(CURRENT_ITEM)
-            ?: when(vm.currentStreamLive.value) {
-                "gold" -> 1
-                "myata_hits" -> 2
-                else -> 0  // default to "myata"
-            }
+        // Always use currentStreamLive as the source of truth for initial position
+        val initialPosition = when(vm.currentStreamLive.value) {
+            "gold" -> 1
+            "myata_hits" -> 2
+            else -> 0  // default to "myata"
+        }
         
         // Set initial position immediately to avoid visual glitch
+        // Set initial position immediately to avoid visual glitch
+        // Use post to ensure ViewPager is ready and prevent initial reset to 0
+        // Set initial position immediately to avoid visual glitch
         binding.viewPager.setCurrentItem(initialPosition, false)
+        updateIndicators(initialPosition)
 
         binding.viewPager.registerOnPageChangeCallback(object: ViewPager2.OnPageChangeCallback(){
             override fun onPageSelected(position: Int) {
+                updateIndicators(position)
+                
+                // Update ViewModel only on user swipe/change, not just UI update
                 when(position){
-                    0->{
-                        vm.currentStreamLive.value = "myata"
-                        binding.dot1.setImageResource(R.drawable.dot_active)
-                        binding.dot2.setImageResource(R.drawable.dot_inactive)
-                        binding.dot3.setImageResource(R.drawable.dot_inactive)
-                    }
-                    1->{
-                        vm.currentStreamLive.value = "gold"
-                        binding.dot1.setImageResource(R.drawable.dot_inactive)
-                        binding.dot2.setImageResource(R.drawable.dot_active)
-                        binding.dot3.setImageResource(R.drawable.dot_inactive)
-                    }
-                    2->{
-                        vm.currentStreamLive.value = "myata_hits"
-                        binding.dot1.setImageResource(R.drawable.dot_inactive)
-                        binding.dot2.setImageResource(R.drawable.dot_inactive)
-                        binding.dot3.setImageResource(R.drawable.dot_active)
-                    }
+                    0 -> vm.currentStreamLive.value = "myata"
+                    1 -> vm.currentStreamLive.value = "gold"
+                    2 -> vm.currentStreamLive.value = "myata_hits"
                 }
+                vm.triggerMetadataUpdate()
                 super.onPageSelected(position)
             }
         })
 
         return binding.root
     }
-
+    private fun updateIndicators(position: Int) {
+        when(position){
+            0->{
+                binding.dot1.setImageResource(R.drawable.dot_active)
+                binding.dot2.setImageResource(R.drawable.dot_inactive)
+                binding.dot3.setImageResource(R.drawable.dot_inactive)
+            }
+            1->{
+                binding.dot1.setImageResource(R.drawable.dot_inactive)
+                binding.dot2.setImageResource(R.drawable.dot_active)
+                binding.dot3.setImageResource(R.drawable.dot_inactive)
+            }
+            2->{
+                binding.dot1.setImageResource(R.drawable.dot_inactive)
+                binding.dot2.setImageResource(R.drawable.dot_inactive)
+                binding.dot3.setImageResource(R.drawable.dot_active)
+            }
+        }
+    }
 }

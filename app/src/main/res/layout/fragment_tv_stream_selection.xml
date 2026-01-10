@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/myata_bg_tv">
+
+    <TextView
+        android:id="@+id/tv_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/muller_light"
+        android:text="Выберите поток"
+        android:textColor="#FFFFFF"
+        android:textSize="32sp"
+        android:letterSpacing="0.0"
+        app:layout_constraintBottom_toTopOf="@id/flow_streams"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_chainStyle="packed" />
+
+    <!-- Horizontal chain for streams -->
+    <androidx.constraintlayout.helper.widget.Flow
+        android:id="@+id/flow_streams"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="60dp"
+        app:constraint_referenced_ids="card_myata,card_gold,card_xtra"
+        app:flow_horizontalGap="24dp"
+        app:flow_horizontalStyle="packed"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_title" />
+
+    <!-- Myata Stream -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/card_myata"
+        android:layout_width="250dp"
+        android:layout_height="118dp"
+        android:focusable="true"
+        android:clickable="true"
+        android:focusableInTouchMode="false"
+        app:cardBackgroundColor="@android:color/transparent"
+        app:cardCornerRadius="15dp"
+        app:cardElevation="0dp"
+        tools:ignore="MissingConstraints">
+        <ImageView
+            android:id="@+id/btn_myata"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="Myata Stream"
+            android:scaleType="fitXY"
+            android:src="@drawable/card_myata_tv" />
+    </androidx.cardview.widget.CardView>
+
+    <!-- Gold Stream -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/card_gold"
+        android:layout_width="250dp"
+        android:layout_height="118dp"
+        android:focusable="true"
+        android:clickable="true"
+        android:focusableInTouchMode="false"
+        app:cardBackgroundColor="@android:color/transparent"
+        app:cardCornerRadius="15dp"
+        app:cardElevation="0dp"
+        tools:ignore="MissingConstraints">
+        <ImageView
+            android:id="@+id/btn_gold"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="Gold Stream"
+            android:scaleType="fitXY"
+            android:src="@drawable/card_gold_tv" />
+    </androidx.cardview.widget.CardView>
+
+    <!-- Xtra Stream -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/card_xtra"
+        android:layout_width="250dp"
+        android:layout_height="118dp"
+        android:focusable="true"
+        android:clickable="true"
+        android:focusableInTouchMode="false"
+        app:cardBackgroundColor="@android:color/transparent"
+        app:cardCornerRadius="15dp"
+        app:cardElevation="0dp"
+        tools:ignore="MissingConstraints">
+        <ImageView
+            android:id="@+id/btn_xtra"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="Xtra Stream"
+            android:scaleType="fitXY"
+            android:src="@drawable/card_xtra_tv" />
+    </androidx.cardview.widget.CardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

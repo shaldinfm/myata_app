@@ -12,7 +12,13 @@
         android:label="SplashFragment" >
         <action
             android:id="@+id/action_splashFragment_to_mainFragment"
-            app:destination="@id/home" />
+            app:destination="@id/home"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out"
+            app:popUpTo="@id/splashFragment"
+            app:popUpToInclusive="true" />
     </fragment>
     <fragment
         android:id="@+id/home"
@@ -20,16 +26,32 @@
         android:label="MainFragment" >
         <action
             android:id="@+id/action_mainFragment_to_playerFragment"
-            app:destination="@id/player" />
+            app:destination="@id/player"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
         <action
             android:id="@+id/action_mainFragment_to_infoFragment"
-            app:destination="@id/info" />
+            app:destination="@id/info"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
         <action
             android:id="@+id/action_mainFragment_to_donateFragment"
-            app:destination="@id/donate" />
+            app:destination="@id/donate"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
         <action
             android:id="@+id/action_mainFragment_to_streamsFragment"
-            app:destination="@id/streams" />
+            app:destination="@id/streams"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
     </fragment>
     <fragment
         android:id="@+id/player"
@@ -37,16 +59,32 @@
         android:label="PlayerFragment" >
         <action
             android:id="@+id/action_playerFragment_to_streamsFragment"
-            app:destination="@id/streams" />
+            app:destination="@id/streams"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
         <action
             android:id="@+id/action_playerFragment_to_mainFragment"
-            app:destination="@id/home" />
+            app:destination="@id/home"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
         <action
             android:id="@+id/action_playerFragment_to_infoFragment"
-            app:destination="@id/info" />
+            app:destination="@id/info"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
         <action
             android:id="@+id/action_playerFragment_to_donateFragment"
-            app:destination="@id/donate" />
+            app:destination="@id/donate"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
     </fragment>
     <fragment
         android:id="@+id/info"
@@ -54,16 +92,32 @@
         android:label="InfoFragment" >
         <action
             android:id="@+id/action_infoFragment_to_playerFragment"
-            app:destination="@id/player" />
+            app:destination="@id/player"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
         <action
             android:id="@+id/action_infoFragment_to_mainFragment"
-            app:destination="@id/home" />
+            app:destination="@id/home"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
         <action
             android:id="@+id/action_infoFragment_to_streamsFragment"
-            app:destination="@id/streams" />
+            app:destination="@id/streams"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
         <action
             android:id="@+id/action_infoFragment_to_donateFragment"
-            app:destination="@id/donate" />
+            app:destination="@id/donate"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
     </fragment>
     <fragment
         android:id="@+id/donate"
@@ -71,15 +125,31 @@
         android:label="DonateFragment" >
         <action
             android:id="@+id/action_donateFragment_to_playerFragment"
-            app:destination="@id/player" />
+            app:destination="@id/player"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
         <action
             android:id="@+id/action_donateFragment_to_streamsFragment"
-            app:destination="@id/streams" />
+            app:destination="@id/streams"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
         <action
             android:id="@+id/action_donateFragment_to_infoFragment"
-            app:destination="@id/info" />
+            app:destination="@id/info"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
         <action
             android:id="@+id/action_donateFragment_to_mainFragment"
-            app:destination="@id/home" />
+            app:destination="@id/home"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
     </fragment>
 </navigation>

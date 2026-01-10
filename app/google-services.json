@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "601607980338",
+    "project_id": "radiomyata",
+    "storage_bucket": "radiomyata.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:601607980338:android:bc343e7200d20f3d41432b",
+        "android_client_info": {
+          "package_name": "dlinemedia.radioplayer.myata"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDms6N7Y6on6t15AOwvgRVI6aodG8C4u7s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

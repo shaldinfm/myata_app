@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:keepScreenOn="true">
+
+    <!-- Full Screen Background Image -->
+    <ImageView
+        android:id="@+id/iv_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:scaleType="centerCrop"
+        android:visibility="visible" />
+
+    <!-- Global Dim Overlay -->
+    <View
+        android:id="@+id/view_dim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#66000000" />
+
+    <!-- Gradient Overlay (Scrim) -->
+    <View
+        android:id="@+id/view_scrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/gradient_scrim_bottom" />
+
+    <!-- Back Button -->
+    <ImageButton
+        android:id="@+id/btn_back"
+        android:layout_width="19dp"
+        android:layout_height="19dp"
+        android:layout_marginStart="14dp"
+        android:layout_marginTop="15dp"
+        android:background="@null"
+        android:stateListAnimator="@null"
+        android:src="@drawable/btn_back_tv"
+        android:scaleType="fitCenter"
+        android:focusable="true"
+        android:focusableInTouchMode="false"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Album Art -->
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/iv_album_art"
+        android:layout_width="280dp"
+        android:layout_height="280dp"
+        android:layout_marginBottom="32dp"
+        android:scaleType="centerCrop"
+        android:src="@drawable/zaglushka_logo"
+        app:shapeAppearanceOverlay="@style/RoundedCornerImage"
+        app:strokeColor="@android:color/transparent"
+        app:strokeWidth="0dp"
+        app:layout_constraintBottom_toTopOf="@id/tv_track_info"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.8" />
+
+     <!-- Track Info (Artist - Title) -->
+    <TextView
+        android:id="@+id/tv_track_info"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:layout_marginStart="100dp"
+        android:layout_marginEnd="100dp"
+        android:fontFamily="@font/muller_regular"
+        android:text="ARTIST - TRACK"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:gravity="center"
+        android:shadowColor="#CC000000"
+        android:shadowDx="1.0"
+        android:shadowDy="1.0"
+        android:shadowRadius="6"
+        android:singleLine="true"
+        android:ellipsize="marquee"
+        android:marqueeRepeatLimit="marquee_forever"
+        android:scrollHorizontally="true"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/container_play_pause" />
+
+    <!-- Center Container for Play/Pause -->
+    <FrameLayout
+        android:id="@+id/container_play_pause"
+        android:layout_width="42dp"
+        android:layout_height="42dp"
+        android:layout_marginBottom="16dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/layout_streams">
+
+        <ImageButton
+            android:id="@+id/btn_play_pause"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:src="@drawable/btn_pause_tv"
+            android:scaleType="fitCenter"
+            android:padding="4dp"
+            android:elevation="4dp"
+            android:focusable="true"
+            android:focusableInTouchMode="false" />
+
+        <ProgressBar
+            android:id="@+id/loading_spinner"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="center"
+            android:indeterminateTint="#FFFFFF"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <!-- Stream Selection Row -->
+    <LinearLayout
+        android:id="@+id/layout_streams"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="60dp"
+        android:orientation="horizontal"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:padding="8dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <TextView
+            android:id="@+id/btn_stream_myata"
+            android:layout_width="90dp"
+            android:layout_height="34dp"
+            android:background="@drawable/bg_tv_stream_button_new"
+            android:fontFamily="@font/muller_regular"
+            android:gravity="center"
+            android:text="MYATA"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:focusable="true"
+            android:focusableInTouchMode="false" />
+
+        <Space
+            android:layout_width="14dp"
+            android:layout_height="match_parent" />
+
+        <TextView
+            android:id="@+id/btn_stream_gold"
+            android:layout_width="90dp"
+            android:layout_height="34dp"
+            android:background="@drawable/bg_tv_stream_button_new"
+            android:fontFamily="@font/muller_regular"
+            android:gravity="center"
+            android:text="GOLD"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:focusable="true"
+            android:focusableInTouchMode="false" />
+
+        <Space
+            android:layout_width="14dp"
+            android:layout_height="match_parent" />
+
+        <TextView
+            android:id="@+id/btn_stream_xtra"
+            android:layout_width="90dp"
+            android:layout_height="34dp"
+            android:background="@drawable/bg_tv_stream_button_new"
+            android:fontFamily="@font/muller_regular"
+            android:gravity="center"
+            android:text="XTRA"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:focusable="true"
+            android:focusableInTouchMode="false" />
+    </LinearLayout>
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

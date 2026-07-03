@@ -1,4 +1,4 @@
-﻿package com.example.musicplayerapp
+package com.example.musicplayerapp
 
 import android.annotation.SuppressLint
 import android.app.Application

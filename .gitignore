@@ -13,3 +13,23 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Signing — never commit (see docs/RELEASE_SIGNING.md)
+keystore.properties
+*.jks
+*.keystore
+
+# Release artifacts
+*.apk
+*.aab
+/app/release/
+/releases/
+
+# Build outputs
+/app/build/
+
+# Build / signing / device logs
+build_log*.txt
+build_output*.txt
+signed_bundle_log*.txt
+*.logcat

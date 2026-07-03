@@ -5,6 +5,15 @@ plugins {
     id 'com.google.firebase.crashlytics'
 }
 
+// Release signing is read from an untracked keystore.properties in the project root.
+// The file is intentionally NOT in git — see docs/RELEASE_SIGNING.md.
+// Debug builds do not need it.
+def keystorePropsFile = rootProject.file('keystore.properties')
+def keystoreProps = new Properties()
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+
 android {
     compileSdk 35
     namespace 'com.example.musicplayerapp'
@@ -28,17 +37,34 @@ android {
     }
 
     signingConfigs {
-        release {
-            storeFile file("D:\\Мята\\Ш_Приложение\\DLineMedia.jks")
-            storePassword "erty3489GoroDL00"
-            keyAlias "dline_media"
-            keyPassword "erty3489GoroDL00"
+        if (keystorePropsFile.exists()) {
+            release {
+                storeFile rootProject.file(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            if (keystorePropsFile.exists()) {
+                signingConfig signingConfigs.release
+            } else {
+                // No local signing config: fail release packaging with a clear
+                // pointer instead of silently producing an unsigned artifact.
+                tasks.whenTaskAdded { t ->
+                    if (t.name == 'packageRelease' || t.name == 'bundleRelease') {
+                        t.doFirst {
+                            throw new GradleException(
+                                'keystore.properties not found — release signing unavailable. ' +
+                                'Copy keystore.properties.example to keystore.properties and fill it locally. ' +
+                                'See docs/RELEASE_SIGNING.md.')
+                        }
+                    }
+                }
+            }
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'

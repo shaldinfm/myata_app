@@ -14,6 +14,9 @@ class TvStreamSelectionFragment : Fragment() {
 
     private var _binding: FragmentTvStreamSelectionBinding? = null
     private val binding get() = _binding!!
+    private val vm: com.example.musicplayerapp.StreamsViewModel by activityViewModels {
+        com.example.musicplayerapp.StreamsViewModelFactory(requireActivity().application, requireActivity())
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -47,8 +50,6 @@ class TvStreamSelectionFragment : Fragment() {
     }
 
     private fun navigateToPlayer(stream: String) {
-        // Update ViewModel
-        val vm: com.example.musicplayerapp.StreamsViewModel by activityViewModels()
         
         // Immediate feedback: Show spinner when entering player ONLY if switching streams or not playing
         if (vm.currentStreamLive.value != stream || vm.isPlaying.value != true) {

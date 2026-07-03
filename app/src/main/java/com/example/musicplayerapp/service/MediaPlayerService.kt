@@ -5,13 +5,15 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.res.Configuration
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
-import android.support.v4.media.MediaMetadataCompat
-import android.support.v4.media.session.MediaSessionCompat
-import android.support.v4.media.session.PlaybackStateCompat
+import android.content.pm.ServiceInfo
+import androidx.media3.session.* 
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.ForwardingPlayer
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -29,14 +31,16 @@ import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
+import android.app.NotificationChannel
+import android.app.NotificationManager
 
 
-class MediaPlayerService(): Service(){
+class MediaPlayerService(): MediaSessionService(){
 
     private lateinit var exoPlayer: ExoPlayer
     
     // MediaSession for lock screen / notification metadata
-    private var mediaSession: MediaSessionCompat? = null
+    private var mediaSession: MediaSession? = null
     
     // Coroutine scope for background metadata polling
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -48,13 +52,19 @@ class MediaPlayerService(): Service(){
     // OkHttp client for API requests (Unsafe for legacy device support)
     private val httpClient = UnsafeNetModule.getUnsafeOkHttpClient()
     
-    // Spotify API (Removed)
-    // private val spotifyClientId = "..."
-    // private val spotifyClientSecret = "..."
+    // Artwork Repository (single source of truth for album art)
+    private val artworkRepository by lazy { com.example.musicplayerapp.data.ArtworkRepository(httpClient) }
     
     // Image cache for album art
     private val albumArtCache = mutableMapOf<String, Bitmap?>()
     private var currentAlbumArt: Bitmap? = null
+    
+    // Platform type for optimizations
+    private var isTv: Boolean = false
+    private var lastFetchedArtist: String? = null
+    private var lastFetchedSong: String? = null
+    private var currentAlbumArtUrl: String? = null
+    private var fetchJob: kotlinx.coroutines.Job? = null
     
     // HTTPS URLs (по умолчанию)
     val myataItemHttps = MediaItem.fromUri("https://radio.dline-media.com/myata")
@@ -74,63 +84,55 @@ class MediaPlayerService(): Service(){
     val xtraItem: MediaItem get() = if (useHttpFallback) xtraItemHttp else xtraItemHttps
     val goldItem: MediaItem get() = if (useHttpFallback) goldItemHttp else goldItemHttps
 
-    var playerNotificationManager: PlayerNotificationManager? = null
     var song: String = ""
     var artist: String = ""
     var stream: String = ""
-    lateinit var notification: Notification
 
-
-    val mediaDescriptionAdapter = object: PlayerNotificationManager.MediaDescriptionAdapter{
-        override fun getCurrentContentTitle(player: Player): CharSequence {
-            return artist
-        }
-
-        @android.annotation.SuppressLint("UnspecifiedImmutableFlag")
-        override fun createCurrentContentIntent(player: Player): PendingIntent? {
-            val intent = Intent(this@MediaPlayerService, MainActivity::class.java)
-            intent.action = stream
-            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            
-            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                PendingIntent.getActivity(this@MediaPlayerService, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-            } else {
-                PendingIntent.getActivity(this@MediaPlayerService, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
-            }
-        }
-
-
-        override fun getCurrentContentText(player: Player): CharSequence? {
-            return song
-        }
-
-        override fun getCurrentSubText(player: Player): CharSequence? {
-            return super.getCurrentSubText(player)
-        }
-
-        override fun getCurrentLargeIcon(
-            player: Player,
-            callback: PlayerNotificationManager.BitmapCallback
-        ): Bitmap? {
-            return currentAlbumArt
-        }
-    }
-
-
-    override fun onBind(p0: Intent?): IBinder? {
-        return null
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
+        return mediaSession
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-
         super.onStartCommand(intent, flags, startId)
 
+        // CRITICAL: Android requires startForeground() within 5s of startForegroundService().
+        // Post a minimal notification immediately to satisfy the contract.
+        // Media3 will replace it with the real notification (with controls) moments later.
+        val isForegroundStart = intent?.getBooleanExtra("FOREGROUND_START", false) == true
+        if (isForegroundStart) {
+            try {
+                val channelId = "playback_channel"
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    val channel = NotificationChannel(channelId, "Playback", NotificationManager.IMPORTANCE_LOW)
+                    (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
+                }
+                val notification = android.app.Notification.Builder(this, channelId)
+                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setContentTitle("Radio Myata")
+                    .setContentText("Загрузка...")
+                    .build()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+                } else {
+                    startForeground(1, notification)
+                }
+                Log.d("MediaPlayerService", "Foreground notification posted immediately")
+            } catch (e: Exception) {
+                Log.e("MediaPlayerService", "Failed to post foreground notification: ${e.message}")
+            }
+        }
+
         if(intent != null) {
-            when(intent?.getStringExtra("ACTION")){
+            val action = intent.getStringExtra("ACTION")
+            
+            when(action){
                 "startStop"->{
                     if(exoPlayer.isPlaying) {
                         exoPlayer.stop()
                         exoPlayer.clearMediaItems()
+                        artist = ""
+                        song = ""
+                        updateMetadata("", "")
                     }
                     else{
                         val intentStream = intent.getStringExtra("STREAM")
@@ -143,11 +145,12 @@ class MediaPlayerService(): Service(){
                             "gold"->{exoPlayer.setMediaItem(goldItem)}
                             "myata_hits"->{exoPlayer.setMediaItem(xtraItem)}
                         }
-                        updateNotificationColor(stream)
-                        // Update metadata from intent
-                        song = intent.getStringExtra("SONG") ?: ""
-                        artist = intent.getStringExtra("ARTIST") ?: ""
-                        playerNotificationManager?.invalidate()
+                        
+                        // Use updateMetadata to ensure art is reset, fetched, and notification updated
+                        val startSong = intent.getStringExtra("SONG") ?: ""
+                        val startArtist = intent.getStringExtra("ARTIST") ?: ""
+                        updateMetadata(startArtist, startSong)
+                        
                         exoPlayer.prepare()
                         exoPlayer.play()
                     }
@@ -163,7 +166,6 @@ class MediaPlayerService(): Service(){
                             "myata_hits"->{exoPlayer.setMediaItem(xtraItem)}
                         }
                         exoPlayer.prepare()
-                        updateNotificationColor(stream)
                     }
                     if(!exoPlayer.isPlaying) {
                         exoPlayer.prepare()
@@ -171,34 +173,50 @@ class MediaPlayerService(): Service(){
                     }
                 }
                 "switch"->{
-                    val wasPlaying = exoPlayer.isPlaying
                     val intentStream = intent.getStringExtra("STREAM")
-                    if (intentStream != null && stream != intentStream)
-                    {
+                    val forcePlay = intent.getBooleanExtra("force_play", false)
+                    
+                    if (intentStream == null) return START_NOT_STICKY
+                    
+                    val isStreamChange = stream != intentStream
+                    
+                    if (isStreamChange) {
+                        // DIFFERENT stream - need to set up new media item
                         stream = intentStream
-                        when(stream){
-                            "myata"->{exoPlayer.setMediaItem(myataItem)}
-                            "gold"->{exoPlayer.setMediaItem(goldItem)}
-                            "myata_hits"->{exoPlayer.setMediaItem(xtraItem)}
-                        }
-                        updateNotificationColor(stream)
                         
-                        // Update MediaSession immediately with new stream info
-                        song = intent.getStringExtra("SONG") ?: ""
-                        artist = intent.getStringExtra("ARTIST") ?: ""
-                        updateMetadata(artist, song)
+                        val switchSong = intent.getStringExtra("SONG") ?: ""
+                        val switchArtist = intent.getStringExtra("ARTIST") ?: ""
+
+                        val initialMetadata = MediaMetadata.Builder()
+                            .setArtist(switchArtist)
+                            .setTitle(switchSong)
+                            .setAlbumTitle(getStreamDisplayName())
+                            .build()
+
+                        val mediaItem = when(stream){
+                            "myata"->myataItem
+                            "gold"->goldItem
+                            "myata_hits"->xtraItem
+                            else -> myataItem
+                        }.buildUpon().setMediaMetadata(initialMetadata).build()
                         
-                        // If was playing, restart playback on new stream
-                        if (wasPlaying) {
+                        exoPlayer.setMediaItem(mediaItem)
+                        currentAlbumArt = null
+                        updateMetadata(switchArtist, switchSong)
+                        
+                        // Always start playback for stream changes
+                        exoPlayer.prepare()
+                        exoPlayer.play()
+                        Log.d("SWITCH", "Stream switched to $stream and playback started")
+                    } else {
+                        // SAME stream - only start if forcePlay requested AND not already playing
+                        if (forcePlay && !exoPlayer.isPlaying) {
                             exoPlayer.prepare()
                             exoPlayer.play()
-                            Log.d("SWITCH", "Stream switched to $stream and playback resumed")
+                            Log.d("SWITCH", "Same stream $stream - resuming playback")
+                        } else {
+                            Log.d("SWITCH", "Same stream $stream - already playing, no action needed")
                         }
-                    } else {
-                        // Same stream - just update metadata
-                        val newSong = intent.getStringExtra("SONG") ?: ""
-                        val newArtist = intent.getStringExtra("ARTIST") ?: ""
-                        updateMetadata(newArtist, newSong)
                     }
                 }
 
@@ -218,7 +236,8 @@ class MediaPlayerService(): Service(){
                     }
                     
                     // Also broadcast current metadata so UI can update immediately
-                    if (stream.isNotEmpty()) {
+                    // ONLY if playing or buffering to avoid overriding fresh API metadata with stale service data
+                    if (stream.isNotEmpty() && (exoPlayer.isPlaying || exoPlayer.playbackState == Player.STATE_BUFFERING)) {
                         LocalBroadcastManager.getInstance(this).sendBroadcast(
                             Intent("metadata_update").apply {
                                 putExtra("artist", artist)
@@ -236,6 +255,12 @@ class MediaPlayerService(): Service(){
                     }
                     Log.d("MediaPlayerService", "Status requested: $action")
                 }
+                "stop" -> {
+                    Log.d("MediaPlayerService", "Stop action received - shutting down")
+                    exoPlayer.stop()
+                    exoPlayer.clearMediaItems()
+                    stopSelf()
+                }
             }
         }
 
@@ -243,50 +268,17 @@ class MediaPlayerService(): Service(){
     }
 
     override fun onCreate() {
+        super.onCreate()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            notification = Notification.Builder(this, createNotificationChannel("307","307"))
-                .setSmallIcon(R.drawable.zaglushka_logo)
-                .setContentTitle("Myata Radio")
-                .setContentText("Playing in background")
-                .build()
-            try {
-                // IMPORTANT: For TV devices, manual startForeground is required immediately 
-                // because we disabled PlayerNotificationManager for them to avoid artwork crashes.
-                // Without this, the service is background-only and gets killed on app exit.
-                val isTv = isTvDevice()
-                if (isTv) {
-                    startForeground(307, notification)
-                    Log.d("MediaPlayerService", "Started manual foreground service for TV")
-                }
-            } catch (e: Exception) {
-                Log.e("Service", "Failed to start foreground: ${e.message}")
-            }
-        } else {
-            notification = Notification.Builder(this)
-                .setSmallIcon(R.drawable.zaglushka_logo)
-                .setContentTitle("Myata Radio")
-                .setContentText("Playing in background")
-                .build()
-            try {
-                val isTv = isTvDevice()
-                if (isTv) {
-                    startForeground(307, notification)
-                }
-            } catch (e: Exception) {
-                Log.e("Service", "Failed to start foreground: ${e.message}")
-            }
-        }
-
-        Log.e("Service","Create")
+        Log.d("Service","Create")
         
         // Initialize WakeLock
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyataRadio::PlaybackWakeLock")
         wakeLock?.setReferenceCounted(false)
 
-        // Определяем тип устройства для оптимизации настроек
-        val isTv = isTvDevice()
+        // Определяем тип устройства для оптимизации плеера
+        isTv = isTvDevice()
         
         // Configure LoadControl - разные настройки для мобильных и TV
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
@@ -306,18 +298,10 @@ class MediaPlayerService(): Service(){
             .build()
 
         // Configure HttpDataSource - Use OkHttp to allow SSL bypass for legacy devices
-        val connectTimeout = if (isTv) 30000 else 15000
-        val readTimeout = if (isTv) 30000 else 15000
-        
-        // Use the unsafe client that trusts all certs
         val unsafeCallFactory = UnsafeNetModule.getUnsafeOkHttpClient()
         
         val httpDataSourceFactory = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(unsafeCallFactory)
             .setUserAgent(if (isTv) "MyataRadio/1.0 (Android TV)" else "MyataRadio/1.0 (Android)")
-            // .setAllowCrossProtocolRedirects(true) // OkHttp handles redirects automatically
-            // .setConnectTimeoutMs(connectTimeout) // Set in OkHttpClient builder
-            // .setReadTimeoutMs(readTimeout)       // Set in OkHttpClient builder
-            // .setKeepPostFor302Redirects(true) // Not supported/needed in OkHttpDataSource
 
         val dataSourceFactory = androidx.media3.datasource.DefaultDataSource.Factory(this, httpDataSourceFactory)
 
@@ -333,10 +317,8 @@ class MediaPlayerService(): Service(){
                     super.onIsPlayingChanged(isPlaying)
                     
                     val action = if(isPlaying) "play" else "pause"
-                    val intent = Intent(action).apply {
-                    }
                     LocalBroadcastManager.getInstance(this@MediaPlayerService)
-                        .sendBroadcast(intent)
+                        .sendBroadcast(Intent(action))
                     
                     // Update MediaSession playback state
                     updatePlaybackState(isPlaying)
@@ -350,15 +332,6 @@ class MediaPlayerService(): Service(){
                             Log.d("MediaPlayerService", "WakeLock acquired")
                         }
                     } else {
-                        // If buffering, we might want to keep it? 
-                        // But onIsPlayingChanged(false) usually means paused or buffering ended (if it was true)
-                        // Actually wait, onIsPlayingChanged is simpler than state change.
-                        
-                        // Check if we are incorrectly stopping polling during buffering?
-                        // If STATE_BUFFERING, isPlaying is false in ExoPlayer terms? No, depends.
-                        // "isPlaying" returns true if state is READY + playWhenReady=true OR buffering + playWhenReady=true.
-                        
-                        // So if isPlaying is false, we are truly paused or stopped (or error).
                         stopMetadataPolling()
                         
                         if (wakeLock?.isHeld == true) {
@@ -393,23 +366,18 @@ class MediaPlayerService(): Service(){
                     super.onPlayerError(error)
                     Log.e("MediaPlayerService", "Player Error: ${error.errorCodeName} (${error.errorCode})")
                     
-                    // Auto-retry on network errors or transient issues
+                    // Auto-retry logic remains same
                     if (error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
                         error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
                         error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ||
                         error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE ||
                         error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED) {
                         
-                        // На ВСЕХ устройствах: если HTTPS не сработал — пробуем HTTP fallback
-                        // Это спасает старые телефоны и проекторы с устаревшими корневыми сертификатами
                         if (!useHttpFallback) {
                             Log.d("MediaPlayerService", "HTTPS failed, switching to HTTP fallback...")
                             useHttpFallback = true
-                            
-                            // Broadcast buffering state to UI
                             LocalBroadcastManager.getInstance(this@MediaPlayerService).sendBroadcast(Intent("buffering"))
                             
-                            // Перезагружаем стрим с HTTP URL
                             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                                 if (stream.isNotEmpty()) {
                                     when(stream) {
@@ -422,7 +390,6 @@ class MediaPlayerService(): Service(){
                                 }
                             }, 1000)
                         } else {
-                            // Обычный retry (уже на HTTP или мобильное устройство)
                             Log.d("MediaPlayerService", "Network error, attempting to reconnect...")
                             LocalBroadcastManager.getInstance(this@MediaPlayerService).sendBroadcast(Intent("buffering"))
                             
@@ -434,99 +401,56 @@ class MediaPlayerService(): Service(){
                             }, 2000)
                         }
                     } else {
-                        // For other errors, broadcast pause so UI button resets
                         LocalBroadcastManager.getInstance(this@MediaPlayerService).sendBroadcast(Intent("pause"))
                     }
                 }
             })
         }
 
-        // Only create notification player for mobile devices (not TV)
-        if (!isTvDevice()) {
-            val notificationListener: PlayerNotificationManager.NotificationListener =
-                object : PlayerNotificationManager.NotificationListener {
+        // Note: isTv is already initialized in onCreate()
 
-                    override fun onNotificationCancelled(
-                        notificationId: Int,
-                        dismissedByUser: Boolean
-                    ) {
-                        Log.d("DISMISS","onNotificationCancelled dismissedByUser $dismissedByUser")
-                        stopSelf()
-                    }
+        val forwardingPlayer = object : ForwardingPlayer(exoPlayer) {
+            override fun pause() {
+                // Unified behavior for all platforms (Mobile & TV): 
+                // Pause acts as Stop to clear buffer and ensure live edge on resume
+                stop()
+                Log.d("MediaPlayerService", "Pause action: Stream stopped (buffer cleared) for radio edge")
+            }
 
-                    override fun onNotificationPosted(
-                        notificationId: Int,
-                        notification: Notification,
-                        ongoing: Boolean
-                    ) {
-                        if(ongoing){
-                            try {
-                                startForeground(notificationId, notification)
-                            } catch (e: Exception) {
-                                Log.e("Service", "Failed to update foreground: ${e.message}")
-                            }
-                        }
-                        else{
-                            stopForeground(false)
-                        }
-                    }
+            override fun play() {
+                // When resuming from pause, re-prepare to jump to live edge
+                // This handles both STATE_READY (paused) and STATE_IDLE (stopped) cases
+                if (playbackState == Player.STATE_READY && !playWhenReady) {
+                    Log.d("MediaPlayerService", "Resuming from pause: Re-preparing for live edge")
+                    prepare()
+                } else if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
+                    Log.d("MediaPlayerService", "Resuming from stop: Re-preparing stream")
+                    prepare()
                 }
+                super.play()
+            }
 
-            playerNotificationManager = PlayerNotificationManager.Builder(
-                this, 307, "307")
-                .setNotificationListener(notificationListener)
-                .setMediaDescriptionAdapter(mediaDescriptionAdapter)
-                .build()
-
-            playerNotificationManager!!.setPlayer(exoPlayer)
-            playerNotificationManager?.setUseStopAction(true)
-            
-            Log.d("MediaPlayerService", "Notification player created for mobile device")
-        } else {
-            Log.d("MediaPlayerService", "Skipping notification player for TV device")
+            override fun getAvailableCommands(): Player.Commands {
+                // Support both Pause and Stop for maximum system compatibility
+                return super.getAvailableCommands().buildUpon()
+                    .add(Player.COMMAND_STOP)
+                    .build()
+            }
         }
-        
-        // Initialize MediaSession for background metadata sync
-        initializeMediaSession()
-        
-        // Pre-warm not needed for iTunes
-        // serviceScope.launch { ... }
-        
-        super.onCreate()
+
+        // Initialize MediaSession (Media3 will handle notification based on this)
+        initializeMediaSession(forwardingPlayer)
     }
     
-    private fun initializeMediaSession() {
-        mediaSession = MediaSessionCompat(this, "MyataRadioSession").apply {
-            setFlags(
-                MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or
-                MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
-            )
-            
-            // Set callback for media button events
-            setCallback(object : MediaSessionCompat.Callback() {
-                override fun onPlay() {
-                    if (!exoPlayer.isPlaying) {
-                        exoPlayer.prepare()
-                        exoPlayer.play()
-                    }
-                }
-                
-                override fun onPause() {
-                    if (exoPlayer.isPlaying) {
-                        exoPlayer.pause()
-                    }
-                }
-                
-                override fun onStop() {
-                    exoPlayer.stop()
-                    exoPlayer.clearMediaItems()
-                }
-            })
-            
-            isActive = true
-        }
+    private fun initializeMediaSession(player: Player) {
+        mediaSession = MediaSession.Builder(this, player)
+            .setSessionActivity(PendingIntent.getActivity(
+                this, 0, Intent(this, MainActivity::class.java), 
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
+            ))
+            .build()
         
-        Log.d("MediaPlayerService", "MediaSession initialized")
+        Log.d("MediaPlayerService", "Media3 MediaSession initialized with Stop-as-Pause behavior")
     }
 
     private fun isTvDevice(): Boolean {
@@ -534,68 +458,34 @@ class MediaPlayerService(): Service(){
         if (uiModeManager.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION) {
             return true
         }
-        // Fallback: Check for touchscreen. If missing, treat as TV/Projector.
         return !packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_TOUCHSCREEN)
     }
 
-    private fun updateNotificationColor(stream: String) {
-        val color = when(stream) {
-            "myata" -> 0xFF5FD9B4.toInt()  // Mint green
-            "gold" -> 0xFF2FB56A.toInt()   // Green
-            "myata_hits" -> 0xFF1C4771.toInt()  // Blue
-            else -> 0xFF5FD9B4.toInt()
-        }
-        playerNotificationManager?.setColor(color)
-    }
-
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun createNotificationChannel(channelId: String, channelName: String): String{
-        val chan = NotificationChannel(channelId,
-            "Радио Мята Плеер", NotificationManager.IMPORTANCE_LOW)
-        chan.description = "Управление воспроизведением радио"
-        chan.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-        val service = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        service.createNotificationChannel(chan)
-        return channelId
-    }
-
     override fun onTaskRemoved(rootIntent: Intent?) {
-        // When user swipes app away from recents, stop playback and service
-        Log.d("MediaPlayerService", "Task removed, stopping playback and service")
-        
-        // Stop playback
-        if (exoPlayer.isPlaying) {
-            exoPlayer.stop()
-        }
-        
-        // Stop the service
-        stopSelf()
-        
+        // IMPORTANT: Do NOT stop playback when task is removed!
+        // This allows radio to continue playing when:
+        // - User swipes app from recents
+        // - System kills app in Doze mode
+        // - Phone goes to sleep while listening (the main user complaint!)
+        // 
+        // The foreground service with notification will keep running.
+        // User can stop playback via the notification controls.
+        Log.d("MediaPlayerService", "Task removed - keeping playback alive (foreground service continues)")
         super.onTaskRemoved(rootIntent)
     }
 
     override fun onDestroy() {
-        // Stop metadata polling
         metadataJob?.cancel()
         serviceScope.cancel()
         
-        // Release MediaSession
         mediaSession?.release()
         mediaSession = null
         
+        exoPlayer.release()
+        
         LocalBroadcastManager.getInstance(this@MediaPlayerService)
             .sendBroadcast(Intent("Dismiss").apply {})
-        playerNotificationManager?.setPlayer(null)
-        stopForeground(true)
-        stopSelf()
-        Log.e("Service","Stopped")
         
-        if (wakeLock?.isHeld == true) {
-            wakeLock?.release()
-        }
-        
-        exoPlayer.release()
         super.onDestroy()
     }
     
@@ -606,10 +496,15 @@ class MediaPlayerService(): Service(){
         metadataJob = serviceScope.launch {
             Log.d("MetadataPolling", "Starting metadata polling for stream: $stream")
             
+            // Fetch metadata IMMEDIATELY on start (don't wait for first loop iteration)
+            fetchMetadataAndGetDelay()
+            
             while (isActive && stream.isNotEmpty()) {
                 val delayMs = fetchMetadataAndGetDelay()
-                Log.d("MetadataPolling", "Next metadata update in ${delayMs / 1000} seconds")
-                delay(delayMs)
+                // Force minimum 10 seconds delay to prevent spamming notifications/system
+                val safeDelay = delayMs.coerceAtLeast(10000L)
+                Log.d("MetadataPolling", "Next metadata update in ${safeDelay / 1000} seconds")
+                delay(safeDelay)
             }
         }
     }
@@ -685,63 +580,84 @@ class MediaPlayerService(): Service(){
         }
     }
     
-    // Job for canceling previous art fetch operations
-    private var fetchJob: Job? = null
+    // fetchJob declared at class level (line 63)
 
     private fun updateMetadata(artist: String, song: String) {
         // Cancel any pending start fetch from previous track
         fetchJob?.cancel()
 
-        this.artist = artist
-        this.song = song
-        
-        Log.d("MetadataPolling", "Updating metadata: $artist - $song")
-        
-        // Reset current art to placeholder IMMEDIATELY to prevent STALE art
-        // This must happen before MediaSession updates or Notification invalidation
-        currentAlbumArt = getPlaceholderBitmap()
-        
-        val metadataBuilder = MediaMetadataCompat.Builder()
-            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
-            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, song)
-            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, song)
-            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, artist)
-            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, getStreamDisplayName())
-            
-        // Explicitly set the album art to buffer/placeholder to FORCE system to clear old art
-        if (currentAlbumArt != null) {
-            metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, currentAlbumArt)
+        // Deduplicate updates EXCEPT when we are force-clearing metadata on pause/stop
+        val isReset = artist.isBlank() && song.isBlank()
+        if (!isReset && this.artist == artist && this.song == song) {
+            Log.d("MetadataPolling", "Metadata unchanged, skipping update: $artist - $song")
+            return
         }
-            
-        val metadata = metadataBuilder.build()
-        
-        // Update MediaSession metadata immediately (without art)
-        // BLOCK FOR TV: Prevent ANY metadata from being sent to system to avoid Mini-Player display/crashes
-        if (!isTvDevice()) {
-            mediaSession?.setMetadata(metadata)
-        }
-        
-        // Also update playback state to "wake up" Android TV Media Hub
-        updatePlaybackState(exoPlayer.isPlaying)
 
-        // Update notification
-        playerNotificationManager?.invalidate()
+        // Use placeholders for empty metadata to keep UI clean
+        val finalArtist = if (artist.isBlank()) getString(R.string.slogan_placeholder) else artist
+        val finalSong = if (song.isBlank()) getString(R.string.brand_name) else song
+
+        // Fix: Don't overwrite valid metadata with empty strings during playback
+        if (artist.isBlank() && song.isBlank() && (this.artist.isNotBlank() || this.song.isNotBlank()) && exoPlayer.isPlaying) {
+             Log.d("MetadataPolling", "Ignoring empty metadata update during playback")
+             return
+        }
+
+        this.artist = finalArtist
+        this.song = finalSong
         
-        // Broadcast to UI
-        LocalBroadcastManager.getInstance(this).sendBroadcast(
-            Intent("metadata_update").apply {
-                putExtra("artist", artist)
-                putExtra("song", song)
-                putExtra("stream", stream)
-            }
-        )
+        // ONLY reset art and metadata if the track has ACTUALLY changed.
+        // This prevents flickering during simple polling cycles.
+        val trackChanged = artist != lastFetchedArtist || song != lastFetchedSong
         
-        // Async: Fetch and set album art from Spotify
+        if (trackChanged) {
+            Log.d("MetadataPolling", "Track changed, resetting art: $artist - $song")
+            currentAlbumArt = getPlaceholderBitmap()
+            currentAlbumArtUrl = null // Reset URL for new track
+            lastFetchedArtist = artist
+            lastFetchedSong = song
+            // Cancel any pending fetch for the previous track
+            fetchJob?.cancel()
+        } else {
+            Log.d("MetadataPolling", "Same track, keeping current art: $artist - $song")
+        }
+        
+        val metadataBuilder = MediaMetadata.Builder()
+            .setArtist(finalArtist)
+            .setTitle(finalSong)
+            .setDisplayTitle(finalSong)
+            .setSubtitle(finalArtist)
+            .setAlbumTitle(getStreamDisplayName())
+            
+        // Preserve current artwork URL if available to prevent flickering
+        currentAlbumArtUrl?.let {
+            metadataBuilder.setArtworkUri(android.net.Uri.parse(it))
+        }
+            
+        // Force Media3 metadata update
+        val metadata = metadataBuilder.build()
+        exoPlayer.currentMediaItem?.let {
+            val newItem = it.buildUpon().setMediaMetadata(metadata).build()
+            exoPlayer.replaceMediaItem(exoPlayer.currentMediaItemIndex, newItem)
+        }
+        
+        // Async: Fetch and set album art
         // We capture currentArtist/currentSong to avoid race conditions
         val currentArtist = artist
         val currentSong = song
         
         fetchJob = serviceScope.launch {
+            // Don't fetch artwork for placeholders/resets
+            if (currentArtist.isBlank() && currentSong.isBlank()) {
+                return@launch
+            }
+
+            // If it's the same track and we already have a real image, don't re-fetch!
+            if (!trackChanged && currentAlbumArt != null && currentAlbumArt != getPlaceholderBitmap()) {
+                Log.d("MetadataPolling", "Already have art for $artist - $song, skipping fetch.")
+                return@launch
+            }
+
             try {
                 val albumArtUrl = fetchAlbumArtUrl(currentArtist, currentSong)
                 val bitmap = if (albumArtUrl != null) {
@@ -760,15 +676,19 @@ class MediaPlayerService(): Service(){
                         updateMediaSessionWithArt(finalBitmap, currentArtist, currentSong)
                         Log.d("MetadataPolling", if (bitmap != null) "Album art set: $albumArtUrl" else "Using placeholder logo")
                         
-                        // Send broadcast with album art URL for UI
-                        LocalBroadcastManager.getInstance(this@MediaPlayerService).sendBroadcast(
-                            Intent("metadata_update").apply {
-                                putExtra("artist", artist)
-                                putExtra("song", song)
-                                putExtra("stream", stream)
-                                putExtra("albumArtUrl", albumArtUrl ?: "NO_IMAGE")
-                            }
-                        )
+                        // Update player metadata with art URL and bitmap
+                        val updatedMetadata = exoPlayer.mediaMetadata.buildUpon()
+                        if (albumArtUrl != null) {
+                            updatedMetadata.setArtworkUri(android.net.Uri.parse(albumArtUrl))
+                        }
+                        
+                        currentAlbumArtUrl = albumArtUrl // Persist the URL
+                        val metadata = updatedMetadata.build()
+                        exoPlayer.currentMediaItem?.let {
+                            val newItem = it.buildUpon().setMediaMetadata(metadata).build()
+                            exoPlayer.replaceMediaItem(exoPlayer.currentMediaItemIndex, newItem)
+                        }
+                        Log.d("MetadataPolling", "Updated player metadata with art URL")
                     } else {
                         Log.d("MetadataPolling", "Track changed, skipping art update for: $currentArtist - $currentSong")
                     }
@@ -795,23 +715,7 @@ class MediaPlayerService(): Service(){
     }
     
     private fun updatePlaybackState(isPlaying: Boolean) {
-        val state = if (isPlaying) {
-            PlaybackStateCompat.STATE_PLAYING
-        } else {
-            PlaybackStateCompat.STATE_PAUSED
-        }
-        
-        val playbackState = PlaybackStateCompat.Builder()
-            .setState(state, 0, 1.0f)
-            .setActions(
-                PlaybackStateCompat.ACTION_PLAY or
-                PlaybackStateCompat.ACTION_PAUSE or
-                PlaybackStateCompat.ACTION_PLAY_PAUSE or
-                PlaybackStateCompat.ACTION_STOP
-            )
-            .build()
-        
-        mediaSession?.setPlaybackState(playbackState)
+        // Handled automatically by Media3 Session
     }
     
     private fun getStreamDisplayName(): String {
@@ -823,302 +727,38 @@ class MediaPlayerService(): Service(){
         }
     }
     
-    // ============== SPOTIFY API FOR ALBUM ART ==============
+    // ============== ARTWORK FETCHING (Delegated to ArtworkRepository) ==============
     
-    // Removed getSpotifyAccessToken as iTunes API does not require authentication
-
     private suspend fun fetchAlbumArtUrl(artist: String, track: String): String? {
-        val cleanArtist = getCleanArtistName(artist)
-        // Remove (...) and [...] content, and standalone "RMX"/"REMIX"
-        val cleanTrack = track
-            .replace(Regex("\\(.*?\\)|\\[.*?\\]"), "")
-            .replace(Regex("(?i)\\b(RMX|REMIX)\\b"), "")
-            .trim()
-        
-        var resultUrl: String? = null
-        
-        try {
-            // Stage 1: Clean Artist (replace & with space) + Clean Track
-            // Replacing & with space allows matching "Artist A & Artist B" with "Artist A featuring Artist B"
-            val queryArtist = cleanArtist.replace("&", " ")
-            val query1 = "$queryArtist $cleanTrack"
-            Log.d("iTunes", "Service: Stage 1: $query1")
-            
-            resultUrl = executeItunesSearch(query1, cleanArtist, cleanTrack)
-            
-            if (resultUrl == null) {
-                // Stage 2: Full Artist + Clean Track
-                if (artist != cleanArtist) {
-                    val query2 = "$artist $cleanTrack"
-                    Log.d("iTunes", "Service: Stage 2: $query2")
-                    // Use FULL artist for validation to enable fuzzy matching overlap
-                    resultUrl = executeItunesSearch(query2, artist, cleanTrack)
-                }
-            }
-            
-            if (resultUrl == null) {
-                // Stage 3: Track Name Only (Fallback for compilations or strictly mismatched artists)
-                // Use with caution: require longer track name to avoid noise
-                if (cleanTrack.length >= 4) {
-                    val query3 = cleanTrack
-                    Log.d("iTunes", "Service: Stage 3 (Track only): $query3")
-                    // Validate against FULL artist
-                    resultUrl = executeItunesSearch(query3, artist, cleanTrack)
-                }
-            }
-            
-        } catch (e: Exception) {
-            Log.e("iTunes", "Service: Search error", e)
-        }
-        
-        // DEEZER FALLBACK (Artist Image)
-        if (resultUrl == null) {
-            Log.d("Service_Art", "No album art found, trying Deezer for Artist Image...")
-            resultUrl = fetchArtistImageFromDeezer(cleanArtist)
-            if (resultUrl != null) {
-                Log.d("Service_Art", "Found artist image via Deezer: $resultUrl")
-            }
-        }
-        
-        // LAST.FM FALLBACK (Scrape)
-        if (resultUrl == null) {
-             Log.d("Service_Art", "Deezer failed/blocked. Trying Last.fm scrape...")
-             resultUrl = fetchArtistImageFromLastFm(cleanArtist)
-             if (resultUrl != null) {
-                 Log.d("Service_Art", "Found artist image via Last.fm: $resultUrl")
-             }
-        }
-        
-        return resultUrl
+        return artworkRepository.fetchArtwork(artist, track).coverUrl
     }
     
-    // Using simple HTTP request for Deezer to avoid adding SDK
-    private fun fetchArtistImageFromDeezer(artist: String): String? {
-        try {
-            val encodedTerm = java.net.URLEncoder.encode(artist, "UTF-8")
-            val url = "https://api.deezer.com/search/artist?q=$encodedTerm"
-            
-            val request = Request.Builder()
-                .url(url)
-                .header("User-Agent", "MyataRadio/1.0") // Good practice
-                .build()
-            
-            httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return null
-                
-                val bodyContent = response.body?.string() ?: return null
-                val json = Gson().fromJson(bodyContent, Map::class.java)
-                val data = json["data"] as? List<Map<String, Any>>
-                
-                if (!data.isNullOrEmpty()) {
-                    val simpleExpected = simplifyString(artist)
-                    
-                    for (item in data) {
-                        val name = item["name"] as? String ?: continue
-                        if (simplifyString(name) == simpleExpected) {
-                            // Return biggest picture BUT verify it's not a placeholder
-                            val pic = item["picture_xl"] as? String ?: item["picture_big"] as? String
-                            
-                            // Deezer placeholder URL usually has double slash: .../images/artist//...
-                            if (pic != null && !pic.contains("/artist//")) {
-                                return pic
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("Deezer_Search", "Service Error: ${e.message}")
-        }
-        return null
-    }
-
-    private fun fetchArtistImageFromLastFm(artist: String): String? {
-        try {
-            val finalArtist = java.net.URLEncoder.encode(artist, "UTF-8")
-            val url = "https://www.last.fm/music/$finalArtist"
-            
-            val request = Request.Builder()
-                .url(url)
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-                .build()
-                
-            httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return null
-                val html = response.body?.string() ?: return null
-                
-                val regex = Regex("property=[\"']og:image[\"']\\s+content=[\"']([^\"']+)[\"']|content=[\"']([^\"']+)[\"']\\s+property=[\"']og:image[\"']")
-                val match = regex.find(html)
-                
-                if (match != null) {
-                   val url1 = match.groups[1]?.value
-                   val url2 = match.groups[2]?.value
-                   val result = url1 ?: url2
-                   
-                   if (result != null && !result.contains("default_artist") && !result.contains("star_")) {
-                       return result
-                   }
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("Service_LastFM", "Error: ${e.message}")
-        }
-        return null
-    }
-
-
-
-    private fun isFuzzyMatch(text1: String, text2: String): Boolean {
-        // Stop words (english + common music connectors)
-        val stopWords = setOf("the", "a", "an", "and", "or", "of", "feat", "ft", "vs", "featuring", "presents", "pres", "with", "&")
-        
-        fun getTokens(text: String): Set<String> {
-             return text.lowercase()
-                .split(Regex("[\\s\\p{Punct}]+")) // Split by whitespace and punctuation
-                .filter { it.length > 1 && !stopWords.contains(it) }
-                .toSet()
-        }
-
-        val tokens1 = getTokens(text1)
-        val tokens2 = getTokens(text2)
-
-        if (tokens1.isEmpty() || tokens2.isEmpty()) return false
-
-        val intersection = tokens1.intersect(tokens2)
-        
-        val ratio1 = intersection.size.toDouble() / tokens1.size
-        val ratio2 = intersection.size.toDouble() / tokens2.size
-        
-        // Threshold 0.66 implies 2/3 match, or 100% if distinct tokens are small
-        return ratio1 >= 0.66 || ratio2 >= 0.66
-    }
-
-    private fun executeItunesSearch(term: String, expectedArtist: String, expectedTrack: String): String? {
-        val encodedTerm = java.net.URLEncoder.encode(term, "UTF-8")
-        // Increase limit to 20 to find tracks hidden in compilations
-        val url = "https://itunes.apple.com/search?term=$encodedTerm&media=music&entity=song&limit=20"
-        
-        val request = Request.Builder().url(url).build()
-        
-        return httpClient.newCall(request).execute().use { response ->
-            if (response.isSuccessful) {
-                val bodyContent = response.body?.string() ?: return@use null
-                val json = Gson().fromJson(bodyContent, Map::class.java)
-                val results = json["results"] as? List<Map<String, Any>>
-                
-                if (!results.isNullOrEmpty()) {
-                    val simpleExpectedArtist = simplifyString(expectedArtist)
-                    val simpleExpectedTrack = simplifyString(expectedTrack)
-                    
-                    val validMatches = mutableListOf<Map<String, Any>>()
-                    
-                    for (item in results) {
-                        val trackName = item["trackName"] as? String // Using "trackName" property from iTunes JSON
-                        val artistName = item["artistName"] as? String
-                        val artworkUrl = item["artworkUrl100"] as? String 
-                        
-                        if (trackName != null && artistName != null && artworkUrl != null) {
-                             // Validation
-                            val simpleArtistName = simplifyString(artistName)
-                            val simpleTrackName = simplifyString(trackName)
-                            
-                            // IMPROVED VALIDATION: Fuzzy Token Match
-                            val matchArtist = isFuzzyMatch(simpleArtistName, simpleExpectedArtist) ||
-                                              isWordMatch(simpleArtistName, simpleExpectedArtist) || 
-                                              isWordMatch(simpleExpectedArtist, simpleArtistName) ||
-                                              isWordMatch(simpleTrackName, simpleExpectedArtist)
-                                              
-                            val matchTrack = isWordMatch(simpleTrackName, simpleExpectedTrack)
-                            
-                            if (matchArtist && matchTrack) {
-                                validMatches.add(item)
-                            }
-                        }
-                    }
-                    
-                    if (validMatches.isNotEmpty()) {
-                        // Priority Sort
-                        val bestMatch = validMatches.maxByOrNull { item ->
-                            val collectionName = item["collectionName"] as? String ?: ""
-                            calculateAlbumPriority(collectionName)
-                        }
-                        return@use bestMatch?.get("artworkUrl100")?.toString()?.replace("100x100bb", "600x600bb")
-                    }
-                    null
-                } else null
-            } else null
-        }
-    }
-
-    private fun calculateAlbumPriority(collectionName: String): Int {
-        val lowerName = collectionName.lowercase()
-        if (lowerName.contains("greatest hits") || 
-            lowerName.contains("best of") || 
-            lowerName.contains("essential") || 
-            lowerName.contains("anthology") ||
-            lowerName.contains("collection") || 
-            lowerName.contains("compilation")) {
-            return 0 
-        }
-        return 1 
-    }
-
-    private fun isWordMatch(text: String, word: String): Boolean {
-        if (word.isEmpty()) return true
-        return try {
-             val pattern = "\\b${java.util.regex.Pattern.quote(word)}\\b".toRegex()
-             pattern.containsMatchIn(text)
-        } catch (e: Exception) {
-             text.contains(word)
-        }
-    }
-
-    private fun simplifyString(input: String): String {
-        val nfd = java.text.Normalizer.normalize(input, java.text.Normalizer.Form.NFD)
-        val pattern = java.util.regex.Pattern.compile("\\p{InCombiningDiacriticalMarks}+")
-        var clean = pattern.matcher(nfd).replaceAll("")
-        
-        clean = clean.replace("Ø", "O", ignoreCase = true)
-                     .replace("ø", "o", ignoreCase = true)
-                     .replace("Æ", "AE", ignoreCase = true)
-                     .replace("æ", "ae", ignoreCase = true)
-        
-        // Remove connectors
-        val connectors = Regex("(?i)\\b(feat\\.|ft\\.|vs\\.|feat|ft|vs|and|featuring|presents|pres\\.)\\b|&")
-        clean = connectors.replace(clean, " ")
-        
-        clean = clean.replace(Regex("[^a-zA-Z0-9]"), " ").lowercase()
-        return clean.replace(Regex("\\s+"), " ").trim()
-    }
+    // ============== BITMAP LOADING ==============
     
     private suspend fun loadAlbumArtBitmap(imageUrl: String): Bitmap? {
         return withContext(Dispatchers.IO) {
             try {
-                // Using shared httpClient to avoid Picasso's potential SSL issues
                 val request = Request.Builder().url(imageUrl).build()
                 httpClient.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) {
-                        Log.e("Spotify", "Service: Failed to download bitmap: ${response.code}")
+                        Log.e("Service", "Failed to download bitmap: ${response.code}")
                         return@use null
                     }
                     val bytes = response.body?.bytes() ?: return@use null
                     
-                    // Decode bounds only first
                     val options = android.graphics.BitmapFactory.Options()
                     options.inJustDecodeBounds = true
                     android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
                     
-                    // Calculate inSampleSize
                     val reqWidth = 300
                     val reqHeight = 300
                     options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
                     
-                    // Decode with scaling
                     options.inJustDecodeBounds = false
                     android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
                 }
             } catch (e: Exception) {
-                Log.e("Spotify", "Service: Error loading bitmap: ${e.message}")
+                Log.e("Service", "Error loading bitmap: ${e.message}")
                 null
             }
         }
@@ -1139,49 +779,8 @@ class MediaPlayerService(): Service(){
         return inSampleSize
     }
     
-    private fun getCleanArtistName(artist: String): String {
-        // Remove feat./ft./vs. parts and secondary artists (after comma)
-        // BUT keep & as part of band name (e.g., "FITZ & THE TANTRUMS")
-        return artist
-            .split(Regex("[,]|feat\\.|ft\\.|vs\\.|Feat\\.|Ft\\.|Vs\\.|FT\\.|FEAT\\.|VS\\.|featuring|Featuring", RegexOption.IGNORE_CASE))[0]
-            .replace(Regex("\\(.*?\\)"), "")
-            .trim()
-    }
-    
     private fun updateMediaSessionWithArt(bitmap: Bitmap?, currentArtist: String, currentSong: String) {
-        val metadata = MediaMetadataCompat.Builder()
-            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, currentArtist)
-            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentSong)
-            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, currentSong)
-            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, currentArtist)
-            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, getStreamDisplayName())
-        
-        // Optimize for IPC limits (TransactionTooLargeException)
-        // 1. Notification gets the full 300x300 bitmap (via currentAlbumArt)
         currentAlbumArt = bitmap
-
-        // 2. MediaSession (Bluetooth/Lockscreen) gets a smaller scaled version
-        // This is crucial because MediaMetadata is sent to all controllers
-        // BUT for TV devices, we skip this to prevent any "Mini Player" like crashes/artifacts if requested
-        if (bitmap != null && !isTvDevice()) {
-            try {
-                // Scale down to 144x144 for metadata - sufficient for car displays/watches
-                val scaledForMetadata = Bitmap.createScaledBitmap(bitmap, 144, 144, true)
-                metadata.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, scaledForMetadata)
-                // Do NOT set ALBUM_ART key to save space (ART is preferred by modern Android)
-                // metadata.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, scaled)
-            } catch (e: Exception) {
-                Log.w("MediaPlayerService", "Failed to scale bitmap for metadata: ${e.message}")
-                // Fallback: don't set bitmap in metadata if scaling fails
-            }
-        }
-        
-        // BLOCK FOR TV: Prevent ANY metadata from being sent to system
-        if (!isTvDevice()) {
-            mediaSession?.setMetadata(metadata.build())
-        }
-        
-        // Update notification
-        playerNotificationManager?.invalidate()
+        // Notification is automatically updated by Media3 when metadata changes
     }
 }

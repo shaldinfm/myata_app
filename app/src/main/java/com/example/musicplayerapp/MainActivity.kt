@@ -40,9 +40,13 @@ class MainActivity : AppCompatActivity() {
             }
             
             // Navigate to player tab if not already there
-            val navController = findNavController(R.id.navHostFragment)
-            if (navController.currentDestination?.id != R.id.player) {
-                navController.navigate(R.id.player)
+            val navHostFragment = supportFragmentManager.findFragmentById(R.id.navHostFragment) as? androidx.navigation.fragment.NavHostFragment
+            val navController = navHostFragment?.navController
+            
+            if (navController != null) {
+                if (navController.currentDestination?.id != R.id.player) {
+                    navController.navigate(R.id.player)
+                }
             }
         }
     }
@@ -104,38 +108,23 @@ class MainActivity : AppCompatActivity() {
         }
 
         viewModel.currentFragmentLiveData.observe(this, Observer {
+            // Reset all buttons to inactive color
+            val inactiveColor = Color.parseColor("#67686D")
+            val activeColor = Color.parseColor("#FFFFFF")
+            
+            binding.infoBtn.setColorFilter(inactiveColor)
+            binding.donateBtn.setColorFilter(inactiveColor)
+            binding.homeBtn.setColorFilter(inactiveColor)
+            binding.playerBtn.setColorFilter(inactiveColor)
+            binding.favoritesBtn.setColorFilter(inactiveColor)
+            
+            // Set active button
             when(it){
-                null->{
-                    binding.infoBtn.setColorFilter(Color.parseColor("#67686D"))
-                    binding.donateBtn.setColorFilter(Color.parseColor("#67686D"))
-                    binding.homeBtn.setColorFilter(Color.parseColor("#67686D"))
-                    binding.playerBtn.setColorFilter(Color.parseColor("#67686D"))
-                }
-                "main"->{
-                    binding.infoBtn.setColorFilter(Color.parseColor("#67686D"))
-                    binding.donateBtn.setColorFilter(Color.parseColor("#67686D"))
-                    binding.homeBtn.setColorFilter(Color.parseColor("#FFFFFF"))
-                    binding.playerBtn.setColorFilter(Color.parseColor("#67686D"))
-                }
-                "player"->{
-                    binding.infoBtn.setColorFilter(Color.parseColor("#67686D"))
-                    binding.donateBtn.setColorFilter(Color.parseColor("#67686D"))
-                    binding.homeBtn.setColorFilter(Color.parseColor("#67686D"))
-                    binding.playerBtn.setColorFilter(Color.parseColor("#FFFFFF"))
-                    // binding code commented out
-                }
-                "donate"->{
-                    binding.infoBtn.setColorFilter(Color.parseColor("#67686D"))
-                    binding.donateBtn.setColorFilter(Color.parseColor("#FFFFFF"))
-                    binding.homeBtn.setColorFilter(Color.parseColor("#67686D"))
-                    binding.playerBtn.setColorFilter(Color.parseColor("#67686D"))
-                }
-                "info"->{
-                    binding.donateBtn.setColorFilter(Color.parseColor("#67686D"))
-                    binding.infoBtn.setColorFilter(Color.parseColor("#FFFFFF"))
-                    binding.homeBtn.setColorFilter(Color.parseColor("#67686D"))
-                    binding.playerBtn.setColorFilter(Color.parseColor("#67686D"))
-                }
+                "main" -> binding.homeBtn.setColorFilter(activeColor)
+                "player" -> binding.playerBtn.setColorFilter(activeColor)
+                "donate" -> binding.donateBtn.setColorFilter(activeColor)
+                "info" -> binding.infoBtn.setColorFilter(activeColor)
+                "favorites" -> binding.favoritesBtn.setColorFilter(activeColor)
             }
         })
 
@@ -151,18 +140,42 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Centralized Navigation Handling
+        // Centralized Navigation Handling with proper back stack management
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.navHostFragment) as androidx.navigation.fragment.NavHostFragment
+        val navController = navHostFragment.navController
+        
+        val navOptions = androidx.navigation.NavOptions.Builder()
+            .setPopUpTo(R.id.home, false) // Pop up to home, but don't pop home itself
+            .setLaunchSingleTop(true)     // Don't create multiple instances of the same fragment
+            .setEnterAnim(R.anim.fade_in)
+            .setExitAnim(R.anim.fade_out)
+            .build()
+            
         binding.homeBtn.setOnClickListener {
-            findNavController(R.id.navHostFragment).navigate(R.id.home)
+            // When going home, pop everything else off the stack
+            if (navController.currentDestination?.id != R.id.home) {
+                navController.popBackStack(R.id.home, false)
+            }
         }
         binding.infoBtn.setOnClickListener {
-            findNavController(R.id.navHostFragment).navigate(R.id.info)
+            if (navController.currentDestination?.id != R.id.info) {
+                navController.navigate(R.id.info, null, navOptions)
+            }
         }
         binding.donateBtn.setOnClickListener {
-            findNavController(R.id.navHostFragment).navigate(R.id.donate)
+            if (navController.currentDestination?.id != R.id.donate) {
+                navController.navigate(R.id.donate, null, navOptions)
+            }
         }
         binding.playerBtn.setOnClickListener {
-            findNavController(R.id.navHostFragment).navigate(R.id.player)
+            if (navController.currentDestination?.id != R.id.player) {
+                navController.navigate(R.id.player, null, navOptions)
+            }
+        }
+        binding.favoritesBtn.setOnClickListener {
+            if (navController.currentDestination?.id != R.id.favorites) {
+                navController.navigate(R.id.favorites, null, navOptions)
+            }
         }
     }
 

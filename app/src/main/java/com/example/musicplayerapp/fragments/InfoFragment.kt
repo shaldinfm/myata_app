@@ -14,6 +14,12 @@ import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.StreamsViewModel
 import com.example.musicplayerapp.databinding.FragmentInfoBinding
+import android.text.Spannable
+import android.text.SpannableStringBuilder
+import android.text.TextPaint
+import android.text.style.MetricAffectingSpan
+import android.graphics.Typeface
+import androidx.core.content.res.ResourcesCompat
 
 class InfoFragment : Fragment() {
 
@@ -58,7 +64,7 @@ class InfoFragment : Fragment() {
             intent.setData(Uri.parse("https://boosty.to/myata"))
             startActivity(intent)
         }
-        binding.vk.setOnClickListener{
+        binding.tiktok.setOnClickListener{
             val intent = Intent(Intent.ACTION_VIEW)
             intent.addCategory(Intent.CATEGORY_BROWSABLE)
             intent.setData(Uri.parse("https://www.tiktok.com/@radio_myata"))
@@ -89,6 +95,36 @@ class InfoFragment : Fragment() {
             startActivity(intent)
         }
 
+        // Highlight GOLD and XTRA in description
+        val descriptionText = binding.description.text.toString()
+        val spannable = SpannableStringBuilder(descriptionText)
+        val mullerBlack = ResourcesCompat.getFont(requireContext(), R.font.mullerblack)
+        
+        mullerBlack?.let { typeface ->
+            // Highlight GOLD
+            val goldIndex = descriptionText.indexOf("GOLD")
+            if (goldIndex != -1) {
+                spannable.setSpan(
+                    CustomTypefaceSpan(typeface),
+                    goldIndex,
+                    goldIndex + 4,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+            
+            // Highlight XTRA
+            val xtraIndex = descriptionText.indexOf("XTRA")
+            if (xtraIndex != -1) {
+                spannable.setSpan(
+                    CustomTypefaceSpan(typeface),
+                    xtraIndex,
+                    xtraIndex + 4,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+        }
+        binding.description.text = spannable
+
 
         vm.isInSplitMode.observe(viewLifecycleOwner, Observer {
             if(it){
@@ -111,5 +147,15 @@ class InfoFragment : Fragment() {
     override fun onResume() {
         vm.currentFragmentLiveData.value = "info"
         super.onResume()
+    }
+
+    // Helper span for custom typefaces on older Android versions
+    class CustomTypefaceSpan(private val typeface: Typeface) : MetricAffectingSpan() {
+        override fun updateDrawState(ds: TextPaint) {
+            ds.typeface = typeface
+        }
+        override fun updateMeasureState(paint: TextPaint) {
+            paint.typeface = typeface
+        }
     }
 }

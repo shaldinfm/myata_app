@@ -19,6 +19,7 @@ import com.example.musicplayerapp.StreamsViewModel
 import com.example.musicplayerapp.adapters.PlaylistAdapter
 import com.example.musicplayerapp.databinding.FragmentMainBinding
 import com.example.musicplayerapp.service.MediaPlayerService
+import com.example.musicplayerapp.utils.ServiceUtils
 
 
 class MainFragment : Fragment() {
@@ -62,54 +63,21 @@ class MainFragment : Fragment() {
         // Navigation listeners are now handled in MainActivity
 
         binding.myataStreamBanner.setOnClickListener {
-            // Check if already playing this stream to avoid infinite spinner
-            if (vm.currentStreamLive.value != "myata" || vm.isPlaying.value != true) {
-                vm.isBuffering.value = true
-            }
-            
-            vm.currentStreamLive.value = "myata"
-            vm.triggerMetadataUpdate()
-            (activity as MainActivity).startService(
-                Intent(context, MediaPlayerService::class.java).also {
-                    it.putExtra("STREAM", "myata")
-                    it.putExtra("ACTION", "play")
-                })
+            vm.switchStream("myata")
             findNavController().navigate(R.id.player, Bundle().apply {
                 putInt(CURRENT_ITEM, 0)
             })
         }
 
         binding.goldStreamBanner.setOnClickListener {
-            // Check if already playing this stream
-            if (vm.currentStreamLive.value != "gold" || vm.isPlaying.value != true) {
-                 vm.isBuffering.value = true
-            }
-
-            vm.currentStreamLive.value = "gold"
-            vm.triggerMetadataUpdate()
-            (activity as MainActivity).startService(
-                Intent(context, MediaPlayerService::class.java).also {
-                    it.putExtra("STREAM", "gold")
-                    it.putExtra("ACTION", "play")
-                })
+            vm.switchStream("gold")
             findNavController().navigate(R.id.player, Bundle().apply {
                 putInt(CURRENT_ITEM, 1)
             })
         }
 
         binding.xtraStreamBanner.setOnClickListener {
-            // Check if already playing this stream
-            if (vm.currentStreamLive.value != "myata_hits" || vm.isPlaying.value != true) {
-                 vm.isBuffering.value = true
-            }
-
-            vm.currentStreamLive.value = "myata_hits"
-            vm.triggerMetadataUpdate()
-            (activity as MainActivity).startService(
-                Intent(context, MediaPlayerService::class.java).also {
-                    it.putExtra("STREAM", "myata_hits")
-                    it.putExtra("ACTION", "play")
-                })
+            vm.switchStream("myata_hits")
             findNavController().navigate(R.id.player, Bundle().apply {
                 putInt(CURRENT_ITEM, 2)
             })
@@ -138,9 +106,7 @@ class MainFragment : Fragment() {
             binding.playlistString.visibility = View.VISIBLE
         }
         
-        // Force refresh of player status (including metadata) when returning to foreground
-        // This fixes the issue where TV home screen idle time makes UI stale
-        vm.refreshPlayerStatus()
+        // MediaController automatically syncs state when re-connected
 
         super.onResume()
     }
@@ -150,7 +116,16 @@ class MainFragment : Fragment() {
         val intent = Intent(Intent.ACTION_VIEW)
         intent.addCategory(Intent.CATEGORY_BROWSABLE)
         intent.setData(Uri.parse(vm.playlistList.value!![position].uri))
-        startActivity(intent)
+        try {
+            startActivity(intent)
+        } catch (e: android.content.ActivityNotFoundException) {
+            // No browser installed on this device (common on Android TV/projectors)
+            android.widget.Toast.makeText(
+                requireContext(),
+                "Не удалось открыть ссылку",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
 }

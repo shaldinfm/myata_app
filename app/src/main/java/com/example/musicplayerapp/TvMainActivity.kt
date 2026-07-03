@@ -9,7 +9,9 @@ import androidx.activity.viewModels
 class TvMainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityTvMainBinding
-    private val vm: StreamsViewModel by viewModels()
+    private val vm: StreamsViewModel by viewModels {
+        StreamsViewModelFactory(application, this)
+    }
     private var isExitDialogShowing = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -133,9 +135,11 @@ class TvMainActivity : AppCompatActivity() {
             .setTitle("Выход")
             .setMessage("Что вы хотите сделать?")
             .setPositiveButton("Закрыть") { _, _ ->
-                val intent = android.content.Intent(this, com.example.musicplayerapp.service.MediaPlayerService::class.java)
-                stopService(intent)
-                finish()
+                val intent = android.content.Intent(this, com.example.musicplayerapp.service.MediaPlayerService::class.java).apply {
+                    putExtra("ACTION", "stop")
+                }
+                startService(intent)
+                finishAffinity()
             }
             .setNeutralButton("Свернуть") { _, _ ->
                 isExitDialogShowing = false

@@ -11,19 +11,25 @@ import android.view.ViewGroup
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.fragment.findNavController
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.StreamsViewModel
+import com.example.musicplayerapp.data.PlayerState
 import com.example.musicplayerapp.databinding.FragmentMyataStreamBinding
 import com.example.musicplayerapp.service.MediaPlayerService
+import com.example.musicplayerapp.utils.ServiceUtils
 import com.squareup.picasso.Picasso
 import jp.wasabeef.picasso.transformations.CropCircleTransformation
 import android.content.ClipboardManager
 import android.content.ClipData
 import android.content.Context
 import android.widget.Toast
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 
 const val STREAM = "myata"
@@ -55,6 +61,9 @@ class MyataStreamFragment() : Fragment() {
             inflater,
             R.layout.fragment_myata_stream, container, false
         )
+        
+        // Initialize FavoritesViewModel (No longer needed here for toggle, but maybe for history?)
+        //favoritesViewModel = ViewModelProvider(this)[FavoritesViewModel::class.java]
 
         // Handle window insets for safe area
         if (vm.cachedTopInset != null) {
@@ -113,7 +122,7 @@ class MyataStreamFragment() : Fragment() {
 
         when(stream){
             "myata"->{
-                binding.backgroundImage.setImageResource(R.drawable.myata_bg)
+                binding.backgroundImage.setImageResource(R.drawable.myata_bg_new)
                 binding.loadingSpinner.indeterminateTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#00E5FF"))
                 vm.currentMyataState.observe(viewLifecycleOwner, Observer {
                     if (it != null) {
@@ -122,7 +131,7 @@ class MyataStreamFragment() : Fragment() {
                 })
             }
             "gold"-> {
-                binding.backgroundImage.setImageResource(R.drawable.gold_bg)
+                binding.backgroundImage.setImageResource(R.drawable.gold_bg_new)
                 binding.loadingSpinner.indeterminateTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#FFFF00"))
                 vm.currentGoldState.observe(viewLifecycleOwner, Observer {
                     if (it != null) {
@@ -131,7 +140,7 @@ class MyataStreamFragment() : Fragment() {
                 })
             }
             "myata_hits"->{
-                binding.backgroundImage.setImageResource(R.drawable.xtra_bg)
+                binding.backgroundImage.setImageResource(R.drawable.xtra_bg_new)
                 binding.loadingSpinner.indeterminateTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#FFCCFF"))
                 vm.currentXtraState.observe(viewLifecycleOwner, Observer {
                     if (it != null) {
@@ -142,35 +151,7 @@ class MyataStreamFragment() : Fragment() {
         }
 
         binding.btnPlay.setOnClickListener {
-            // Show loading spinner only when starting playback, not when pausing
-            if (vm.isPlaying.value == false) {
-                vm.isBuffering.value = true
-            }
-            
-            vm.ifNeedToListenReciever = true
-            (activity as MainActivity).startService(
-                Intent(
-                    context,
-                    MediaPlayerService::class.java
-                ).also {
-                    it.putExtra("STREAM", vm.currentStreamLive.value)
-                    it.putExtra("ACTION", "startStop")
-                    // Include current track metadata for notification
-                    when(vm.currentStreamLive.value) {
-                        "myata" -> {
-                            it.putExtra("SONG", vm.currentMyataState.value?.song ?: "Radio Myata")
-                            it.putExtra("ARTIST", vm.currentMyataState.value?.artist ?: "You are listening to")
-                        }
-                        "gold" -> {
-                            it.putExtra("SONG", vm.currentGoldState.value?.song ?: "Radio Myata")
-                            it.putExtra("ARTIST", vm.currentGoldState.value?.artist ?: "You are listening to")
-                        }
-                        "myata_hits" -> {
-                            it.putExtra("SONG", vm.currentXtraState.value?.song ?: "Radio Myata")
-                            it.putExtra("ARTIST", vm.currentXtraState.value?.artist ?: "You are listening to")
-                        }
-                    }
-                })
+            vm.togglePlayPause()
         }
 
         vm.isInSplitMode.observe(viewLifecycleOwner, Observer {
@@ -180,7 +161,7 @@ class MyataStreamFragment() : Fragment() {
             }
         })
 
-        // Remove previous sync fix as it is handled by the improved observer logic below
+        // Remove previous sync fix as it is handled by the improved observer
         
         vm.currentStreamLive.observe(viewLifecycleOwner, Observer {
             
@@ -190,54 +171,79 @@ class MyataStreamFragment() : Fragment() {
             }
             vm.lastObservedStream = it
 
-            var intent = Intent()
-            intent.setAction("switch_track")
             when(it){
                 "myata"->{
-                    intent.putExtra("artist",vm.currentMyataState.value?.artist)
-                    intent.putExtra("song",vm.currentMyataState.value?.song)
                     if(vm.isPlaying.value == false)
                         binding.btnPlay.setImageResource(R.drawable.btn_play)
                     else
                         binding.btnPlay.setImageResource(R.drawable.pause_btn)
-                    binding.mainAuthor.setTextColor(Color.parseColor("#00E5FF"))
+                    
+                    val color = Color.parseColor("#00E5FF")
+                    binding.mainAuthor.setTextColor(color)
+                    binding.btnFavorite.setColorFilter(color)
+                    binding.btnHistory.setColorFilter(color)
                 }
                 "gold"->{
-                    intent.putExtra("artist",vm.currentGoldState.value?.artist)
-                    intent.putExtra("song",vm.currentGoldState.value?.song)
                     if(vm.isPlaying.value == false)
                         binding.btnPlay.setImageResource(R.drawable.btn_play_yellow)
                     else
                         binding.btnPlay.setImageResource(R.drawable.pause_btn_yellow)
-                    binding.mainAuthor.setTextColor(Color.parseColor("#FFFF00"))
+                    
+                    val color = Color.parseColor("#FFFF00")
+                    binding.mainAuthor.setTextColor(color)
+                    binding.btnFavorite.setColorFilter(color)
+                    binding.btnHistory.setColorFilter(color)
                 }
                 "myata_hits"->{
-                    intent.putExtra("artist",vm.currentXtraState.value?.artist)
-                    intent.putExtra("song",vm.currentXtraState.value?.song)
                     if(vm.isPlaying.value == false)
                         binding.btnPlay.setImageResource(R.drawable.btn_play_pink)
                     else
                         binding.btnPlay.setImageResource(R.drawable.pause_btn_pink)
-                    binding.mainAuthor.setTextColor(Color.parseColor("#FFCCFF"))
+                    
+                    val color = Color.parseColor("#FFCCFF")
+                    binding.mainAuthor.setTextColor(color)
+                    binding.btnFavorite.setColorFilter(color)
+                    binding.btnHistory.setColorFilter(color)
                 }
-            }
-            context?.let { it1 ->
-                LocalBroadcastManager.getInstance(it1)
-                    .sendBroadcast(intent).apply {}
             }
         })
 
 
 
         // Navigation listeners are now handled in MainActivity
+        
+        // Favorite button handler
+        binding.btnFavorite.setOnClickListener {
+            vm.toggleCurrentFavorite()
+        }
+        
+        // History button handler
+        binding.btnHistory.setOnClickListener {
+            val historyDialog = HistoryBottomSheet()
+            historyDialog.show(parentFragmentManager, HistoryBottomSheet.TAG)
+        }
+        
+        // Observe favorite status for current track from centralized VM
+        vm.isCurrentFavorite.observe(viewLifecycleOwner) { isFavorite ->
+            updateHeartIcon(isFavorite)
+        }
 
         return binding.root
+    }
+    
+    
+    private fun updateHeartIcon(isFavorite: Boolean) {
+        if (isFavorite) {
+            binding.btnFavorite.setImageResource(R.drawable.ic_heart_filled)
+        } else {
+            binding.btnFavorite.setImageResource(R.drawable.ic_heart_outline)
+        }
     }
 
     override fun onResume() {
         vm.currentFragmentLiveData.value = "player"
 
-        updatePlayer()
+        // Removed updatePlayer() - syncing is now handled by MediaController
 
         when(stream){
             "myata"->{
@@ -261,50 +267,33 @@ class MyataStreamFragment() : Fragment() {
     }
 
     fun updatePlayer(){
-        (activity as MainActivity).startService(
-            Intent(
-                context,
-                MediaPlayerService::class.java
-            ).also {
-                it.putExtra("STREAM", vm.currentStreamLive.value)
-                it.putExtra("ACTION", "switch")
-                vm.ifNeedToListenReciever = false
-                when(vm.currentStreamLive.value){
-                    "myata"->{
-                        if(vm.currentMyataState.value!!.song != null && vm.currentMyataState.value!!.artist != null) {
-                            it.putExtra("SONG", vm.currentMyataState.value!!.song)
-                            it.putExtra("ARTIST", vm.currentMyataState.value!!.artist)
-                        }
-                        else{
-                            it.putExtra("SONG", "You are listening to")
-                            it.putExtra("ARTIST", "Radio Myata")
-                        }
-                    }
-                    "gold"->{
-                        if(vm.currentGoldState.value!!.song != null && vm.currentGoldState.value!!.artist != null) {
-                            it.putExtra("SONG", vm.currentGoldState.value!!.song)
-                            it.putExtra("ARTIST", vm.currentGoldState.value!!.artist)
-                        }
-                        else{
-                            it.putExtra("SONG", "You are listening to")
-                            it.putExtra("ARTIST", "Radio Myata")
-                        }
-                    }
-                    "myata_hits"->{
-                        if(vm.currentXtraState.value!!.song != null && vm.currentXtraState.value!!.artist != null) {
-                            it.putExtra("SONG", vm.currentXtraState.value!!.song)
-                            it.putExtra("ARTIST", vm.currentXtraState.value!!.artist)
-                        }
-                        else{
-                            it.putExtra("SONG", "You are listening to")
-                            it.putExtra("ARTIST", "Radio Myata")
-                        }
-                    }
-                }
-            })
+        val streamToSync = vm.currentStreamLive.value
+        val artistToSync: String
+        val songToSync: String
+        
+        when(streamToSync) {
+            "myata" -> {
+                artistToSync = vm.currentMyataState.value?.artist ?: getString(R.string.slogan_placeholder)
+                songToSync = vm.currentMyataState.value?.song ?: getString(R.string.brand_name)
+            }
+            "gold" -> {
+                artistToSync = vm.currentGoldState.value?.artist ?: getString(R.string.slogan_placeholder)
+                songToSync = vm.currentGoldState.value?.song ?: getString(R.string.brand_name)
+            }
+            "myata_hits" -> {
+                artistToSync = vm.currentXtraState.value?.artist ?: getString(R.string.slogan_placeholder)
+                songToSync = vm.currentXtraState.value?.song ?: getString(R.string.brand_name)
+            }
+            else -> {
+                artistToSync = getString(R.string.slogan_placeholder)
+                songToSync = getString(R.string.brand_name)
+            }
+        }
+        
+        ServiceUtils.safeStartService(requireContext(), "switch", streamToSync, artistToSync, songToSync)
     }
 
-    fun updateUI(it: StreamsViewModel.PlayerState){
+    fun updateUI(it: PlayerState){
         if (it != null) {
             // Background Image Logic - Static Only
             if (currentBackgroundUrl != "STATIC") {
@@ -326,6 +315,7 @@ class MyataStreamFragment() : Fragment() {
                             binding.photo.alpha = 1f
                             Picasso.get()
                                 .load(Uri.parse(it.img))
+                                .noPlaceholder()
                                 .error(R.drawable.zaglushka_logo)
                                 .fit()
                                 .centerCrop()
@@ -344,6 +334,7 @@ class MyataStreamFragment() : Fragment() {
                             binding.photo.alpha = 1f
                             Picasso.get()
                                 .load(Uri.parse(it.img))
+                                .noPlaceholder()
                                 .error(R.drawable.zaglushka_logo)
                                 .fit()
                                 .centerCrop()
@@ -377,11 +368,12 @@ class MyataStreamFragment() : Fragment() {
 
                     binding.mainSong.text = it.song
                     binding.mainAuthor.text = it.artist
+                    
                 }
                 else{
                     currentImageUrl = null
-                    binding.mainAuthor.text = "YOU ARE LISTENING"
-                    binding.mainSong.text = "RADIO MYATA"
+                    binding.mainAuthor.text = getString(R.string.slogan_placeholder)
+                    binding.mainSong.text = getString(R.string.brand_name)
                     // Show logo placeholder immediately without animation
                     binding.photo.setImageResource(R.drawable.zaglushka_logo)
                     binding.photo.alpha = 1f
@@ -390,8 +382,8 @@ class MyataStreamFragment() : Fragment() {
         }
         else {
             currentImageUrl = null
-            binding.mainAuthor.text = "YOU ARE LISTENING"
-            binding.mainSong.text = "RADIO MYATA"
+            binding.mainAuthor.text = getString(R.string.slogan_placeholder)
+            binding.mainSong.text = getString(R.string.brand_name)
             binding.photo.setImageResource(R.drawable.zaglushka_logo)
             binding.photo.alpha = 1f
         }
@@ -400,20 +392,23 @@ class MyataStreamFragment() : Fragment() {
     private fun copyTrackInfoToClipboard() {
         val artist = binding.mainAuthor.text.toString()
         val song = binding.mainSong.text.toString()
-        if (artist.isNotBlank() && song.isNotBlank() && artist != "YOU ARE LISTENING" && song != "RADIO MYATA") {
+        val slogan = getString(R.string.slogan_placeholder)
+        val brand = getString(R.string.brand_name)
+
+        if (artist.isNotBlank() && song.isNotBlank() && artist != slogan && song != brand) {
             val textToCopy = "$artist - $song"
             val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = ClipData.newPlainText("Track Info", textToCopy)
+            val clip = ClipData.newPlainText(getString(R.string.track_info_clip), textToCopy)
             clipboard.setPrimaryClip(clip)
-            Toast.makeText(requireContext(), "Скопировано: $textToCopy", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.copy_toast, textToCopy), Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun getStaticBackgroundRes(): Int {
         return when(stream) {
-            "gold" -> R.drawable.gold_bg
-            "myata_hits" -> R.drawable.xtra_bg
-            else -> R.drawable.myata_bg
+            "gold" -> R.drawable.gold_bg_new
+            "myata_hits" -> R.drawable.xtra_bg_new
+            else -> R.drawable.myata_bg_new
         }
     }
 }

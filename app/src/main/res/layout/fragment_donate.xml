@@ -7,22 +7,20 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         tools:context=".fragments.DonateFragment"
-        android:fitsSystemWindows="true"
-        android:background="#1C4771"
+        android:background="#1C3F5F"
         android:orientation="vertical">
 
         <TextView
-            android:layout_marginTop="80dp"
-            android:layout_weight="1"
-            android:layout_width="wrap_content"
-            android:layout_height="50dp"
-            android:layout_gravity="center"
-            android:textSize="26.5sp"
-            android:text="ПОМОЧЬ ПРОЕКТУ"
-            android:gravity="center"
-            android:id="@+id/title"
-            android:fontFamily="@font/mullerregular"
-            android:textColor="#FFFFFF" />
+                android:layout_marginTop="70dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:textSize="26.5sp"
+                android:text="ПОМОЧЬ ПРОЕКТУ"
+                android:gravity="center"
+                android:id="@+id/title"
+                android:fontFamily="@font/mullerblack"
+                android:textColor="#FFFFFF" />
 
         <ScrollView
             android:layout_width="match_parent"
@@ -51,92 +49,105 @@
                         android:orientation="vertical"
                         tools:ignore="Suspicious0dp">
                         <androidx.constraintlayout.widget.ConstraintLayout
-                            android:layout_height="77dp"
-                            android:layout_marginBottom="20dp"
                             android:layout_width="match_parent"
-                            android:orientation="horizontal">
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="24dp"
+                            android:layout_marginBottom="24dp">
 
                             <HorizontalScrollView
-                                android:layout_height="0dp"
-                                android:layout_width="match_parent"
-                                android:layout_marginTop="90dp"
-                                android:orientation="horizontal"
-                                android:layout_weight="7"
                                 android:id="@+id/summs"
-                                android:scrollbars="none">
+                                android:layout_width="match_parent"
+                                android:layout_height="65dp"
+                                android:scrollbars="none"
+                                app:layout_constraintTop_toTopOf="parent"
+                                app:layout_constraintBottom_toBottomOf="parent">
 
                                 <LinearLayout
+                                    android:layout_width="wrap_content"
                                     android:layout_height="match_parent"
-                                    android:layout_width="match_parent">
+                                    android:orientation="horizontal"
+                                    android:paddingStart="21dp"
+                                    android:paddingEnd="21dp"
+                                    android:gravity="center_vertical">
 
-                                    <Button
+                                    <androidx.appcompat.widget.AppCompatButton
                                         android:id="@+id/sum100"
-                                        android:layout_height="match_parent"
-                                        android:layout_width="wrap_content"
-                                        app:tint="@color/white"
+                                        android:layout_width="110dp"
+                                        android:layout_height="58dp"
+                                        android:layout_marginEnd="8dp"
+                                        android:background="@drawable/summ"
                                         android:fontFamily="@font/mullerheavy"
                                         android:text="100"
                                         android:textColor="#1C4771"
-                                        android:textSize="20sp"
-                                        android:background="@drawable/summ"
-                                        android:layout_marginStart="10dp"
-                                        android:layout_marginEnd="7dp"
-                                        />
+                                        android:textSize="24sp" />
 
-                                    <Button
+                                    <androidx.appcompat.widget.AppCompatButton
                                         android:id="@+id/sum200"
-                                        android:layout_height="match_parent"
-                                        android:layout_width="wrap_content"
-                                        app:tint="@color/white"
+                                        android:layout_width="110dp"
+                                        android:layout_height="58dp"
+                                        android:layout_marginEnd="8dp"
+                                        android:background="@drawable/summ"
                                         android:fontFamily="@font/mullerheavy"
                                         android:text="200"
                                         android:textColor="#1C4771"
-                                        android:textSize="20sp"
-                                        android:background="@drawable/summ"
-                                        android:layout_marginStart="5dp"
-                                        android:layout_marginEnd="5dp"
-                                        />
+                                        android:textSize="24sp" />
 
-                                    <Button
+                                    <androidx.appcompat.widget.AppCompatButton
                                         android:id="@+id/sum500"
-                                        android:layout_height="match_parent"
-                                        android:layout_width="wrap_content"
-                                        app:tint="@color/black"
-                                        android:textColor="#1C4771"
+                                        android:layout_width="110dp"
+                                        android:layout_height="58dp"
+                                        android:layout_marginEnd="8dp"
+                                        android:background="@drawable/summ"
                                         android:fontFamily="@font/mullerheavy"
                                         android:text="500"
-                                        android:textSize="20sp"
-                                        android:background="@drawable/summ"
-                                        android:layout_marginStart="10dp"
-                                        android:layout_marginEnd="5dp"
-                                        />
+                                        android:textColor="#1C4771"
+                                        android:textSize="24sp" />
 
-                                    <Button
+                                    <androidx.appcompat.widget.AppCompatButton
                                         android:id="@+id/sum1000"
-                                        android:layout_height="match_parent"
-                                        android:layout_width="wrap_content"
-                                        app:tint="@color/white"
-                                        android:textSize="20sp"
+                                        android:layout_width="110dp"
+                                        android:layout_height="58dp"
+                                        android:layout_marginEnd="8dp"
+                                        android:background="@drawable/summ"
                                         android:fontFamily="@font/mullerheavy"
                                         android:text="1000"
                                         android:textColor="#1C4771"
-                                        android:background="@drawable/summ"
-                                        android:layout_marginStart="10dp"
-                                        android:layout_marginEnd="5dp"
-                                        />
+                                        android:textSize="24sp" />
 
-                                    <Button
-                                        android:id="@+id/sum0"
-                                        android:layout_height="match_parent"
-                                        android:layout_width="wrap_content"
-                                        app:tint="@color/white"
-                                        android:text="Другая\nсумма"
-                                        android:textColor="#1C4771"
-                                        android:fontFamily="@font/mullerheavy"
-                                        android:background="@drawable/summ"
-                                        android:layout_marginStart="10dp"
-                                        android:layout_marginEnd="5dp"
-                                        />
+                                    <FrameLayout
+                                        android:id="@+id/sum0_group"
+                                        android:layout_width="110dp"
+                                        android:layout_height="58dp"
+                                        android:layout_marginStart="4dp">
+
+                                        <TextView
+                                            android:id="@+id/sum0_text"
+                                            android:layout_width="match_parent"
+                                            android:layout_height="match_parent"
+                                            android:background="@drawable/summ"
+                                            android:fontFamily="@font/mullerheavy"
+                                            android:gravity="center"
+                                            android:text="ДРУГАЯ\nСУММА"
+                                            android:textColor="#1C4771"
+                                            android:textSize="14sp"
+                                            android:visibility="visible" />
+
+                                        <EditText
+                                            android:id="@+id/sum0_input"
+                                            android:layout_width="match_parent"
+                                            android:layout_height="match_parent"
+                                            android:background="@drawable/summ_green"
+                                            android:digits="0123456789"
+                                            android:fontFamily="@font/mullerheavy"
+                                            android:gravity="center"
+                                            android:hint="₽"
+                                            android:inputType="number"
+                                            android:textColor="#1C4771"
+                                            android:textColorHint="#991C4771"
+                                            android:textSize="16sp"
+                                            android:visibility="gone" />
+
+                                    </FrameLayout>
 
                                 </LinearLayout>
 
@@ -144,15 +155,16 @@
 
                         </androidx.constraintlayout.widget.ConstraintLayout>
 
+
+
                         <EditText
                             android:paddingTop="15dp"
-                            android:layout_marginLeft="30dp"
-                            android:layout_marginRight="30dp"
+                            android:layout_marginStart="21dp"
+                            android:layout_marginEnd="21dp"
                             android:hint="Комментарий"
                             android:fontFamily="@font/mullerregular"
                             android:gravity="top"
                             android:maxHeight="164dp"
-                            android:layout_gravity="center"
                             android:layout_height="wrap_content"
                             android:id="@+id/comment_text"
                             android:background="@drawable/comment_bg"
@@ -160,18 +172,17 @@
                             android:paddingRight="20dp"
                             android:layout_width="match_parent" />
 
-                        <Button
+                        <androidx.appcompat.widget.AppCompatButton
                             android:fontFamily="@font/mullerblack"
                             android:textAllCaps="false"
                             android:id="@+id/sendBtn"
-                            android:text="ОТПРАВИТЬ"
+                            android:text="ПОДДЕРЖАТЬ МЯТУ"
                             android:textColor="#FFFFFF"
                             android:textSize="20sp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="70dp"
                             android:layout_width="match_parent"
-                            android:layout_marginLeft="30dp"
-                            android:layout_marginRight="30dp"
-                            android:layout_gravity="center"
+                            android:layout_marginStart="21dp"
+                            android:layout_marginEnd="21dp"
                             android:layout_marginTop="20dp"
                             android:background="@drawable/send_btn"/>
 
@@ -189,57 +200,73 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content">
 
-                                <ImageView
+                                <androidx.cardview.widget.CardView
                                     android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
+                                    android:layout_height="150dp"
                                     android:layout_marginStart="21dp"
                                     android:layout_marginEnd="7dp"
-                                    android:src="@drawable/boosty_79"
-                                    android:id="@+id/boosty_79_banner"
-                                    android:clipToOutline="true"
-                                    android:outlineProvider="background"
-                                    android:background="@drawable/rounded_banner_bg"
-                                    android:elevation="4dp"
-                                    android:contentDescription="Boosty 79₽"/>
+                                    app:cardCornerRadius="20dp"
+                                    app:cardElevation="4dp"
+                                    app:cardBackgroundColor="@android:color/transparent">
+                                    <ImageView
+                                        android:id="@+id/boosty_79_banner"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="match_parent"
+                                        android:src="@drawable/boosty_79"
+                                        android:adjustViewBounds="true"
+                                        android:contentDescription="Boosty 79₽"/>
+                                </androidx.cardview.widget.CardView>
 
-                                <ImageView
+                                <androidx.cardview.widget.CardView
                                     android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
+                                    android:layout_height="150dp"
                                     android:layout_marginStart="7dp"
                                     android:layout_marginEnd="7dp"
-                                    android:src="@drawable/boosty_249"
-                                    android:id="@+id/boosty_249_banner"
-                                    android:clipToOutline="true"
-                                    android:outlineProvider="background"
-                                    android:background="@drawable/rounded_banner_bg"
-                                    android:elevation="4dp"
-                                    android:contentDescription="Boosty 249₽"/>
+                                    app:cardCornerRadius="20dp"
+                                    app:cardElevation="4dp"
+                                    app:cardBackgroundColor="@android:color/transparent">
+                                    <ImageView
+                                        android:id="@+id/boosty_249_banner"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="match_parent"
+                                        android:src="@drawable/boosty_249"
+                                        android:adjustViewBounds="true"
+                                        android:contentDescription="Boosty 249₽"/>
+                                </androidx.cardview.widget.CardView>
 
-                                <ImageView
+                                <androidx.cardview.widget.CardView
                                     android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
+                                    android:layout_height="150dp"
                                     android:layout_marginStart="7dp"
                                     android:layout_marginEnd="7dp"
-                                    android:src="@drawable/boosty_499"
-                                    android:id="@+id/boosty_499_banner"
-                                    android:clipToOutline="true"
-                                    android:outlineProvider="background"
-                                    android:background="@drawable/rounded_banner_bg"
-                                    android:elevation="4dp"
-                                    android:contentDescription="Boosty 499₽"/>
+                                    app:cardCornerRadius="20dp"
+                                    app:cardElevation="4dp"
+                                    app:cardBackgroundColor="@android:color/transparent">
+                                    <ImageView
+                                        android:id="@+id/boosty_499_banner"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="match_parent"
+                                        android:src="@drawable/boosty_499"
+                                        android:adjustViewBounds="true"
+                                        android:contentDescription="Boosty 499₽"/>
+                                </androidx.cardview.widget.CardView>
 
-                                <ImageView
+                                <androidx.cardview.widget.CardView
                                     android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
+                                    android:layout_height="150dp"
                                     android:layout_marginStart="7dp"
                                     android:layout_marginEnd="21dp"
-                                    android:src="@drawable/boosty_1499"
-                                    android:id="@+id/boosty_1499_banner"
-                                    android:clipToOutline="true"
-                                    android:outlineProvider="background"
-                                    android:background="@drawable/rounded_banner_bg"
-                                    android:elevation="4dp"
-                                    android:contentDescription="Boosty 1499₽"/>
+                                    app:cardCornerRadius="20dp"
+                                    app:cardElevation="4dp"
+                                    app:cardBackgroundColor="@android:color/transparent">
+                                    <ImageView
+                                        android:id="@+id/boosty_1499_banner"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="match_parent"
+                                        android:src="@drawable/boosty_1499"
+                                        android:adjustViewBounds="true"
+                                        android:contentDescription="Boosty 1499₽"/>
+                                </androidx.cardview.widget.CardView>
 
                             </LinearLayout>
 

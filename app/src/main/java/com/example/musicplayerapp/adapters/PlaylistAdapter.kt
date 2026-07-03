@@ -6,12 +6,12 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.musicplayerapp.R
-import com.example.musicplayerapp.StreamsViewModel
+import com.example.musicplayerapp.data.MyataPlaylist
 import com.squareup.picasso.Picasso
 import jp.wasabeef.picasso.transformations.RoundedCornersTransformation
 
 
-class PlaylistAdapter(private val playlists: List<StreamsViewModel.MyataPlaylist>, private val onItemClick: (position: Int) -> Unit):
+class PlaylistAdapter(private val playlists: List<MyataPlaylist>, private val onItemClick: (position: Int) -> Unit):
     RecyclerView.Adapter<PlaylistAdapter.PlaylistViewHolder>() {
 
     class PlaylistViewHolder(itemView: View, private val onItemClick: (position: Int) -> Unit) : RecyclerView.ViewHolder(itemView), View.OnClickListener{

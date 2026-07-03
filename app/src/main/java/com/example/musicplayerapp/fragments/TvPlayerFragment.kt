@@ -8,7 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import com.example.musicplayerapp.StreamsViewModel.PlayerState
+import com.example.musicplayerapp.data.PlayerState
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.StreamsViewModel
 import com.example.musicplayerapp.databinding.FragmentTvPlayerBinding
@@ -20,7 +20,9 @@ class TvPlayerFragment : Fragment() {
 
     private var _binding: FragmentTvPlayerBinding? = null
     private val binding get() = _binding!!
-    private val vm: StreamsViewModel by activityViewModels()
+    private val vm: StreamsViewModel by activityViewModels {
+        com.example.musicplayerapp.StreamsViewModelFactory(requireActivity().application, requireActivity())
+    }
     private var currentColor: Int = Color.BLACK
     
     // Track previous track info to avoid re-animating unchanged content
@@ -141,51 +143,20 @@ class TvPlayerFragment : Fragment() {
         }
 
         binding.btnPlayPause.setOnClickListener {
-            val intent = Intent(context, MediaPlayerService::class.java).apply {
-                putExtra("STREAM", vm.currentStreamLive.value)
-                putExtra("ACTION", "startStop")
-                val currentState = getCurrentState()
-                putExtra("SONG", currentState?.song ?: "Radio Myata")
-                putExtra("ARTIST", currentState?.artist ?: "You are listening to")
-            }
-            activity?.startService(intent)
+            vm.togglePlayPause()
         }
 
         binding.btnStreamMyata.setOnClickListener { 
-            switchStream("myata")
+            vm.switchStream("myata")
         }
         binding.btnStreamGold.setOnClickListener { 
-            switchStream("gold")
+            vm.switchStream("gold")
         }
         binding.btnStreamXtra.setOnClickListener { 
-            switchStream("myata_hits")
+            vm.switchStream("myata_hits")
         }
     }
 
-    private fun switchStream(stream: String) {
-        if (vm.currentStreamLive.value != stream) {
-            // Immediate feedback: Show spinner while service prepares stream
-            vm.isBuffering.value = true
-            
-            vm.currentStreamLive.value = stream
-            vm.triggerMetadataUpdate()
-            // Auto-play: Send play intent immediately
-            val intent = Intent(context, MediaPlayerService::class.java).apply {
-                putExtra("STREAM", stream)
-                putExtra("ACTION", "play") 
-            }
-            activity?.startService(intent)
-        } else {
-             // If clicking the same stream, ensure it plays if paused
-             if (vm.isPlaying.value != true) {
-                val intent = Intent(context, MediaPlayerService::class.java).apply {
-                    putExtra("STREAM", stream)
-                    putExtra("ACTION", "play")
-                }
-                activity?.startService(intent)
-             }
-        }
-    }
 
     private fun setupFocus(view: View) {
         view.setOnFocusChangeListener { v, hasFocus ->
@@ -292,6 +263,10 @@ class TvPlayerFragment : Fragment() {
                 .alpha(0f)
                 .setDuration(250)
                 .withEndAction {
+                    // CRITICAL: Check binding is still valid after animation completes
+                    // Fragment may be destroyed while animation was running
+                    if (_binding == null) return@withEndAction
+                    
                     binding.tvTrackInfo.text = newTrackInfo
                     binding.tvTrackInfo.animate()
                         .alpha(1f)
@@ -312,6 +287,9 @@ class TvPlayerFragment : Fragment() {
             
             // CRITICAL: Only load if URL changed to prevent duplicate loads
             if (imageUrlChanged) {
+                // Cancel previous request to avoid race conditions and clearing wrong image
+                currentTarget?.let { Picasso.get().cancelRequest(it) }
+                
                 currentImageUrl = state.img
                 
                 // CRITICAL: Create and store Target to prevent garbage collection
@@ -319,8 +297,8 @@ class TvPlayerFragment : Fragment() {
                     override fun onBitmapLoaded(bitmap: android.graphics.Bitmap?, from: Picasso.LoadedFrom?) {
                         if (_binding == null) return
                         
-                        // Fade in the new image
-                        binding.ivAlbumArt.alpha = 0f
+                        // NEW behavior: No alpha = 0f reset. 
+                        // Crossfade directly on top of the old image if possible or just update
                         binding.ivAlbumArt.setImageBitmap(bitmap)
                         binding.ivAlbumArt.animate()
                             .alpha(1f)
@@ -332,12 +310,14 @@ class TvPlayerFragment : Fragment() {
                     }
                     override fun onBitmapFailed(e: Exception?, errorDrawable: android.graphics.drawable.Drawable?) {
                         if (_binding == null) return
-                        binding.ivAlbumArt.setImageResource(R.drawable.zaglushka_logo)
-                        binding.ivAlbumArt.alpha = 1f
+                        // If it fails, only then show logo if nothing is already there
+                        if (binding.ivAlbumArt.drawable == null) {
+                            binding.ivAlbumArt.setImageResource(R.drawable.zaglushka_logo)
+                            binding.ivAlbumArt.alpha = 1f
+                        }
                     }
                     override fun onPrepareLoad(placeHolderDrawable: android.graphics.drawable.Drawable?) {
-                        if (_binding == null) return
-                        binding.ivAlbumArt.setImageDrawable(placeHolderDrawable)
+                        // REMOVED: Do NOT set placeholder logo here, it causes the flicker
                     }
                 }
                 
@@ -346,16 +326,23 @@ class TvPlayerFragment : Fragment() {
                 
                 Picasso.get()
                     .load(state.img)
-                    .noPlaceholder()
+                    .noPlaceholder() // Avoid reset
                     .error(R.drawable.zaglushka_logo)
                     .into(target)
             }
-        } else {
+        } else if (state.img == "NO_IMAGE") {
+            // Explicitly no image found - only then fall back to logo
             currentImageUrl = null
+            currentTarget?.let { Picasso.get().cancelRequest(it) }
             currentTarget = null
             binding.ivAlbumArt.setImageResource(R.drawable.zaglushka_logo)
             binding.ivAlbumArt.alpha = 1f
             animateBackgroundColor(Color.parseColor("#2A2A2A"))
+        } else {
+            // state.img is null (initial state or poll pending)
+            // KEEP current image and background to avoid flicker!
+            // Transition will happen when real data arrives.
+            Log.d("TvPlayerFragment", "Waiting for metadata poll - keeping current artwork")
         }
     }
 
@@ -400,6 +387,10 @@ class TvPlayerFragment : Fragment() {
 
     override fun onDestroyView() {
         hideHandler.removeCallbacksAndMessages(null)
+        alphaAnimator?.cancel()
+        // Cancel any running animations to prevent callbacks after binding is null
+        binding.tvTrackInfo.animate().cancel()
+        binding.ivAlbumArt.animate().cancel()
         currentTarget?.let { Picasso.get().cancelRequest(it) }
         currentImageUrl = null
         previousTrackInfo = ""

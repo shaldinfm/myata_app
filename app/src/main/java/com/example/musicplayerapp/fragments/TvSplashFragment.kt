@@ -14,6 +14,21 @@ class TvSplashFragment : Fragment() {
 
     private var _binding: FragmentTvSplashBinding? = null
     private val binding get() = _binding!!
+    
+    private val handler = Handler(Looper.getMainLooper())
+    private val navigateRunnable = Runnable {
+        // Check fragment is still attached and Activity is not saving state
+        if (isAdded && !isStateSaved) {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.tv_fragment_container, TvStreamSelectionFragment())
+                .commit()
+        } else if (isAdded) {
+            // Activity is saving state, use commitAllowingStateLoss as fallback
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.tv_fragment_container, TvStreamSelectionFragment())
+                .commitAllowingStateLoss()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -27,16 +42,12 @@ class TvSplashFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         // Navigate to Stream Selection after 2 seconds
-        Handler(Looper.getMainLooper()).postDelayed({
-            if (isAdded) {
-                parentFragmentManager.beginTransaction()
-                    .replace(R.id.tv_fragment_container, TvStreamSelectionFragment())
-                    .commit()
-            }
-        }, 2000)
+        handler.postDelayed(navigateRunnable, 2000)
     }
 
     override fun onDestroyView() {
+        // Cancel pending navigation to prevent leaks and crashes
+        handler.removeCallbacks(navigateRunnable)
         super.onDestroyView()
         _binding = null
     }

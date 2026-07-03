@@ -1,5 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+    <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:windowFullscreen">true</item>
@@ -14,7 +14,7 @@
         <item name="android:forceDarkAllowed">false</item>
         <item name="android:statusBarColor">@color/main_fragment</item>
     </style>
-    <style name="AppTheme0" parent="Theme.AppCompat.Light.NoActionBar">
+    <style name="AppTheme0" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -25,7 +25,7 @@
         <item name="android:forceDarkAllowed">false</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
-    <style name="AppTheme1" parent="Theme.AppCompat.Light.NoActionBar">
+    <style name="AppTheme1" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -36,7 +36,7 @@
         <item name="android:forceDarkAllowed">false</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
-    <style name="AppTheme2" parent="Theme.AppCompat.Light.NoActionBar">
+    <style name="AppTheme2" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -47,7 +47,7 @@
         <item name="android:forceDarkAllowed">false</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
-    <style name="AppTheme3" parent="Theme.AppCompat.Light.NoActionBar">
+    <style name="AppTheme3" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -58,7 +58,7 @@
         <item name="android:forceDarkAllowed">false</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
-    <style name="AppTheme4" parent="Theme.AppCompat.Light.NoActionBar">
+    <style name="AppTheme4" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -69,7 +69,7 @@
         <item name="android:forceDarkAllowed">false</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
-    <style name="AppTheme5" parent="Theme.AppCompat.Light.NoActionBar">
+    <style name="AppTheme5" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -80,7 +80,7 @@
         <item name="android:forceDarkAllowed">false</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
-    <style name="AppTheme6" parent="Theme.AppCompat.Light.NoActionBar">
+    <style name="AppTheme6" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -91,7 +91,7 @@
         <item name="android:forceDarkAllowed">false</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
-    <style name="AppTheme7" parent="Theme.AppCompat.Light.NoActionBar">
+    <style name="AppTheme7" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -102,7 +102,7 @@
         <item name="android:forceDarkAllowed">false</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
-    <style name="AppTheme8" parent="Theme.AppCompat.Light.NoActionBar">
+    <style name="AppTheme8" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -113,7 +113,7 @@
         <item name="android:forceDarkAllowed">false</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
-    <style name="AppTheme9" parent="Theme.AppCompat.Light.NoActionBar">
+    <style name="AppTheme9" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>

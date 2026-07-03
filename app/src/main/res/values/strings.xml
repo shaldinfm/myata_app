@@ -1,5 +1,11 @@
 <resources>
     <string name="app_name">Радио Мята</string>
+    <string name="brand_name">RADIO MYATA</string>
+    <string name="slogan_placeholder">YOUR MUSIC! YOUR STATION!</string>
+    <string name="copy_toast">Скопировано: %s</string>
+    <string name="track_info_clip">Track Info</string>
+    
+    <!-- Previous strings -->
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="channel_name">channel_name</string>

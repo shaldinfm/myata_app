@@ -75,12 +75,19 @@ class PlayerFragment : Fragment() {
             override fun onPageSelected(position: Int) {
                 updateIndicators(position)
                 
-                // Update ViewModel only on user swipe/change, not just UI update
-                when(position){
-                    0 -> vm.currentStreamLive.value = "myata"
-                    1 -> vm.currentStreamLive.value = "gold"
-                    2 -> vm.currentStreamLive.value = "myata_hits"
+                // Determine the new stream from position
+                val newStream = when(position){
+                    0 -> "myata"
+                    1 -> "gold"
+                    2 -> "myata_hits"
+                    else -> "myata"
                 }
+                
+                // Only switch stream if it's actually different (user swiped)
+                if (vm.currentStreamLive.value != newStream) {
+                    vm.switchStream(newStream)
+                }
+                
                 vm.triggerMetadataUpdate()
                 super.onPageSelected(position)
             }

@@ -1,5 +1,6 @@
 package com.example.musicplayerapp.fragments
 
+import android.content.Context
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.os.Bundle
@@ -66,7 +67,9 @@ class DonateFragment : Fragment() {
             if (summ != 500){
                 summ = 500
                 binding.sum500.setBackgroundResource(R.drawable.summ_green)
-                binding.sum0.setBackgroundResource(R.drawable.summ)
+                binding.sum0Group.setBackgroundResource(0)
+                binding.sum0Text.visibility = View.VISIBLE
+                binding.sum0Input.visibility = View.GONE
                 binding.sum100.setBackgroundResource(R.drawable.summ)
                 binding.sum200.setBackgroundResource(R.drawable.summ)
                 binding.sum1000.setBackgroundResource(R.drawable.summ)
@@ -77,7 +80,9 @@ class DonateFragment : Fragment() {
             if (summ != 1000){
                 summ = 1000
                 binding.sum500.setBackgroundResource(R.drawable.summ)
-                binding.sum0.setBackgroundResource(R.drawable.summ)
+                binding.sum0Group.setBackgroundResource(0)
+                binding.sum0Text.visibility = View.VISIBLE
+                binding.sum0Input.visibility = View.GONE
                 binding.sum100.setBackgroundResource(R.drawable.summ)
                 binding.sum200.setBackgroundResource(R.drawable.summ)
                 binding.sum1000.setBackgroundResource(R.drawable.summ_green)
@@ -88,7 +93,9 @@ class DonateFragment : Fragment() {
             if (summ != 100){
                 summ = 100
                 binding.sum500.setBackgroundResource(R.drawable.summ)
-                binding.sum0.setBackgroundResource(R.drawable.summ)
+                binding.sum0Group.setBackgroundResource(0)
+                binding.sum0Text.visibility = View.VISIBLE
+                binding.sum0Input.visibility = View.GONE
                 binding.sum100.setBackgroundResource(R.drawable.summ_green)
                 binding.sum200.setBackgroundResource(R.drawable.summ)
                 binding.sum1000.setBackgroundResource(R.drawable.summ)
@@ -99,25 +106,43 @@ class DonateFragment : Fragment() {
             if (summ != 200){
                 summ = 200
                 binding.sum500.setBackgroundResource(R.drawable.summ)
-                binding.sum0.setBackgroundResource(R.drawable.summ)
+                binding.sum0Group.setBackgroundResource(0)
+                binding.sum0Text.visibility = View.VISIBLE
+                binding.sum0Input.visibility = View.GONE
                 binding.sum100.setBackgroundResource(R.drawable.summ)
                 binding.sum200.setBackgroundResource(R.drawable.summ_green)
                 binding.sum1000.setBackgroundResource(R.drawable.summ)
             }
         }
 
-        binding.sum0.setOnClickListener{
+        binding.sum0Group.setOnClickListener{
             if (summ != 0){
                 summ = 0
                 binding.sum500.setBackgroundResource(R.drawable.summ)
-                binding.sum0.setBackgroundResource(R.drawable.summ_green)
                 binding.sum100.setBackgroundResource(R.drawable.summ)
                 binding.sum200.setBackgroundResource(R.drawable.summ)
                 binding.sum1000.setBackgroundResource(R.drawable.summ)
+                
+                binding.sum0Text.visibility = View.GONE
+                binding.sum0Input.visibility = View.VISIBLE
+                binding.sum0Input.requestFocus()
+                
+                // Explicitly show keyboard
+                val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                imm.showSoftInput(binding.sum0Input, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
             }
         }
 
         binding.sendBtn.setOnClickListener{
+            var finalSum = summ
+            if (summ == 0) {
+                val otherSumStr = binding.sum0Input.text.toString()
+                finalSum = otherSumStr.toIntOrNull() ?: 0
+                if (finalSum <= 0) {
+                    // Show error or handle accordingly
+                    return@setOnClickListener
+                }
+            }
 
             binding.form.visibility = View.GONE
             binding.webView.visibility = View.VISIBLE
@@ -127,7 +152,7 @@ class DonateFragment : Fragment() {
             (activity as MainActivity).binding.donateBtn.setColorFilter(Color.parseColor("#FFFFFF"))
             (activity as MainActivity).binding.homeBtn.setColorFilter(Color.parseColor("#999999"))
             (activity as MainActivity).binding.playerBtn.setColorFilter(Color.parseColor("#999999"))
-            makePay(summ, binding.commentText.text.toString(), "ac")
+            makePay(finalSum, binding.commentText.text.toString(), "ac")
         }
 
 
@@ -158,30 +183,28 @@ class DonateFragment : Fragment() {
         startActivity(intent)
     }
 
-    private fun makePay(sum:Int, comment: String, paymentType: String)
-    {
-        val order_id = "1"
-        var url = "https://yoomoney.ru/quickpay/confirm.xml"
-        if(sum!=0) {
-            val postData = "receiver=410015757768507" +
-                    "&formcomment=" + comment +
-                    "&short-dest=" + "Пожертовование Radio Myata" +
-                    "&label=$order_id" +
-                    "&quickpay-form=donate" +
-                    "&targets=" + "Пожертовование Radio Myata" +
-                    "&sum=$sum" +
-                    "&comment=" + comment
-            "&need-fio=false" +
-                    "&need-email=false" +
-                    "&need-phone=false" +
-                    "&need-address=false" +
-                    "&paymentType=${paymentType}"
+    private fun makePay(sum: Int, comment: String, paymentType: String) {
+        val order_id = System.currentTimeMillis().toString()
+        val url = "https://yoomoney.ru/quickpay/confirm.xml"
+        
+        val encodedComment = java.net.URLEncoder.encode(comment, "UTF-8")
+        val targets = java.net.URLEncoder.encode("Пожертвование Radio Myata", "UTF-8")
+        
+        val postData = "receiver=410015757768507" +
+                "&formcomment=$encodedComment" +
+                "&short-dest=$targets" +
+                "&label=$order_id" +
+                "&quickpay-form=donate" +
+                "&targets=$targets" +
+                "&sum=$sum" +
+                "&comment=$encodedComment" +
+                "&need-fio=false" +
+                "&need-email=false" +
+                "&need-phone=false" +
+                "&need-address=false" +
+                "&paymentType=$paymentType"
 
-            binding.webView.postUrl(url, postData.toByteArray())
-        }
-        else{
-            binding.webView.loadUrl("https://yoomoney.ru/to/410015757768507")
-        }
+        binding.webView.postUrl(url, postData.toByteArray())
     }
 
     private fun setWebViewClient()

@@ -11,7 +11,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:scaleType="centerCrop"
-            android:src="#5FD9B4"/>
+            android:src="#1C3F5F"/>
 
         <LinearLayout
             android:id="@+id/main_content_container"
@@ -28,7 +28,7 @@
                 android:fontFamily="@font/muller_regular"
                 android:layout_marginStart="22dp"
                 android:layout_marginTop="60dp"
-                android:textColor="@color/black" />
+                android:textColor="#F5F7FA" />
 
             <HorizontalScrollView
                 android:layout_height="0dp"
@@ -44,44 +44,59 @@
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent">
 
-                    <ImageView
+                    <androidx.cardview.widget.CardView
+                        android:id="@+id/myata_stream_banner_container"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
                         android:layout_marginStart="21dp"
                         android:layout_marginEnd="7dp"
-                        android:src="@drawable/myata_banner_new"
-                        android:id="@+id/myata_stream_banner"
-                        android:clipToOutline="true"
-                        android:outlineProvider="background"
-                        android:background="@drawable/rounded_banner_bg"
-                        android:elevation="4dp"/>
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="4dp"
+                        app:cardBackgroundColor="@android:color/transparent">
+                        <ImageView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:src="@drawable/myata_banner_new"
+                            android:id="@+id/myata_stream_banner"
+                            android:adjustViewBounds="true"/>
+                    </androidx.cardview.widget.CardView>
 
-                    <ImageView
+                    <androidx.cardview.widget.CardView
+                        android:id="@+id/gold_stream_banner_container"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
                         android:layout_marginStart="7dp"
                         android:layout_marginEnd="7dp"
-                        android:src="@drawable/gold_banner_new"
-                        android:id="@+id/gold_stream_banner"
-                        android:clipToOutline="true"
-                        android:outlineProvider="background"
-                        android:background="@drawable/rounded_banner_bg"
-                        android:elevation="4dp"/>
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="4dp"
+                        app:cardBackgroundColor="@android:color/transparent">
+                        <ImageView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:src="@drawable/gold_banner_new"
+                            android:id="@+id/gold_stream_banner"
+                            android:adjustViewBounds="true"/>
+                    </androidx.cardview.widget.CardView>
 
-                    <ImageView
+                    <androidx.cardview.widget.CardView
+                        android:id="@+id/xtra_stream_banner_container"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
                         android:layout_marginStart="7dp"
-                        android:layout_marginEnd="7dp"
-                        android:src="@drawable/xtra_banner_new"
-                        android:id="@+id/xtra_stream_banner"
-                        android:clipToOutline="true"
-                        android:outlineProvider="background"
-                        android:background="@drawable/rounded_banner_bg"
-                        android:elevation="4dp"/>
+                        android:layout_marginEnd="14dp"
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="4dp"
+                        app:cardBackgroundColor="@android:color/transparent">
+                        <ImageView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:src="@drawable/xtra_banner_new"
+                            android:id="@+id/xtra_stream_banner"
+                            android:adjustViewBounds="true"/>
+                    </androidx.cardview.widget.CardView>
 
                 </LinearLayout>
 
@@ -96,14 +111,16 @@
                 android:gravity=""
                 android:fontFamily="@font/muller_regular"
                 android:layout_marginStart="22dp"
-                android:layout_marginBottom="20dp"
-                android:textColor="@color/black"
+                android:textColor="#F5F7FA"
                 android:layout_weight="1" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="6"
+                android:layout_marginTop="20dp"
+                android:paddingEnd="14dp"
+                android:clipToPadding="false"
                 tools:listitem="@layout/rw_playlist_item"
                 android:id="@+id/playlists"
                 android:layout_marginBottom="55dp">

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Full TLS validation for the whole app.
+
+    Two roots are bundled in res/raw because our own hosts chain to CAs that
+    older Android system trust stores do not carry:
+
+      radiomyata.ru         -> ISRG Root X1            (system store: Android 7.1.1+)
+      radio.dline-media.com -> GlobalSign Root CA - R6 (system store: recent Android only)
+
+    Adding them as extra trust anchors keeps real chain verification and hostname
+    checking, unlike the trust-all TrustManager this replaces. See SecureNetModule
+    for the equivalent OkHttp-level configuration (this file is honoured from API 24).
+-->
+<network-security-config>
+
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/isrg_root_x1" />
+            <certificates src="@raw/globalsign_root_r6" />
+        </trust-anchors>
+    </base-config>
+
+    <!--
+        MediaPlayerService keeps a plain-HTTP fallback for legacy TV/projector
+        devices whose TLS stack cannot complete the handshake at all. The
+        exception is scoped to that single audio host; every other destination
+        in the app is HTTPS-only.
+    -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">radio.dline-media.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/globalsign_root_r6" />
+        </trust-anchors>
+    </domain-config>
+
+</network-security-config>

@@ -64,9 +64,10 @@ class TvMainActivity : AppCompatActivity() {
         super.onStop()
     }
 
-    override fun dispatchKeyEvent(event: android.view.KeyEvent?): Boolean {
-        if (event == null) return super.dispatchKeyEvent(event)
-        
+    // AppCompat 1.7 annotates this parameter as non-null, so the override can no
+    // longer declare it nullable.
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+
         if (event.action == android.view.KeyEvent.ACTION_DOWN) {
             // Wake up UI on ANY key press (D-Pad, Volume, etc.)
             val currentFragment = supportFragmentManager.findFragmentById(R.id.tv_fragment_container)

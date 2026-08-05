@@ -35,6 +35,11 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 
 
+// Media3 marks most of ExoPlayer's configuration surface (LoadControl, DataSource
+// factories, PlayerNotificationManager, ForwardingPlayer command sets) @UnstableApi.
+// Media3 1.7 promotes using them without opt-in to a lint error, so declare it once
+// for the whole service rather than annotating each call site.
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class MediaPlayerService(): MediaSessionService(){
 
     private lateinit var exoPlayer: ExoPlayer
@@ -106,10 +111,13 @@ class MediaPlayerService(): MediaSessionService(){
                     val channel = NotificationChannel(channelId, "Playback", NotificationManager.IMPORTANCE_LOW)
                     (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
                 }
-                val notification = android.app.Notification.Builder(this, channelId)
+                // NotificationCompat, not Notification.Builder: the platform builder
+                // that takes a channel id requires API 26, and minSdk here is 21.
+                val notification = androidx.core.app.NotificationCompat.Builder(this, channelId)
                     .setSmallIcon(R.drawable.ic_launcher_foreground)
                     .setContentTitle("Radio Myata")
                     .setContentText("Загрузка...")
+                    .setPriority(androidx.core.app.NotificationCompat.PRIORITY_LOW)
                     .build()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)

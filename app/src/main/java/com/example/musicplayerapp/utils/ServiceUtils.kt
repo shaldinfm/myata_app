@@ -6,6 +6,7 @@ import android.os.Build
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.example.musicplayerapp.service.MediaPlayerService
+import com.example.musicplayerapp.service.PlaybackLog
 
 object ServiceUtils {
     
@@ -24,6 +25,14 @@ object ServiceUtils {
         // Actions that are guaranteed to call startForeground in MediaPlayerService
         val isForegroundAction = action == "startStop" || action == "play" || action == "switch"
 
+        PlaybackLog.event(
+            "SERVICE_START_REQUEST",
+            "action" to action,
+            "stream" to (stream ?: "none"),
+            "forcePlay" to forcePlay,
+            "foreground" to isForegroundAction
+        )
+
         try {
             if (isForegroundAction) {
                 // For actions that start playback, we MUST use startForegroundService 
@@ -39,6 +48,13 @@ object ServiceUtils {
             }
         } catch (e: Exception) {
             Log.e("ServiceUtils", "Failed to start service (action: $action): ${e.message}")
+            // Swallowed by design today, so the user sees nothing happen. See issue #14.
+            PlaybackLog.problem(
+                "SERVICE_START_FAILED",
+                "action" to action,
+                "cause" to e.javaClass.simpleName,
+                "outcome" to "request_lost"
+            )
         }
     }
 }

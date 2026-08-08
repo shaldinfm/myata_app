@@ -100,6 +100,28 @@ class MediaPlayerService(): MediaSessionService(){
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
 
+        if (intent == null) {
+            // START_STICKY handed the service back to us without the original
+            // intent: the process was killed and restarted rather than started.
+            PlaybackLog.problem("SERVICE_RESTARTED_BY_SYSTEM", "startId" to startId, "flags" to flags)
+        } else {
+            // Media3 keeps the service alive with its own action-less start
+            // commands during normal playback; those carry no information and
+            // would drown out the interesting lines, so only ours are logged.
+            val requestedAction = intent.getStringExtra("ACTION")
+            if (requestedAction != null) {
+                PlaybackLog.event(
+                    "START_COMMAND",
+                    "action" to requestedAction,
+                    "intentStream" to (intent.getStringExtra("STREAM") ?: "none"),
+                    "forcePlay" to intent.getBooleanExtra("force_play", false),
+                    "foregroundStart" to intent.getBooleanExtra("FOREGROUND_START", false),
+                    "currentStream" to (stream.ifEmpty { "none" }),
+                    "startId" to startId
+                )
+            }
+        }
+
         // CRITICAL: Android requires startForeground() within 5s of startForegroundService().
         // Post a minimal notification immediately to satisfy the contract.
         // Media3 will replace it with the real notification (with controls) moments later.
@@ -136,6 +158,7 @@ class MediaPlayerService(): MediaSessionService(){
             when(action){
                 "startStop"->{
                     if(exoPlayer.isPlaying) {
+                        PlaybackLog.event("PLAYER_STOP", "source" to "intent", "reason" to "startStop_toggle_off")
                         exoPlayer.stop()
                         exoPlayer.clearMediaItems()
                         artist = ""
@@ -153,13 +176,16 @@ class MediaPlayerService(): MediaSessionService(){
                             "gold"->{exoPlayer.setMediaItem(goldItem)}
                             "myata_hits"->{exoPlayer.setMediaItem(xtraItem)}
                         }
-                        
+                        logStreamSelection("startStop")
+
                         // Use updateMetadata to ensure art is reset, fetched, and notification updated
                         val startSong = intent.getStringExtra("SONG") ?: ""
                         val startArtist = intent.getStringExtra("ARTIST") ?: ""
                         updateMetadata(startArtist, startSong)
-                        
+
+                        PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "startStop_toggle_on")
                         exoPlayer.prepare()
+                        PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "startStop_toggle_on")
                         exoPlayer.play()
                     }
                 }
@@ -173,10 +199,14 @@ class MediaPlayerService(): MediaSessionService(){
                             "gold"->{exoPlayer.setMediaItem(goldItem)}
                             "myata_hits"->{exoPlayer.setMediaItem(xtraItem)}
                         }
+                        logStreamSelection("play_streamChange")
+                        PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "play_streamChange")
                         exoPlayer.prepare()
                     }
                     if(!exoPlayer.isPlaying) {
+                        PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "play_notPlaying")
                         exoPlayer.prepare()
+                        PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "play_notPlaying")
                         exoPlayer.play()
                     }
                 }
@@ -209,17 +239,22 @@ class MediaPlayerService(): MediaSessionService(){
                         }.buildUpon().setMediaMetadata(initialMetadata).build()
                         
                         exoPlayer.setMediaItem(mediaItem)
+                        logStreamSelection("switch_streamChange")
                         currentAlbumArt = null
                         updateMetadata(switchArtist, switchSong)
-                        
+
                         // Always start playback for stream changes
+                        PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "switch_streamChange")
                         exoPlayer.prepare()
+                        PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "switch_streamChange")
                         exoPlayer.play()
                         Log.d("SWITCH", "Stream switched to $stream and playback started")
                     } else {
                         // SAME stream - only start if forcePlay requested AND not already playing
                         if (forcePlay && !exoPlayer.isPlaying) {
+                            PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "switch_forcePlay")
                             exoPlayer.prepare()
+                            PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "switch_forcePlay")
                             exoPlayer.play()
                             Log.d("SWITCH", "Same stream $stream - resuming playback")
                         } else {
@@ -265,6 +300,7 @@ class MediaPlayerService(): MediaSessionService(){
                 }
                 "stop" -> {
                     Log.d("MediaPlayerService", "Stop action received - shutting down")
+                    PlaybackLog.event("PLAYER_STOP", "source" to "intent", "reason" to "stop_action_shutdown")
                     exoPlayer.stop()
                     exoPlayer.clearMediaItems()
                     stopSelf()
@@ -279,7 +315,9 @@ class MediaPlayerService(): MediaSessionService(){
         super.onCreate()
 
         Log.d("Service","Create")
-        
+        PlaybackLog.event("SERVICE_CREATE")
+        registerNetworkLogging()
+
         // Initialize WakeLock
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyataRadio::PlaybackWakeLock")
@@ -336,7 +374,14 @@ class MediaPlayerService(): MediaSessionService(){
             addListener(object: Player.Listener{
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     super.onIsPlayingChanged(isPlaying)
-                    
+
+                    PlaybackLog.event(
+                        "IS_PLAYING_CHANGED",
+                        "isPlaying" to isPlaying,
+                        "state" to PlaybackLog.stateName(this@apply.playbackState),
+                        "stream" to (stream.ifEmpty { "none" })
+                    )
+
                     val action = if(isPlaying) "play" else "pause"
                     LocalBroadcastManager.getInstance(this@MediaPlayerService)
                         .sendBroadcast(Intent(action))
@@ -351,20 +396,53 @@ class MediaPlayerService(): MediaSessionService(){
                         if (wakeLock?.isHeld == false) {
                             wakeLock?.acquire()
                             Log.d("MediaPlayerService", "WakeLock acquired")
+                            PlaybackLog.event("WAKELOCK_ACQUIRED")
                         }
                     } else {
                         stopMetadataPolling()
-                        
+
                         if (wakeLock?.isHeld == true) {
                             wakeLock?.release()
                             Log.d("MediaPlayerService", "WakeLock released")
+                            PlaybackLog.event("WAKELOCK_RELEASED")
                         }
                     }
                 }
                 
+                /**
+                 * Diagnostics only. This is the callback that distinguishes a user
+                 * pause from audio-focus loss from AUDIO_BECOMING_NOISY — the app
+                 * never read it before, which is why issue #15 has no evidence.
+                 */
+                override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                    super.onPlayWhenReadyChanged(playWhenReady, reason)
+                    PlaybackLog.event(
+                        "PLAY_WHEN_READY_CHANGED",
+                        "playWhenReady" to playWhenReady,
+                        "reason" to PlaybackLog.playWhenReadyReason(reason),
+                        "stream" to (stream.ifEmpty { "none" })
+                    )
+                }
+
+                /** Transient audio-focus loss shows up here rather than as a pause. */
+                override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
+                    super.onPlaybackSuppressionReasonChanged(playbackSuppressionReason)
+                    PlaybackLog.event(
+                        "PLAYBACK_SUPPRESSION_CHANGED",
+                        "reason" to PlaybackLog.suppressionReason(playbackSuppressionReason)
+                    )
+                }
+
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     super.onPlaybackStateChanged(playbackState)
-                    
+
+                    PlaybackLog.event(
+                        "STATE_CHANGED",
+                        "state" to PlaybackLog.stateName(playbackState),
+                        "playWhenReady" to this@apply.playWhenReady,
+                        "stream" to (stream.ifEmpty { "none" })
+                    )
+
                     when(playbackState) {
                         Player.STATE_BUFFERING -> {
                             // Broadcast buffering state
@@ -386,7 +464,15 @@ class MediaPlayerService(): MediaSessionService(){
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                     super.onPlayerError(error)
                     Log.e("MediaPlayerService", "Player Error: ${error.errorCodeName} (${error.errorCode})")
-                    
+
+                    PlaybackLog.problem(
+                        "PLAYER_ERROR",
+                        *PlaybackLog.describe(error),
+                        "stream" to (stream.ifEmpty { "none" }),
+                        "transport" to (if (useHttpFallback) "http" else "https"),
+                        "state" to PlaybackLog.stateName(this@apply.playbackState)
+                    )
+
                     // Auto-retry logic remains same
                     if (error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
                         error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
@@ -396,9 +482,14 @@ class MediaPlayerService(): MediaSessionService(){
                         
                         if (!useHttpFallback) {
                             Log.d("MediaPlayerService", "HTTPS failed, switching to HTTP fallback...")
+                            PlaybackLog.problem(
+                                "TRANSPORT_FALLBACK", "from" to "https", "to" to "http",
+                                "trigger" to error.errorCodeName, "stream" to (stream.ifEmpty { "none" })
+                            )
                             useHttpFallback = true
                             LocalBroadcastManager.getInstance(this@MediaPlayerService).sendBroadcast(Intent("buffering"))
-                            
+
+                            PlaybackLog.event("RECONNECT_SCHEDULED", "delayMs" to 1000, "reason" to "transport_fallback")
                             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                                 if (stream.isNotEmpty()) {
                                     when(stream) {
@@ -406,22 +497,40 @@ class MediaPlayerService(): MediaSessionService(){
                                         "gold" -> setMediaItem(goldItem)
                                         "myata_hits" -> setMediaItem(xtraItem)
                                     }
+                                    PlaybackLog.event(
+                                        "RECONNECT_ATTEMPT", "reason" to "transport_fallback",
+                                        "transport" to "http", "stream" to stream
+                                    )
                                     prepare()
                                     play()
+                                } else {
+                                    PlaybackLog.problem("RECONNECT_SKIPPED", "reason" to "no_stream_selected")
                                 }
                             }, 1000)
                         } else {
                             Log.d("MediaPlayerService", "Network error, attempting to reconnect...")
                             LocalBroadcastManager.getInstance(this@MediaPlayerService).sendBroadcast(Intent("buffering"))
-                            
+
+                            PlaybackLog.event("RECONNECT_SCHEDULED", "delayMs" to 2000, "reason" to "network_error")
                             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                                 if (stream.isNotEmpty()) {
+                                    PlaybackLog.event(
+                                        "RECONNECT_ATTEMPT", "reason" to "network_error",
+                                        "transport" to "http", "stream" to stream
+                                    )
                                     prepare()
                                     play()
+                                } else {
+                                    PlaybackLog.problem("RECONNECT_SKIPPED", "reason" to "no_stream_selected")
                                 }
                             }, 2000)
                         }
                     } else {
+                        // No retry path exists for these codes - see issue #15.
+                        PlaybackLog.problem(
+                            "ERROR_NOT_RETRIED", "errorCodeName" to error.errorCodeName,
+                            "outcome" to "playback_stopped_silently"
+                        )
                         LocalBroadcastManager.getInstance(this@MediaPlayerService).sendBroadcast(Intent("pause"))
                     }
                 }
@@ -430,22 +539,42 @@ class MediaPlayerService(): MediaSessionService(){
 
         // Note: isTv is already initialized in onCreate()
 
+        // Commands arriving here came through the MediaSession: the in-app button
+        // (via MediaController), the Media3 notification, or a media button.
         val forwardingPlayer = object : ForwardingPlayer(exoPlayer) {
             override fun pause() {
-                // Unified behavior for all platforms (Mobile & TV): 
+                // Unified behavior for all platforms (Mobile & TV):
                 // Pause acts as Stop to clear buffer and ensure live edge on resume
+                PlaybackLog.event(
+                    "PLAYER_PAUSE", "source" to "session",
+                    "reason" to "pause_as_stop", "state" to PlaybackLog.stateName(playbackState)
+                )
                 stop()
                 Log.d("MediaPlayerService", "Pause action: Stream stopped (buffer cleared) for radio edge")
             }
 
+            override fun stop() {
+                PlaybackLog.event(
+                    "PLAYER_STOP", "source" to "session",
+                    "state" to PlaybackLog.stateName(playbackState)
+                )
+                super.stop()
+            }
+
             override fun play() {
+                PlaybackLog.event(
+                    "PLAYER_PLAY", "source" to "session",
+                    "state" to PlaybackLog.stateName(playbackState)
+                )
                 // When resuming from pause, re-prepare to jump to live edge
                 // This handles both STATE_READY (paused) and STATE_IDLE (stopped) cases
                 if (playbackState == Player.STATE_READY && !playWhenReady) {
                     Log.d("MediaPlayerService", "Resuming from pause: Re-preparing for live edge")
+                    PlaybackLog.event("PLAYER_PREPARE", "source" to "session", "reason" to "resume_from_pause")
                     prepare()
                 } else if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
                     Log.d("MediaPlayerService", "Resuming from stop: Re-preparing stream")
+                    PlaybackLog.event("PLAYER_PREPARE", "source" to "session", "reason" to "resume_from_stop")
                     prepare()
                 }
                 super.play()
@@ -492,13 +621,78 @@ class MediaPlayerService(): MediaSessionService(){
         // The foreground service with notification will keep running.
         // User can stop playback via the notification controls.
         Log.d("MediaPlayerService", "Task removed - keeping playback alive (foreground service continues)")
+        PlaybackLog.event("TASK_REMOVED", "isPlaying" to exoPlayer.isPlaying, "outcome" to "playback_kept_alive")
         super.onTaskRemoved(rootIntent)
     }
 
+    // ============== DIAGNOSTICS (logging only, no playback behaviour) ==============
+
+    /**
+     * Records which stream/transport the player was actually pointed at. The
+     * `when(stream)` blocks above have no else branch, so an unrecognised key
+     * silently leaves the player with no media item — worth a loud line.
+     */
+    private fun logStreamSelection(where: String) {
+        val known = stream == "myata" || stream == "gold" || stream == "myata_hits"
+        if (known) {
+            PlaybackLog.event(
+                "MEDIA_ITEM_SET", "stream" to stream, "at" to where,
+                "transport" to (if (useHttpFallback) "http" else "https"),
+                "mediaItemCount" to exoPlayer.mediaItemCount
+            )
+        } else {
+            PlaybackLog.problem(
+                "STREAM_UNRECOGNISED", "stream" to (stream.ifEmpty { "<empty>" }), "at" to where,
+                "outcome" to "no_media_item_set", "mediaItemCount" to exoPlayer.mediaItemCount
+            )
+        }
+    }
+
+    private var networkCallback: android.net.ConnectivityManager.NetworkCallback? = null
+
+    /** Log-only: records connectivity transitions so they can be lined up with player events. */
+    private fun registerNetworkLogging() {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager ?: return
+        val callback = object : android.net.ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: android.net.Network) {
+                PlaybackLog.event("NETWORK_AVAILABLE")
+            }
+
+            override fun onLost(network: android.net.Network) {
+                PlaybackLog.problem("NETWORK_LOST")
+            }
+        }
+        try {
+            cm.registerDefaultNetworkCallback(callback)
+            networkCallback = callback
+        } catch (e: Exception) {
+            PlaybackLog.problem("NETWORK_CALLBACK_UNAVAILABLE", "cause" to e.javaClass.simpleName)
+        }
+    }
+
+    private fun unregisterNetworkLogging() {
+        val callback = networkCallback ?: return
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+        try {
+            cm?.unregisterNetworkCallback(callback)
+        } catch (e: IllegalArgumentException) {
+            // Already unregistered.
+        }
+        networkCallback = null
+    }
+
     override fun onDestroy() {
+        PlaybackLog.event(
+            "SERVICE_DESTROY",
+            "wasPlaying" to exoPlayer.isPlaying,
+            "state" to PlaybackLog.stateName(exoPlayer.playbackState),
+            "stream" to (stream.ifEmpty { "none" })
+        )
+        unregisterNetworkLogging()
+
         metadataJob?.cancel()
         serviceScope.cancel()
-        
+
         mediaSession?.release()
         mediaSession = null
         

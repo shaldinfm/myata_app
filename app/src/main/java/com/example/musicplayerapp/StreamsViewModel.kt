@@ -13,6 +13,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.example.musicplayerapp.service.MediaPlayerService
+import com.example.musicplayerapp.service.PlaybackLog
 import com.example.musicplayerapp.utils.ServiceUtils
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
@@ -139,15 +140,28 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         // Use context.packageName (applicationId) since it may differ from the source package
         val sessionToken = SessionToken(context, ComponentName(context.packageName, MediaPlayerService::class.java.name))
         val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+        PlaybackLog.event("CONTROLLER_CONNECT_REQUESTED")
         controllerFuture.addListener({
             try {
                 mediaController = controllerFuture.get()
                 mediaController?.addListener(playerListener)
+                PlaybackLog.event(
+                    "CONTROLLER_CONNECTED",
+                    "isPlaying" to (mediaController?.isPlaying == true),
+                    "state" to PlaybackLog.stateName(mediaController?.playbackState ?: Player.STATE_IDLE)
+                )
                 // Initial sync
                 isPlaying.postValue(mediaController?.isPlaying == true)
                 isBuffering.postValue(mediaController?.playbackState == Player.STATE_BUFFERING)
             } catch (e: Exception) {
                 Log.e("MediaController", "Failed to connect", e)
+                // Nothing retries this: the controller stays null for the whole
+                // session and every Play press is dropped below. See issue #14.
+                PlaybackLog.problem(
+                    "CONTROLLER_CONNECT_FAILED",
+                    "cause" to e.javaClass.simpleName,
+                    "outcome" to "controller_null_for_session"
+                )
             }
         }, { it.run() }) // Executor
     }
@@ -349,11 +363,25 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     }
     
     fun togglePlayPause() {
-        mediaController?.let {
+        val controller = mediaController
+        if (controller == null) {
+            // The tap is discarded here. Logging it is the whole point: this path
+            // was previously invisible and is a prime suspect for issue #14.
+            PlaybackLog.problem("UI_REQUEST_DROPPED", "request" to "toggle", "reason" to "controller_null")
+            return
+        }
+        controller.let {
             if (it.isPlaying) {
+                PlaybackLog.event("UI_PAUSE_REQUEST", "state" to PlaybackLog.stateName(it.playbackState))
                 it.pause()
             } else {
-                // If player is empty, we must start a stream via the Service intent 
+                PlaybackLog.event(
+                    "UI_PLAY_REQUEST",
+                    "state" to PlaybackLog.stateName(it.playbackState),
+                    "mediaItemCount" to it.mediaItemCount,
+                    "stream" to (currentStreamLive.value ?: "none")
+                )
+                // If player is empty, we must start a stream via the Service intent
                 // because current stream selection logic (fallback etc) is still in Service.
                 // In Phase 3 we can move all URI logic to a Repository.
                 if (it.playbackState == Player.STATE_IDLE || it.mediaItemCount == 0) {
@@ -368,7 +396,13 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
 
     fun switchStream(stream: String) {
         val isSameStream = currentStreamLive.value == stream
-        
+        PlaybackLog.event(
+            "UI_STREAM_SWITCH",
+            "to" to stream,
+            "from" to (currentStreamLive.value ?: "none"),
+            "sameStream" to isSameStream
+        )
+
         if (isSameStream) {
             // Same stream clicked - only trigger playback if stream is NOT already playing
             // The isPlaying check is done in the service via forcePlay logic

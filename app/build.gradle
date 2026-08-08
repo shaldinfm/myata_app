@@ -31,7 +31,7 @@ def releaseSigningProblem = {
     }
     if (!rootProject.file(keystoreProps['storeFile']).isFile()) {
         return 'the keystore that storeFile points to does not exist at that path ' +
-                '(java.util.Properties drops single backslashes — use forward slashes)'
+                '(java.util.Properties drops single backslashes, so use forward slashes)'
     }
     return null
 }()
@@ -118,7 +118,7 @@ if (!releaseSigningAvailable) {
                     "Release signing unavailable: ${releaseSigningProblem}.\n" +
                     "Refusing to run: ${blocked.join(', ')}.\n" +
                     'Copy keystore.properties.example to keystore.properties and fill it in ' +
-                    'locally — see docs/RELEASE_SIGNING.md.\n' +
+                    'locally, then see docs/RELEASE_SIGNING.md.\n' +
                     'This build produced no artifact. Anything currently in ' +
                     'app/build/outputs/ is left over from an earlier run and is NOT a ' +
                     'result of this build.')

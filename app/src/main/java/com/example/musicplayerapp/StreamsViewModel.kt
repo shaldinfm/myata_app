@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.*
 import org.jsoup.Jsoup
 import org.jsoup.select.Elements
@@ -66,6 +67,9 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     var isBuffering = MutableLiveData<Boolean>()
     var isInSplitMode = MutableLiveData<Boolean>()
     var playlistList = MutableLiveData<MutableList<MyataPlaylist>>()
+    private val _playlistsState = MutableLiveData(PlaylistsState.LOADING)
+    val playlistsState: LiveData<PlaylistsState> = _playlistsState
+    private var playlistsJob: Job? = null
     var lastObservedStream: String? = null
     
     // Use SavedStateHandle for persistence
@@ -259,8 +263,39 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
 
 
 
-    fun refreshPlaylists() = viewModelScope.launch {
-        playlistList.postValue(metadataRepository.fetchPlaylists().toMutableList())
+    /**
+     * Loads the playlists, retrying with exponential backoff inside a bounded budget.
+     * Ends in either READY or ERROR — never keeps the splash screen waiting forever
+     * and never turns into an endless background poll (issue #9).
+     *
+     * Calling this while a load is already running is a no-op, so a burst of
+     * connectivity callbacks cannot pile up requests.
+     */
+    fun refreshPlaylists() {
+        if (playlistsJob?.isActive == true) return
+
+        playlistsJob = viewModelScope.launch {
+            _playlistsState.value = PlaylistsState.LOADING
+
+            val loaded = withTimeoutOrNull(PLAYLISTS_LOAD_BUDGET_MS) {
+                var backoffMs = PLAYLISTS_RETRY_INITIAL_DELAY_MS
+                var playlists = metadataRepository.fetchPlaylists()
+                while (playlists.isEmpty()) {
+                    delay(backoffMs)
+                    backoffMs = (backoffMs * 2).coerceAtMost(PLAYLISTS_RETRY_MAX_DELAY_MS)
+                    playlists = metadataRepository.fetchPlaylists()
+                }
+                playlists
+            }
+
+            if (loaded != null) {
+                playlistList.value = loaded.toMutableList()
+                _playlistsState.value = PlaylistsState.READY
+            } else {
+                Log.w("StreamsViewModel", "Playlists not loaded within budget, showing error state")
+                _playlistsState.value = PlaylistsState.ERROR
+            }
+        }
     }
 
     private fun startMetadataPolling() {
@@ -397,6 +432,13 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
             .replace("/", "%2F")
             .replace(" ", "+")
         }/+images"
+    }
+
+    private companion object {
+        /** Hard ceiling on the whole retry sequence for one playlist load attempt. */
+        const val PLAYLISTS_LOAD_BUDGET_MS = 12_000L
+        const val PLAYLISTS_RETRY_INITIAL_DELAY_MS = 1_000L
+        const val PLAYLISTS_RETRY_MAX_DELAY_MS = 4_000L
     }
 }
 

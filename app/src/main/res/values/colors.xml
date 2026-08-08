@@ -8,4 +8,6 @@
     <color name="black">#FF000000</color>
     <color name="main_fragment">#000000</color>
     <color name="white">#FFFFFFFF</color>
+    <!-- Brand accent already used throughout the Myata artwork -->
+    <color name="myata_accent">#00B7CE</color>
 </resources>

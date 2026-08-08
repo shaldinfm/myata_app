@@ -14,3 +14,13 @@ data class MyataPlaylist(
     val uri: String,
     val img: Uri
 )
+
+/**
+ * Load state of the playlist list, which the splash screen waits on before
+ * entering the app. ERROR is terminal until something asks for a retry.
+ */
+enum class PlaylistsState {
+    LOADING,
+    READY,
+    ERROR
+}

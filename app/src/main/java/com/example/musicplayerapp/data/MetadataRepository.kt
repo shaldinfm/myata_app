@@ -77,13 +77,20 @@ class MetadataRepository(private val client: OkHttpClient) {
 
     /**
      * Fetches playlists from the server.
+     * Returns an empty list on any failure; the caller decides whether to retry.
      */
     suspend fun fetchPlaylists(): List<MyataPlaylist> = withContext(Dispatchers.IO) {
+        var connection: HttpURLConnection? = null
         try {
             val url = URL("https://radiomyata.ru/covers/playlists.txt")
-            val connection: HttpURLConnection = url.openConnection() as HttpsURLConnection
+            connection = (url.openConnection() as HttpsURLConnection).apply {
+                // Without these the defaults are "wait forever", which is how a slow
+                // network kept the splash screen up indefinitely (issue #9).
+                connectTimeout = CONNECT_TIMEOUT_MS
+                readTimeout = READ_TIMEOUT_MS
+            }
             val lastModified = connection.lastModified
-            
+
             val br = BufferedReader(InputStreamReader(connection.getInputStream()))
             val wholeText = br.readText().split(Regex("\\n\\s*\\n"))
             br.close()
@@ -106,6 +113,13 @@ class MetadataRepository(private val client: OkHttpClient) {
         } catch (e: Exception) {
             Log.e("MetadataRepo", "Error fetching playlists", e)
             emptyList()
+        } finally {
+            connection?.disconnect()
         }
+    }
+
+    private companion object {
+        const val CONNECT_TIMEOUT_MS = 5_000
+        const val READ_TIMEOUT_MS = 5_000
     }
 }

@@ -21,7 +21,9 @@ android {
 
     defaultConfig {
         applicationId "dlinemedia.radioplayer.myata"
-        minSdk 21
+        // 24, not 21: Android 5/6 cannot reach our own servers (see the commit
+        // that raised this) and network_security_config only applies from 24.
+        minSdk 24
         targetSdk 36
         versionCode 202611
         versionName "3.6.5"

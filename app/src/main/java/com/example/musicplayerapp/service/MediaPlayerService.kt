@@ -319,6 +319,18 @@ class MediaPlayerService(): MediaSessionService(){
                 .setDataSourceFactory(dataSourceFactory))
             .setLoadControl(loadControl)
             .setAudioAttributes(audioAttributes, true) // true = automatic audio focus handling
+            // Pause when the active output goes away (Bluetooth drops, headphones
+            // unplugged). Without this the system simply re-routes to the phone
+            // speaker and the radio keeps playing out loud - issue #13. Audio focus
+            // handling above does NOT cover this: focus is about other apps wanting
+            // the output, this is about the output disappearing.
+            //
+            // ExoPlayer's own AudioBecomingNoisyManager clears playWhenReady with
+            // reason PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY. It never
+            // auto-resumes, and it does not route through the MediaSession, so the
+            // ForwardingPlayer's pause()-as-stop() is not triggered and the buffer
+            // is kept: the user resumes with a single Play press.
+            .setHandleAudioBecomingNoisy(true)
             .setWakeMode(androidx.media3.common.C.WAKE_MODE_NETWORK) // Prevent CPU sleep
             .build().apply {
             addListener(object: Player.Listener{

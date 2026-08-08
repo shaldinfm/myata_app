@@ -88,6 +88,13 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+    testOptions {
+        unitTests {
+            // Media3's PlaybackException touches android.os stubs when constructed.
+            // Without this the stubs throw and the pure-logic tests cannot run.
+            returnDefaultValues = true
+        }
+    }
     kotlinOptions {
         jvmTarget = '17'
     }

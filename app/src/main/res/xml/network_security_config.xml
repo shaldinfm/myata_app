@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Full TLS validation for the whole app.
+
+    Everything defaults to the system trust store over HTTPS. Two of our own hosts
+    additionally get a bundled root, because their chains end at CAs that older
+    Android system stores do not carry:
+
+      radiomyata.ru         -> ISRG Root X1            (system store: Android 7.1.1+)
+      radio.dline-media.com -> GlobalSign Root CA - R6 (system store: recent Android only)
+
+    These are extra trust anchors, not pins: "system" stays listed alongside them,
+    so an ordinary server-certificate rotation under any trusted CA keeps working.
+    Chain building and hostname verification are unchanged. Scoped per domain so
+    the extra anchors never widen trust for third-party hosts.
+
+    Applies from API 24. See SecureNetModule for what this replaced.
+-->
+<network-security-config>
+
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Metadata API, track history and playlist covers. -->
+    <domain-config>
+        <domain includeSubdomains="true">radiomyata.ru</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/isrg_root_x1" />
+        </trust-anchors>
+    </domain-config>
+
+    <!--
+        Audio streams. MediaPlayerService keeps a plain-HTTP fallback for legacy
+        TV/projector devices whose TLS stack cannot complete the handshake at all,
+        so cleartext is permitted here and nowhere else.
+    -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">radio.dline-media.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/globalsign_root_r6" />
+        </trust-anchors>
+    </domain-config>
+
+</network-security-config>

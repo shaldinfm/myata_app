@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.musicplayerapp.data.AppDatabase
 import com.example.musicplayerapp.data.FavoriteTrack
 import com.example.musicplayerapp.data.FeedbackRepository
-import com.example.musicplayerapp.UnsafeNetModule
+import com.example.musicplayerapp.SecureNetModule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -18,7 +18,7 @@ class FavoritesViewModel(application: Application) : AndroidViewModel(applicatio
     
     private val database = AppDatabase.getDatabase(application)
     private val favoriteDao = database.favoriteDao()
-    private val feedbackRepository = FeedbackRepository(UnsafeNetModule.getUnsafeOkHttpClient())
+    private val feedbackRepository = FeedbackRepository(SecureNetModule.getOkHttpClient(application))
     
     /**
      * Flow of all favorite tracks, sorted by most recently added.

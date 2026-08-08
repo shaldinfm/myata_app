@@ -85,7 +85,7 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     val isCurrentFavorite: LiveData<Boolean> = _isCurrentFavorite
     private var favoriteObservationJob: Job? = null
 
-    private val client = UnsafeNetModule.getUnsafeOkHttpClient()
+    private val client = SecureNetModule.getOkHttpClient(app)
 
     // Repositories
     private val historyRepository = HistoryRepository(client)

@@ -8,11 +8,11 @@ class MyataApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // Configure Picasso to use Unsafe OkHttpClient
-        // This handles cases where Android TV/Projectors have old/expired root certs
-        // which causes loading images from Spotify (Let's Encrypt) to fail.
+        // Configure Picasso to use the shared, fully validating OkHttpClient.
+        // Old Android TV/projector trust stores are handled by the extra roots
+        // bundled in SecureNetModule, not by disabling certificate checks.
         try {
-            val client = UnsafeNetModule.getUnsafeOkHttpClient()
+            val client = SecureNetModule.getOkHttpClient(this)
             val picasso = Picasso.Builder(this)
                 .downloader(OkHttp3Downloader(client))
                 .listener { _, uri, exception -> 
@@ -27,7 +27,7 @@ class MyataApplication : Application() {
                 android.util.Log.w("Picasso", "Singleton already set")
             }
         } catch (e: Exception) {
-            android.util.Log.e("MyataApplication", "Failed to init unsafe Picasso: ${e.message}")
+            android.util.Log.e("MyataApplication", "Failed to init Picasso: ${e.message}")
         }
     }
 }

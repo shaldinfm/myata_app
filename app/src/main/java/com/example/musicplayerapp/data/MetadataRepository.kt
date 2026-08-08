@@ -2,7 +2,6 @@ package com.example.musicplayerapp.data
 
 import android.net.Uri
 import android.util.Log
-import com.example.musicplayerapp.UnsafeNetModule
 import com.example.musicplayerapp.utils.ServiceUtils
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers

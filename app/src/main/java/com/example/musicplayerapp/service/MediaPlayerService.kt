@@ -22,7 +22,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerNotificationManager
 import com.example.musicplayerapp.R
-import com.example.musicplayerapp.UnsafeNetModule
+import com.example.musicplayerapp.SecureNetModule
 import com.example.musicplayerapp.MainActivity
 import com.google.gson.Gson
 import com.squareup.picasso.Picasso
@@ -35,6 +35,11 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 
 
+// Media3 marks most of ExoPlayer's configuration surface (LoadControl, DataSource
+// factories, PlayerNotificationManager, ForwardingPlayer command sets) @UnstableApi.
+// Media3 1.7 promotes using them without opt-in to a lint error, so declare it once
+// for the whole service rather than annotating each call site.
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class MediaPlayerService(): MediaSessionService(){
 
     private lateinit var exoPlayer: ExoPlayer
@@ -49,8 +54,8 @@ class MediaPlayerService(): MediaSessionService(){
     // WakeLock to prevent sleep on Android TV
     private var wakeLock: PowerManager.WakeLock? = null
     
-    // OkHttp client for API requests (Unsafe for legacy device support)
-    private val httpClient = UnsafeNetModule.getUnsafeOkHttpClient()
+    // OkHttp client for API requests (full TLS validation, extra roots bundled)
+    private val httpClient by lazy { SecureNetModule.getOkHttpClient(this) }
     
     // Artwork Repository (single source of truth for album art)
     private val artworkRepository by lazy { com.example.musicplayerapp.data.ArtworkRepository(httpClient) }
@@ -106,10 +111,13 @@ class MediaPlayerService(): MediaSessionService(){
                     val channel = NotificationChannel(channelId, "Playback", NotificationManager.IMPORTANCE_LOW)
                     (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
                 }
-                val notification = android.app.Notification.Builder(this, channelId)
+                // NotificationCompat, not Notification.Builder: the platform builder
+                // that takes a channel id requires API 26, and minSdk here is 21.
+                val notification = androidx.core.app.NotificationCompat.Builder(this, channelId)
                     .setSmallIcon(R.drawable.ic_launcher_foreground)
                     .setContentTitle("Radio Myata")
                     .setContentText("Загрузка...")
+                    .setPriority(androidx.core.app.NotificationCompat.PRIORITY_LOW)
                     .build()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
@@ -297,10 +305,11 @@ class MediaPlayerService(): MediaSessionService(){
             .setUsage(androidx.media3.common.C.USAGE_MEDIA)
             .build()
 
-        // Configure HttpDataSource - Use OkHttp to allow SSL bypass for legacy devices
-        val unsafeCallFactory = UnsafeNetModule.getUnsafeOkHttpClient()
-        
-        val httpDataSourceFactory = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(unsafeCallFactory)
+        // Configure HttpDataSource - OkHttp, so the stream uses the same validated
+        // trust anchors as the rest of the app (see SecureNetModule).
+        val callFactory = SecureNetModule.getOkHttpClient(this)
+
+        val httpDataSourceFactory = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(callFactory)
             .setUserAgent(if (isTv) "MyataRadio/1.0 (Android TV)" else "MyataRadio/1.0 (Android)")
 
         val dataSourceFactory = androidx.media3.datasource.DefaultDataSource.Factory(this, httpDataSourceFactory)

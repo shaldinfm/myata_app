@@ -16,15 +16,17 @@ if (keystorePropsFile.exists()) {
 }
 
 android {
-    compileSdk 35
+    compileSdk 36
     namespace 'com.example.musicplayerapp'
 
     defaultConfig {
         applicationId "dlinemedia.radioplayer.myata"
-        minSdk 21
-        targetSdk 35
-        versionCode 202610
-        versionName "3.6.4"
+        // 24, not 21: Android 5/6 cannot reach our own servers (see the commit
+        // that raised this) and network_security_config only applies from 24.
+        minSdk 24
+        targetSdk 36
+        versionCode 202611
+        versionName "3.6.5"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -82,9 +84,12 @@ android {
 
 dependencies {
 
-    def exoplayerVersion = '1.3.0'
+    // 1.3.0 predates the Android 14+/15 foreground-service and MediaSession
+    // changes; 1.7.1 is the current line validated against API 36.
+    def exoplayerVersion = '1.7.1'
     def retrofitVersion = '2.9.0'
-    def room_version = '2.6.1'
+    // 2.7.x is the first Room line built for KSP2 / Kotlin 2.2. Schema is unchanged.
+    def room_version = '2.7.2'
 
     implementation 'org.jsoup:jsoup:1.17.2'
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
@@ -94,12 +99,14 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.10.1'
     implementation "com.squareup.okhttp3:logging-interceptor:4.12.0"
 
-    implementation("androidx.navigation:navigation-fragment-ktx:2.7.7")
-    implementation("androidx.navigation:navigation-ui-ktx:2.7.7")
+    // 2.8.x is the first Navigation line that supports predictive back, which
+    // Android 16 turns on for targetSdk 36 regardless of the manifest opt-out.
+    implementation("androidx.navigation:navigation-fragment-ktx:2.8.9")
+    implementation("androidx.navigation:navigation-ui-ktx:2.8.9")
 
-    implementation 'androidx.core:core-ktx:1.12.0'
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
     
     // Room Database
     implementation "androidx.room:room-runtime:$room_version"
@@ -110,8 +117,9 @@ dependencies {
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
     
     // Lifecycle
-    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0"
-    implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.7.0"
+    // Required by Navigation 2.8.x.
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7"
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.8.7"
     
     // Media3 migration
     implementation "androidx.media3:media3-exoplayer:$exoplayerVersion"

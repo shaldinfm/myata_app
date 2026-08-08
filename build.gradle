@@ -6,11 +6,17 @@ buildscript {
         maven { url 'https://jitpack.io' }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.3.2'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0"
+        // AGP 8.9+ is the first line with compileSdk 36 support; 8.13.x is the
+        // current stable and requires Gradle 8.13+ and JDK 17.
+        classpath 'com.android.tools.build:gradle:8.13.2'
+        // Kotlin 2.2 is forced by AGP 8.13: its bundled databinding-ktx and
+        // kotlin-stdlib carry metadata version 2.2.0, which a 1.9 compiler
+        // refuses to read.
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.21"
         classpath 'com.google.gms:google-services:4.4.4'
-        classpath 'com.google.firebase:firebase-crashlytics-gradle:2.9.9'
-        classpath 'com.google.devtools.ksp:symbol-processing-gradle-plugin:1.9.0-1.0.13'
+        // 2.9.x is incompatible with AGP 8.9+ (uses removed variant APIs).
+        classpath 'com.google.firebase:firebase-crashlytics-gradle:3.0.7'
+        classpath 'com.google.devtools.ksp:symbol-processing-gradle-plugin:2.2.21-2.0.5'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files

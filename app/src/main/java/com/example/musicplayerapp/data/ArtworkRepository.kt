@@ -292,7 +292,9 @@ class ArtworkRepository(private val httpClient: OkHttpClient) {
 
     private fun tryFetchArtistImage(artistName: String): String? {
         try {
-            val artistUrl = "http://ws.audioscrobbler.com/2.0/?method=artist.getInfo&api_key=$LAST_FM_API_KEY&artist=${java.net.URLEncoder.encode(artistName, "UTF-8")}&format=json"
+            // https, not http: cleartext is no longer permitted for this host, and
+            // the api_key travelled in the query string of a plaintext request.
+            val artistUrl = "https://ws.audioscrobbler.com/2.0/?method=artist.getInfo&api_key=$LAST_FM_API_KEY&artist=${java.net.URLEncoder.encode(artistName, "UTF-8")}&format=json"
             val request = Request.Builder().url(artistUrl).build()
 
             httpClient.newCall(request).execute().use { response ->

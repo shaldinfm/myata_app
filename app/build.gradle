@@ -15,6 +15,28 @@ if (keystorePropsFile.exists()) {
     keystorePropsFile.withInputStream { keystoreProps.load(it) }
 }
 
+// Why release signing cannot be used, or null when it can. Checking the keystore
+// itself — not just that keystore.properties exists — keeps a half-filled config
+// from failing later inside validateSigningRelease.
+// This message is user-facing: name the key at fault, never its value.
+def releaseSigningProblem = {
+    if (!keystorePropsFile.exists()) {
+        return 'keystore.properties not found in the project root'
+    }
+    def missing = ['storeFile', 'storePassword', 'keyAlias', 'keyPassword'].findAll {
+        !keystoreProps[it]?.trim()
+    }
+    if (!missing.isEmpty()) {
+        return "keystore.properties has no value for: ${missing.join(', ')}"
+    }
+    if (!rootProject.file(keystoreProps['storeFile']).isFile()) {
+        return 'the keystore that storeFile points to does not exist at that path ' +
+                '(java.util.Properties drops single backslashes — use forward slashes)'
+    }
+    return null
+}()
+def releaseSigningAvailable = releaseSigningProblem == null
+
 android {
     compileSdk 36
     namespace 'com.example.musicplayerapp'
@@ -40,7 +62,7 @@ android {
     }
 
     signingConfigs {
-        if (keystorePropsFile.exists()) {
+        if (releaseSigningAvailable) {
             release {
                 storeFile rootProject.file(keystoreProps['storeFile'])
                 storePassword keystoreProps['storePassword']
@@ -52,22 +74,11 @@ android {
 
     buildTypes {
         release {
-            if (keystorePropsFile.exists()) {
+            if (releaseSigningAvailable) {
                 signingConfig signingConfigs.release
-            } else {
-                // No local signing config: fail release packaging with a clear
-                // pointer instead of silently producing an unsigned artifact.
-                tasks.whenTaskAdded { t ->
-                    if (t.name == 'packageRelease' || t.name == 'bundleRelease') {
-                        t.doFirst {
-                            throw new GradleException(
-                                'keystore.properties not found — release signing unavailable. ' +
-                                'Copy keystore.properties.example to keystore.properties and fill it locally. ' +
-                                'See docs/RELEASE_SIGNING.md.')
-                        }
-                    }
-                }
             }
+            // Without a signing config the build is stopped by the guard below,
+            // before any task that could write an artifact gets to run.
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -79,6 +90,39 @@ android {
     }
     kotlinOptions {
         jvmTarget = '17'
+    }
+}
+
+// Release signing guard (issue #10).
+//
+// The previous version hung a doFirst on the bundleRelease *lifecycle* task.
+// bundleRelease produces nothing itself: its dependency packageReleaseBundle
+// writes the bundle and runs to completion first, so a build without a signing
+// config still left an unsigned app-release.aab in app/build/outputs before
+// failing. The check therefore has to happen before execution starts at all.
+//
+// Failing from taskGraph.whenReady does that: the graph is fully resolved and
+// no task has run yet, so nothing is ever written to outputs/.
+if (!releaseSigningAvailable) {
+    def needsReleaseSigning = { String name ->
+        name ==~ /^(assemble|bundle|install|package|validateSigning)Release(Bundle|UniversalApk)?$/
+    }
+
+    gradle.taskGraph.whenReady { graph ->
+        def blocked = graph.allTasks
+                .findAll { it.project == project && needsReleaseSigning(it.name) }
+                .collect { it.name }
+                .sort()
+        if (!blocked.isEmpty()) {
+            throw new GradleException(
+                    "Release signing unavailable: ${releaseSigningProblem}.\n" +
+                    "Refusing to run: ${blocked.join(', ')}.\n" +
+                    'Copy keystore.properties.example to keystore.properties and fill it in ' +
+                    'locally — see docs/RELEASE_SIGNING.md.\n' +
+                    'This build produced no artifact. Anything currently in ' +
+                    'app/build/outputs/ is left over from an earlier run and is NOT a ' +
+                    'result of this build.')
+        }
     }
 }
 

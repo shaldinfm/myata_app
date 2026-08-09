@@ -93,6 +93,35 @@ function applyBox(node, spec, theme) {
   if (spec.opacity != null) node.opacity = spec.opacity;
 }
 
+/* Turn a frame into a real Figma auto-layout frame. This is what makes a history
+ * row grow with a long title instead of clipping it, and it leaves the result as
+ * an ordinary editable layer rather than a flattened picture. */
+function applyAutoLayout(frame, al) {
+  frame.layoutMode = al.mode;
+  frame.itemSpacing = al.gap || 0;
+  frame.paddingTop = al.pad[0]; frame.paddingRight = al.pad[1];
+  frame.paddingBottom = al.pad[2]; frame.paddingLeft = al.pad[3];
+  frame.counterAxisAlignItems = al.align === "CENTER" ? "CENTER" : "MIN";
+  frame.primaryAxisAlignItems = "MIN";
+  if (al.hug === "HEIGHT") {
+    // hug on the axis that is the height for this direction, fixed on the other
+    if (al.mode === "VERTICAL") { frame.primaryAxisSizingMode = "AUTO"; frame.counterAxisSizingMode = "FIXED"; }
+    else { frame.counterAxisSizingMode = "AUTO"; frame.primaryAxisSizingMode = "FIXED"; }
+  } else {
+    frame.primaryAxisSizingMode = "FIXED";
+    frame.counterAxisSizingMode = "FIXED";
+  }
+  frame.clipsContent = false;
+}
+
+function applyChildLayout(node, spec, parentAl) {
+  if (!parentAl) return;
+  if (spec.grow) {
+    node.layoutGrow = 1;
+    if (parentAl.mode === "HORIZONTAL" && "layoutAlign" in node) node.layoutAlign = "INHERIT";
+  }
+}
+
 /* Replace every solid fill and stroke in a cloned subtree, which is what makes a
  * brand mark monochrome. Geometry is never touched beyond the uniform resize. */
 function retint(node, hex) {
@@ -157,9 +186,12 @@ async function buildNode(spec, theme) {
     t.fontSize = spec.text.size;
     t.lineHeight = { unit: "PIXELS", value: spec.text.lh };
     t.textAlignHorizontal = spec.text.align;
-    t.textAutoResize = "NONE";
+    t.textAlignVertical = spec.text.valign === "CENTER" ? "CENTER" : "TOP";
     t.x = spec.x; t.y = spec.y;
     t.resizeWithoutConstraints(Math.max(spec.w, 1), Math.max(spec.h, 1));
+    // HEIGHT keeps the width and lets the text run onto as many lines as it needs.
+    // Nothing in these screens truncates.
+    t.textAutoResize = spec.text.wrap ? "HEIGHT" : "NONE";
     var c = resolve(spec.fill, theme);
     t.fills = c ? solid(c) : [];
     return t;
@@ -189,7 +221,14 @@ async function buildNode(spec, theme) {
   fr.clipsContent = false;
   fr.layoutMode = "NONE";
   var kids = spec.ch || [];
-  for (var i = 0; i < kids.length; i++) fr.appendChild(await buildNode(kids[i], theme));
+  for (var i = 0; i < kids.length; i++) {
+    var child = await buildNode(kids[i], theme);
+    fr.appendChild(child);
+    applyChildLayout(child, kids[i], spec.al);
+  }
+  // Auto-layout is applied AFTER the children exist so Figma lays them out once,
+  // with their final sizes, instead of reflowing on every append.
+  if (spec.al) applyAutoLayout(fr, spec.al);
   return fr;
 }
 
@@ -201,7 +240,17 @@ async function buildScreen(screen, theme, x, y) {
   root.fills = solid(resolve("background", theme));
   root.clipsContent = true;
   root.layoutMode = "NONE";
-  for (var i = 0; i < screen.nodes.length; i++) root.appendChild(await buildNode(screen.nodes[i], theme));
+  for (var i = 0; i < screen.nodes.length; i++) {
+    var child = await buildNode(screen.nodes[i], theme);
+    root.appendChild(child);
+  }
+  // A screen whose only child is an auto-layout column grows with its content;
+  // match the root to it so the frame is not left with dead space or a clip.
+  if (screen.nodes.length === 1 && screen.nodes[0].al && root.children.length === 1) {
+    var only = root.children[0];
+    only.x = 0; only.y = 0;
+    root.resizeWithoutConstraints(screen.w, Math.max(only.height, 1));
+  }
   return root;
 }
 
@@ -231,6 +280,7 @@ async function dryRun() {
 
   // Verify every referenced asset node actually resolves, per theme, before anything is written.
   report.assets = [];
+  var families = {};
   for (var key in SCREEN_SPEC.assets) {
     if (!Object.prototype.hasOwnProperty.call(SCREEN_SPEC.assets, key)) continue;
     var reg = SCREEN_SPEC.assets[key];
@@ -243,8 +293,33 @@ async function dryRun() {
       row.resolved[th] = found ? "OK" : "NOT_FOUND";
       if (!found) report.warnings.push("asset " + key + " (" + th + "): node " + nid + " not found in this file");
     }
-    report.assets.push(row);
     if (reg.status === "PENDING_OWNER") report.blocked = (report.blocked || 0) + 1;
+
+    // Collapse a family (16 avatar slots) into one line so the report stays readable.
+    if (reg.family) {
+      if (!families[reg.family]) {
+        families[reg.family] = { key: reg.family + "-01 … ", status: reg.status, resolved: row.resolved, note: reg.note, count: 0 };
+        report.assets.push(families[reg.family]);
+      }
+      families[reg.family].count++;
+      families[reg.family].key = reg.family + "-01 … -" + String(families[reg.family].count).padStart(2, "0");
+      if (row.resolved.dark !== "OK" || row.resolved.light !== "OK") families[reg.family].resolved = row.resolved;
+    } else {
+      report.assets.push(row);
+    }
+  }
+
+  // Read-only sweep for anything in this file that could serve as an avatar
+  // asset, so the owner does not have to hunt for node ids by hand.
+  report.avatarCandidates = [];
+  try {
+    var comps = figma.root.findAllWithCriteria({ types: ["COMPONENT", "COMPONENT_SET"] });
+    for (var ci = 0; ci < comps.length && report.avatarCandidates.length < 40; ci++) {
+      if (/avatar|monogram|profile pic|person/i.test(comps[ci].name))
+        report.avatarCandidates.push({ id: comps[ci].id, name: comps[ci].name });
+    }
+  } catch (e) {
+    report.avatarCandidates = null;   // criteria search unavailable; not an error
   }
 
   var layout = planLayout(SCREEN_SPEC.screens);
@@ -272,6 +347,32 @@ async function dryRun() {
   return report;
 }
 
+/* Grid the frames we just created using their real sizes, starting clear of
+ * whatever was already on the page. Only frames from this run are moved. */
+function relayout(page, frames) {
+  if (!frames.length) return;
+  var mine = {};
+  for (var i = 0; i < frames.length; i++) mine[frames[i].id] = true;
+
+  var startY = 0;
+  for (var j = 0; j < page.children.length; j++) {
+    var c = page.children[j];
+    if (mine[c.id]) continue;
+    var b = c.y + c.height;
+    if (b > startY) startY = b;
+  }
+  if (startY > 0) startY += GRID_GAP_Y;
+
+  var x = 0, y = startY, rowH = 0;
+  for (var k = 0; k < frames.length; k++) {
+    var f = frames[k];
+    if (x > 0 && x + f.width > GRID_WRAP) { x = 0; y += rowH + GRID_GAP_Y; rowH = 0; }
+    f.x = x; f.y = y;
+    x += f.width + GRID_GAP_X;
+    if (f.height > rowH) rowH = f.height;
+  }
+}
+
 /* ---------- apply ---------- */
 
 async function apply() {
@@ -281,6 +382,7 @@ async function apply() {
 
   var pages = await allPages();
   missingAssets = [];
+  var created = [];
   var done = { created: 0, skipped: 0, pagesCreated: 0, notes: [], errors: [], assetSlots: [] };
   var byId = {};
   for (var i = 0; i < SCREEN_SPEC.screens.length; i++) byId[SCREEN_SPEC.screens[i].id] = SCREEN_SPEC.screens[i];
@@ -303,11 +405,17 @@ async function apply() {
       try {
         var frame = await buildScreen(byId[plan.id], t.theme, plan.at.x, plan.at.y);
         page.appendChild(frame);
+        created.push(frame);
         done.created++;
       } catch (e) {
         done.errors.push(plan.name + ": " + (e && e.message ? e.message : String(e)));
       }
     }
+
+    // Auto-layout frames end up taller than the planned nominal height, so lay
+    // the page out from the sizes the frames actually came out at.
+    relayout(page, created);
+    created.length = 0;
   }
 
   var tally = {};

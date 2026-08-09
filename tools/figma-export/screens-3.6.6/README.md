@@ -3,8 +3,10 @@
 Design proposals for the four flows that have no canonical design, plus the
 revised account/settings concepts from PR #23.
 
-**Status: awaiting visual approval. Nothing here is implemented in Android, and
-nothing here has been written to Figma yet.**
+**Status: ready to be created in Figma. Nothing here is implemented in Android.**
+Run the plugin below to place the frames on the two proposal pages, then refine
+logos, icons and spacing by hand in Figma — the frames are ordinary editable
+layers, and that manual pass is the intended next step.
 
 ---
 
@@ -15,7 +17,7 @@ spec/tokens.mjs       colour roles - v1 copied from canonical/semantic-tokens.js
                       v2 proposed with the canonical node each value came from
 spec/assets.json      brand marks and canonical controls, referenced by node id
 spec/primitives.mjs   canonical layout primitives, every number measured from the real pages
-spec/screens.mjs      the 25 screens
+spec/screens.mjs      the 29 screens
 build-spec.mjs        validates and emits spec.json
 render-preview.mjs    spec.json -> preview.html
 create-plugin/        Figma plugin: dry run, then create the frames
@@ -36,6 +38,7 @@ approximation is drawn.
 | `logo/youtube-music` | **needs confirmation** | ABOUT US › Section 3 › YouTube — this is the YouTube mark, not the YouTube Music mark |
 | `logo/apple-music` | **needs an asset** | nothing in the file |
 | `logo/lastfm` | **needs an asset** | nothing in the file |
+| `avatar/m3-01 … -16` | **needs assets** | intended to be the Material 3 Design Kit avatars |
 | `control/find-track` | in the file | COLLECTION › Track Item 1 › Container › Button |
 
 The `Social Button` components on the UI KIT page look like logo assets but are
@@ -46,6 +49,10 @@ Where a key has no node, the preview draws a **red dashed slot** and the plugin
 creates an empty frame named `Asset slot / <key> (PENDING)` and lists it as
 blocked. The gap stays visible instead of being papered over. To supply one, see
 `howToSupply` in `spec/assets.json`.
+
+The dry run also sweeps this file for local components whose name looks like an
+avatar and prints their ids, so wiring the Material 3 avatars is a paste rather
+than a hunt.
 
 `spec.json` is the single source both consumers read. The preview and the Figma
 frames come from one node tree with only the token table swapped, so light and
@@ -58,8 +65,9 @@ node tools/figma-export/screens-3.6.6/build-spec.mjs && node tools/figma-export/
 ```
 
 `build-spec.mjs` fails the build if any node uses a raw hex instead of a token,
-is missing a dimension, or falls outside its parent. It caught ten such
-problems on the first run.
+names an asset key that is not registered, is missing a dimension, falls outside
+its parent, or over-subscribes a horizontal auto-layout. Containment is not
+checked inside an auto-layout frame, where Figma computes the positions.
 
 Open `preview.html` for review. Muller is not embedded, so unless it is installed
 locally the text falls back to a system face — colour, layout and hierarchy are
@@ -69,35 +77,65 @@ accurate, letterforms and text widths are not.
 
 `create-plugin/` is a manifest plugin. Import it, Dry Run, then Create.
 
-- Dry Run performs no writes.
+- Dry Run performs no writes. It reports the frame count, checks that every
+  referenced asset node resolves, lists the ones that need supplying, and refuses
+  a canonical page.
 - Create runs only what Dry Run listed, and re-checks the live page first.
-- Frames go to two **new** pages, `3.6.6 PROPOSALS — DARK` and
-  `3.6.6 PROPOSALS - LIGHT`. The plugin **refuses to write to a canonical page**,
-  so `figma-canonical-*-normalized.json` stays comparable across exports.
+- Frames go to two pages, `3.6.6 PROPOSALS - LIGHT` and
+  `3.6.6 PROPOSALS - DARK`, created if absent. The plugin **refuses to write to
+  a canonical page**, so `figma-canonical-*-normalized.json` stays comparable
+  across exports.
 - Re-running skips frames that already exist by name, so a partial run resumes
   cleanly.
+- Everything created is an ordinary editable Figma layer — plain frames, text and
+  auto-layout, no flattening, no components — so logos, icons, spacing and
+  individual details can be refined by hand afterwards.
+- The page is laid out from the sizes the frames actually came out at, because an
+  auto-layout frame that hugs a wrapped title ends up taller than its nominal
+  height.
 
-After the frames exist, re-export both canonical pages, run
-`canonical/normalize-snapshot.mjs`, and commit the updated baselines. The
-canonical pages themselves should show **no diff** — that is the check that the
-plugin stayed off them.
+### Steps
+
+1. Open the Figma file that holds both canonical pages.
+2. **Menu → Plugins → Development → Import plugin from manifest…** and pick
+   `tools/figma-export/screens-3.6.6/create-plugin/manifest.json`.
+3. Run **Radio Myata · 3.6.6 proposal screens**.
+4. Press **1 · Dry Run**. Nothing is written. Check that Muller Regular, Medium
+   and Bold all report `AVAILABLE`, that the frame count reads 58, and that the
+   asset list shows only the expected `NEEDS ASSET` rows.
+5. Press **2 · Create frames**. It stays disabled until a dry run has succeeded,
+   and stays disabled if any warning was raised.
+6. Stop there. Do not export or normalize the proposal pages yet.
+
+Re-exporting is a later step, and when it happens the canonical pages must show
+**no diff** — that is the check that the plugin stayed off them.
 
 ---
 
-## The 25 screens
+## The 29 screens
 
-### Таймер сна (5)
+### Таймер сна (8)
 
 Entry point is the existing `Menu row / Таймер сна` on the player menu, so the
 flow adds no new navigation. Presentation is the canonical bottom sheet.
 
 | id | what |
 |---|---|
-| `sleep-timer-select` | 15 / 30 / 45 / 60, nothing preselected |
-| `sleep-timer-active` | selected option with remaining time, plus a separated destructive "Отключить таймер" |
+| `sleep-timer-select` | 15 / 30 / 45 / 60 presets plus **Своё время**, nothing preselected |
+| `sleep-timer-custom` | hours + minutes picker, with the resulting wall-clock time previewed |
+| `sleep-timer-custom-invalid` | 0 ч 0 мин — the only invalid input; Установить disabled |
+| `sleep-timer-active` | preset running: remaining time, plus a separated destructive "Отключить таймер" |
+| `sleep-timer-active-custom` | the same sheet after a custom duration is confirmed |
 | `sleep-timer-menu-active` | the player menu with `Таймер сна · 24 мин` |
 | `sleep-timer-cancelled` | snackbar, composited over the player |
 | `sleep-timer-completed` | snackbar, playback stopped |
+
+**Своё время** allows hours and minutes, so `1 ч 30 мин` is expressible. The
+picker resolves the duration to a wall-clock time before anything is committed,
+and `Установить` is disabled at `0 ч 0 мин` rather than accepting it and failing
+later. Once confirmed it is not a special case — it behaves exactly like a preset:
+absolute end time persisted, remaining time shown, cancellable, survives
+backgrounding and process recreation, and does not resume after a reboot.
 
 **Android requirements this design assumes** (not implemented, stated so the
 design can be checked against them):
@@ -133,6 +171,18 @@ no account data, no location. The card says so on the frame.
 `history-content`, `history-loading`, `history-empty`, `history-error`,
 `find-track-sheet`.
 
+**Rows are variable height and nothing is ever truncated.** The row is a
+horizontal auto-layout frame that hugs its content, and the title and artist are
+set to wrap rather than clip, so a track called
+*Краснознамённая дивизия имени моей бабушки* is shown in full. Two of the eight
+rows on `history-content` wrap on purpose so the behaviour is reviewable.
+
+A uniform 8px gap with 13px padding reproduces every canonical anchor exactly —
+time at 13, art at 60, text at 116, action at 305 — which means a single-line row
+still comes out at 13 + 48 + 13 = **74**, the canonical height. Cross-axis
+alignment is `MIN`, so the time stays on the title's first line instead of
+drifting to the middle of a tall row.
+
 The row is the canonical `History Item` from the player's Broadcast History
 section, promoted to full content width because the standalone screen has no
 outer card to sit in. Capped at 30 entries; older ones are dropped rather than
@@ -147,9 +197,14 @@ destructive row, since there is nothing saved to delete.
 **Album art.** The canonical row leaves a 64px gap between the time column
 (ends at +39) and the text column (starts at +103) with no child in it. That gap
 is the album-art slot: a 48×48 thumbnail centred in it lands the text back on the
-canonical x. Thumbnail geometry is the mini player's, 48×48 at radius 8. The
-loading skeleton is that square, at that exact position — not a horizontal bar —
-so the row does not reflow when data lands.
+canonical x. Thumbnail geometry is the mini player's, 48×48 at radius 8.
+
+**Skeleton.** Same auto-layout frame, same four slots, placeholders instead of
+content: a small bar in the real time column, a 48×48 square where the art goes,
+two bars in the real text column, and a 40×40 trailing circle for the action.
+Every horizontal anchor is identical to the loaded row, verified in the rendered
+preview — `13 / 60 / 116 / 305` in both — so nothing appears or shifts sideways
+when the data lands.
 
 ### Коллекция (2)
 
@@ -179,10 +234,25 @@ That is five permanently visible controls removed from a screen whose job is to
 show a list, and 88px of vertical space returned above the fold. **Needs a GO,
 and would ship as a repair-plan mutation, not as a new frame.**
 
-### Аккаунт / Настройки (8)
+### Аккаунт / Настройки (9)
 
 `auth-sign-in`, `auth-create-account`, `profile-guest`, `profile-authenticated`,
-`settings`, `settings-appearance`, `settings-sync`, `settings-lastfm`.
+`profile-avatar`, `settings`, `settings-appearance`, `settings-sync`,
+`settings-lastfm`.
+
+**Registration is optional and there is no wall anywhere.** Radio, the player,
+Broadcast History, Sleep Timer and a local Collection all work without an
+account; `profile-guest` says exactly that on the card. An account *adds*
+collection sync between devices, cloud restore, and future profile
+functionality — the list is headed "Аккаунт добавляет", not "unlock". No copy
+implies that listening requires signing in, and `auth-sign-in` keeps
+"Продолжить без аккаунта" as a first-class exit.
+
+**`profile-avatar`** is sixteen predefined avatars in a 4×4 grid (76px cells,
+18px gutters, 4·76 + 3·18 = 358), with the current avatar previewed above,
+a selected state and a Save action. No photo upload in 3.6.6. Every cell is an
+asset slot, so the Material 3 avatars are referenced if their ids are supplied
+and left as empty named slots otherwise — nothing is a drawn approximation.
 
 Every row runs on one fixed track, so nothing can grow into anything else:
 

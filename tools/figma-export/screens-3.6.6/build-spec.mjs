@@ -15,6 +15,19 @@ import { SCREENS } from "./spec/screens.mjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ASSETS = JSON.parse(fs.readFileSync(path.join(here, "spec", "assets.json"), "utf8"));
 
+// Expand declared families (avatar/m3 -> avatar/m3-01 … -16) so every slot the
+// plugin will create has its own entry the owner can point at a node.
+for (const [base, fam] of Object.entries(ASSETS.families || {})) {
+  for (let i = 1; i <= fam.count; i++) {
+    const key = `${base}-${String(i).padStart(fam.pad || 2, "0")}`;
+    if (ASSETS.assets[key]) continue;
+    ASSETS.assets[key] = {
+      status: fam.status, darkNodeId: null, lightNodeId: null, source: null,
+      nativeSize: fam.nativeSize, note: fam.note, family: base
+    };
+  }
+}
+
 /* Fail loudly rather than silently shipping a screen with a bad colour or a
  * node that falls outside its parent. */
 const errors = [];
@@ -33,11 +46,22 @@ function check(node, parent, screen, trail) {
     if (!TOKENS[v]) errors.push(`${where}: unknown token '${v}' in ${key}`);
   }
   if (node.w == null || node.h == null) errors.push(`${where}: missing width/height`);
-  if (parent) {
+  // Inside an auto-layout parent, x/y are computed by Figma and heights hug, so
+  // absolute containment is not a meaningful check.
+  if (parent && !parent.al) {
     if (node.x < -1) errors.push(`${where}: x=${node.x} is outside its parent`);
     if (node.y < -1) errors.push(`${where}: y=${node.y} is outside its parent`);
     if (node.x + node.w > parent.w + 1) errors.push(`${where}: right edge ${node.x + node.w} exceeds parent width ${parent.w}`);
-    if (node.y + node.h > parent.h + 1) errors.push(`${where}: bottom edge ${node.y + node.h} exceeds parent height ${parent.h}`);
+    if (node.y + node.h > parent.h + 1 && !parent.hugsChild) errors.push(`${where}: bottom edge ${node.y + node.h} exceeds parent height ${parent.h}`);
+  }
+  if (node.al) {
+    // A horizontal auto-layout must not be over-subscribed at its nominal widths.
+    if (node.al.mode === "HORIZONTAL") {
+      const kids = node.ch || [];
+      const pad = node.al.pad || [0, 0, 0, 0];
+      const used = pad[3] + pad[1] + (kids.length - 1) * (node.al.gap || 0) + kids.reduce((a, c) => a + c.w, 0);
+      if (used > node.w + 1) errors.push(`${where}: horizontal auto-layout needs ${used} but the frame is ${node.w}`);
+    }
   }
   (node.ch || []).forEach((c) => check(c, node, screen, trail + " > " + c.n));
 }
@@ -65,7 +89,7 @@ const spec = {
     note: "Every metric is measured from the canonical pages. Where a primitive had no " +
           "canonical equivalent, primitives.mjs records what it was derived from."
   },
-  figmaPages: { dark: "3.6.6 PROPOSALS — DARK", light: "3.6.6 PROPOSALS - LIGHT" },
+  figmaPages: { dark: "3.6.6 PROPOSALS - DARK", light: "3.6.6 PROPOSALS - LIGHT" },
   tokens: TOKENS,
   type: TYPE,
   assets: ASSETS.assets,
@@ -83,10 +107,15 @@ console.log(`spec.json written: ${SCREENS.length} screens x 2 themes = ${SCREENS
 for (const g of Object.keys(byGroup)) console.log(`  ${g}: ${byGroup[g].length} - ${byGroup[g].join(", ")}`);
 
 console.log("\nassets referenced:");
+const rolled = {};
 for (const key of Object.keys(assetUse)) {
   const a = ASSETS.assets[key];
-  const n = assetUse[key].length;
-  console.log(`  ${a.status === "PENDING_OWNER" ? "BLOCKED " : a.status === "CANONICAL_NODE_APPROXIMATE" ? "CONFIRM " : "ok      "} ${key.padEnd(22)} ${n} use${n > 1 ? "s" : " "}  ${a.status}`);
+  const label = a.family ? a.family + "-* (" + ASSETS.families[a.family].count + " slots)" : key;
+  rolled[label] = rolled[label] || { status: a.status, uses: 0 };
+  rolled[label].uses += assetUse[key].length;
 }
-const blocked = Object.keys(assetUse).filter((k) => ASSETS.assets[k].status === "PENDING_OWNER");
-if (blocked.length) console.log(`\n${blocked.length} asset(s) need owner-supplied Figma nodes: ${blocked.join(", ")}`);
+for (const [label, r] of Object.entries(rolled))
+  console.log(`  ${r.status === "PENDING_OWNER" ? "NEEDS ASSET" : r.status === "CANONICAL_NODE_APPROXIMATE" ? "CONFIRM    " : "ok         "} ${label.padEnd(28)} ${r.uses} use(s)`);
+
+const blocked = Object.entries(rolled).filter(([, r]) => r.status === "PENDING_OWNER").map(([l]) => l);
+if (blocked.length) console.log(`\nowner must supply: ${blocked.join(", ")}`);

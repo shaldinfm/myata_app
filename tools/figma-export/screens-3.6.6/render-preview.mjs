@@ -16,8 +16,20 @@ const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 const col = (v, theme) => (v == null ? null : v.charAt(0) === "#" ? v : spec.tokens[v][theme]);
 const px = (n) => (Math.round(n * 100) / 100) + "px";
 
-function node(n, theme) {
-  const st = [`left:${px(n.x)}`, `top:${px(n.y)}`, `width:${px(n.w)}`, `height:${px(n.h)}`];
+function node(n, theme, inFlow) {
+  // Children of an auto-layout frame sit in flow; everything else is absolute.
+  const st = inFlow
+    // relative, not static: these frames still hold absolutely-positioned children
+    ? ["position:relative", n.grow ? "flex:1 1 0;width:auto" : `flex:0 0 auto;width:${px(n.w)}`, `height:${px(n.h)}`]
+    : [`left:${px(n.x)}`, `top:${px(n.y)}`, `width:${px(n.w)}`, `height:${px(n.h)}`];
+  if (n.al) {
+    st.push("display:flex", `flex-direction:${n.al.mode === "VERTICAL" ? "column" : "row"}`,
+            `gap:${px(n.al.gap || 0)}`,
+            `padding:${n.al.pad.map(px).join(" ")}`,
+            `align-items:${n.al.align === "CENTER" ? "center" : "flex-start"}`,
+            "box-sizing:border-box");
+    if (n.al.hug === "HEIGHT") st.push("height:auto", "align-self:flex-start");
+  }
   if (n.opacity != null) st.push(`opacity:${n.opacity}`);
 
   if (n.t === "TEXT") {
@@ -25,6 +37,9 @@ function node(n, theme) {
     st.push(`font-weight:${{ Regular: 400, Medium: 500, Bold: 700 }[n.text.font]}`);
     st.push(`font-size:${px(n.text.size)}`, `line-height:${px(n.text.lh)}`);
     st.push(`text-align:${n.text.align.toLowerCase()}`);
+    if (n.text.wrap) st.push("white-space:normal", "height:auto", "overflow-wrap:anywhere");
+    if (n.text.valign === "CENTER") st.push("display:flex", "align-items:center",
+      `justify-content:${n.text.align === "RIGHT" ? "flex-end" : n.text.align === "CENTER" ? "center" : "flex-start"}`);
     return `<div class="t" style="${st.join(";")}" title="${esc(n.n)}">${esc(n.text.s)}</div>`;
   }
 
@@ -54,8 +69,12 @@ function node(n, theme) {
   if (n.r) st.push(`border-radius:${px(Math.min(n.r, Math.min(n.w, n.h) / 2))}`);
   if (n.t === "ELLIPSE") st.push("border-radius:50%");
   return `<div class="f" style="${st.join(";")}" title="${esc(n.n)}">` +
-         (n.ch || []).map((c) => node(c, theme)).join("") + "</div>";
+         (n.ch || []).map((c) => node(c, theme, !!n.al)).join("") + "</div>";
 }
+
+/* A screen whose single root is an auto-layout frame grows with its content, so
+ * the preview must let it size itself instead of clamping it to the spec height. */
+const autoRoot = (s) => s.nodes.length === 1 && !!s.nodes[0].al;
 
 const groups = [...new Set(spec.screens.map((s) => s.group))];
 
@@ -69,8 +88,8 @@ const body = groups.map((g) => {
         ${["light", "dark"].map((theme) => `
           <figure class="${theme}">
             <figcaption>${theme}</figcaption>
-            <div class="screen" style="width:${px(s.w)};height:${px(s.h)};background:${col("background", theme)}">
-              ${s.nodes.map((n) => node(n, theme)).join("")}
+            <div class="screen" style="width:${px(s.w)};${autoRoot(s) ? "height:auto;display:flex;flex-direction:column" : `height:${px(s.h)}`};background:${col("background", theme)}">
+              ${s.nodes.map((n) => node(n, theme, autoRoot(s))).join("")}
             </div>
           </figure>`).join("")}
       </div>

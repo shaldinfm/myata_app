@@ -10,7 +10,7 @@ import { TYPE } from "./tokens.mjs";
 import {
   SCREEN_W, MARGIN, CONTENT_W, APPBAR_H, NAV_H, F, T, V, E, A, icon,
   topAppBar, bottomNav, sheetShell, sheetRow, SHEET, menu, button, card,
-  historyItem, HISTORY_ART, snackbar
+  historyItem, historySkeleton, HISTORY_ART, HISTORY_ROW, snackbar
 } from "./primitives.mjs";
 
 const S = [];
@@ -97,31 +97,85 @@ const centeredState = (o) => {
 const TIMER_OPTIONS = ["15 минут", "30 минут", "45 минут", "60 минут"];
 const rowY = (i) => SHEET.rowTop + 20 + i * SHEET.pitch;   // +20 leaves room for the subtitle
 
-add("sleep-timer-select", "Таймер сна", "Таймер сна · выбор", SHEET.w, rowY(3) + SHEET.rowH + SHEET.padBottom,
-  [sheetShell("Bottom Sheet / Таймер сна", "Таймер сна", rowY(3) + SHEET.rowH + SHEET.padBottom,
-    TIMER_OPTIONS.map((label, i) => sheetRow(label, { y: rowY(i), ic: "clock", iconColor: "textSecondary" })),
-    { subtitle: "Остановить воспроизведение через" })],
-  "No option is preselected. Choosing one starts the timer and closes the sheet.");
-
 {
-  const dividerY = rowY(3) + SHEET.rowH + 12;
+  const h = rowY(4) + SHEET.rowH + SHEET.padBottom;
+  add("sleep-timer-select", "Таймер сна", "Таймер сна · выбор", SHEET.w, h,
+    [sheetShell("Bottom Sheet / Таймер сна", "Таймер сна", h,
+      TIMER_OPTIONS.map((label, i) => sheetRow(label, { y: rowY(i), ic: "clock", iconColor: "textSecondary" }))
+        .concat([sheetRow("Своё время", { y: rowY(4), ic: "clock", iconColor: "textSecondary", chevron: true })]),
+      { subtitle: "Остановить воспроизведение через" })],
+    "No option is preselected. A preset starts the timer and closes the sheet; " +
+    "'Своё время' opens the picker instead.");
+}
+
+/* Stepper row: label on the left, [-] value [+] on the right.
+ * 40px controls on the same 16px margin as everything else. */
+const stepperRow = (label, value, o = {}) =>
+  F("Stepper / " + label, { x: MARGIN, y: o.y, w: SHEET.w - 2 * MARGIN, h: 64, r: 12, fill: "surface", stroke: "outline" }, [
+    T("label", label, { x: 16, y: 21, w: 120, h: 22, ty: TYPE.sheetRow, fill: "textPrimary" }),
+    F("minus", { x: 156, y: 12, w: 40, h: 40, r: 20, stroke: o.minDisabled ? "outline" : "primary" }, [
+      V("m", { x: 8, y: 8, w: 24, h: 24, path: "M6 12 H18", stroke: o.minDisabled ? "disabledContent" : "primary", sw: 2 })
+    ]),
+    T("value", value, { x: 200, y: 18, w: 46, h: 28, ty: TYPE.sheetTitle, align: "CENTER", fill: "textPrimary" }),
+    F("plus", { x: 250, y: 12, w: 40, h: 40, r: 20, stroke: "primary" }, [
+      V("p", { x: 8, y: 8, w: 24, h: 24, path: "M6 12 H18 M12 6 V18", stroke: "primary", sw: 2 })
+    ])
+  ]);
+
+function customPicker(invalid) {
+  const h = 398;
+  const foot = invalid
+    ? T("error", "Укажите хотя бы 1 минуту", { x: MARGIN, y: 278, w: SHEET.w - 2 * MARGIN, h: 20, ty: TYPE.bodySecondary, fill: "error" })
+    : T("preview", "Эфир остановится в 01:12", { x: MARGIN, y: 278, w: SHEET.w - 2 * MARGIN, h: 20, ty: TYPE.bodySecondary, fill: "textSecondary" });
+  return sheetShell("Bottom Sheet / Своё время", "Своё время", h, [
+    stepperRow("Часы", invalid ? "0" : "1", { y: 118, minDisabled: true }),
+    stepperRow("Минуты", invalid ? "0" : "30", { y: 194, minDisabled: invalid }),
+    foot,
+    button("Отмена", { x: MARGIN, y: 322, w: 157, kind: "outline", name: "cancel" }),
+    button("Установить", { x: MARGIN + 169, y: 322, w: 157, kind: invalid ? "disabled" : "primary", name: "confirm" })
+  ], { subtitle: "Через сколько остановить эфир" });
+}
+
+add("sleep-timer-custom", "Таймер сна", "Таймер сна · своё время", SHEET.w, 398, [customPicker(false)],
+  "Hours and minutes, so durations past an hour are expressible. The preview line " +
+  "resolves the duration to a wall-clock time before anything is committed.");
+
+add("sleep-timer-custom-invalid", "Таймер сна", "Таймер сна · своё время, ошибка", SHEET.w, 398, [customPicker(true)],
+  "0 ч 0 мин is the only invalid input. Установить is disabled rather than " +
+  "accepting it and failing later, and minus is disabled at zero.");
+
+const timerActiveSheet = (name, selectedIndex, custom) => {
+  const rows = TIMER_OPTIONS.map((label, i) =>
+    sheetRow(label, {
+      y: rowY(i), ic: i === selectedIndex ? "check" : "clock",
+      iconColor: i === selectedIndex ? "primary" : "textSecondary",
+      trailing: i === selectedIndex ? "осталось 24 мин" : null
+    }));
+  rows.push(custom
+    ? sheetRow("Своё время", { y: rowY(4), ic: "check", iconColor: "primary", trailing: "осталось 1 ч 24 мин" })
+    : sheetRow("Своё время", { y: rowY(4), ic: "clock", iconColor: "textSecondary", chevron: true }));
+  const dividerY = rowY(4) + SHEET.rowH + 12;
   const offY = dividerY + 13;
   const h = offY + SHEET.rowH + SHEET.padBottom;
-  add("sleep-timer-active", "Таймер сна", "Таймер сна · активен", SHEET.w, h,
-    [sheetShell("Bottom Sheet / Таймер сна активен", "Таймер сна", h,
-      TIMER_OPTIONS.map((label, i) =>
-        sheetRow(label, {
-          y: rowY(i), ic: i === 1 ? "check" : "clock",
-          iconColor: i === 1 ? "primary" : "textSecondary",
-          trailing: i === 1 ? "осталось 24 мин" : null
-        })
-      ).concat([
-        F("Divider", { x: MARGIN, y: dividerY, w: SHEET.w - 2 * MARGIN, h: 1, fill: "outline" }),
-        sheetRow("Отключить таймер", { y: offY, ic: "timerOff", iconColor: "error", labelColor: "error" })
-      ]),
-      { subtitle: "Воспроизведение остановится в 23:47" })],
+  rows.push(F("Divider", { x: MARGIN, y: dividerY, w: SHEET.w - 2 * MARGIN, h: 1, fill: "outline" }));
+  rows.push(sheetRow("Отключить таймер", { y: offY, ic: "timerOff", iconColor: "error", labelColor: "error" }));
+  return { node: sheetShell(name, "Таймер сна", h, rows,
+    { subtitle: custom ? "Воспроизведение остановится в 01:12" : "Воспроизведение остановится в 23:47" }), h };
+};
+
+{
+  const a = timerActiveSheet("Bottom Sheet / Таймер сна активен", 1, false);
+  add("sleep-timer-active", "Таймер сна", "Таймер сна · активен", SHEET.w, a.h, [a.node],
     "Reopening the sheet while a timer runs shows this state. The remaining time is " +
     "computed from the stored absolute end time, never from a counter that restarts.");
+}
+
+{
+  const a = timerActiveSheet("Bottom Sheet / Таймер сна активен (своё время)", -1, true);
+  add("sleep-timer-active-custom", "Таймер сна", "Таймер сна · активен, своё время", SHEET.w, a.h, [a.node],
+    "A confirmed custom duration behaves exactly like a preset: absolute end time " +
+    "persisted, remaining time shown, cancellable, survives backgrounding and process " +
+    "recreation, and does not resume after a reboot.");
 }
 
 add("sleep-timer-menu-active", "Таймер сна", "Меню плеера · таймер активен", 260, 10 + 4 * 52 + 46,
@@ -224,40 +278,61 @@ add("report-success", "Сообщить о проблеме", "Сообщить 
 /* ================= 3. FULL BROADCAST HISTORY ================= */
 
 const HISTORY = [
-  { time: "10:45", title: "CRYOGEN", artist: "MUSE" },
-  { time: "10:41", title: "MEET ME IN LOVE", artist: "BLOSSOMS" },
-  { time: "10:36", title: "CITY WALLS", artist: "TWENTY ONE PILOTS" },
-  { time: "10:31", title: "WHAT YOU KNOW", artist: "TWO DOOR CINEMA CLUB" },
-  { time: "10:27", title: "SUNLIT ROOM", artist: "GLASS ANIMALS" },
-  { time: "10:22", title: "NORTHERN LINE", artist: "FOALS" },
-  { time: "10:18", title: "PAPER BOATS", artist: "ALT-J" },
-  { time: "10:13", title: "SLOW BURN", artist: "KAYTRANADA" }
+  { time: "10:45", title: "CRYOGEN", artist: "MUSE", lines: 1 },
+  { time: "10:41", title: "Краснознамённая дивизия имени моей бабушки", artist: "АУКЦЫОН", lines: 2 },
+  { time: "10:36", title: "CITY WALLS", artist: "TWENTY ONE PILOTS", lines: 1 },
+  { time: "10:31", title: "WHAT YOU KNOW", artist: "TWO DOOR CINEMA CLUB", lines: 1 },
+  { time: "10:27", title: "Прогулка по воде под дождём в конце ноября", artist: "НАУТИЛУС ПОМПИЛИУС", lines: 2 },
+  { time: "10:22", title: "NORTHERN LINE", artist: "FOALS", lines: 1 },
+  { time: "10:18", title: "PAPER BOATS", artist: "ALT-J", lines: 1 },
+  { time: "10:13", title: "SLOW BURN", artist: "KAYTRANADA", lines: 1 }
 ];
-const HIST_PITCH = 82;
+
+/* Nominal heights only - in Figma every one of these frames hugs its content.
+ * A one-line row is 13 + 48 + 13 = 74; each extra title line adds 28. */
+const histRowH = (r) => 13 + Math.max(48, r.lines * 28 + 20) + 13;
+const histListH = (rows) => 16 + rows.reduce((a, r) => a + r, 0) + (rows.length - 1) * 8;
+
+const historyList = (children, nominalH) =>
+  F("Broadcast History List", { w: SCREEN_W, h: nominalH,
+    al: { mode: "VERTICAL", gap: 8, pad: [16, 16, 0, 16], align: "MIN", hug: "HEIGHT" } }, children);
+
+/* The screen root is itself a vertical auto-layout, so the whole frame grows
+ * when a row does. Everything stays an ordinary editable Figma layer. */
+const historyScreen = (nodes, h) =>
+  F("Screen", { w: SCREEN_W, h, al: { mode: "VERTICAL", gap: 0, pad: [0, 0, 24, 0], align: "MIN", hug: "HEIGHT" } }, nodes);
 
 {
-  const last = 80 + (HISTORY.length - 1) * HIST_PITCH + 74;
-  add("history-content", "История эфира", "История эфира · список", SCREEN_W, last + 24 + 20 + 24, [
-    topAppBar("История эфира", { back: true }),
-    ...HISTORY.map((h, i) => historyItem({ ...h, y: 80 + i * HIST_PITCH })),
-    T("footer", "Показаны последние 30 треков", { x: MARGIN, y: last + 24, w: CONTENT_W, h: 20,
-                                                  ty: TYPE.bodySecondary, align: "CENTER", fill: "textSecondary" })
-  ], "Same row as the Player's Broadcast History, promoted to full content width because " +
-     "there is no outer card here. Capped at 30 entries; older ones are dropped, not paged.");
+  const rows = HISTORY.map(histRowH);
+  const listH = histListH(rows);
+  const h = APPBAR_H + listH + 44 + 24;
+  add("history-content", "История эфира", "История эфира · список", SCREEN_W, h, [
+    historyScreen([
+      topAppBar("История эфира", { back: true }),
+      historyList(HISTORY.map((r) => historyItem(r)), listH),
+      F("Footer", { w: SCREEN_W, h: 44 }, [
+        T("footer", "Показаны последние 30 треков", { x: MARGIN, y: 24, w: CONTENT_W, h: 20,
+                                                      ty: TYPE.bodySecondary, align: "CENTER", fill: "textSecondary" })
+      ])
+    ], h)
+  ], "Rows are variable height and never truncate. Two of the eight here wrap to a second " +
+     "line on purpose so the behaviour is reviewable. The time sits on the title's first " +
+     "line rather than drifting to the middle of a tall row. One trailing action, the " +
+     "canonical Collection control - there is no History-specific find icon.");
 }
 
 {
-  const n = 8, last = 80 + (n - 1) * HIST_PITCH + 74;
-  add("history-loading", "История эфира", "История эфира · загрузка", SCREEN_W, last + 24, [
-    topAppBar("История эфира", { back: true }),
-    ...Array.from({ length: n }, (_, i) =>
-      F("Skeleton " + (i + 1), { x: MARGIN, y: 80 + i * HIST_PITCH, w: CONTENT_W, h: 74, r: 8, stroke: "outline" }, [
-        F("s-art", { ...HISTORY_ART, fill: "outline", opacity: 0.5 }),
-        F("s-title", { x: 116, y: 18, w: 150, h: 16, r: 8, fill: "outline", opacity: 0.5 }),
-        F("s-artist", { x: 116, y: 44, w: 96, h: 12, r: 6, fill: "outline", opacity: 0.35 })
-      ]))
-  ], "The skeleton is the square album-art thumbnail at the real geometry, not a bar. " +
-     "Row height, art position and text baselines match the loaded row exactly, so nothing shifts.");
+  const n = 8;
+  const listH = histListH(Array.from({ length: n }, () => 74));
+  const h = APPBAR_H + listH + 24;
+  add("history-loading", "История эфира", "История эфира · загрузка", SCREEN_W, h, [
+    historyScreen([
+      topAppBar("История эфира", { back: true }),
+      historyList(Array.from({ length: n }, (_, i) => historySkeleton(i + 1)), listH)
+    ], h)
+  ], "Every horizontal anchor matches the loaded row: time at 13, art at 60, text at 116, " +
+     "action at 305. Placeholders for all four, including the trailing action, so nothing " +
+     "appears or shifts sideways when the data lands.");
 }
 
 {
@@ -351,16 +426,19 @@ add("profile-guest", "Аккаунт", "Профиль · гость", SCREEN_W,
   card("Guest card", { y: 96, h: 226 }, [
     F("Avatar", { x: 143, y: 32, w: 72, h: 72, r: 36, fill: "surfaceContainer" }, [icon("person", { x: 24, y: 24, color: "textSecondary" })]),
     T("h", "Вы не вошли", { x: 0, y: 128, w: CONTENT_W, h: 32, ty: TYPE.sheetTitle, align: "CENTER", fill: "textHeading" }),
-    T("b", "Коллекция хранится только на этом устройстве.", { x: 0, y: 172, w: CONTENT_W, h: 22, ty: TYPE.fieldText, align: "CENTER", fill: "textSecondary" })
+    T("b0", "Радио, плеер, история эфира, таймер сна", { x: 0, y: 168, w: CONTENT_W, h: 22, ty: TYPE.fieldText, align: "CENTER", fill: "textSecondary" }),
+    T("b1", "и коллекция работают без аккаунта.", { x: 0, y: 190, w: CONTENT_W, h: 22, ty: TYPE.fieldText, align: "CENTER", fill: "textSecondary" })
   ]),
   button("Войти", { x: MARGIN, y: 346 }),
   button("Создать аккаунт", { x: MARGIN, y: 414, kind: "outline" }),
-  sectionLabel("Что даёт аккаунт", 494),
+  sectionLabel("Аккаунт добавляет", 494),
   listRow("Синхронизация коллекции", { y: 522, ic: "sync" }),
   listRow("Восстановление коллекции", { y: 594, ic: "download" })
-], "Guest is a first-class state, not a degraded one. Nothing on this screen blocks playback.");
+], "Guest is a first-class state, not a degraded one. Registration is optional and there " +
+   "is no wall anywhere: the card states what already works without an account, and the " +
+   "list below is what an account adds rather than what it unlocks.");
 
-add("profile-authenticated", "Аккаунт", "Профиль · вошли", SCREEN_W, 620, [
+add("profile-authenticated", "Аккаунт", "Профиль · вошли", SCREEN_W, 692, [
   topAppBar("Профиль", { back: true }),
   card("Account card", { y: 96, h: 104 }, [
     F("Avatar", { x: 16, y: 20, w: 64, h: 64, r: 32, fill: "primary" }, [
@@ -373,9 +451,41 @@ add("profile-authenticated", "Аккаунт", "Профиль · вошли", S
   listRow("Облачная синхронизация", { y: 252, ic: "sync", sub: "Включена" }),
   listRow("Последняя синхронизация", { y: 332, ic: "clock", sub: "2 мин назад" }),
   sectionLabel("Аккаунт", 428),
-  listRow("Сменить пароль", { y: 456, ic: "doc", chevron: true }),
-  listRow("Выйти", { y: 528, ic: "logout", danger: true })
+  listRow("Аватар", { y: 456, ic: "person", chevron: true }),
+  listRow("Сменить пароль", { y: 528, ic: "doc", chevron: true }),
+  listRow("Выйти", { y: 600, ic: "logout", danger: true })
 ], "Sign-out is destructive-styled but does not delete the local collection - that is stated in the confirm dialog, not here.");
+
+/* 4x4 grid: 76px cells, 18px gutters, 4*76 + 3*18 = 358 = content width. */
+{
+  const CELL = 76, GUT = 18, GRID_TOP = 244, SELECTED = 5;
+  const cells = Array.from({ length: 16 }, (_, i) => {
+    const col = i % 4, row = (i / 4) | 0;
+    const key = "avatar/m3-" + String(i + 1).padStart(2, "0");
+    const on = i === SELECTED;
+    return F("Avatar cell " + (i + 1), {
+      x: MARGIN + col * (CELL + GUT), y: GRID_TOP + row * (CELL + GUT), w: CELL, h: CELL, r: CELL / 2,
+      stroke: on ? "primary" : "outline", sw: on ? 2 : 1
+    }, [
+      A(key, { x: 6, y: 6, w: 64, h: 64, tint: "textSecondary", slotRadius: 32 }),
+      ...(on ? [F("Selected badge", { x: 52, y: 52, w: 24, h: 24, r: 12, fill: "primary" },
+        [icon("check", { color: "onPrimary" })])] : [])
+    ]);
+  });
+
+  add("profile-avatar", "Аккаунт", "Выбор аватара", SCREEN_W, 702, [
+    topAppBar("Выбор аватара", { back: true }),
+    F("Current", { x: 147, y: 96, w: 96, h: 96, r: 48, stroke: "primary", sw: 2 }, [
+      A("avatar/m3-06", { x: 8, y: 8, w: 80, h: 80, tint: "textSecondary", slotRadius: 40 })
+    ]),
+    T("caption", "Текущий аватар", { x: MARGIN, y: 208, w: CONTENT_W, h: 20, ty: TYPE.bodySecondary,
+                                     align: "CENTER", fill: "textSecondary" }),
+    ...cells,
+    button("Сохранить", { x: MARGIN, y: 626 })
+  ], "Sixteen predefined avatars. No photo upload in 3.6.6. Every cell is an asset slot - " +
+     "Material 3 avatar nodes are referenced if they exist in the file, and left as empty " +
+     "named slots for the owner to fill if not. Nothing here is a drawn approximation.");
+}
 
 add("settings", "Настройки", "Настройки", SCREEN_W, 792, [
   topAppBar("Настройки", { back: true }),

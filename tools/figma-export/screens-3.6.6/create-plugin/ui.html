@@ -84,6 +84,16 @@
              (a.note ? '<br><span style="color:#5f6368">' + esc(a.note) + "</span>" : "") + "</div>";
       });
 
+      if (r.avatarCandidates && r.avatarCandidates.length) {
+        h += '<div class="grp">Possible avatar components found in this file</div>';
+        r.avatarCandidates.forEach(function (c) {
+          h += '<div class="item">' + esc(c.name) + " <code>" + esc(c.id) + "</code></div>";
+        });
+        h += '<div class="item skip">Paste ids into spec/assets.json to use these instead of empty slots.</div>';
+      } else if (r.avatarCandidates) {
+        h += '<div class="grp">Avatar components</div><div class="item skip">None found locally. Avatar cells will be created as empty named slots.</div>';
+      }
+
       if (r.warnings.length) {
         h += '<div class="grp">Warnings</div>';
         r.warnings.forEach(function (w) { h += '<div class="item miss">' + esc(w) + "</div>"; });

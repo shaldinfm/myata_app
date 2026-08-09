@@ -17,17 +17,31 @@ export const CONTENT_TOP = 80;  // 'Main' starts at y=80 on every canonical scre
 
 /* ---------- node constructors ---------- */
 
+/* `al` turns a frame into a Figma auto-layout frame, which is what lets a row
+ * grow with its content instead of clipping it. Children of an al frame are laid
+ * out in flow; their x/y are ignored. `hug: "HEIGHT"` means the frame's height is
+ * whatever its content needs - the h in the spec is then only a nominal value for
+ * the preview and the validator.
+ *
+ *   al: { mode:"HORIZONTAL"|"VERTICAL", gap, pad:[t,r,b,l], align:"MIN"|"CENTER", hug:"HEIGHT" }
+ */
 export const F = (n, o = {}, ch = []) => ({
   n, t: "FRAME", x: o.x || 0, y: o.y || 0, w: o.w, h: o.h,
   fill: o.fill ?? null, stroke: o.stroke ?? null, sw: o.sw ?? (o.stroke ? 1 : 0),
-  r: o.r ?? 0, opacity: o.opacity, ch
+  r: o.r ?? 0, opacity: o.opacity,
+  al: o.al ?? null, grow: o.grow ?? 0, ch
 });
 
+/* `wrap: true` lets the text run onto as many lines as it needs: the width stays
+ * fixed and the height follows. Nothing in these screens truncates with an
+ * ellipsis - a track called "Краснознамённая дивизия имени моей бабушки" has to
+ * be readable in full. */
 export const T = (n, s, o = {}) => ({
   n, t: "TEXT", x: o.x || 0, y: o.y || 0, w: o.w, h: o.h ?? (o.ty?.lh ?? 20),
-  fill: o.fill ?? "textPrimary",
+  fill: o.fill ?? "textPrimary", grow: o.grow ?? 0,
   text: { s, font: (o.ty || TYPE.bodySecondary).font, size: (o.ty || TYPE.bodySecondary).size,
-          lh: (o.ty || TYPE.bodySecondary).lh, align: o.align || "LEFT" }
+          lh: (o.ty || TYPE.bodySecondary).lh, align: o.align || "LEFT",
+          valign: o.valign || "TOP", wrap: !!o.wrap }
 });
 
 export const V = (n, o = {}) => ({
@@ -152,10 +166,15 @@ export function sheetRow(label, o = {}) {
     : icon(o.ic || "disc", { x: 12, y: 12, color: o.iconColor || "primary" });
   const ch = [
     F("Sheet / leading icon", { x: 16, y: 4, w: 48, h: 48, r: 24 }, [leading]),
-    T("Sheet / label", label, { x: 76, y: 16, w: o.trailing ? 180 : 266, h: 24, ty: TYPE.sheetRow, fill: o.labelColor || "textPrimary" })
+    T("Sheet / label", label, { x: 76, y: 16, w: o.trailing ? 104 : (o.chevron ? 240 : 266), h: 24,
+                                ty: TYPE.sheetRow, fill: o.labelColor || "textPrimary" })
   ];
   if (o.trailing)
-    ch.push(T("Sheet / trailing", o.trailing, { x: 200, y: 18, w: 142, h: 20, ty: TYPE.bodySecondary, align: "RIGHT", fill: "textSecondary" }));
+    ch.push(T("Sheet / trailing", o.trailing, { x: 180, y: 18, w: 162, h: 20, ty: TYPE.bodySecondary, align: "RIGHT", fill: "textSecondary" }));
+  if (o.chevron)
+    ch.push(F("Sheet / chevron", { x: 318, y: 16, w: 24, h: 24 }, [
+      V("chevron", { w: 24, h: 24, path: "M9 5 L16 12 L9 19", stroke: "textSecondary", sw: 1.8 })
+    ]));
   return F("Sheet row / " + label, { y: o.y, w: SHEET.w, h: SHEET.rowH }, ch);
 }
 
@@ -212,15 +231,53 @@ export const card = (n, o, ch) =>
  *
  * One trailing action only: the canonical 'find track' control cloned from the
  * Collection track item, so History and Collection share a single pattern. */
-export const HISTORY_ART = { x: 60, y: 13, w: 48, h: 48, r: 8 };
+export const HISTORY_ART = { w: 48, h: 48, r: 8 };
+
+/* The row is a horizontal auto-layout so it grows with its text. A uniform 8px
+ * gap and 13px padding reproduce every canonical anchor exactly:
+ *
+ *   13 time 39 | 8 | 60 art 48 | 8 | 116 text 181 | 8 | 305 action 40 | 13
+ *
+ * A single-line row therefore comes out at 13 + 48 + 13 = 74, which is the
+ * canonical height; a two-line title simply makes it taller. Cross-axis
+ * alignment is MIN so the time stays at the top rather than drifting to the
+ * middle of a tall title. */
+export const HISTORY_ROW = { pad: 13, gap: 8, timeW: 39, textW: 181, actionW: 40 };
+
+const historyRowFrame = (name, ch) =>
+  F(name, {
+    w: CONTENT_W, h: 74, r: 8, stroke: "outline",
+    al: { mode: "HORIZONTAL", gap: HISTORY_ROW.gap, pad: [13, 13, 13, 13], align: "MIN", hug: "HEIGHT" }
+  }, ch);
 
 export function historyItem(o) {
-  return F("History Item / " + o.title, { x: MARGIN, y: o.y, w: CONTENT_W, h: 74, r: 8, stroke: "outline" }, [
-    T("time", o.time, { x: 13, y: 27, w: 45, h: 20, ty: TYPE.bodySecondary, fill: "textSecondary" }),
+  return historyRowFrame("History Item / " + o.title, [
+    // 28 tall with centred text so it sits on the title's first line, not above it
+    T("time", o.time, { w: HISTORY_ROW.timeW, h: 28, ty: TYPE.bodySecondary, fill: "textSecondary", valign: "CENTER" }),
     F("Album art", { ...HISTORY_ART, fill: "surfaceContainer" }),
-    T("title", o.title, { x: 116, y: 12, w: 181, h: 28, ty: TYPE.historyTitle, fill: "textPrimary" }),
-    T("artist", o.artist, { x: 116, y: 40, w: 181, h: 20, ty: TYPE.bodySecondary, fill: "textSecondary" }),
-    A("control/find-track", { n: "Button / find track", x: 305, y: 17, w: 40, h: 40, tint: "primary", slotRadius: 20 })
+    F("Text", { w: HISTORY_ROW.textW, h: 48, grow: 1,
+                al: { mode: "VERTICAL", gap: 0, pad: [0, 0, 0, 0], align: "MIN", hug: "HEIGHT" } }, [
+      T("title", o.title, { w: HISTORY_ROW.textW, h: 28, ty: TYPE.historyTitle, fill: "textPrimary", wrap: true }),
+      T("artist", o.artist, { w: HISTORY_ROW.textW, h: 20, ty: TYPE.bodySecondary, fill: "textSecondary", wrap: true })
+    ]),
+    A("control/find-track", { n: "Button / find track", w: 40, h: 40, tint: "primary", slotRadius: 20 })
+  ]);
+}
+
+/* Same frame, same anchors, placeholders instead of content - so nothing moves
+ * horizontally when the data arrives. */
+export function historySkeleton(n) {
+  return historyRowFrame("Skeleton " + n, [
+    F("s-time", { w: HISTORY_ROW.timeW, h: 28 }, [
+      F("bar", { x: 0, y: 8, w: 34, h: 12, r: 6, fill: "outline", opacity: 0.45 })
+    ]),
+    F("s-art", { ...HISTORY_ART, fill: "outline", opacity: 0.5 }),
+    F("s-text", { w: HISTORY_ROW.textW, h: 48, grow: 1,
+                  al: { mode: "VERTICAL", gap: 0, pad: [0, 0, 0, 0], align: "MIN", hug: "HEIGHT" } }, [
+      F("s-title", { w: HISTORY_ROW.textW, h: 28 }, [F("bar", { x: 0, y: 6, w: 150, h: 16, r: 8, fill: "outline", opacity: 0.5 })]),
+      F("s-artist", { w: HISTORY_ROW.textW, h: 20, }, [F("bar", { x: 0, y: 4, w: 96, h: 12, r: 6, fill: "outline", opacity: 0.35 })])
+    ]),
+    F("s-action", { w: 40, h: 40, r: 20, stroke: "outline", opacity: 0.5 })
   ]);
 }
 

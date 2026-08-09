@@ -52,6 +52,15 @@
       "note": "The canonical per-track 'find track' control: 40x40, 1px primary stroke, radius 9999, primary glyph inside. Reused verbatim by Broadcast History so there is one action pattern, not two."
     }
   },
+  "families": {
+    "avatar/m3": {
+      "count": 16,
+      "pad": 2,
+      "status": "PENDING_OWNER",
+      "nativeSize": [64, 64],
+      "note": "Predefined profile avatars, expanded to avatar/m3-01 … avatar/m3-16. The intent is the official Material 3 Design Kit avatar assets. The plugin cannot pull them from a library it has not been given ids for, so every cell is created as an editable named slot. The dry run also lists any local components in this file whose name looks like an avatar, so their ids can be pasted in without hunting."
+    }
+  },
   "howToSupply": [
     "1. Place the mark in the Figma file, on either canonical page or the UI KIT page.",
     "2. Right-click the node > Copy link, and take the node-id from the URL.",

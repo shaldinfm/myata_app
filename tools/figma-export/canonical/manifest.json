@@ -1,0 +1,12 @@
+{
+  "name": "Radio Myata · Canonical Snapshot (read-only)",
+  "id": "radio-myata-canonical-snapshot",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "reasoning": "The plugin only reads the open document and hands the result to its own UI for download. It never contacts a server."
+  }
+}

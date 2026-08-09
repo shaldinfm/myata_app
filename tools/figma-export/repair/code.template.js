@@ -103,6 +103,20 @@ function classify(node, m) {
   if (!node) return m.op === "deleteNode"
     ? { status: "ALREADY_APPLIED", current: "(node gone - deleted)" }
     : { status: "SKIP_MISSING", current: "(node not found)" };
+
+  // A reorder is only meaningful against the parent the plan recorded, and only
+  // with a usable integer target. Both are checked here so a bad plan entry shows
+  // up in Dry Run rather than at write time.
+  if (m.op === "reorderChild") {
+    if (!node.parent) return { status: "SKIP_CHANGED", current: "(no parent)" };
+    if (m.parentId && node.parent.id !== m.parentId)
+      return { status: "SKIP_CHANGED", current: "parent " + node.parent.id + ", expected " + m.parentId };
+    if (typeof m.toIndex !== "number" || Math.floor(m.toIndex) !== m.toIndex)
+      return { status: "SKIP_CHANGED", current: "invalid toIndex " + JSON.stringify(m.toIndex) };
+    if (m.toIndex < 0 || m.toIndex >= node.parent.children.length)
+      return { status: "SKIP_CHANGED", current: "toIndex " + m.toIndex + " out of range 0.." + (node.parent.children.length - 1) };
+  }
+
   var cur = currentValue(node, m.op);
   if (m.op !== "deleteNode" && isAlreadyApplied(m.op, cur, m)) return { status: "ALREADY_APPLIED", current: cur };
   if (isReady(m.op, cur, m)) return { status: "READY", current: cur };
@@ -161,8 +175,15 @@ async function dryRun() {
     var m = REPAIR_PLAN.mutations[i];
     var node = await getNode(m.id);
     var c = classify(node, m);
-    report.mutations.push({ group: m.group, theme: m.theme, op: m.op, id: m.id, path: m.path,
-      expect: m.expect, value: m.value, reason: m.reason, current: c.current, status: c.status });
+    // Copy EVERY field from the plan entry. An earlier version listed fields by
+    // hand and silently dropped op-specific ones (parentId, fromIndex, toIndex),
+    // so Apply - which iterates this report, not the plan - called
+    // insertChild(undefined, node). Copying wholesale removes that class of bug.
+    var entry = {};
+    for (var k in m) if (Object.prototype.hasOwnProperty.call(m, k)) entry[k] = m[k];
+    entry.current = c.current;
+    entry.status = c.status;
+    report.mutations.push(entry);
   }
 
   var names = Object.keys(REPAIR_PLAN.tokens);
@@ -311,8 +332,26 @@ async function apply() {
       else if (m.op === "reorderChild") {
         // Layer order only. insertChild moves an existing child; geometry,
         // visibility, fills and text are untouched.
-        if (!node.parent) { done.skipped.push(m.id + ": no parent"); continue; }
-        node.parent.insertChild(m.toIndex, node);
+        var parent = node.parent;
+        if (!parent) { done.skipped.push(m.id + ": node has no parent"); continue; }
+        if (m.parentId && parent.id !== m.parentId) {
+          done.skipped.push(m.id + ": parent mismatch - expected " + m.parentId + ", found " + parent.id);
+          continue;
+        }
+        var target = m.toIndex;
+        if (typeof target !== "number" || !isFinite(target) || Math.floor(target) !== target) {
+          done.skipped.push(m.id + ": refusing to reorder - toIndex is not an integer (got " + JSON.stringify(target) + ")");
+          continue;
+        }
+        var siblings = parent.children;
+        if (target < 0 || target >= siblings.length) {
+          done.skipped.push(m.id + ": refusing to reorder - toIndex " + target + " out of range 0.." + (siblings.length - 1));
+          continue;
+        }
+        var currentIndex = siblings.indexOf(node);
+        if (currentIndex === -1) { done.skipped.push(m.id + ": node is not a child of " + parent.id); continue; }
+        if (currentIndex === target) { done.mutationsSkipped++; continue; }
+        parent.insertChild(target, node);
       }
       else if (m.op === "setFontStyle" || m.op === "setFontFamily") {
         var target = { family: "Muller", style: m.op === "setFontStyle" ? m.value.split("/")[1] : "Regular" };

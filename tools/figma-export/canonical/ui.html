@@ -1,0 +1,117 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  body { margin:0; padding:16px; font:12px/1.5 Inter, -apple-system, system-ui, sans-serif; color:#1b1b1f; }
+  h1 { margin:0 0 4px; font-size:14px; }
+  .sub { margin:0 0 16px; color:#5f6368; }
+  fieldset { border:1px solid #e0e0e2; border-radius:8px; padding:10px 12px; margin:0 0 12px; }
+  legend { padding:0 4px; color:#5f6368; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
+  label { display:flex; gap:8px; align-items:flex-start; margin:6px 0; }
+  label span small { display:block; color:#5f6368; }
+  button { width:100%; height:36px; border:0; border-radius:8px; background:#0d99ff; color:#fff; font-weight:600; font-size:13px; cursor:pointer; }
+  button.secondary { background:#f0f0f2; color:#1b1b1f; }
+  button:disabled { opacity:.5; cursor:default; }
+  .row { display:flex; gap:8px; margin-top:8px; }
+  .status { margin-top:12px; padding:10px; border-radius:8px; background:#f6f6f7; white-space:pre-wrap; word-break:break-word; }
+  .status.err { background:#fde7e9; color:#8b1a1a; }
+  .ok { color:#0a7c42; font-weight:600; }
+  dl { margin:8px 0 0; display:grid; grid-template-columns:auto 1fr; gap:2px 10px; }
+  dt { color:#5f6368; } dd { margin:0; }
+  .hint { margin-top:12px; color:#5f6368; }
+  code { background:#f0f0f2; padding:1px 4px; border-radius:4px; }
+</style>
+</head>
+<body>
+  <h1>Canonical snapshot</h1>
+  <p class="sub">Read-only. Nothing in this file will be changed.</p>
+
+  <fieldset>
+    <legend>What to export</legend>
+    <label><input type="radio" name="scope" value="page" checked>
+      <span>Whole current page<small>Everything on the page that is open right now.</small></span></label>
+    <label><input type="radio" name="scope" value="selection">
+      <span>Selected frames only<small>Falls back to the whole page if nothing is selected.</small></span></label>
+  </fieldset>
+
+  <button id="run">Export snapshot</button>
+  <div class="row">
+    <button id="download" class="secondary" disabled>Download JSON</button>
+    <button id="copy" class="secondary" disabled>Copy</button>
+  </div>
+
+  <div id="status" class="status">Open the canonical page, then press Export.</div>
+
+  <p class="hint">Save the file as<br><code>tools/figma-export/canonical/figma-canonical.json</code></p>
+
+<script>
+  var json = null;
+  var statusEl = document.getElementById("status");
+  var dl = document.getElementById("download");
+  var cp = document.getElementById("copy");
+
+  function scope() {
+    var checked = document.querySelector('input[name="scope"]:checked');
+    return checked ? checked.value : "page";
+  }
+
+  document.getElementById("run").onclick = function () {
+    json = null; dl.disabled = true; cp.disabled = true;
+    statusEl.className = "status";
+    statusEl.textContent = "Working…";
+    parent.postMessage({ pluginMessage: { type: "export", scope: scope() } }, "*");
+  };
+
+  dl.onclick = function () {
+    if (!json) return;
+    var blob = new Blob([json], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "figma-canonical.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+  };
+
+  cp.onclick = function () {
+    if (!json) return;
+    var ta = document.createElement("textarea");
+    ta.value = json;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+    cp.textContent = "Copied";
+    setTimeout(function () { cp.textContent = "Copy"; }, 1500);
+  };
+
+  onmessage = function (event) {
+    var msg = event.data.pluginMessage;
+    if (!msg) return;
+    if (msg.type === "status") {
+      statusEl.className = "status";
+      statusEl.textContent = msg.text;
+    } else if (msg.type === "error") {
+      statusEl.className = "status err";
+      statusEl.textContent = "Export failed:\n" + msg.text;
+    } else if (msg.type === "result") {
+      json = msg.json;
+      dl.disabled = false; cp.disabled = false;
+      var s = msg.summary;
+      statusEl.className = "status";
+      statusEl.innerHTML =
+        '<span class="ok">Snapshot ready</span><dl>' +
+        "<dt>File</dt><dd>" + (s.file || "-") + "</dd>" +
+        "<dt>Page</dt><dd>" + s.page + "</dd>" +
+        "<dt>Scope</dt><dd>" + s.scope + "</dd>" +
+        "<dt>Top-level frames</dt><dd>" + s.frames + "</dd>" +
+        "<dt>Variables</dt><dd>" + s.variables + "</dd>" +
+        "<dt>Size</dt><dd>" + Math.round(s.bytes / 1024) + " KB</dd>" +
+        "</dl>";
+    }
+  };
+</script>
+</body>
+</html>

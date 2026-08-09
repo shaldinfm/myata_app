@@ -4,8 +4,8 @@
   "derivedFrom": {
     "darkPage": "CURRENT ANDROID UI — DARK",
     "lightPage": "CURRENT ANDROID UI - LIGHT",
-    "darkExportedAt": "2026-08-09T07:08:19.927Z",
-    "lightExportedAt": "2026-08-09T07:06:30.759Z",
+    "darkExportedAt": "2026-08-09T09:16:56.012Z",
+    "lightExportedAt": "2026-08-09T09:15:47.627Z",
     "method": "Equivalent nodes matched one-to-one across the two canonical Figma pages; every theme-changing fill, stroke and text colour was collected and grouped by UI role."
   },
   "whyNotInFigma": {
@@ -21,16 +21,23 @@
   "tokens": [
     {
       "role": "background",
+      "inV1": true,
       "light": "#f8f9fa",
-      "dark": "#0b1d31",
+      "dark": "#0f253e",
       "boundInFigma": false,
       "usageCount": 0,
-      "confidence": "PROPOSED",
-      "representativeNodes": [],
-      "notes": "No confirmed node usage. The screen frames carry #ffffff in BOTH themes on Player, About and Collection-empty, and #edeeef in both on Home - those are Figma frame fills, not the visible background, so they were not used as evidence. Values proposed from the dark page's darkest surface and the light page's lightest. Needs designer confirmation."
+      "confidence": "CONFIRMED",
+      "representativeNodes": [
+        {
+          "role": "screen root frames, second fill",
+          "note": "HOME, PLAYER, COLLECTION, COLLECTION pusto, ABOUT US on both pages"
+        }
+      ],
+      "notes": "Each screen frame has TWO solid fills. The first is a dead underlay that differs per screen (#edeeef / #ffffff / #142d47) and should be cleaned up separately. The SECOND fill is the real background and is identical across all five screens on each page: #0f253e dark, #f8f9fa light. The Header - TopAppBar uses the same pair, which corroborates it."
     },
     {
       "role": "surface",
+      "inV1": true,
       "light": "#ffffff",
       "dark": "#142d47",
       "boundInFigma": false,
@@ -70,6 +77,7 @@
     },
     {
       "role": "surfaceContainer",
+      "inV1": true,
       "light": "#f8f9fa",
       "dark": "#1c4771",
       "boundInFigma": false,
@@ -109,6 +117,7 @@
     },
     {
       "role": "surfaceElevated",
+      "inV1": false,
       "light": "#ffffff",
       "dark": "#28557e",
       "boundInFigma": false,
@@ -119,6 +128,7 @@
     },
     {
       "role": "navigationContainer",
+      "inV1": true,
       "light": "#edeeef",
       "dark": "#142d47",
       "boundInFigma": false,
@@ -158,6 +168,7 @@
     },
     {
       "role": "menuSurface",
+      "inV1": true,
       "light": "#f8f9fa",
       "dark": "#142d47",
       "boundInFigma": false,
@@ -183,6 +194,7 @@
     },
     {
       "role": "textPrimary",
+      "inV1": true,
       "light": "#191c1d",
       "dark": "#f5f7fa",
       "boundInFigma": false,
@@ -222,6 +234,7 @@
     },
     {
       "role": "textHeading",
+      "inV1": true,
       "light": "#003056",
       "dark": "#f5f7fa",
       "boundInFigma": false,
@@ -261,10 +274,11 @@
     },
     {
       "role": "textSecondary",
+      "inV1": true,
       "light": "#42474e",
       "dark": "#b3c4d1",
       "boundInFigma": false,
-      "usageCount": 40,
+      "usageCount": 39,
       "confidence": "CONFIRMED",
       "representativeNodes": [
         {
@@ -300,6 +314,7 @@
     },
     {
       "role": "textDisabled",
+      "inV1": false,
       "light": "#8e969e",
       "dark": "#6f899f",
       "boundInFigma": false,
@@ -323,6 +338,7 @@
     },
     {
       "role": "primary",
+      "inV1": true,
       "light": "#1c4771",
       "dark": "#5fd9b4",
       "boundInFigma": false,
@@ -362,6 +378,7 @@
     },
     {
       "role": "onPrimary",
+      "inV1": true,
       "light": "#ffffff",
       "dark": "#0f253e",
       "boundInFigma": false,
@@ -401,6 +418,7 @@
     },
     {
       "role": "secondary",
+      "inV1": false,
       "light": "#0090a3",
       "dark": "#00e5ff",
       "boundInFigma": false,
@@ -424,6 +442,7 @@
     },
     {
       "role": "outline",
+      "inV1": true,
       "light": "#e1e3e4",
       "dark": "#466d8f",
       "boundInFigma": false,
@@ -463,6 +482,7 @@
     },
     {
       "role": "divider",
+      "inV1": false,
       "light": "#e1e3e4",
       "dark": "#466d8f",
       "boundInFigma": false,
@@ -473,6 +493,7 @@
     },
     {
       "role": "error",
+      "inV1": false,
       "light": "#b3261e",
       "dark": "#ff8a80",
       "boundInFigma": false,
@@ -490,6 +511,7 @@
     },
     {
       "role": "disabled",
+      "inV1": false,
       "light": "#e8eaed",
       "dark": "#1e3754",
       "boundInFigma": false,
@@ -500,6 +522,7 @@
     },
     {
       "role": "scrim",
+      "inV1": false,
       "light": "#003056",
       "dark": "#0f253e",
       "boundInFigma": false,

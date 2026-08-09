@@ -57,6 +57,7 @@ function currentValue(node, op) {
     case "renameNode": return node.name;
     case "deleteNode": return "present";
     case "setAutoLayoutHug": return (node.layoutMode || "NONE") + " / " + node.layoutSizingHorizontal + " / " + node.layoutSizingVertical;
+    case "reorderChild": return node.parent ? "index " + node.parent.children.indexOf(node) : "(no parent)";
     default: return "?";
   }
 }
@@ -76,6 +77,7 @@ function isAlreadyApplied(op, current, m) {
     case "setVisible": return current === m.value;
     case "renameNode": return current === m.value;
     case "setAutoLayoutHug": return current === "HORIZONTAL / HUG / HUG";
+    case "reorderChild": return current === m.value;
     default: return false;
   }
 }
@@ -91,6 +93,7 @@ function isReady(op, current, m) {
       } catch (e) { return false; }
     }
     case "setAutoLayoutHug": return current !== "HORIZONTAL / HUG / HUG";
+    case "reorderChild": return current === m.expect;
     case "deleteNode": return true; // node exists => still to delete
     default: return current === m.expect;
   }
@@ -305,6 +308,12 @@ async function apply() {
       else if (m.op === "renameNode") node.name = m.value;
       else if (m.op === "deleteNode") node.remove();
       else if (m.op === "setAutoLayoutHug") { node.layoutMode = "HORIZONTAL"; node.layoutSizingHorizontal = "HUG"; node.layoutSizingVertical = "HUG"; }
+      else if (m.op === "reorderChild") {
+        // Layer order only. insertChild moves an existing child; geometry,
+        // visibility, fills and text are untouched.
+        if (!node.parent) { done.skipped.push(m.id + ": no parent"); continue; }
+        node.parent.insertChild(m.toIndex, node);
+      }
       else if (m.op === "setFontStyle" || m.op === "setFontFamily") {
         var target = { family: "Muller", style: m.op === "setFontStyle" ? m.value.split("/")[1] : "Regular" };
         try { await figma.loadFontAsync(target); }

@@ -8,8 +8,8 @@ var REPAIR_PLAN = {
   "generatedFrom": {
     "dark": "CURRENT ANDROID UI — DARK",
     "light": "CURRENT ANDROID UI - LIGHT",
-    "darkExportedAt": "2026-08-09T07:08:19.927Z",
-    "lightExportedAt": "2026-08-09T07:06:30.759Z"
+    "darkExportedAt": "2026-08-09T09:16:56.012Z",
+    "lightExportedAt": "2026-08-09T09:15:47.627Z"
   },
   "pages": {
     "dark": "CURRENT ANDROID UI — DARK",
@@ -137,84 +137,27 @@ var REPAIR_PLAN = {
       "reason": "Layer was retyped and lost its content-derived name; Dark already names it 10:45. UI-KIT layers named 'History / time' are role names and are NOT renamed."
     },
     {
-      "group": "typography",
-      "theme": "dark",
-      "op": "setFontFamily",
-      "id": "2444:18296",
-      "path": "PLAYER_dark > Main > Broadcast History Section > Margin > Container > Button > Ещё",
-      "expect": "Hanken Grotesk/Regular/12",
-      "value": "Muller/Regular/12",
-      "reason": "Muller Regular 12/16 already exists in this design; same size and line height, no hierarchy change."
-    },
-    {
-      "group": "typography",
-      "theme": "dark",
-      "op": "setFontFamily",
-      "id": "2444:18301",
-      "path": "PLAYER_dark > Main > Broadcast History Section > List > History Item 1 > Container > Container > 10:45",
-      "expect": "Hanken Grotesk/Regular/14",
-      "value": "Muller/Regular/14",
-      "reason": "Muller Regular 14/20 already exists in this design; same size and line height, no hierarchy change."
-    },
-    {
-      "group": "typography",
-      "theme": "dark",
-      "op": "setFontFamily",
-      "id": "2444:18319",
-      "path": "PLAYER_dark > Main > Broadcast History Section > History Item 1 > Container > Container > 10:41",
-      "expect": "Hanken Grotesk/Regular/14",
-      "value": "Muller/Regular/14",
-      "reason": "Muller Regular 14/20 already exists in this design; same size and line height, no hierarchy change."
-    },
-    {
-      "group": "typography",
-      "theme": "dark",
-      "op": "setFontFamily",
-      "id": "2444:18337",
-      "path": "PLAYER_dark > Main > Broadcast History Section > History Item 2 > Container > Container > 10:36",
-      "expect": "Hanken Grotesk/Regular/14",
-      "value": "Muller/Regular/14",
-      "reason": "Muller Regular 14/20 already exists in this design; same size and line height, no hierarchy change."
-    },
-    {
-      "group": "typography",
+      "group": "structural",
       "theme": "light",
-      "op": "setFontFamily",
-      "id": "2396:30792",
-      "path": "PLAYER > Main > Broadcast History Section > Margin > Container > Button > Ещё",
-      "expect": "Hanken Grotesk/Regular/12",
-      "value": "Muller/Regular/12",
-      "reason": "Muller Regular 12/16 already exists in this design; same size and line height, no hierarchy change."
+      "op": "setConstraints",
+      "id": "2444:18814",
+      "path": "ABOUT US > Section 3: Social Media > Container > TikTok > Container > Vector",
+      "expect": "{\"horizontal\":\"MIN\",\"vertical\":\"MIN\"}",
+      "value": "{\"horizontal\":\"CENTER\",\"vertical\":\"CENTER\"}",
+      "reason": "The TikTok glyph itself, not its container. Dark is already CENTER/CENTER (2444:18812); light is the only side that differs."
     },
     {
-      "group": "typography",
+      "group": "structural",
       "theme": "light",
-      "op": "setFontFamily",
-      "id": "2396:30797",
-      "path": "PLAYER > Main > Broadcast History Section > List > History Item 1 > Container > Container > Text",
-      "expect": "Hanken Grotesk/Regular/14",
-      "value": "Muller/Regular/14",
-      "reason": "Muller Regular 14/20 already exists in this design; same size and line height, no hierarchy change."
-    },
-    {
-      "group": "typography",
-      "theme": "light",
-      "op": "setFontFamily",
-      "id": "2399:31075",
-      "path": "PLAYER > Main > Broadcast History Section > History Item 1 > Container > Container > 10:41",
-      "expect": "Hanken Grotesk/Regular/14",
-      "value": "Muller/Regular/14",
-      "reason": "Muller Regular 14/20 already exists in this design; same size and line height, no hierarchy change."
-    },
-    {
-      "group": "typography",
-      "theme": "light",
-      "op": "setFontFamily",
-      "id": "2399:31094",
-      "path": "PLAYER > Main > Broadcast History Section > History Item 2 > Container > Container > 10:36",
-      "expect": "Hanken Grotesk/Regular/14",
-      "value": "Muller/Regular/14",
-      "reason": "Muller Regular 14/20 already exists in this design; same size and line height, no hierarchy change."
+      "op": "reorderChild",
+      "id": "2444:10347",
+      "parentId": "2429:196",
+      "fromIndex": 3,
+      "toIndex": 1,
+      "path": "COLLECTION pusto > Track Item 1 > Container ('Сохраняйте понравившеся треки...')",
+      "expect": "index 3",
+      "value": "index 1",
+      "reason": "Layer-order only, to match Dark. Deleting the hidden duplicate revealed that Light keeps the subtitle at index 3 while Dark has it at index 1. Same elements, same geometry, same visibility - the elements are absolutely positioned and do not overlap, so nothing moves visually. Purely so structural diffs stay meaningful."
     }
   ],
   "tokens": {
@@ -1417,23 +1360,6 @@ var REPAIR_PLAN = {
     },
     {
       "group": "tokenBinding",
-      "token": "textSecondary",
-      "prop": "fills",
-      "dark": {
-        "id": "2444:18495",
-        "path": "collection pusto > Main > Collection List > Track Item 1 > Container > Сохраняйте понравившеся треки в плеере, и они появятся здесь.",
-        "current": "#b3c4d1"
-      },
-      "light": {
-        "id": "2429:295",
-        "path": "collection pusto > Main > Collection List > Track Item 1 > Container > Сохраняйте понравившеся треки в плеере, и они появятся здесь.",
-        "current": "#42474e"
-      },
-      "nodeType": "TEXT",
-      "nodeName": "Сохраняйте понравившеся треки в плеере, и они появятся здесь."
-    },
-    {
-      "group": "tokenBinding",
       "token": "textHeading",
       "prop": "fills",
       "dark": {
@@ -2211,6 +2137,7 @@ function currentValue(node, op) {
     case "renameNode": return node.name;
     case "deleteNode": return "present";
     case "setAutoLayoutHug": return (node.layoutMode || "NONE") + " / " + node.layoutSizingHorizontal + " / " + node.layoutSizingVertical;
+    case "reorderChild": return node.parent ? "index " + node.parent.children.indexOf(node) : "(no parent)";
     default: return "?";
   }
 }
@@ -2230,6 +2157,7 @@ function isAlreadyApplied(op, current, m) {
     case "setVisible": return current === m.value;
     case "renameNode": return current === m.value;
     case "setAutoLayoutHug": return current === "HORIZONTAL / HUG / HUG";
+    case "reorderChild": return current === m.value;
     default: return false;
   }
 }
@@ -2245,6 +2173,7 @@ function isReady(op, current, m) {
       } catch (e) { return false; }
     }
     case "setAutoLayoutHug": return current !== "HORIZONTAL / HUG / HUG";
+    case "reorderChild": return current === m.expect;
     case "deleteNode": return true; // node exists => still to delete
     default: return current === m.expect;
   }
@@ -2459,6 +2388,12 @@ async function apply() {
       else if (m.op === "renameNode") node.name = m.value;
       else if (m.op === "deleteNode") node.remove();
       else if (m.op === "setAutoLayoutHug") { node.layoutMode = "HORIZONTAL"; node.layoutSizingHorizontal = "HUG"; node.layoutSizingVertical = "HUG"; }
+      else if (m.op === "reorderChild") {
+        // Layer order only. insertChild moves an existing child; geometry,
+        // visibility, fills and text are untouched.
+        if (!node.parent) { done.skipped.push(m.id + ": no parent"); continue; }
+        node.parent.insertChild(m.toIndex, node);
+      }
       else if (m.op === "setFontStyle" || m.op === "setFontFamily") {
         var target = { family: "Muller", style: m.op === "setFontStyle" ? m.value.split("/")[1] : "Regular" };
         try { await figma.loadFontAsync(target); }

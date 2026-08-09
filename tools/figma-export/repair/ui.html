@@ -67,9 +67,22 @@
     if (m.type === "dryrun-result") {
       var r = m.report, c = r.counts, h = "";
       counts.innerHTML =
-        "<div><b>" + c.mutationsReady + "</b> mutations ready</div><div>" + c.mutationsSkipped + " skipped</div>" +
-        "<div><b>" + c.bindingsReady + "</b> bindings ready</div><div>" + c.bindingsSkipped + " skipped</div>" +
-        "<div><b>" + c.variables + "</b> variables</div><div><b>" + c.textStyles + "</b> text styles</div>";
+        "<div><b>" + c.mutationsReady + "</b> mutations remaining</div><div>" + c.mutationsApplied + " already applied</div>" +
+        "<div><b>" + c.bindingsReady + "</b> bindings remaining</div><div>" + c.bindingsApplied + " already applied</div>" +
+        "<div><b>" + c.variablesToCreate + "</b> variables to create</div><div>" + c.variablesExisting + " existing</div>" +
+        "<div><b>" + c.stylesToCreate + "</b> styles to create</div><div>" + c.stylesExisting + " existing</div>" +
+        (c.bindingsBlocked ? "<div class='miss'><b>" + c.bindingsBlocked + "</b> bindings BLOCKED</div><div></div>" : "") +
+        (c.mutationsChanged || c.mutationsMissing ? "<div class='skip'>" + c.mutationsChanged + " changed, " + c.mutationsMissing + " missing</div><div></div>" : "");
+
+      // current document state first - this is the recovery view
+      var st = r.collection;
+      h += '<div class="grp">Current document state</div>';
+      h += '<div class="item">collection <code>' + esc(st.exists ? "EXISTS" : "not created") + "</code>" +
+           (st.exists ? " · modes: <code>" + esc(st.modes.join(", ") || "(none)") + "</code>" : "") +
+           (st.exists ? " · variables present: <b>" + Object.keys(st.variables).length + "</b> / " + (Object.keys(st.variables).length + st.missingVariables.length) : "") +
+           "</div>";
+      if (st.note) h += '<div class="item skip">' + esc(st.note) + "</div>";
+      if (r.warnings.length) r.warnings.forEach(function (w) { h += '<div class="item miss">' + esc(w) + "</div>"; });
 
       h += '<div class="grp">Structural &amp; typography</div>';
       r.mutations.forEach(function (x) {
@@ -105,11 +118,13 @@
 
     if (m.type === "apply-result") {
       var d = m.done;
-      out.innerHTML = '<div class="grp">Applied</div>' +
-        "<div class='item'>mutations: <b>" + d.mutations + "</b></div>" +
-        "<div class='item'>variables: <b>" + d.variables + "</b></div>" +
+      out.innerHTML = '<div class="grp">Applied (stopped in phase: ' + esc(d.phase) + ")</div>" +
+        "<div class='item'>mutations written: <b>" + d.mutations + "</b> · skipped/already done: " + d.mutationsSkipped + "</div>" +
+        "<div class='item'>variables created: <b>" + d.variables + "</b> · reused: " + d.variablesReused + "</div>" +
         "<div class='item'>bindings: <b>" + d.bindings + "</b></div>" +
-        "<div class='item'>text styles: <b>" + d.textStyles + "</b></div>" +
+        "<div class='item'>text styles created: <b>" + d.textStyles + "</b></div>" +
+        (d.modeError ? '<div class="grp">Blocked</div><div class="item miss">' + esc(d.modeError) + "</div>" : "") +
+        (d.notes.length ? '<div class="grp">Notes</div>' + d.notes.map(function (s) { return '<div class="item">' + esc(s) + "</div>"; }).join("") : "") +
         (d.skipped.length ? '<div class="grp">Skipped</div>' + d.skipped.map(function (s) { return '<div class="item skip">' + esc(s) + "</div>"; }).join("") : "");
       applyBtn.disabled = true; applyBtn.className = "";
     }

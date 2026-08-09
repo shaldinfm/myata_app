@@ -14,8 +14,10 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.findNavController
+import com.example.musicplayerapp.data.Streams
 import com.example.musicplayerapp.databinding.ActivityMainBinding
 import com.example.musicplayerapp.service.MediaPlayerService
+import com.example.musicplayerapp.service.PlaybackLog
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 
@@ -32,13 +34,19 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
-        
-        if (intent.action != Intent.ACTION_MAIN && intent.action != null) {
+
+        // The action is only a stream name for our own deep links. Framework
+        // actions - the manifest also declares android.intent.action.PLAY on this
+        // activity - must never become a stream key: nothing matches it further
+        // down and playback silently never starts (issue #14).
+        val requestedStream = Streams.normalise(intent.action)
+
+        if (requestedStream != null) {
             // Only update if stream actually changed
-            if (viewModel.currentStreamLive.value != intent.action) {
-                viewModel.currentStreamLive.value = intent.action
+            if (viewModel.currentStreamLive.value != requestedStream) {
+                viewModel.currentStreamLive.value = requestedStream
             }
-            
+
             // Navigate to player tab if not already there
             val navHostFragment = supportFragmentManager.findFragmentById(R.id.navHostFragment) as? androidx.navigation.fragment.NavHostFragment
             val navController = navHostFragment?.navController
@@ -48,6 +56,12 @@ class MainActivity : AppCompatActivity() {
                     navController.navigate(R.id.player)
                 }
             }
+        } else if (intent.action != null && intent.action != Intent.ACTION_MAIN) {
+            PlaybackLog.event(
+                "LAUNCH_ACTION_IGNORED",
+                "action" to intent.action,
+                "reason" to "not_a_stream_key"
+            )
         }
     }
 

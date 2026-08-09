@@ -11,6 +11,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { TOKENS, TYPE } from "./spec/tokens.mjs";
 import { SCREENS } from "./spec/screens.mjs";
+import { normalizePath, validateFigmaPath } from "./spec/path.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ASSETS = JSON.parse(fs.readFileSync(path.join(here, "spec", "assets.json"), "utf8"));
@@ -31,6 +32,29 @@ for (const [base, fam] of Object.entries(ASSETS.families || {})) {
 /* Fail loudly rather than silently shipping a screen with a bad colour or a
  * node that falls outside its parent. */
 const errors = [];
+/* Every vector is rewritten into the M/L/C/Z subset here, once, and then
+ * re-validated. spec.json therefore only ever contains paths Figma accepts, and
+ * the plugin never has to convert anything at create time. */
+const vectors = { total: 0, converted: 0, alreadySafe: 0, failed: [] };
+function normalizeVectors(node, screen, trail) {
+  if (node.t === "VECTOR" && node.path) {
+    vectors.total++;
+    const before = node.path;
+    try {
+      node.path = normalizePath(before);
+    } catch (e) {
+      vectors.failed.push(`${screen.id} :: ${trail}: ${e.message}`);
+      return;
+    }
+    const bad = validateFigmaPath(node.path);
+    if (bad) vectors.failed.push(`${screen.id} :: ${trail}: ${bad} -> ${node.path.slice(0, 60)}`);
+    else if (/[AHVSTQahvstq]/.test(before)) vectors.converted++;
+    else vectors.alreadySafe++;
+  }
+  (node.ch || []).forEach((c) => normalizeVectors(c, screen, trail + " > " + c.n));
+}
+for (const s of SCREENS) s.nodes.forEach((n) => normalizeVectors(n, s, n.n));
+
 const assetUse = {};
 function check(node, parent, screen, trail) {
   const where = `${screen.id} :: ${trail}`;
@@ -74,6 +98,8 @@ for (const s of SCREENS) {
 const ids = SCREENS.map((s) => s.id);
 ids.forEach((id, i) => { if (ids.indexOf(id) !== i) errors.push(`duplicate screen id: ${id}`); });
 
+errors.push(...vectors.failed);
+
 if (errors.length) {
   console.error("spec is invalid:\n  " + errors.join("\n  "));
   process.exit(1);
@@ -104,6 +130,8 @@ let count = 0;
 (function walk(ns) { for (const n of ns) { count++; walk(n.ch || []); } })(SCREENS.flatMap((s) => s.nodes));
 
 console.log(`spec.json written: ${SCREENS.length} screens x 2 themes = ${SCREENS.length * 2} frames, ${count} nodes per theme.`);
+console.log(`vectors: ${vectors.total} total, ${vectors.converted} converted to M/L/C/Z, ` +
+            `${vectors.alreadySafe} already safe, ${vectors.failed.length} failed.`);
 for (const g of Object.keys(byGroup)) console.log(`  ${g}: ${byGroup[g].length} - ${byGroup[g].join(", ")}`);
 
 console.log("\nassets referenced:");

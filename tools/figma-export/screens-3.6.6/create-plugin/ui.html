@@ -75,6 +75,16 @@
              "</span> Muller " + esc(f.style) + "</div>";
       });
 
+      var v = r.vectors || { total: 0, ok: 0, failed: [] };
+      h += '<div class="grp">Vector preflight</div>';
+      h += '<div class="item"><span class="' + (v.failed.length ? "miss" : "ok") + '">' +
+           (v.failed.length ? "FAIL" : "OK") + "</span> " + v.ok + " of " + v.total +
+           " vector paths validated" + (v.failed.length ? ", <b>" + v.failed.length + " would fail at create</b>" : "") + "</div>";
+      v.failed.slice(0, 20).forEach(function (f) {
+        h += '<div class="item miss">' + esc(f.screen) + " — " + esc(f.node) + "<br>" +
+             esc(f.why) + " <code>" + esc(f.path) + "</code></div>";
+      });
+
       h += '<div class="grp">Assets (cloned from this file, never drawn)</div>';
       (r.assets || []).forEach(function (a) {
         var pending = a.status === "PENDING_OWNER";

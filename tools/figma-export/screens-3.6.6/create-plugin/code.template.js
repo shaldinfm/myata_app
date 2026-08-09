@@ -21,6 +21,7 @@ var GRID_GAP_X = 80, GRID_GAP_Y = 120, GRID_WRAP = 3200;
 
 var dryRunReport = null;   // set by dryRun(), consumed by apply()
 var missingAssets = [];    // asset keys that resolved to an empty slot during apply()
+var inFlight = [];         // nodes created for the screen currently being built
 
 /* ---------- helpers ---------- */
 
@@ -41,6 +42,41 @@ function resolve(token, theme) {
 }
 
 function solid(hex) { return [{ type: "SOLID", color: hexToRgb(hex), opacity: 1 }]; }
+
+/* Figma's vectorPaths accepts only a subset of the SVG path grammar - notably
+ * NOT the arc command A/a nor the shorthands H/h and V/v. Paths in spec.json are
+ * already normalised to M/L/C/Z by spec/path.mjs at build time; this is the same
+ * check, run again here so a dry run can never green-light a create that will
+ * throw "Failed to convert path. Invalid command at …".
+ *
+ * Deliberately a duplicate of validateFigmaPath() in spec/path.mjs: the plugin
+ * cannot import it, and the point of the check is to be independent of the thing
+ * that produced the string. */
+function validateFigmaPath(d) {
+  if (typeof d !== "string" || !d.replace(/\s/g, "")) return "empty path";
+  var letters = d.match(/[A-Za-z]/g) || [];
+  for (var i = 0; i < letters.length; i++)
+    if ("MLCZ".indexOf(letters[i]) < 0) return "unsupported command '" + letters[i] + "'";
+
+  var tk = [], re = /([MLCZ])|(-?(?:\d*\.\d+|\d+)(?:[eE][+-]?\d+)?)/g, m;
+  while ((m = re.exec(d)) !== null) tk.push(m[1] !== undefined ? m[1] : parseFloat(m[2]));
+  if (tk[0] !== "M") return "path must start with M";
+
+  var need = { M: 2, L: 2, C: 6, Z: 0 };
+  var j = 0;
+  while (j < tk.length) {
+    var c = tk[j];
+    if (typeof c !== "string") return "stray number";
+    j++;
+    var n = need[c], k;
+    for (k = 0; k < n; k++, j++) if (typeof tk[j] !== "number") return "'" + c + "' is missing arguments";
+    while (typeof tk[j] === "number") {
+      if (n === 0) return "'Z' takes no arguments";
+      for (k = 0; k < n; k++, j++) if (typeof tk[j] !== "number") return "'" + c + "' repeat is truncated";
+    }
+  }
+  return null;
+}
 
 function allPages() {
   if (typeof figma.loadAllPagesAsync === "function") return figma.loadAllPagesAsync().then(function () { return figma.root.children; });
@@ -217,6 +253,7 @@ async function buildNode(spec, theme) {
   }
 
   var fr = figma.createFrame();
+  inFlight.push(fr);
   applyBox(fr, spec, theme);
   fr.clipsContent = false;
   fr.layoutMode = "NONE";
@@ -232,8 +269,23 @@ async function buildNode(spec, theme) {
   return fr;
 }
 
+/* figma.createFrame() attaches the new node to the CURRENT page, not to the one
+ * we are appending into. If a build throws part-way, every ancestor created but
+ * not yet appended is left behind as debris on whatever page happened to be
+ * open - which could be a canonical page. Both are handled: the caller switches
+ * the current page to the target first, and anything still parented to a page
+ * when the build fails is removed. */
+function discardInFlight() {
+  for (var i = 0; i < inFlight.length; i++) {
+    var n = inFlight[i];
+    try { if (!n.removed && n.parent && n.parent.type === "PAGE") n.remove(); } catch (e) {}
+  }
+  inFlight = [];
+}
+
 async function buildScreen(screen, theme, x, y) {
   var root = figma.createFrame();
+  inFlight.push(root);
   root.name = frameName(screen, theme);
   root.x = x; root.y = y;
   root.resizeWithoutConstraints(screen.w, screen.h);
@@ -322,6 +374,28 @@ async function dryRun() {
     report.avatarCandidates = null;   // criteria search unavailable; not an error
   }
 
+  // Preflight EVERY vector through the same check Create relies on. This is the
+  // gate that was missing when the first run reported 58 WILL_CREATE and then
+  // died on the first arc command.
+  report.vectors = { total: 0, ok: 0, failed: [] };
+  for (var si2 = 0; si2 < SCREEN_SPEC.screens.length; si2++) {
+    var scr = SCREEN_SPEC.screens[si2];
+    (function walk(nodes, trail) {
+      for (var vi = 0; vi < nodes.length; vi++) {
+        var nd = nodes[vi];
+        if (nd.t === "VECTOR") {
+          report.vectors.total++;
+          var why = validateFigmaPath(nd.path);
+          if (why) report.vectors.failed.push({ screen: scr.id, node: trail + " > " + nd.n, why: why, path: String(nd.path).slice(0, 70) });
+          else report.vectors.ok++;
+        }
+        if (nd.ch) walk(nd.ch, trail + " > " + nd.n);
+      }
+    })(scr.nodes, scr.id);
+  }
+  if (report.vectors.failed.length)
+    report.warnings.push(report.vectors.failed.length + " vector path(s) would fail at create time - see the vector preflight below");
+
   var layout = planLayout(SCREEN_SPEC.screens);
 
   for (var ti = 0; ti < THEMES.length; ti++) {
@@ -394,6 +468,15 @@ async function apply() {
     var page = findPage(pages, t.page);
     if (!page) { page = figma.createPage(); page.name = t.page; done.pagesCreated++; done.notes.push("created page " + t.page); }
 
+    // Make the target page current so nothing can be created on a canonical page.
+    try {
+      if (typeof figma.setCurrentPageAsync === "function") await figma.setCurrentPageAsync(page);
+      else figma.currentPage = page;
+    } catch (e) {
+      done.errors.push("could not switch to page " + t.page + ": " + (e && e.message ? e.message : String(e)));
+      continue;
+    }
+
     // Re-check on the live page rather than trusting the dry-run snapshot.
     var existing = existingFrameNames(page);
 
@@ -402,12 +485,15 @@ async function apply() {
       if (plan.status !== "WILL_CREATE") { done.skipped++; continue; }
       if (existing[plan.name]) { done.skipped++; done.notes.push("already present, skipped: " + plan.name); continue; }
 
+      inFlight = [];
       try {
         var frame = await buildScreen(byId[plan.id], t.theme, plan.at.x, plan.at.y);
         page.appendChild(frame);
         created.push(frame);
+        inFlight = [];
         done.created++;
       } catch (e) {
+        discardInFlight();   // leave no half-built debris behind
         done.errors.push(plan.name + ": " + (e && e.message ? e.message : String(e)));
       }
     }

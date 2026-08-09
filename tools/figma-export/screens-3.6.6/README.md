@@ -16,6 +16,7 @@ layers, and that manual pass is the intended next step.
 spec/tokens.mjs       colour roles - v1 copied from canonical/semantic-tokens.json,
                       v2 proposed with the canonical node each value came from
 spec/assets.json      brand marks and canonical controls, referenced by node id
+spec/path.mjs         SVG path -> the M/L/C/Z subset Figma's vectorPaths accepts
 spec/primitives.mjs   canonical layout primitives, every number measured from the real pages
 spec/screens.mjs      the 29 screens
 build-spec.mjs        validates and emits spec.json
@@ -57,6 +58,29 @@ than a hunt.
 `spec.json` is the single source both consumers read. The preview and the Figma
 frames come from one node tree with only the token table swapped, so light and
 dark cannot drift apart, and neither can the preview and the file.
+
+## Vector paths must be M/L/C/Z
+
+Figma's `VectorPath.data` implements only a subset of the SVG path grammar. The
+arc command `A`/`a` and the shorthands `H`/`h`, `V`/`v`, `S`/`s`, `T`/`t` are not
+in it; assigning one throws `Failed to convert path. Invalid command at …`.
+
+The HTML preview never caught this, because it renders `<path d="…">` inside a
+real `<svg>`, which implements the full SVG 1.1 grammar. **The preview was not a
+test of what Figma would accept.** A first create run got 16 frames in before
+dying on the first arc.
+
+`spec/path.mjs` rewrites every path into absolute `M`/`L`/`C`/`Z` at build time:
+`H`/`V` become explicit lines, quadratics convert exactly to cubics, `S`/`T`
+resolve their reflected control points, and arcs become cubic Béziers split at
+90° or finer. Geometry and bounds are preserved — verified by sampling 400 points
+along the original and the converted path with the browser's own SVG engine
+across all 23 icons plus seven adversarial cases (rotated elliptic arc, relative
+shorthand, `S`, `T`, degenerate radii): **worst deviation 0.0005 px**.
+
+`spec.json` therefore only ever contains paths Figma accepts, and the plugin
+converts nothing at create time. Both `build-spec.mjs` and the plugin's dry run
+validate independently, so a dry run cannot green-light a create that will throw.
 
 ## Running it
 
@@ -101,14 +125,35 @@ accurate, letterforms and text widths are not.
    `tools/figma-export/screens-3.6.6/create-plugin/manifest.json`.
 3. Run **Radio Myata · 3.6.6 proposal screens**.
 4. Press **1 · Dry Run**. Nothing is written. Check that Muller Regular, Medium
-   and Bold all report `AVAILABLE`, that the frame count reads 58, and that the
-   asset list shows only the expected `NEEDS ASSET` rows.
+   and Bold all report `AVAILABLE`, that the frame count reads 58, that the
+   vector preflight reads **116 of 116 validated**, and that the asset list shows
+   only the expected `NEEDS ASSET` rows.
 5. Press **2 · Create frames**. It stays disabled until a dry run has succeeded,
    and stays disabled if any warning was raised.
 6. Stop there. Do not export or normalize the proposal pages yet.
 
 Re-exporting is a later step, and when it happens the canonical pages must show
 **no diff** — that is the check that the plugin stayed off them.
+
+### Recovering from a partial create
+
+A partial run leaves a page that is both incomplete and littered: `createFrame()`
+attaches to the *current* page, so every ancestor built but not yet appended when
+a screen throws is left behind as loose debris. **Do not try to patch such a
+page.** Delete `3.6.6 PROPOSALS - LIGHT` and `3.6.6 PROPOSALS - DARK` outright
+and run Dry Run → Create again from zero; the plugin recreates both pages.
+
+Two fixes make this recoverable rather than recurring:
+
+- The plugin now switches the current page to the target page before building, so
+  in-flight nodes can never land on a canonical page.
+- If a screen build throws, everything created for it is removed instead of being
+  abandoned on the canvas.
+
+After a partial run made **before** those fixes, check whichever page was open at
+the time — including the canonical ones — for stray frames, and delete or undo
+them. Nothing was ever written *into* a canonical frame; the risk is only loose
+nodes dropped alongside them.
 
 ---
 

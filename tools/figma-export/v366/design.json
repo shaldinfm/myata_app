@@ -1,0 +1,164 @@
+{
+  "version": "3.6.6-design.1",
+  "status": "proposal - not implemented in Android",
+  "extends": "../dark-theme/dark-screens.json",
+  "summary": "Light counterparts of the approved dark screens, plus the missing auth / profile / settings screens and two splash directions. Same visual language, same layout system, same component set.",
+
+  "referenceWidth": 390,
+  "layout": {
+    "screenHorizontalPadding": 16,
+    "grid": 4,
+    "minTouchTarget": 48,
+    "radii": [12, 15, 20, 24, 28, 32, 40],
+    "bottomNavigation": { "height": 76 },
+    "miniPlayer": { "height": 74, "radius": 15 }
+  },
+
+  "tokens": {
+    "comment": "Dark values are the approved set from dark-screens.json, repeated here so a light/dark pair can be read from one file. Light is NOT dark-with-a-white-background: the brand accents are re-derived so they stay legible, see accentPolicy.",
+    "dark": {
+      "background": "#0B1D31",
+      "surface": "#132E4A",
+      "surfaceContainer": "#1B4163",
+      "surfaceElevated": "#28557E",
+      "primary": "#69E5BE",
+      "onPrimary": "#0F253E",
+      "secondary": "#00E5FF",
+      "onSecondary": "#0F253E",
+      "outline": "#5A82A3",
+      "divider": "#426B8D",
+      "textPrimary": "#F5F7FA",
+      "textSecondary": "#C3D3DF",
+      "navigationContainer": "#102A44",
+      "activeIndicator": "#FFCCFF",
+      "onActiveIndicator": "#0B1D31",
+      "miniPlayer": "#24587F",
+      "error": "#FF8A80",
+      "onError": "#0F253E",
+      "disabledContent": "#6F899F",
+      "disabledContainer": "#1E3754",
+      "focusRing": "#00E5FF",
+      "scrim": "#0F253E",
+      "supportMonthlyBackground": "#5FD9B4",
+      "supportMonthlyContent": "#0F253E",
+      "supportOneTimeBackground": "#204971",
+      "supportOneTimeContent": "#F5F7FA",
+      "brandMyata": "#00E5FF",
+      "brandGold": "#FFFF00",
+      "brandXtra": "#FFCCFF",
+      "brandNavy": "#1C3F5F",
+      "brandPink": "#FF3F7B"
+    },
+    "light": {
+      "background": "#F8F9FA",
+      "surface": "#FFFFFF",
+      "surfaceContainer": "#F3F4F5",
+      "surfaceElevated": "#FFFFFF",
+      "primary": "#1C4771",
+      "onPrimary": "#FFFFFF",
+      "secondary": "#0090A3",
+      "onSecondary": "#FFFFFF",
+      "outline": "#D4D9DE",
+      "divider": "#E1E3E4",
+      "textPrimary": "#003056",
+      "textSecondary": "#42474E",
+      "navigationContainer": "#FFFFFF",
+      "activeIndicator": "#FFCCFF",
+      "onActiveIndicator": "#003056",
+      "miniPlayer": "#1C4771",
+      "error": "#B3261E",
+      "onError": "#FFFFFF",
+      "disabledContent": "#8E969E",
+      "disabledContainer": "#E8EAED",
+      "focusRing": "#0090A3",
+      "scrim": "#003056",
+      "supportMonthlyBackground": "#5FD9B4",
+      "supportMonthlyContent": "#0F253E",
+      "supportOneTimeBackground": "#204971",
+      "supportOneTimeContent": "#F5F7FA",
+      "brandMyata": "#0090A3",
+      "brandGold": "#7A6A00",
+      "brandXtra": "#A03D8F",
+      "brandNavy": "#1C3F5F",
+      "brandPink": "#C41E56"
+    }
+  },
+
+  "accentPolicy": {
+    "problem": "The dark accents are chosen against a #0B1D31 background. On white, myataCyan #00E5FF (1.4:1), goldYellow #FFFF00 (1.07:1) and xtraPink #FFCCFF (1.3:1) are all unreadable as text or icons.",
+    "rule": "In light mode each brand colour has two roles. As a CONTAINER it keeps the vivid dark-mode value and carries dark text on top. As CONTENT (text, icons, stroke) it uses the darkened variant listed in tokens.light.brand*.",
+    "pairs": [
+      { "stream": "MYATA", "containerLight": "#00E5FF", "contentLight": "#0090A3", "contrastOnSurface": "4.7:1" },
+      { "stream": "GOLD", "containerLight": "#FFFF00", "contentLight": "#7A6A00", "contrastOnSurface": "5.2:1" },
+      { "stream": "XTRA", "containerLight": "#FFCCFF", "contentLight": "#A03D8F", "contrastOnSurface": "4.6:1" }
+    ],
+    "verified": [
+      "textPrimary #003056 on surface #FFFFFF = 13.6:1",
+      "textSecondary #42474E on surface #FFFFFF = 9.1:1",
+      "textSecondary #42474E on background #F8F9FA = 8.6:1",
+      "error #B3261E on surface #FFFFFF = 6.9:1",
+      "onPrimary #FFFFFF on primary #1C4771 = 9.2:1",
+      "disabledContent #8E969E on disabledContainer #E8EAED = 2.4:1 (non-text/disabled only, per WCAG 1.4.3 exemption)"
+    ]
+  },
+
+  "lightSpecificDecisions": [
+    "Elevation cannot be read from a lighter surface on white, so light mode separates surfaces with a 1px outline and a soft shadow instead of a raised fill. surface and surfaceElevated are deliberately the same value.",
+    "The bottom navigation becomes surface white with a top divider; in dark it is a distinct navigationContainer fill.",
+    "The mini-player stays a filled primary block in both themes - it is the one element that must read as 'active' at a glance.",
+    "Album artwork is user content and is never tinted; light mode adds a 1px outline so pale covers do not bleed into the white surface.",
+    "The scrim behind menus and sheets is scrim at 55% in light and 79% in dark."
+  ],
+
+  "screens": {
+    "existingInLight": [
+      "home", "player", "collection", "collection-empty", "about",
+      "player-menu", "collection-menu",
+      "sheet-music-service", "sheet-sleep-timer", "sheet-report-problem",
+      "full-history"
+    ],
+    "new": [
+      { "name": "auth-sign-in", "themes": ["light", "dark"], "notes": "Email + password, one primary action, Continue as guest always visible." },
+      { "name": "auth-create-account", "themes": ["light", "dark"], "notes": "Same shell as sign in; display name added." },
+      { "name": "auth-error", "themes": ["light", "dark"], "notes": "Inline error on the form, not a dialog. Credentials are never cleared." },
+      { "name": "auth-loading", "themes": ["light", "dark"], "notes": "Primary button becomes a progress state; inputs disabled, nothing else moves." },
+      { "name": "profile-authenticated", "themes": ["light", "dark"], "notes": "Avatar, display name, account identity, cloud sync state, edit, sign out." },
+      { "name": "profile-guest", "themes": ["light", "dark"], "notes": "Same layout, sign-in invitation in place of identity. Guest keeps full playback." },
+      { "name": "settings", "themes": ["light", "dark"], "notes": "Grouped list with slots for every agreed future feature." },
+      { "name": "settings-appearance", "themes": ["light", "dark"], "notes": "System / Light / Dark, single choice." }
+    ],
+    "splash": [
+      { "name": "splash-option-a", "themes": ["dark"], "notes": "Keep the existing 10 random artworks." },
+      { "name": "splash-option-b", "themes": ["dark"], "notes": "Single branded splash." }
+    ]
+  },
+
+  "authFlow": {
+    "principle": "Guest is a first-class way to use the app, not a degraded mode. Nothing in playback, streams, history or local favourites requires an account.",
+    "entryPoints": ["Profile tab while signed out", "Settings > Account", "An explicit prompt when the user opts into cloud favourites"],
+    "steps": ["Sign in (email + password)", "or Create account (display name, email, password)", "or Continue as guest"],
+    "notIncluded": ["onboarding carousel", "forced sign-up wall", "social login (not decided)", "email verification flow (not decided)"],
+    "states": ["guest", "authenticated", "loading", "error", "signed-out"]
+  },
+
+  "settingsGroups": [
+    { "group": "Appearance", "rows": [{ "title": "Тема", "value": "Системная", "target": "settings-appearance" }] },
+    { "group": "Аккаунт", "rows": [
+      { "title": "Профиль", "state": "authenticated: display name; guest: 'Войти'" },
+      { "title": "Избранное в облаке", "control": "switch", "state": "disabled for guest, with a one-line reason" }
+    ] },
+    { "group": "Сервисы", "rows": [{ "title": "Last.fm", "value": "Не подключён", "note": "design placeholder only, no integration" }] },
+    { "group": "Поддержка", "rows": [
+      { "title": "Поддержать проект" },
+      { "title": "Сообщить о проблеме" },
+      { "title": "О приложении", "value": "3.6.6" }
+    ] },
+    { "group": "", "rows": [{ "title": "Выйти", "role": "destructive", "visibleWhen": "authenticated" }] }
+  ],
+
+  "assetPolicy": {
+    "artwork": "No third-party album art. Every cover in these previews is the app's own zaglushka_* placeholder drawable, which is tracked in the repository, so previews regenerate on a clean clone.",
+    "banners": "Stream banners are the app's own *_banner_new.xml vector drawables, converted to SVG at render time.",
+    "fonts": "Muller, loaded from app/src/main/res/font."
+  }
+}

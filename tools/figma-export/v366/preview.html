@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<style>
+  @font-face { font-family: Muller; src: url("../../../app/src/main/res/font/muller_regular.ttf"); font-weight: 400; }
+  @font-face { font-family: Muller; src: url("../../../app/src/main/res/font/muller_bold.ttf"); font-weight: 700; }
+  @font-face { font-family: Muller; src: url("../../../app/src/main/res/font/mullerblack.ttf"); font-weight: 900; }
+
+  /* Token sets come straight from design.json. Light is not dark inverted:
+     brand accents split into container vs content roles, and light separates
+     surfaces with an outline instead of a raised fill. */
+  .t-dark{
+    --bg:#0B1D31; --surface:#132E4A; --container:#1B4163; --elevated:#28557E;
+    --primary:#69E5BE; --on-primary:#0F253E; --secondary:#00E5FF; --on-secondary:#0F253E;
+    --outline:#5A82A3; --divider:#426B8D; --text:#F5F7FA; --muted:#C3D3DF;
+    --nav:#102A44; --indicator:#FFCCFF; --on-indicator:#0B1D31; --mini:#24587F;
+    --error:#FF8A80; --on-error:#0F253E; --disabled:#6F899F; --disabled-bg:#1E3754;
+    --scrim:#0F253Ec9; --monthly:#5FD9B4; --monthly-fg:#0F253E; --one:#204971; --one-fg:#F5F7FA;
+    --myata:#00E5FF; --gold:#FFFF00; --xtra:#FFCCFF; --pinkbrand:#FF3F7B;
+    --card-shadow:none; --surface-border:1px solid var(--outline);
+  }
+  .t-light{
+    --bg:#F8F9FA; --surface:#FFFFFF; --container:#F3F4F5; --elevated:#FFFFFF;
+    --primary:#1C4771; --on-primary:#FFFFFF; --secondary:#0090A3; --on-secondary:#FFFFFF;
+    --outline:#D4D9DE; --divider:#E1E3E4; --text:#003056; --muted:#42474E;
+    --nav:#FFFFFF; --indicator:#FFCCFF; --on-indicator:#003056; --mini:#1C4771;
+    --error:#B3261E; --on-error:#FFFFFF; --disabled:#8E969E; --disabled-bg:#E8EAED;
+    --scrim:#0030568c; --monthly:#5FD9B4; --monthly-fg:#0F253E; --one:#204971; --one-fg:#F5F7FA;
+    --myata:#0090A3; --gold:#7A6A00; --xtra:#A03D8F; --pinkbrand:#C41E56;
+    --card-shadow:0 1px 3px #00305614; --surface-border:1px solid var(--outline);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:#20262c;font-family:Muller,Arial,sans-serif}
+  #screens{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start;padding:28px}
+  .screen{width:390px;position:relative;overflow:hidden;background:var(--bg);color:var(--text);isolation:isolate}
+  .label{position:absolute;left:0;top:-22px;font-size:12px;color:#c9d3dc}
+
+  .title{position:absolute;left:16px;top:16px;margin:0;font-size:24px;line-height:32px;font-weight:900}
+  .icon-btn{position:absolute;width:48px;height:48px;display:grid;place-items:center;font-size:22px}
+  .account{right:16px;top:8px}
+  .account::before{content:"";position:absolute;width:40px;height:40px;border-radius:50%;background:var(--container);border:var(--surface-border);z-index:-1}
+  .dots{right:16px;top:8px;font-weight:900;letter-spacing:2px}
+  .section-title{position:absolute;left:16px;margin:0;font-weight:900;font-size:25px;line-height:32px}
+  .scroll-x{position:absolute;left:16px;width:358px;overflow:hidden;display:flex;gap:16px}
+  .streams{top:132px;height:198px}.playlists{top:416px;height:160px}
+  .stream{width:316px;height:198px;flex:0 0 316px;border-radius:24px;overflow:hidden;background:var(--container);border:1px solid #0002}
+  .stream svg{display:block;width:100%;height:100%}
+  .playlist{width:160px;height:160px;flex:0 0 160px;border-radius:24px;overflow:hidden;background:var(--container);border:var(--surface-border)}
+  .playlist img,.art img{width:100%;height:100%;object-fit:cover;display:block}
+
+  .mini{position:absolute;left:16px;width:358px;height:74px;border-radius:15px;background:var(--mini);color:#F5F7FA;display:flex;align-items:center;box-shadow:0 6px 14px #00000026}
+  .mini .art{margin-left:12px;width:48px;height:48px;border-radius:8px;overflow:hidden;background:#0003}
+  .mini-copy{margin-left:12px;min-width:0}
+  .mini-copy b{display:block;font-size:16px;line-height:20px;font-weight:400}
+  .mini-copy span{display:block;margin-top:2px;font-size:14px;line-height:18px;opacity:.8}
+  .mini .mini-action{margin-left:auto;width:48px;height:48px;display:grid;place-items:center;font-size:20px}
+
+  .nav{position:absolute;left:0;bottom:0;width:390px;height:76px;border-radius:18px 18px 0 0;background:var(--nav);border-top:1px solid var(--divider);display:flex}
+  .nav-item{width:97.5px;height:76px;position:relative;display:flex;flex-direction:column;align-items:center;padding-top:13px;color:var(--muted);font-size:12px;line-height:16px;font-weight:700}
+  .nav-item .nav-icon{height:24px;font-size:21px;line-height:24px;z-index:1}
+  .nav-item span:last-child{margin-top:8px;z-index:1}
+  .nav-item.active{color:var(--on-indicator)}
+  .nav-item.active::before{content:"";position:absolute;top:8px;width:64px;height:48px;border-radius:24px;background:var(--indicator)}
+
+  .now-playing{position:absolute;top:34px;width:100%;font-size:12px;line-height:16px;text-align:center;color:var(--muted)}
+  .pager{position:absolute;top:64px;left:182px;display:flex;gap:2px}
+  .pager i{width:8px;height:8px;border-radius:50%;background:var(--disabled)}
+  .pager i:first-child{background:var(--myata)}
+  .album{position:absolute;left:74px;top:94px;width:242px;height:242px;border-radius:24px;overflow:hidden;border:var(--surface-border);box-shadow:0 8px 22px #00000026;background:var(--container)}
+  .track-title{position:absolute;top:373px;left:16px;width:358px;text-align:center;font-size:24px;line-height:30px;font-weight:900}
+  .track-artist{position:absolute;top:404px;left:16px;width:358px;text-align:center;font-size:18px;line-height:24px;color:var(--muted)}
+  .controls{position:absolute;top:442px;left:16px;width:358px;height:80px;display:flex;align-items:center;justify-content:space-between}
+  .reaction{width:48px;height:48px;display:grid;place-items:center;font-size:27px;color:var(--text)}
+  .play-pause{width:80px;height:80px;border-radius:24px;display:grid;place-items:center;background:var(--primary);color:var(--on-primary);font-size:27px;font-weight:900}
+  .hint{position:absolute;top:526px;width:100%;text-align:center;font-size:11px;color:var(--muted)}
+  .history{position:absolute;left:16px;top:553px;width:358px;height:372px;padding:18px 16px;border-radius:20px;border:var(--surface-border);background:var(--elevated);box-shadow:var(--card-shadow)}
+  .history h2{margin:0;font-size:24px;line-height:30px;font-weight:900}
+  .history-row{height:74px;display:flex;align-items:center;gap:8px}
+  .history-row:first-of-type{margin-top:18px}
+  .time{width:48px;font-size:13px;color:var(--muted)}
+  .history-row .art{width:40px;height:40px;border-radius:8px;overflow:hidden;background:var(--container);border:var(--surface-border)}
+  .history-copy{min-width:0}
+  .history-copy b{display:block;font-size:16px;line-height:20px;font-weight:400}
+  .history-copy span{font-size:13px;line-height:18px;color:var(--muted)}
+  .wide-button{position:absolute;left:16px;bottom:16px;width:326px;height:54px;border:var(--surface-border);border-radius:12px;display:grid;place-items:center;font-size:20px;background:var(--surface)}
+
+  .description{position:absolute;left:16px;top:84px;color:var(--muted);font-size:14px;line-height:20px}
+  .track-card{position:absolute;left:16px;width:358px;height:97px;background:var(--surface);border:var(--surface-border);border-radius:20px;display:flex;align-items:center;padding:16px;gap:12px;box-shadow:var(--card-shadow)}
+  .track-card .art{width:64px;height:64px;border-radius:16px;overflow:hidden;flex:0 0 64px;background:var(--container)}
+  .track-copy{width:178px}
+  .track-copy b{font-size:16px;line-height:20px;font-weight:400;display:block}
+  .track-copy span{font-size:13px;line-height:18px;color:var(--muted);display:block}
+  .open{margin-left:auto;width:48px;height:48px;border-radius:50%;border:2px solid var(--secondary);display:grid;place-items:center;color:var(--secondary);font-size:24px}
+
+  .empty-card{position:absolute;left:16px;top:133px;width:358px;height:358px;border:var(--surface-border);border-radius:24px;background:var(--surface);box-shadow:var(--card-shadow)}
+  .disc-outer,.disc-inner,.disc-center,.disc-hole{position:absolute;border-radius:50%}
+  .disc-outer{left:109px;top:68px;width:140px;height:140px;background:#e3d3ff}
+  .disc-inner{left:124px;top:83px;width:110px;height:110px;background:#FFCCFF}
+  .disc-center{left:152px;top:111px;width:54px;height:54px;background:#6e53a9}
+  .disc-hole{left:172px;top:131px;width:14px;height:14px;background:var(--surface)}
+  .empty-heart{position:absolute;top:155px;left:232px;font-size:40px;color:var(--pinkbrand)}
+  .empty-title{position:absolute;top:238px;width:100%;text-align:center;font-size:16px;font-weight:700}
+  .empty-copy{position:absolute;top:270px;width:100%;text-align:center;font-size:13px;line-height:20px;color:var(--muted)}
+
+  .support{position:absolute;left:16px;width:358px;border-radius:24px;padding:24px}
+  .support.monthly{top:80px;height:286px;background:var(--monthly);color:var(--monthly-fg)}
+  .support.one{top:382px;height:266px;background:var(--one);color:var(--one-fg)}
+  .chip{display:inline-grid;place-items:center;height:28px;padding:0 14px;border-radius:14px;background:#ffffff;color:var(--monthly-fg);font-size:11px}
+  .support h2{font-size:24px;line-height:30px;font-weight:400;margin:16px 0 8px}
+  .support p{font-size:14px;line-height:20px;margin:0}
+  .support .button{position:absolute;left:24px;bottom:24px;height:52px;border-radius:12px;display:grid;place-items:center;font-size:20px}
+  .monthly .button{width:184px;background:var(--monthly-fg);color:var(--monthly)}
+  .one .button{width:239px;background:#0f253e;color:#F5F7FA}
+  .about-card{position:absolute;left:16px;top:695px;width:358px;height:276px;border-radius:24px;border:var(--surface-border);background:var(--surface);padding:36px 32px;box-shadow:var(--card-shadow)}
+  .about-card h2{margin:0 0 22px;font-size:26px;line-height:32px;font-weight:900}
+  .about-card p{font-size:16px;line-height:24px;color:var(--muted);margin:0}
+  .about-card .button{position:absolute;left:32px;bottom:32px;width:294px;height:54px;border:var(--surface-border);border-radius:12px;display:grid;place-items:center;font-size:20px}
+  .social-title{position:absolute;left:16px;top:1025px;margin:0;font-size:24px;line-height:30px;font-weight:900}
+  .social-grid{position:absolute;left:16px;top:1067px;display:grid;grid-template-columns:repeat(4,76px);gap:16px 14px}
+  .social{width:76px;height:76px;border-radius:12px;border:var(--surface-border);background:var(--surface);padding:12px}
+  .social img{width:100%;height:100%;object-fit:contain}
+
+  .scrim{position:absolute;inset:0;background:var(--scrim);z-index:10}
+  .popup{position:absolute;right:16px;top:72px;width:206px;border-radius:20px;padding:8px 11px;background:var(--elevated);border:var(--surface-border);z-index:11;box-shadow:0 8px 24px #00000033}
+  .popup-row{height:48px;display:flex;align-items:center;gap:10px;font-size:14px}
+  .popup-row i{width:48px;display:grid;place-items:center;font-style:normal;color:var(--muted)}
+  .popup-row.danger{color:var(--error)}.popup-row.danger i{color:var(--error)}
+
+  .sheet{position:absolute;left:16px;width:358px;border-radius:28px;background:var(--surface);border:var(--surface-border);z-index:11;padding:0 0 18px;box-shadow:0 -4px 28px #00000026}
+  .sheet .handle{width:40px;height:4px;border-radius:2px;background:var(--outline);margin:16px auto}
+  .sheet h2{margin:0 24px 18px;font-size:22px;line-height:28px;font-weight:900}
+  .sheet-row{height:56px;padding:0 16px;display:flex;align-items:center;gap:12px;font-size:16px}
+  .sheet-row i{width:48px;height:48px;display:grid;place-items:center;font-style:normal;color:var(--secondary);font-size:20px}
+  .sheet-row.selected{box-shadow:inset 4px 0 var(--secondary)}
+  .message-box{height:126px;margin:0 24px 20px;border-radius:16px;border:var(--surface-border);background:var(--container);padding:16px;color:var(--muted);font-size:16px}
+  .send{height:52px;margin:0 24px;border-radius:12px;display:grid;place-items:center;background:var(--primary);color:var(--on-primary);font-size:20px}
+  .error-note{margin:14px 24px 0;font-size:11px;color:var(--error)}
+  .full-history{position:absolute;left:40px;top:90px;width:310px;height:842px;border:var(--surface-border);border-radius:40px;background:var(--elevated);z-index:11;padding:24px 16px;box-shadow:0 12px 40px #00000033}
+  .full-history h2{font-size:20px;letter-spacing:1px;text-align:center;margin:0 0 16px}
+  .full-history hr{border:0;border-top:1px solid var(--divider);margin:0}
+  .full-history .history-row{height:82px}
+  .close{position:absolute;right:24px;top:34px;z-index:12;width:48px;height:48px;border-radius:50%;background:var(--elevated);border:var(--surface-border);display:grid;place-items:center;font-size:24px}
+
+  /* ---- new screens ---- */
+  .pad{position:absolute;left:16px;width:358px}
+  .back{position:absolute;left:8px;top:8px;width:48px;height:48px;display:grid;place-items:center;font-size:24px}
+  .screen-title{position:absolute;left:16px;top:72px;margin:0;font-size:28px;line-height:34px;font-weight:900}
+  .screen-sub{position:absolute;left:16px;top:112px;width:358px;margin:0;font-size:14px;line-height:20px;color:var(--muted)}
+  .field{position:absolute;left:16px;width:358px;height:60px;border-radius:16px;border:var(--surface-border);background:var(--surface);padding:9px 16px}
+  .field label{display:block;font-size:11px;line-height:14px;color:var(--muted)}
+  .field .val{display:block;margin-top:2px;font-size:16px;line-height:22px}
+  .field .val.ph{color:var(--disabled)}
+  .field.focused{border:2px solid var(--focus,var(--secondary));padding:8px 15px}
+  .field.invalid{border:2px solid var(--error);padding:8px 15px}
+  .field.disabled{background:var(--disabled-bg);border-color:var(--disabled-bg)}
+  .field.disabled .val,.field.disabled label{color:var(--disabled)}
+  .btn{position:absolute;left:16px;width:358px;height:56px;border-radius:16px;display:grid;place-items:center;font-size:18px;font-weight:700;background:var(--primary);color:var(--on-primary)}
+  .btn.ghost{background:transparent;border:var(--surface-border);color:var(--text);font-weight:400}
+  .btn.text{background:transparent;color:var(--secondary);font-weight:700}
+  .btn.loading{background:var(--primary);color:var(--on-primary);opacity:.9}
+  .spinner{width:22px;height:22px;border-radius:50%;border:3px solid #ffffff59;border-top-color:var(--on-primary);display:inline-block}
+  .inline-error{position:absolute;left:16px;width:358px;display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:18px;color:var(--error)}
+  .legal{position:absolute;left:16px;width:358px;text-align:center;font-size:12px;line-height:18px;color:var(--muted)}
+
+  .avatar{position:absolute;left:50%;transform:translateX(-50%);width:96px;height:96px;border-radius:50%;background:var(--container);border:var(--surface-border);display:grid;place-items:center;font-size:34px;font-weight:900;color:var(--muted);overflow:hidden}
+  .center{position:absolute;left:16px;width:358px;text-align:center}
+  .list{position:absolute;left:16px;width:358px;border-radius:20px;border:var(--surface-border);background:var(--surface);overflow:hidden;box-shadow:var(--card-shadow)}
+  .row{height:60px;display:flex;align-items:center;gap:12px;padding:0 16px;font-size:16px}
+  .row + .row{border-top:1px solid var(--divider)}
+  .row i{width:28px;display:grid;place-items:center;font-style:normal;color:var(--muted);font-size:18px}
+  .row .r{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px}
+  .row.danger{color:var(--error)}.row.danger i{color:var(--error)}
+  .row.disabled{color:var(--disabled)}.row.disabled i{color:var(--disabled)}
+  .group-title{position:absolute;left:28px;font-size:12px;line-height:16px;font-weight:700;letter-spacing:.6px;color:var(--muted);text-transform:uppercase}
+  .switch{width:44px;height:26px;border-radius:13px;background:var(--disabled-bg);position:relative;flex:0 0 44px}
+  .switch.on{background:var(--primary)}
+  .switch::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px #0003}
+  .switch.on::after{left:21px;background:var(--on-primary)}
+  .radio{width:22px;height:22px;border-radius:50%;border:2px solid var(--outline);flex:0 0 22px;position:relative}
+  .radio.on{border-color:var(--secondary)}
+  .radio.on::after{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--secondary)}
+  .badge{height:24px;padding:0 10px;border-radius:12px;display:inline-grid;place-items:center;font-size:11px;font-weight:700}
+  .badge.ok{background:var(--indicator);color:var(--on-indicator)}
+  .badge.off{background:var(--disabled-bg);color:var(--disabled)}
+
+  .splash{position:absolute;inset:0;display:grid;place-items:center}
+  .splash img{width:100%;height:100%;object-fit:cover}
+  .splash-mark{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;width:358px}
+  .splash-mark .logo{width:132px;height:132px;border-radius:36px;background:var(--myata);display:grid;place-items:center;margin:0 auto 20px;font-size:56px;font-weight:900;color:#0B1D31}
+  .splash-mark b{display:block;font-size:26px;letter-spacing:3px;font-weight:900;color:#F5F7FA}
+  .splash-mark span{display:block;margin-top:8px;font-size:11px;letter-spacing:1.4px;color:#C3D3DF;white-space:nowrap}
+  .splash-note{position:absolute;left:16px;bottom:24px;width:358px;text-align:center;font-size:11px;color:#C3D3DF}
+
+  #kits{display:flex;flex-wrap:wrap;gap:28px;padding:0 28px 28px}
+  .kit{width:880px;border-radius:24px;border:var(--surface-border);background:var(--bg);color:var(--text);padding:24px}
+  .kit h1{font-size:24px;margin:0 0 4px}
+  .kit>p{margin:0 0 18px;color:var(--muted);font-size:13px}
+  .kit-sec{border:var(--surface-border);border-radius:16px;background:var(--surface);padding:16px;margin-bottom:16px}
+  .kit-sec h2{font-size:15px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  .swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .swatch{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+  .swatch b{width:28px;height:28px;border-radius:8px;display:block;border:1px solid #8884}
+  .btn-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .demo{width:150px;height:48px;border-radius:14px;display:grid;place-items:center;font-size:15px;font-weight:700;background:var(--primary);color:var(--on-primary)}
+  .demo.disabled{background:var(--disabled-bg);color:var(--disabled)}
+  .demo.err{background:var(--error);color:var(--on-error)}
+  .demo.ghost{background:transparent;border:var(--surface-border);color:var(--text);font-weight:400}
+  .type b{display:block;font-weight:900;font-size:24px}
+  .type i{display:block;font-style:normal;font-weight:900;font-size:20px;margin-top:6px}
+  .type u{display:block;text-decoration:none;font-size:16px;margin-top:6px}
+  .type s{display:block;text-decoration:none;font-size:14px;color:var(--muted);margin-top:6px}
+</style>
+</head>
+<body>
+<div id="screens"></div>
+<div id="kits"></div>
+<script>
+const A = "../assets/";
+// Placeholders only. Third-party album art is deliberately not in the repository,
+// so previews regenerate identically on a clean clone.
+const art = { a:A+"zaglushka_1_img.png", b:A+"zaglushka_3_img.png", c:A+"zaglushka_4_img.png" };
+const ic = { home:"⌂", player:"▷", collection:"♫", about:"ⓘ", account:"♙", up:"♧", down:"♤", pause:"Ⅱ", play:"▶", menu:"⋮", open:"↗", search:"⌕", timer:"◴", warn:"⚠", browser:"□", close:"×", back:"‹", chev:"›", check:"✓", mail:"✉", lock:"✦", user:"♙", cloud:"☁", palette:"◐", heart:"♡", info:"ⓘ", exit:"⇥", link:"⛓" };
+const tracks = [["HOMEWRECKER","SOMBЯ",art.a],["LEILA","MIAMI HORROR",art.b],["FOREVER","CHVRCHES",art.c]];
+const hist = [["10:45","CRYOGEN","MUSE",art.a],["10:41","MEET ME IN LOVE","BLOSSOMS",art.b],["10:36","CITY WALLS","TWENTY ONE PILOTS",art.c],["10:32","THE LESS I KNOW","TAME IMPALA",art.a],["10:28","DREAMS","THE CRANBERRIES",art.b]];
+const esc = v => String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const attr=(n,a)=>n.getAttribute(a)||n.getAttribute("android:"+a)||"";
+function col(v){if(!v||v==="#00000000")return["none",1];const r=v.replace("#","");return r.length===8?["#"+r.slice(2),parseInt(r.slice(0,2),16)/255]:["#"+r,1]}
+function toSvg(xml){const d=new DOMParser().parseFromString(xml,"application/xml"),root=d.documentElement;
+  const walk=n=>{const t=n.tagName.toLowerCase();
+    if(t==="path"){const[f,fo]=col(attr(n,"fillColor")),[s,so]=col(attr(n,"strokeColor"));
+      return `<path d="${esc(attr(n,"pathData"))}" fill="${f}" fill-opacity="${fo}" stroke="${s}" stroke-opacity="${so}" stroke-width="${attr(n,"strokeWidth")||0}"/>`}
+    const c=[...n.children].map(walk).join("");
+    if(t==="group")return `<g transform="translate(${attr(n,"translateX")||0} ${attr(n,"translateY")||0})">${c}</g>`;
+    return c};
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${attr(root,"viewportWidth")} ${attr(root,"viewportHeight")}">${[...root.children].map(walk).join("")}</svg>`}
+async function banners(){for(const n of ["myata","gold","xtra"]){const x=await fetch(A+n+"_banner_new.xml").then(r=>r.text());document.querySelectorAll(`[data-banner="${n}"]`).forEach(e=>e.innerHTML=toSvg(x))}}
+
+const nav=a=>`<div class="nav">${[["home","Главная"],["player","Плеер"],["collection","Коллекция"],["about","О нас"]].map(x=>`<div class="nav-item ${x[0]===a?"active":""}"><span class="nav-icon">${ic[x[0]]}</span><span>${x[1]}</span></div>`).join("")}</div>`;
+const mini=(s,t)=>`<div class="mini" style="top:${t}px"><div class="art"><img src="${art.a}"></div><div class="mini-copy"><b>WHAT YOU KNOW</b><span>TWO DOOR CINEMA CLUB</span></div><div class="mini-action">${s==="buffering"?"•••":ic[s]}</div></div>`;
+const head=(t,k="account")=>`<h1 class="title">${t}</h1><div class="icon-btn ${k}">${k==="account"?ic.account:ic.menu}</div>`;
+const rows=(n=3)=>hist.slice(0,n).map(r=>`<div class="history-row"><span class="time">${r[0]}</span><div class="art"><img src="${r[3]}"></div><div class="history-copy"><b>${r[1]}</b><span>${r[2]}</span></div></div>`).join("");
+
+const S={};
+S.home=()=>`${head("Радио Мята")}<h2 class="section-title" style="top:96px">Наши потоки</h2>
+<div class="scroll-x streams">${["myata","gold","xtra"].map(n=>`<div class="stream" data-banner="${n}"></div>`).join("")}</div>
+<h2 class="section-title" style="top:372px">Мятные плейлисты</h2>
+<div class="scroll-x playlists">${[art.a,art.b,art.c].map(s=>`<div class="playlist"><img src="${s}"></div>`).join("")}</div>
+${mini("pause",600)}${nav("home")}`;
+S.player=()=>`<div class="now-playing">СЕЙЧАС ИГРАЕТ</div><div class="pager"><i></i><i></i><i></i></div>
+<div class="album"><img src="${art.a}"></div><div class="track-title">WHAT YOU KNOW</div><div class="track-artist">TWO DOOR CINEMA CLUB</div>
+<div class="controls"><div class="reaction">${ic.up}</div><div class="play-pause">${ic.pause}</div><div class="reaction" style="color:var(--muted)">${ic.down}</div></div>
+<div class="hint">Сохранить в Коллекцию · Отрицательная реакция</div>
+<div class="history"><h2>История эфира</h2>${rows(3)}<div class="wide-button">Показать ещё</div></div>${nav("player")}`;
+S.collection=()=>`${head("Коллекция","dots")}<div class="description">Треки, которые вы сохранили</div>${tracks.map((t,i)=>`<div class="track-card" style="top:${133+i*114}px"><div class="art"><img src="${t[2]}"></div><div class="track-copy"><b>${t[0]}</b><span>${t[1]}</span></div><div class="open">${ic.open}</div></div>`).join("")}${mini("play",600)}${nav("collection")}`;
+S["collection-empty"]=()=>`${head("Коллекция","dots")}<div class="description">Треки, которые вы сохранили</div>
+<div class="empty-card"><div class="disc-outer"></div><div class="disc-inner"></div><div class="disc-center"></div><div class="disc-hole"></div><div class="empty-heart">${ic.heart}</div>
+<div class="empty-title">Здесь пока пусто</div><div class="empty-copy">Нажмите ${ic.up} в плеере,<br>чтобы сохранить трек</div></div>${nav("collection")}`;
+S.about=()=>`${head("О нас","dots")}
+<div class="support monthly"><span class="chip">ЕЖЕМЕСЯЧНО</span><h2>Поддержать проект</h2><p>Регулярная поддержка помогает нам оставаться в эфире и без рекламы.</p><div class="button">Оформить</div></div>
+<div class="support one"><span class="chip">РАЗОВО</span><h2>Разовый донат</h2><p>Любая сумма — тоже поддержка. Спасибо, что вы с нами.</p><div class="button">Поддержать</div></div>
+<div class="about-card"><h2>Радио Мята</h2><p>Мы играем музыку, которую любим сами. Три потока, живой эфир и никакой рекламы.</p><div class="button">Сообщить о проблеме</div></div>
+<h2 class="social-title">Мы в сети</h2><div class="social-grid">${["telegram","vk","youtube","insta","spotify","yandex","tiktok","boosty"].map(s=>`<div class="social"><img src="${A+s}_info.png"></div>`).join("")}</div>${nav("about")}`;
+S["player-menu"]=()=>`${S.player()}<div class="scrim"></div><div class="popup">
+${[["Найти в сервисе",ic.search],["Таймер сна",ic.timer],["История эфира",ic.collection],["Сообщить о проблеме",ic.warn]].map(r=>`<div class="popup-row"><i>${r[1]}</i>${r[0]}</div>`).join("")}</div>`;
+S["collection-menu"]=()=>`${S.collection()}<div class="scrim"></div><div class="popup">
+<div class="popup-row"><i>${ic.open}</i>Открыть в сервисе</div><div class="popup-row"><i>${ic.search}</i>Найти в браузере</div><div class="popup-row danger"><i>${ic.close}</i>Удалить из коллекции</div></div>`;
+S["sheet-music-service"]=()=>`${S.player()}<div class="scrim"></div><div class="sheet" style="bottom:16px"><div class="handle"></div><h2>Открыть трек в</h2>
+${[["Spotify",1],["Apple Music",0],["YouTube Music",0],["Яндекс Музыка",0],["Найти в браузере",0]].map(r=>`<div class="sheet-row ${r[1]?"selected":""}"><i>${r[1]?ic.check:ic.open}</i>${r[0]}</div>`).join("")}</div>`;
+S["sheet-sleep-timer"]=()=>`${S.player()}<div class="scrim"></div><div class="sheet" style="bottom:16px"><div class="handle"></div><h2>Таймер сна</h2>
+${[["15 минут",0],["30 минут",1],["1 час",0],["Выключить",0]].map(r=>`<div class="sheet-row ${r[1]?"selected":""}"><i>${r[1]?ic.check:ic.timer}</i>${r[0]}</div>`).join("")}</div>`;
+S["sheet-report-problem"]=()=>`${S.player()}<div class="scrim"></div><div class="sheet" style="bottom:16px"><div class="handle"></div><h2>Сообщить о проблеме</h2>
+<div class="message-box">Опишите, что произошло…</div><div class="send">Отправить</div><div class="error-note">${ic.warn} Не удалось отправить. Проверьте соединение.</div></div>`;
+S["full-history"]=()=>`${S.player()}<div class="scrim"></div><div class="full-history"><h2>ИСТОРИЯ ЭФИРА</h2>
+${hist.map((r,i)=>`${i?'<hr>':''}<div class="history-row"><span class="time">${r[0]}</span><div class="art"><img src="${r[3]}"></div><div class="history-copy"><b>${r[1]}</b><span>${r[2]}</span></div></div>`).join("")}</div><div class="close">${ic.close}</div>`;
+
+// ---- new screens ----
+const authShell=(title,sub)=>`<div class="back">${ic.back}</div><h1 class="screen-title">${title}</h1><p class="screen-sub">${sub}</p>`;
+S["auth-sign-in"]=()=>`${authShell("С возвращением","Войдите, чтобы синхронизировать избранное между устройствами.")}
+<div class="field" style="top:170px"><label>Email</label><span class="val">anna@example.com</span></div>
+<div class="field focused" style="top:242px"><label>Пароль</label><span class="val">••••••••</span></div>
+<div class="btn text" style="top:310px;left:auto;right:16px;width:auto;height:40px;justify-items:end">Забыли пароль?</div>
+<div class="btn" style="top:362px">Войти</div>
+<div class="btn ghost" style="top:430px">Создать аккаунт</div>
+<div class="btn text" style="top:502px">Продолжить как гость</div>
+<p class="legal" style="top:566px">Гостевой режим даёт полный доступ к радио.<br>Аккаунт нужен только для облачного избранного.</p>`;
+S["auth-create-account"]=()=>`${authShell("Создать аккаунт","Понадобится только имя, email и пароль.")}
+<div class="field" style="top:170px"><label>Имя</label><span class="val">Анна</span></div>
+<div class="field" style="top:242px"><label>Email</label><span class="val">anna@example.com</span></div>
+<div class="field" style="top:314px"><label>Пароль</label><span class="val ph">Минимум 8 символов</span></div>
+<div class="btn" style="top:398px">Создать аккаунт</div>
+<div class="btn text" style="top:466px">У меня уже есть аккаунт</div>
+<p class="legal" style="top:530px">Продолжая, вы принимаете условия использования<br>и политику конфиденциальности.</p>`;
+S["auth-error"]=()=>`${authShell("С возвращением","Войдите, чтобы синхронизировать избранное между устройствами.")}
+<div class="field" style="top:170px"><label>Email</label><span class="val">anna@example.com</span></div>
+<div class="field invalid" style="top:242px"><label>Пароль</label><span class="val">••••••••</span></div>
+<div class="inline-error" style="top:308px"><span>${ic.warn}</span><span>Неверный email или пароль. Введённые данные сохранены — исправьте пароль и попробуйте снова.</span></div>
+<div class="btn" style="top:376px">Войти</div>
+<div class="btn ghost" style="top:444px">Создать аккаунт</div>
+<div class="btn text" style="top:516px">Продолжить как гость</div>`;
+S["auth-loading"]=()=>`${authShell("С возвращением","Войдите, чтобы синхронизировать избранное между устройствами.")}
+<div class="field disabled" style="top:170px"><label>Email</label><span class="val">anna@example.com</span></div>
+<div class="field disabled" style="top:242px"><label>Пароль</label><span class="val">••••••••</span></div>
+<div class="btn loading" style="top:362px"><span class="spinner"></span></div>
+<div class="btn ghost" style="top:430px;color:var(--disabled);border-color:var(--disabled-bg)">Создать аккаунт</div>
+<p class="legal" style="top:502px">Проверяем данные…</p>`;
+S["profile-authenticated"]=()=>`${head("Профиль","dots")}
+<div class="avatar" style="top:88px"><img src="${art.b}" style="width:100%;height:100%;object-fit:cover"></div>
+<div class="center" style="top:198px;font-size:22px;font-weight:900">Анна Кузнецова</div>
+<div class="center" style="top:228px;font-size:14px;color:var(--muted)">anna@example.com</div>
+<div class="list" style="top:274px"><div class="row"><i>${ic.cloud}</i>Избранное в облаке<span class="r"><span class="badge ok">ВКЛ</span></span></div>
+<div class="row"><i>${ic.heart}</i>Сохранено треков<span class="r">124</span></div>
+<div class="row"><i>${ic.timer}</i>Последняя синхронизация<span class="r">2 мин назад</span></div></div>
+<div class="list" style="top:466px"><div class="row"><i>${ic.user}</i>Изменить профиль<span class="r">${ic.chev}</span></div>
+<div class="row"><i>${ic.palette}</i>Настройки<span class="r">${ic.chev}</span></div></div>
+<div class="list" style="top:598px"><div class="row danger"><i>${ic.exit}</i>Выйти</div></div>${nav("about")}`;
+S["profile-guest"]=()=>`${head("Профиль","dots")}
+<div class="avatar" style="top:88px">${ic.user}</div>
+<div class="center" style="top:198px;font-size:22px;font-weight:900">Вы слушаете как гость</div>
+<div class="center" style="top:230px;font-size:14px;line-height:20px;color:var(--muted)">Радио, потоки и история доступны без аккаунта.<br>Аккаунт нужен, чтобы избранное жило в облаке.</div>
+<div class="btn" style="top:306px">Войти</div>
+<div class="btn ghost" style="top:374px">Создать аккаунт</div>
+<div class="list" style="top:456px"><div class="row"><i>${ic.heart}</i>Избранное на устройстве<span class="r">12</span></div>
+<div class="row disabled"><i>${ic.cloud}</i>Избранное в облаке<span class="r"><span class="badge off">НУЖЕН ВХОД</span></span></div>
+<div class="row"><i>${ic.palette}</i>Настройки<span class="r">${ic.chev}</span></div></div>${nav("about")}`;
+S.settings=()=>`<div class="back">${ic.back}</div><h1 class="screen-title">Настройки</h1>
+<div class="group-title" style="top:126px">Внешний вид</div>
+<div class="list" style="top:148px"><div class="row"><i>${ic.palette}</i>Тема<span class="r">Системная ${ic.chev}</span></div></div>
+<div class="group-title" style="top:232px">Аккаунт</div>
+<div class="list" style="top:254px"><div class="row"><i>${ic.user}</i>Профиль<span class="r">Анна ${ic.chev}</span></div>
+<div class="row"><i>${ic.cloud}</i>Избранное в облаке<span class="r"><span class="switch on"></span></span></div></div>
+<div class="group-title" style="top:398px">Сервисы</div>
+<div class="list" style="top:420px"><div class="row"><i>${ic.link}</i>Last.fm<span class="r">Не подключён ${ic.chev}</span></div></div>
+<div class="group-title" style="top:504px">Поддержка</div>
+<div class="list" style="top:526px"><div class="row"><i>${ic.heart}</i>Поддержать проект<span class="r">${ic.chev}</span></div>
+<div class="row"><i>${ic.warn}</i>Сообщить о проблеме<span class="r">${ic.chev}</span></div>
+<div class="row"><i>${ic.info}</i>О приложении<span class="r">3.6.6 ${ic.chev}</span></div></div>
+<div class="list" style="top:730px"><div class="row danger"><i>${ic.exit}</i>Выйти</div></div>`;
+S["settings-appearance"]=()=>`<div class="back">${ic.back}</div><h1 class="screen-title">Тема</h1>
+<p class="screen-sub" style="top:114px">Приложение может следовать системной теме или всегда использовать выбранную.</p>
+<div class="list" style="top:186px">
+<div class="row"><i>${ic.palette}</i>Системная<span class="r"><span class="radio on"></span></span></div>
+<div class="row"><i>${ic.play}</i>Светлая<span class="r"><span class="radio"></span></span></div>
+<div class="row"><i>${ic.pause}</i>Тёмная<span class="r"><span class="radio"></span></span></div></div>
+<p class="legal" style="top:400px;text-align:left">Системная тема переключается вместе с настройкой Android.</p>`;
+S["splash-option-a"]=()=>`<div class="splash"><img src="${art.c}"></div>
+<div class="splash-note">Вариант A · один из 10 случайных артов, как сейчас</div>`;
+S["splash-option-b"]=()=>`<div class="splash" style="background:linear-gradient(160deg,#0B1D31,#1C3F5F 60%,#123A52)"></div>
+<div class="splash-mark"><div class="logo">М</div><b>РАДИО МЯТА</b><span>ТВОЯ МУЗЫКА · ТВОЯ СТАНЦИЯ</span></div>
+<div class="splash-note">Вариант B · единый брендовый сплэш</div>`;
+
+const H={home:757,player:1022,collection:740,"collection-empty":740,about:1418,"player-menu":1022,"collection-menu":740,"sheet-music-service":1022,"sheet-sleep-timer":1022,"sheet-report-problem":1022,"full-history":1022,"auth-sign-in":700,"auth-create-account":660,"auth-error":700,"auth-loading":640,"profile-authenticated":740,"profile-guest":740,settings:820,"settings-appearance":500,"splash-option-a":740,"splash-option-b":740};
+const PLAN=[
+  ...["home","player","collection","collection-empty","about","player-menu","collection-menu","sheet-music-service","sheet-sleep-timer","sheet-report-problem","full-history"].map(n=>[n,"light"]),
+  ...["auth-sign-in","auth-create-account","auth-error","auth-loading","profile-authenticated","profile-guest","settings","settings-appearance"].flatMap(n=>[[n,"light"],[n,"dark"]]),
+  ["splash-option-a","dark"],["splash-option-b","dark"]
+];
+const root=document.getElementById("screens");
+for(const [name,theme] of PLAN){
+  const el=document.createElement("div");
+  el.className=`screen t-${theme}`;
+  el.style.height=H[name]+"px";
+  el.dataset.name=`${theme}-${name}`;
+  el.innerHTML=S[name]();
+  root.appendChild(el);
+}
+
+// UI kit per theme, so the token pair can be reviewed side by side.
+const kitFor=(theme)=>{
+  const T=theme==="light"
+    ?[["background","#F8F9FA"],["surface","#FFFFFF"],["surfaceContainer","#F3F4F5"],["primary","#1C4771"],["secondary","#0090A3"],["outline","#D4D9DE"],["textPrimary","#003056"],["textSecondary","#42474E"],["error","#B3261E"],["indicator","#FFCCFF"],["MYATA content","#0090A3"],["GOLD content","#7A6A00"],["XTRA content","#A03D8F"],["disabled","#8E969E"]]
+    :[["background","#0B1D31"],["surface","#132E4A"],["surfaceContainer","#1B4163"],["primary","#69E5BE"],["secondary","#00E5FF"],["outline","#5A82A3"],["textPrimary","#F5F7FA"],["textSecondary","#C3D3DF"],["error","#FF8A80"],["indicator","#FFCCFF"],["MYATA content","#00E5FF"],["GOLD content","#FFFF00"],["XTRA content","#FFCCFF"],["disabled","#6F899F"]];
+  return `<div class="kit t-${theme}" data-kit="${theme}"><h1>UI Kit — ${theme==="light"?"Light":"Dark"}</h1><p>Radio Myata 3.6.6 · semantic tokens, components and states</p>
+  <div class="kit-sec"><h2>Colour</h2><div class="swatches">${T.map(s=>`<div class="swatch"><b style="background:${s[1]}"></b><span>${s[0]}<br>${s[1]}</span></div>`).join("")}</div></div>
+  <div class="kit-sec"><h2>Typography — Muller</h2><div class="type"><b>Заголовок экрана 24/900</b><i>Секция 20/900</i><u>Основной текст 16/400</u><s>Вторичный текст 14/400</s></div></div>
+  <div class="kit-sec"><h2>Buttons and states</h2><div class="btn-row"><div class="demo">Основная</div><div class="demo ghost">Вторичная</div><div class="demo disabled">Недоступна</div><div class="demo err">Ошибка</div><div class="demo"><span class="spinner"></span></div></div></div>
+  <div class="kit-sec"><h2>Controls</h2><div class="btn-row"><span class="switch on"></span><span class="switch"></span><span class="radio on"></span><span class="radio"></span><span class="badge ok">ВКЛ</span><span class="badge off">НУЖЕН ВХОД</span></div></div>
+  <div class="kit-sec"><h2>Navigation and mini-player</h2><div style="position:relative;height:76px;width:390px">${nav("home")}</div><div style="position:relative;height:90px;width:390px">${mini("pause",8)}</div></div>
+  </div>`};
+document.getElementById("kits").innerHTML=kitFor("light")+kitFor("dark");
+
+banners().then(()=>{document.body.dataset.ready="true"}).catch(e=>{document.body.dataset.ready="true";console.error(e)});
+</script>
+</body>
+</html>

@@ -1,0 +1,188 @@
+[
+  {
+    "name": "light-home",
+    "file": "light-home.png",
+    "width": 390,
+    "height": 757
+  },
+  {
+    "name": "light-player",
+    "file": "light-player.png",
+    "width": 390,
+    "height": 1022
+  },
+  {
+    "name": "light-collection",
+    "file": "light-collection.png",
+    "width": 390,
+    "height": 740
+  },
+  {
+    "name": "light-collection-empty",
+    "file": "light-collection-empty.png",
+    "width": 390,
+    "height": 740
+  },
+  {
+    "name": "light-about",
+    "file": "light-about.png",
+    "width": 390,
+    "height": 1418
+  },
+  {
+    "name": "light-player-menu",
+    "file": "light-player-menu.png",
+    "width": 390,
+    "height": 1022
+  },
+  {
+    "name": "light-collection-menu",
+    "file": "light-collection-menu.png",
+    "width": 390,
+    "height": 740
+  },
+  {
+    "name": "light-sheet-music-service",
+    "file": "light-sheet-music-service.png",
+    "width": 390,
+    "height": 1022
+  },
+  {
+    "name": "light-sheet-sleep-timer",
+    "file": "light-sheet-sleep-timer.png",
+    "width": 390,
+    "height": 1022
+  },
+  {
+    "name": "light-sheet-report-problem",
+    "file": "light-sheet-report-problem.png",
+    "width": 390,
+    "height": 1022
+  },
+  {
+    "name": "light-full-history",
+    "file": "light-full-history.png",
+    "width": 390,
+    "height": 1022
+  },
+  {
+    "name": "light-auth-sign-in",
+    "file": "light-auth-sign-in.png",
+    "width": 390,
+    "height": 700
+  },
+  {
+    "name": "dark-auth-sign-in",
+    "file": "dark-auth-sign-in.png",
+    "width": 390,
+    "height": 700
+  },
+  {
+    "name": "light-auth-create-account",
+    "file": "light-auth-create-account.png",
+    "width": 390,
+    "height": 660
+  },
+  {
+    "name": "dark-auth-create-account",
+    "file": "dark-auth-create-account.png",
+    "width": 390,
+    "height": 660
+  },
+  {
+    "name": "light-auth-error",
+    "file": "light-auth-error.png",
+    "width": 390,
+    "height": 700
+  },
+  {
+    "name": "dark-auth-error",
+    "file": "dark-auth-error.png",
+    "width": 390,
+    "height": 700
+  },
+  {
+    "name": "light-auth-loading",
+    "file": "light-auth-loading.png",
+    "width": 390,
+    "height": 640
+  },
+  {
+    "name": "dark-auth-loading",
+    "file": "dark-auth-loading.png",
+    "width": 390,
+    "height": 640
+  },
+  {
+    "name": "light-profile-authenticated",
+    "file": "light-profile-authenticated.png",
+    "width": 390,
+    "height": 740
+  },
+  {
+    "name": "dark-profile-authenticated",
+    "file": "dark-profile-authenticated.png",
+    "width": 390,
+    "height": 740
+  },
+  {
+    "name": "light-profile-guest",
+    "file": "light-profile-guest.png",
+    "width": 390,
+    "height": 740
+  },
+  {
+    "name": "dark-profile-guest",
+    "file": "dark-profile-guest.png",
+    "width": 390,
+    "height": 740
+  },
+  {
+    "name": "light-settings",
+    "file": "light-settings.png",
+    "width": 390,
+    "height": 820
+  },
+  {
+    "name": "dark-settings",
+    "file": "dark-settings.png",
+    "width": 390,
+    "height": 820
+  },
+  {
+    "name": "light-settings-appearance",
+    "file": "light-settings-appearance.png",
+    "width": 390,
+    "height": 500
+  },
+  {
+    "name": "dark-settings-appearance",
+    "file": "dark-settings-appearance.png",
+    "width": 390,
+    "height": 500
+  },
+  {
+    "name": "dark-splash-option-a",
+    "file": "dark-splash-option-a.png",
+    "width": 390,
+    "height": 740
+  },
+  {
+    "name": "dark-splash-option-b",
+    "file": "dark-splash-option-b.png",
+    "width": 390,
+    "height": 740
+  },
+  {
+    "name": "light-ui-kit",
+    "file": "light-ui-kit.png",
+    "width": 880,
+    "height": 1035
+  },
+  {
+    "name": "dark-ui-kit",
+    "file": "dark-ui-kit.png",
+    "width": 880,
+    "height": 1035
+  }
+]

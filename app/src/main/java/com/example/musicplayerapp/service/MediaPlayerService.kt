@@ -200,6 +200,7 @@ class MediaPlayerService(): MediaSessionService(){
                             stream = intentStream
                         }
                         onUserWantsPlayback("startStop_toggle_on")
+                        ensureValidStream("startStop")
                         // Always set MediaItem (it may have been cleared by stop)
                         when(stream){
                             "myata"->{exoPlayer.setMediaItem(myataItem)}
@@ -213,10 +214,12 @@ class MediaPlayerService(): MediaSessionService(){
                         val startArtist = intent.getStringExtra("ARTIST") ?: ""
                         updateMetadata(startArtist, startSong)
 
-                        PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "startStop_toggle_on")
-                        exoPlayer.prepare()
-                        PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "startStop_toggle_on")
-                        exoPlayer.play()
+                        if (canPrepare("startStop")) {
+                            PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "startStop_toggle_on")
+                            exoPlayer.prepare()
+                            PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "startStop_toggle_on")
+                            exoPlayer.play()
+                        }
                     }
                 }
                 "play"->{
@@ -225,20 +228,35 @@ class MediaPlayerService(): MediaSessionService(){
                     if (intentStream != null && stream != intentStream)
                     {
                         stream = intentStream
+                        ensureValidStream("play_streamChange")
                         when(stream){
                             "myata"->{exoPlayer.setMediaItem(myataItem)}
                             "gold"->{exoPlayer.setMediaItem(goldItem)}
                             "myata_hits"->{exoPlayer.setMediaItem(xtraItem)}
                         }
                         logStreamSelection("play_streamChange")
-                        PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "play_streamChange")
-                        exoPlayer.prepare()
+                        if (canPrepare("play_streamChange")) {
+                            PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "play_streamChange")
+                            exoPlayer.prepare()
+                        }
                     }
                     if(!exoPlayer.isPlaying) {
-                        PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "play_notPlaying")
-                        exoPlayer.prepare()
-                        PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "play_notPlaying")
-                        exoPlayer.play()
+                        // The player can be empty here after a stop cleared it.
+                        if (exoPlayer.mediaItemCount == 0) {
+                            ensureValidStream("play_notPlaying")
+                            when(stream){
+                                "myata"->{exoPlayer.setMediaItem(myataItem)}
+                                "gold"->{exoPlayer.setMediaItem(goldItem)}
+                                "myata_hits"->{exoPlayer.setMediaItem(xtraItem)}
+                            }
+                            logStreamSelection("play_notPlaying")
+                        }
+                        if (canPrepare("play_notPlaying")) {
+                            PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "play_notPlaying")
+                            exoPlayer.prepare()
+                            PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "play_notPlaying")
+                            exoPlayer.play()
+                        }
                     }
                 }
                 "switch"->{
@@ -253,6 +271,7 @@ class MediaPlayerService(): MediaSessionService(){
                         // DIFFERENT stream - need to set up new media item
                         stream = intentStream
                         onUserWantsPlayback("stream_switch")
+                        ensureValidStream("switch_streamChange")
                         
                         val switchSong = intent.getStringExtra("SONG") ?: ""
                         val switchArtist = intent.getStringExtra("ARTIST") ?: ""
@@ -276,20 +295,34 @@ class MediaPlayerService(): MediaSessionService(){
                         updateMetadata(switchArtist, switchSong)
 
                         // Always start playback for stream changes
-                        PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "switch_streamChange")
-                        exoPlayer.prepare()
-                        PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "switch_streamChange")
-                        exoPlayer.play()
-                        Log.d("SWITCH", "Stream switched to $stream and playback started")
+                        if (canPrepare("switch_streamChange")) {
+                            PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "switch_streamChange")
+                            exoPlayer.prepare()
+                            PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "switch_streamChange")
+                            exoPlayer.play()
+                            Log.d("SWITCH", "Stream switched to $stream and playback started")
+                        }
                     } else {
                         // SAME stream - only start if forcePlay requested AND not already playing
                         if (forcePlay && !exoPlayer.isPlaying) {
                             onUserWantsPlayback("switch_forcePlay")
-                            PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "switch_forcePlay")
-                            exoPlayer.prepare()
-                            PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "switch_forcePlay")
-                            exoPlayer.play()
-                            Log.d("SWITCH", "Same stream $stream - resuming playback")
+                            // A previous stop clears the playlist; restore it first.
+                            if (exoPlayer.mediaItemCount == 0) {
+                                ensureValidStream("switch_forcePlay")
+                                when(stream){
+                                    "myata"->{exoPlayer.setMediaItem(myataItem)}
+                                    "gold"->{exoPlayer.setMediaItem(goldItem)}
+                                    "myata_hits"->{exoPlayer.setMediaItem(xtraItem)}
+                                }
+                                logStreamSelection("switch_forcePlay")
+                            }
+                            if (canPrepare("switch_forcePlay")) {
+                                PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "switch_forcePlay")
+                                exoPlayer.prepare()
+                                PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "switch_forcePlay")
+                                exoPlayer.play()
+                                Log.d("SWITCH", "Same stream $stream - resuming playback")
+                            }
                         } else {
                             Log.d("SWITCH", "Same stream $stream - already playing, no action needed")
                         }
@@ -802,8 +835,42 @@ class MediaPlayerService(): MediaSessionService(){
      * `when(stream)` blocks above have no else branch, so an unrecognised key
      * silently leaves the player with no media item — worth a loud line.
      */
+    /**
+     * Resolves [stream] to a usable key, falling back to the default rather than
+     * leaving the player with no media item. Returns true if a valid stream is set.
+     */
+    private fun ensureValidStream(where: String): Boolean {
+        val normalised = com.example.musicplayerapp.data.Streams.normalise(stream)
+        if (normalised == null) {
+            PlaybackLog.problem(
+                "STREAM_FALLBACK_APPLIED", "invalid" to (stream.ifEmpty { "<empty>" }),
+                "usedInstead" to com.example.musicplayerapp.data.Streams.DEFAULT, "at" to where
+            )
+            stream = com.example.musicplayerapp.data.Streams.DEFAULT
+        } else if (normalised != stream) {
+            PlaybackLog.event("STREAM_NORMALISED", "from" to stream, "to" to normalised, "at" to where)
+            stream = normalised
+        }
+        return true
+    }
+
+    /**
+     * prepare() on an empty playlist is a silent no-op that looks exactly like a
+     * dead Play button, so refuse it loudly instead (issue #14).
+     */
+    private fun canPrepare(where: String): Boolean {
+        if (exoPlayer.mediaItemCount == 0) {
+            PlaybackLog.problem(
+                "PREPARE_REFUSED", "at" to where, "reason" to "no_media_item",
+                "stream" to (stream.ifEmpty { "<empty>" })
+            )
+            return false
+        }
+        return true
+    }
+
     private fun logStreamSelection(where: String) {
-        val known = stream == "myata" || stream == "gold" || stream == "myata_hits"
+        val known = com.example.musicplayerapp.data.Streams.isKnown(stream)
         if (known) {
             PlaybackLog.event(
                 "MEDIA_ITEM_SET", "stream" to stream, "at" to where,

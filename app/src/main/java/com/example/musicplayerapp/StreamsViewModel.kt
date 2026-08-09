@@ -99,6 +99,10 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     private val metadataRepository = MetadataRepository(client)
 
     private var mediaController: MediaController? = null
+
+    /** A Play pressed before the controller connected, to be run once it does. */
+    private var pendingPlayRequest = false
+    private var controllerRetryAttempt = 0
     
     private val _historyTracks = MutableLiveData<List<HistoryTrack>>()
     val historyTracks: LiveData<List<HistoryTrack>> = _historyTracks
@@ -136,34 +140,72 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         observeTrackForFavorites()
     }
 
-    private fun setupMediaController() {
+    private fun setupMediaController(attempt: Int = 0) {
         // Use context.packageName (applicationId) since it may differ from the source package
         val sessionToken = SessionToken(context, ComponentName(context.packageName, MediaPlayerService::class.java.name))
         val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
-        PlaybackLog.event("CONTROLLER_CONNECT_REQUESTED")
+        PlaybackLog.event("CONTROLLER_CONNECT_REQUESTED", "attempt" to (attempt + 1))
         controllerFuture.addListener({
             try {
                 mediaController = controllerFuture.get()
                 mediaController?.addListener(playerListener)
                 PlaybackLog.event(
                     "CONTROLLER_CONNECTED",
+                    "attempt" to (attempt + 1),
                     "isPlaying" to (mediaController?.isPlaying == true),
                     "state" to PlaybackLog.stateName(mediaController?.playbackState ?: Player.STATE_IDLE)
                 )
+                controllerRetryAttempt = 0
                 // Initial sync
                 isPlaying.postValue(mediaController?.isPlaying == true)
                 isBuffering.postValue(mediaController?.playbackState == Player.STATE_BUFFERING)
+                // A Play pressed before the controller existed is honoured now.
+                flushPendingPlayRequest()
             } catch (e: Exception) {
                 Log.e("MediaController", "Failed to connect", e)
-                // Nothing retries this: the controller stays null for the whole
-                // session and every Play press is dropped below. See issue #14.
                 PlaybackLog.problem(
                     "CONTROLLER_CONNECT_FAILED",
-                    "cause" to e.javaClass.simpleName,
-                    "outcome" to "controller_null_for_session"
+                    "attempt" to (attempt + 1),
+                    "cause" to e.javaClass.simpleName
                 )
+                scheduleControllerReconnect(attempt)
             }
         }, { it.run() }) // Executor
+    }
+
+    /**
+     * Bounded reconnect. Without this a single failed connection left the
+     * controller null for the entire session and silently swallowed every
+     * subsequent Play press (issue #14).
+     */
+    private fun scheduleControllerReconnect(failedAttempt: Int) {
+        val next = failedAttempt + 1
+        if (next >= CONTROLLER_MAX_ATTEMPTS) {
+            PlaybackLog.problem(
+                "CONTROLLER_RECONNECT_GAVE_UP", "attempts" to next,
+                "outcome" to "play_falls_back_to_service_intent"
+            )
+            return
+        }
+        val delay = (CONTROLLER_RETRY_BASE_MS shl (failedAttempt.coerceAtMost(3)))
+            .coerceAtMost(CONTROLLER_RETRY_MAX_MS)
+        controllerRetryAttempt = next
+        PlaybackLog.event("CONTROLLER_RECONNECT_SCHEDULED", "nextAttempt" to (next + 1), "delayMs" to delay)
+        viewModelScope.launch {
+            delay(delay)
+            setupMediaController(next)
+        }
+    }
+
+    /**
+     * Runs a Play that arrived before the controller was ready. Guarded so a burst
+     * of taps cannot turn into several Play commands.
+     */
+    private fun flushPendingPlayRequest() {
+        if (!pendingPlayRequest) return
+        pendingPlayRequest = false
+        PlaybackLog.event("UI_PENDING_PLAY_FLUSHED")
+        togglePlayPause()
     }
 
     private val playerListener = object : Player.Listener {
@@ -365,9 +407,19 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     fun togglePlayPause() {
         val controller = mediaController
         if (controller == null) {
-            // The tap is discarded here. Logging it is the whole point: this path
-            // was previously invisible and is a prime suspect for issue #14.
-            PlaybackLog.problem("UI_REQUEST_DROPPED", "request" to "toggle", "reason" to "controller_null")
+            // Never drop the tap. Remember it and run it once the controller is
+            // ready; a second tap while one is queued must not queue another,
+            // otherwise a burst of taps becomes a burst of Play commands (#14).
+            if (pendingPlayRequest) {
+                PlaybackLog.event("UI_PLAY_REQUEST_COALESCED", "reason" to "already_queued")
+            } else {
+                pendingPlayRequest = true
+                PlaybackLog.event(
+                    "UI_PLAY_REQUEST_QUEUED",
+                    "reason" to "controller_not_ready",
+                    "stream" to (currentStreamLive.value ?: "none")
+                )
+            }
             return
         }
         controller.let {
@@ -424,6 +476,20 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     }
 
     private fun startServiceForCurrentStream(action: String, forcePlay: Boolean = false) {
+        // Never hand the service an unusable stream key: its lookups have no else
+        // branch, so it would prepare a player with no media item (issue #14).
+        val resolved = Streams.normalise(currentStreamLive.value)
+        if (resolved == null) {
+            PlaybackLog.problem(
+                "STREAM_FALLBACK_APPLIED",
+                "invalid" to (currentStreamLive.value ?: "null"),
+                "usedInstead" to Streams.DEFAULT
+            )
+            currentStreamLive.value = Streams.DEFAULT
+        } else if (resolved != currentStreamLive.value) {
+            currentStreamLive.value = resolved
+        }
+
         val artist = when(currentStreamLive.value) {
             "myata" -> currentMyataState.value?.artist
             "gold" -> currentGoldState.value?.artist
@@ -469,6 +535,11 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     }
 
     private companion object {
+        /** Bounded MediaController reconnect: 0.5s, 1s, 2s, 4s, then stop trying. */
+        const val CONTROLLER_MAX_ATTEMPTS = 5
+        const val CONTROLLER_RETRY_BASE_MS = 500L
+        const val CONTROLLER_RETRY_MAX_MS = 4_000L
+
         /** Hard ceiling on the whole retry sequence for one playlist load attempt. */
         const val PLAYLISTS_LOAD_BUDGET_MS = 12_000L
         const val PLAYLISTS_RETRY_INITIAL_DELAY_MS = 1_000L

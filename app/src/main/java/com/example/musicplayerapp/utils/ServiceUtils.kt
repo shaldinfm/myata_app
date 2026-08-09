@@ -11,9 +11,13 @@ import com.example.musicplayerapp.service.PlaybackLog
 object ServiceUtils {
     
     /**
-     * Safely starts the MediaPlayerService, handling Android 12+ background start restrictions.
+     * Starts the MediaPlayerService, handling Android 12+ background start restrictions.
+     *
+     * Returns whether the start was accepted. Failures used to be swallowed with
+     * only a log line, so a blocked start looked to the user exactly like a Play
+     * press that did nothing (issue #14). Callers can now see it.
      */
-    fun safeStartService(context: Context, action: String, stream: String? = null, artist: String? = null, song: String? = null, forcePlay: Boolean = false) {
+    fun safeStartService(context: Context, action: String, stream: String? = null, artist: String? = null, song: String? = null, forcePlay: Boolean = false): Boolean {
         val intent = Intent(context, MediaPlayerService::class.java).apply {
             putExtra("ACTION", action)
             stream?.let { putExtra("STREAM", it) }
@@ -46,15 +50,22 @@ object ServiceUtils {
                 // these actions don't trigger playback/notification.
                 context.startService(intent)
             }
+            return true
         } catch (e: Exception) {
             Log.e("ServiceUtils", "Failed to start service (action: $action): ${e.message}")
-            // Swallowed by design today, so the user sees nothing happen. See issue #14.
+            // Android 12+ refuses a foreground start from the background. That is a
+            // platform rule, not something to retry in a loop - record exactly what
+            // happened and let the caller decide.
+            val blockedByPlatform = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                    e is android.app.ForegroundServiceStartNotAllowedException
             PlaybackLog.problem(
                 "SERVICE_START_FAILED",
                 "action" to action,
                 "cause" to e.javaClass.simpleName,
-                "outcome" to "request_lost"
+                "blockedByPlatform" to blockedByPlatform,
+                "outcome" to "start_refused"
             )
+            return false
         }
     }
 }

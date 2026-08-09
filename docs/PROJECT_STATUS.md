@@ -1,36 +1,38 @@
 # PROJECT_STATUS.md — MyataRadio
 
-Last updated: 2026-07-03.
+Last updated: 2026-08-08.
 
 ## Current canonical state
 
 - **GitHub `main` (https://github.com/shaldinfm/myata_app) is the single source of truth** — see [SOURCE_OF_TRUTH.md](SOURCE_OF_TRUTH.md).
-- `main` contains the current app code: **versionName 3.6.4 / versionCode 202610** (imported from the D working copy, PR #5).
-- Release signing lives only in a local untracked `keystore.properties` (PR #4) — see [RELEASE_SIGNING.md](RELEASE_SIGNING.md). No secrets in the tracked tree.
+- `main` builds **versionName 3.6.5 / versionCode 202611**.
+- **API 36**: `compileSdk 36`, `targetSdk 36`, `minSdk 24`.
+- **Networking is secure**: full TLS validation with per-domain bundled trust anchors (`SecureNetModule`, `network_security_config.xml`). The old trust-all `UnsafeNetModule` is gone. Cleartext remains permitted for the audio stream host only, as a TV/legacy fallback that is now TV-only, TLS-triggered and episode-scoped.
+- **Play App Signing is resolved and documented** — see [PLAY_APP_SIGNING_CHECK.md](PLAY_APP_SIGNING_CHECK.md). Release signing comes from a local untracked `keystore.properties` ([RELEASE_SIGNING.md](RELEASE_SIGNING.md)), and the build refuses to produce an unsigned release artifact.
 - Local folders D / A / B are **read-only archives**, not development sources.
-- All new work: fresh clone → branch → draft PR into `main`. Agents follow [../CLAUDE.md](../CLAUDE.md) and [../AGENTS.md](../AGENTS.md).
+- All new work: branch off `main` → draft PR → owner merges. Agents follow [../CLAUDE.md](../CLAUDE.md) and [../AGENTS.md](../AGENTS.md).
+
+## Google Play
+
+**Version 3.6.5 / 202611 is handled outside this repository workflow.** Do not modify, build or upload a release from repository tasks. No release AAB is produced by agent work.
 
 ## Closed work
 
-- **Issue #1 — source of truth: completed.** The divergence between four project copies was investigated and resolved; GitHub `main` declared canonical (PR #3 documented the problem, PR #6 finalized the docs).
-- **Current code imported to GitHub.** The 3.6.4 / 202610 working copy from folder D was imported into `main` via an allowlist, without secrets/artifacts/backups (PR #5, commit `d145ef9`); `assembleDebug` from a fresh clone was verified.
-- **Signing removed from the current tree.** Hardcoded signing values were replaced with a local untracked `keystore.properties` (PR #4, commit `0bf9880`).
+- **Issue #1 — source of truth.** Resolved; GitHub `main` declared canonical.
+- **Issue #2 — key rotation / repo privacy / history.** Closed.
+- **Issue #9 — endless splash screen.** Splash now waits a bounded time, retries with backoff, and shows an offline/error state with Retry.
+- **Issue #10 — release signing guard.** The guard fails when the task graph is ready, before any task runs, so no unsigned `.aab` reaches disk.
+- **Issue #13 — headphones disconnect.** Playback pauses when the audio output disappears instead of continuing on the phone speaker.
+- **Issue #14 — Play sometimes did nothing.** Silent failure paths in the UI → service start sequence removed: stream ids come from an allow-list, invalid/missing keys fall back instead of leaving an empty player, a Play arriving before the MediaController is ready is queued and run once, and service-start failures are recorded.
+- **Issue #16 — cleartext downgrade.** A stream error can no longer latch the app into plain HTTP for the session.
 
 ## Open work
 
-- **Issue #2 — key rotation / repo privacy / git history cleanup.** Old signing secrets remain in git history; keys need rotation and the history needs owner-driven cleanup. **Open, highest priority.**
-- **Cleanup of old APK/AAB and backup folders.** `app/release/` (old release artifacts) and `app/src_backup_best_version/` are still tracked in the repo; the archive folders D/A/B still exist on disk. Removal/archiving needs an explicit owner decision.
-- **`UnsafeNetModule` / TLS security issue.** The app relaxes TLS certificate validation via `UnsafeNetModule.kt`, used across networking (metadata, player datasource). Needs a proper fix (correct certificates or scoped trust), planned and tested.
-- **Player reliability / ExoPlayer errors.** Stream reconnect and error handling in `MediaPlayerService` need hardening (recovery after network loss, error surfacing).
-- **Metadata polling loops.** Duplicate/looping now-playing metadata polling should be consolidated into a single well-behaved poller.
-- **Release runbook / CI.** No documented step-by-step release process and no CI (build/lint checks on PRs) yet.
+- **Issue #15 — playback can stop by itself during continuous listening. OPEN.** Recovery was substantially improved (bounded, network-aware reconnect; `STATE_ENDED` on a live stream now treated as a disconnect), but **the root cause of the user reports is not proven**. Closing it needs a `MyataPlayback` log from a real affected device showing the stop with its cause and then automatic recovery.
+- **Playback diagnostics are in `main`**: every playback decision is logged under one tag — `adb logcat | grep MyataPlayback`. This is what #15 will be diagnosed with.
+- **Phase 2 / 3.6.6 — not implemented.** Design source lives in `tools/figma-export/` (approved dark screens, light/dark semantic tokens, plugin sources, rendered previews). No Phase 2 code exists yet: the app is still Material Components (M2), XML Views, with no `values-night/` and no `dimens.xml`.
+- **Repository hygiene, needs owner decision**: `app/release/` and `app/src_backup_best_version/` are still tracked; no CI (build/lint on PRs); no release runbook.
 
-## Recommended next steps — NOT STARTED, require owner GO
+## Phase 2 / 3.6.6 scope (agreed, not started)
 
-1. Resolve issue #2 first: rotate the signing key, decide on repo privacy, clean git history (owner-driven).
-2. Decide and execute cleanup of tracked artifacts (`app/release/`, `app/src_backup_best_version/`) and physical archiving of D/A/B folders.
-3. Plan and implement the `UnsafeNetModule`/TLS fix.
-4. Add minimal CI (debug build + lint on PRs), then write a release runbook.
-5. Address player reliability and metadata polling as separate, scoped PRs.
-
-None of the above has been started; each item needs explicit owner approval before any agent acts on it.
+New design, Light / Dark / System, new screens, auth / profile / settings, cloud favorites, Supabase. The playback fixes already in `main` ship as part of the same 3.6.6 release. Nothing here has been implemented, and each step needs explicit owner approval.

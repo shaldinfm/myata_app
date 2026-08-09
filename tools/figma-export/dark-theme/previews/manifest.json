@@ -1,0 +1,74 @@
+[
+  {
+    "name": "home",
+    "file": "dark-home.png",
+    "width": 390,
+    "height": 757
+  },
+  {
+    "name": "player",
+    "file": "dark-player.png",
+    "width": 390,
+    "height": 1022
+  },
+  {
+    "name": "collection",
+    "file": "dark-collection.png",
+    "width": 390,
+    "height": 740
+  },
+  {
+    "name": "collection-empty",
+    "file": "dark-collection-empty.png",
+    "width": 390,
+    "height": 740
+  },
+  {
+    "name": "about",
+    "file": "dark-about.png",
+    "width": 390,
+    "height": 1418
+  },
+  {
+    "name": "player-menu",
+    "file": "dark-player-menu.png",
+    "width": 390,
+    "height": 1022
+  },
+  {
+    "name": "collection-menu",
+    "file": "dark-collection-menu.png",
+    "width": 390,
+    "height": 740
+  },
+  {
+    "name": "music-service",
+    "file": "dark-music-service.png",
+    "width": 390,
+    "height": 1022
+  },
+  {
+    "name": "sleep-timer",
+    "file": "dark-sleep-timer.png",
+    "width": 390,
+    "height": 1022
+  },
+  {
+    "name": "report-problem",
+    "file": "dark-report-problem.png",
+    "width": 390,
+    "height": 1022
+  },
+  {
+    "name": "full-history",
+    "file": "dark-full-history.png",
+    "width": 390,
+    "height": 1022
+  },
+  {
+    "name": "ui-kit",
+    "file": "dark-ui-kit.png",
+    "width": 1800,
+    "height": 3020
+  }
+]

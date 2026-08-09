@@ -1,0 +1,139 @@
+{
+  "version": "1.0.0",
+  "source": {
+    "app": "Radio Myata Android · Kotlin + XML Views",
+    "referenceWidth": 390,
+    "unit": "dp/px visual reference",
+    "androidResources": [
+      "app/src/main/res/layout/fragment_main.xml",
+      "app/src/main/res/layout/fragment_player.xml",
+      "app/src/main/res/layout/fragment_collection.xml",
+      "app/src/main/res/layout/fragment_info.xml",
+      "app/src/main/res/layout/bottom_sheet_*.xml",
+      "app/src/main/res/drawable/myata_banner_new.xml",
+      "app/src/main/res/drawable/gold_banner_new.xml",
+      "app/src/main/res/drawable/xtra_banner_new.xml",
+      "app/src/main/res/drawable/zaglushka_*.png"
+    ]
+  },
+  "tokens": {
+    "light": {
+      "background": "#F8F9FA",
+      "surface": "#FFFFFF",
+      "surfaceContainer": "#F3F4F5",
+      "surfaceElevated": "#FFFFFF",
+      "primary": "#1C4771",
+      "onPrimary": "#FFFFFF",
+      "secondary": "#5FD9B4",
+      "onSecondary": "#003056",
+      "outline": "#E1E3E4",
+      "textPrimary": "#003056",
+      "textSecondary": "#42474E",
+      "activeIndicator": "#FFCCFF",
+      "miniPlayer": "#1C4771",
+      "error": "#E74C3C",
+      "supportMonthlyBackground": "#5FD9B4",
+      "supportMonthlyContent": "#0F253E",
+      "supportOneTimeBackground": "#204971",
+      "supportOneTimeContent": "#F5F7FA"
+    },
+    "dark": {
+      "background": "#0B1D31",
+      "surface": "#132E4A",
+      "surfaceContainer": "#1B4163",
+      "surfaceElevated": "#28557E",
+      "primary": "#69E5BE",
+      "onPrimary": "#0F253E",
+      "secondary": "#00E5FF",
+      "onSecondary": "#0F253E",
+      "outline": "#5A82A3",
+      "textPrimary": "#F5F7FA",
+      "textSecondary": "#C3D3DF",
+      "activeIndicator": "#FFCCFF",
+      "miniPlayer": "#24587F",
+      "error": "#FF8A80",
+      "supportMonthlyBackground": "#5FD9B4",
+      "supportMonthlyContent": "#0F253E",
+      "supportOneTimeBackground": "#204971",
+      "supportOneTimeContent": "#F5F7FA",
+      "navigationContainer": "#102A44",
+      "disabledContent": "#6F899F",
+      "disabledContainer": "#1E3754",
+      "divider": "#426B8D",
+      "focusRing": "#00E5FF",
+      "scrim": "#0F253E",
+      "myataPink": "#FF3F7B",
+      "myataCyan": "#00E5FF",
+      "goldYellow": "#FFFF00",
+      "xtraPink": "#FFCCFF",
+      "brandNavy": "#1C3F5F"
+    }
+  },
+  "layout": {
+    "screens": {
+      "home": { "width": 390, "height": 757 },
+      "player": { "width": 390, "height": 1022 },
+      "collection": { "width": 390, "height": 740 },
+      "collectionEmpty": { "width": 390, "height": 740 },
+      "about": { "width": 390, "height": 1418 }
+    },
+    "bottomNavigation": { "height": 76, "minTouchTarget": 48 },
+    "miniPlayer": { "height": 74, "radius": 15 },
+    "screenHorizontalPadding": 16,
+    "grid": 4,
+    "minTouchTarget": 48,
+    "radii": [15, 20, 24, 28, 32, 40]
+  },
+  "screens": [
+    "DARK / Home",
+    "DARK / Player",
+    "DARK / Collection",
+    "DARK / Collection Empty",
+    "DARK / About & Support",
+    "DARK / Player Menu",
+    "DARK / Collection Menu",
+    "DARK / Music Service Bottom Sheet",
+    "DARK / Sleep Timer Bottom Sheet",
+    "DARK / Report Problem Bottom Sheet",
+    "DARK / Full Broadcast History Bottom Sheet"
+  ],
+  "components": [
+    "Bottom Navigation",
+    "Mini-player",
+    "Stream Card",
+    "Playlist Card",
+    "Track Card",
+    "History Row",
+    "Player Controls",
+    "Support Card / Monthly",
+    "Support Card / One-time",
+    "Social Button",
+    "Primary Button",
+    "Chip",
+    "Menu Row",
+    "Bottom Sheet Row"
+  ],
+  "componentVariants": {
+    "navigationItem": ["State=Active", "State=Inactive"],
+    "miniPlayer": ["State=Play", "State=Pause", "State=Buffering"],
+    "button": ["State=Default", "State=Pressed", "State=Disabled", "State=Loading", "State=Error"]
+  },
+  "approvedMusicServiceSheetItems": [
+    "Spotify",
+    "Apple Music",
+    "YouTube Music",
+    "Яндекс Музыка",
+    "Найти в браузере"
+  ],
+  "playerActions": {
+    "thumbsUp": "Сохранить в Коллекцию",
+    "thumbsDown": "Отрицательная реакция",
+    "favoriteUsesError": false
+  },
+  "assetPolicy": {
+    "vectorBanners": "Android XML vector drawables converted to editable VectorNode",
+    "rasterArt": "Real track and playlist crops plus Android PNGs are separate image fills",
+    "referenceScreenshot": "Used only as isolated artwork crops where remote artwork is absent from Android resources; never inserted as a full screen",
+    "mullerFallback": "Plugin labels Inter fallback layers if Muller is unavailable in Figma"
+  }
+}

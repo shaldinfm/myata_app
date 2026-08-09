@@ -1,0 +1,199 @@
+{
+  "sourceOfTruth": "app/src/main/res and app/src/main/java",
+  "implementationStage": "home-v2-and-ui-kit",
+  "viewport": {
+    "width": 375,
+    "height": 667,
+    "unit": "dp",
+    "orientation": "portrait"
+  },
+  "visualReference": {
+    "asset": "tools/figma-export/assets/reference-home.png",
+    "sourceSizePx": {"width": 576, "height": 1280},
+    "figmaReferenceSize": {"width": 375, "height": 833.333333},
+    "lockedOutsideHome": true,
+    "usage": "visual reference only; never used as a flat Home screen"
+  },
+  "fontAudit": {
+    "androidFamilies": [
+      "muller_regular",
+      "mullerblack",
+      "mullerheavy",
+      "muller_light",
+      "muller_bold",
+      "mullerregular",
+      "mullerlight",
+      "mullerthin"
+    ],
+    "figmaPolicy": "Use Muller when listAvailableFontsAsync exposes it; otherwise use Inter and mark affected text layers."
+  },
+  "tokens": {
+    "colors": {
+      "background": "#1C3F5F",
+      "streamBackground": "#1C4771",
+      "textPrimary": "#F5F7FA",
+      "white": "#FFFFFF",
+      "myata": "#00E5FF",
+      "gold": "#FFFF00",
+      "xtra": "#FFCCFF",
+      "pink": "#FF3F7B",
+      "navSurface": "#132740",
+      "cardSurface": "#0F253E",
+      "historySurface": "#204971",
+      "selected": "#5FD9B4",
+      "border": "#1E3754",
+      "muted": "#88FFFFFF"
+    },
+    "radiiDp": [
+      15,
+      20,
+      24,
+      27,
+      32,
+      39,
+      40
+    ],
+    "spacingDp": [
+      4,
+      7,
+      8,
+      9,
+      10,
+      14,
+      20,
+      21,
+      22,
+      25,
+      30,
+      40,
+      50,
+      55,
+      60,
+      70
+    ],
+    "bottomNavigation": {
+      "height": 54,
+      "marginStart": 25,
+      "marginEnd": 25,
+      "marginBottom": 10,
+      "cornerRadius": 27,
+      "stroke": "#000000",
+      "strokeWidth": 1.5
+    }
+  },
+  "components": [
+    "Bottom Navigation",
+    "Player Controls",
+    "Play Button",
+    "Station Card",
+    "Playlist Card / 01",
+    "Playlist Card / 02",
+    "Playlist Card / 03",
+    "Primary Button",
+    "Donation Amount Button",
+    "History Row"
+  ],
+  "screens": [
+    {
+      "id": "splash",
+      "title": "Splash",
+      "status": "planned",
+      "sourceLayouts": ["fragment_splash.xml"],
+      "states": ["10 random splash backgrounds", "waiting for playlist data"]
+    },
+    {
+      "id": "home",
+      "title": "Home / Main",
+      "status": "implemented-v2",
+      "size": {"width": 375, "height": 667},
+      "sourceLayouts": ["activity_main.xml", "fragment_main.xml", "rw_playlist_item.xml"],
+      "texts": ["Наши потоки", "Мятные плейлисты"],
+      "states": ["default", "split mode hides playlists and bottom navigation"],
+      "geometry": {
+        "background": "#1C3F5F",
+        "title": {"x": 22, "y": 60, "fontSize": 25},
+        "streamViewport": {"x": 0, "y": 105, "width": 375, "height": 218, "clip": true},
+        "streamCards": {"width": 316, "height": 198, "radius": 20, "firstX": 21, "gap": 7, "nextX": 344},
+        "playlistTitle": {"x": 22, "y": 350, "fontSize": 25},
+        "playlistCards": {"width": 140, "height": 140, "radius": 20, "firstX": 9, "gap": 14, "thirdX": 317, "clip": true},
+        "bottomNavigation": {"x": 25, "y": 603, "width": 325, "height": 54, "radius": 27}
+      },
+      "imageAssets": {
+        "android": ["zaglushka_1_img.png", "zaglushka_3_img.png", "zaglushka_4_img.png"],
+        "referenceCrops": ["reference-cover-01.png", "reference-cover-02.png"],
+        "fallbackPolicy": "use Android raster assets when reference crops or user-selected covers are unavailable"
+      }
+    },
+    {
+      "id": "player",
+      "title": "Player",
+      "status": "planned",
+      "sourceLayouts": ["fragment_player.xml", "fragment_myata_stream.xml"],
+      "variants": ["MYATA", "GOLD", "XTRA"],
+      "states": ["placeholder metadata", "playing", "paused", "buffering", "favorite outline", "favorite filled", "history modal"]
+    },
+    {
+      "id": "info",
+      "title": "Info",
+      "status": "planned",
+      "sourceLayouts": ["fragment_info.xml"],
+      "states": ["default"]
+    },
+    {
+      "id": "donate",
+      "title": "Donate",
+      "status": "planned",
+      "sourceLayouts": ["fragment_donate.xml"],
+      "states": ["100 selected", "200 selected", "500 selected", "1000 selected", "custom amount", "payment WebView"]
+    },
+    {
+      "id": "favorites",
+      "title": "Favorites",
+      "status": "planned",
+      "sourceLayouts": ["fragment_favorites.xml", "item_favorite_track.xml"],
+      "states": ["empty", "populated", "export TXT", "export CSV"]
+    },
+    {
+      "id": "history",
+      "title": "History modal",
+      "status": "planned",
+      "sourceLayouts": ["fragment_history_bottom_sheet.xml", "item_history_track.xml"],
+      "states": ["empty", "populated", "MYATA tint", "GOLD tint", "XTRA tint"]
+    }
+  ],
+  "sourceResources": {
+    "homeLayouts": [
+      "app/src/main/res/layout/activity_main.xml",
+      "app/src/main/res/layout/fragment_main.xml",
+      "app/src/main/res/layout/rw_playlist_item.xml"
+    ],
+    "navigation": "app/src/main/res/navigation/navgraph.xml",
+    "vectorDrawables": [
+      "app/src/main/res/drawable/home_new.xml",
+      "app/src/main/res/drawable/player_new.xml",
+      "app/src/main/res/drawable/donate_new.xml",
+      "app/src/main/res/drawable/info_new.xml",
+      "app/src/main/res/drawable/ic_favorites_nav.xml",
+      "app/src/main/res/drawable/myata_banner_new.xml",
+      "app/src/main/res/drawable/gold_banner_new.xml",
+      "app/src/main/res/drawable/xtra_banner_new.xml"
+    ],
+    "rasterResourcesNotEmbedded": [
+      "screen0.png … screen9.png",
+      "myata_bg_new.png",
+      "gold_bg_new.png",
+      "xtra_bg_new.png",
+      "zaglushka_logo.png",
+      "remote playlist images"
+    ],
+    "bundledForHomeV2": [
+      "tools/figma-export/assets/reference-home.png",
+      "tools/figma-export/assets/zaglushka_1_img.png",
+      "tools/figma-export/assets/zaglushka_3_img.png",
+      "tools/figma-export/assets/zaglushka_4_img.png",
+      "tools/figma-export/assets/myata_banner_new.xml",
+      "tools/figma-export/assets/gold_banner_new.xml",
+      "tools/figma-export/assets/xtra_banner_new.xml"
+    ]
+  }
+}

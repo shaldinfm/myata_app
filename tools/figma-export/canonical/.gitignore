@@ -1,0 +1,4 @@
+# Raw Figma exports are ~20 MB each and are local evidence, not repository content.
+# Commit the normalized baselines instead - see normalize-snapshot.mjs.
+figma-canonical-*.json
+!figma-canonical-*-normalized.json

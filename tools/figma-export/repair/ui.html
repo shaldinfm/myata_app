@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  body { margin:0; padding:14px; font:11px/1.5 Inter,-apple-system,system-ui,sans-serif; color:#1b1b1f; }
+  h1 { margin:0 0 2px; font-size:13px; }
+  .sub { margin:0 0 12px; color:#5f6368; }
+  .row { display:flex; gap:8px; margin-bottom:10px; }
+  button { flex:1; height:34px; border:0; border-radius:8px; font-weight:600; font-size:12px; cursor:pointer; }
+  #dry { background:#0d99ff; color:#fff; }
+  #apply { background:#e3e3e5; color:#8a8a8e; }
+  #apply.armed { background:#d33; color:#fff; cursor:pointer; }
+  .warn { background:#fff4e5; border:1px solid #ffd8a8; border-radius:8px; padding:8px 10px; margin-bottom:10px; color:#7a4a00; }
+  .counts { display:grid; grid-template-columns:1fr 1fr; gap:4px 10px; margin-bottom:10px; }
+  .counts b { font-weight:600; }
+  .out { border:1px solid #e0e0e2; border-radius:8px; max-height:330px; overflow:auto; padding:8px; background:#fbfbfc; }
+  .grp { font-weight:700; margin:8px 0 4px; text-transform:uppercase; letter-spacing:.4px; color:#5f6368; font-size:10px; }
+  .item { border-bottom:1px solid #eee; padding:4px 0; }
+  .ok { color:#0a7c42; font-weight:600; }
+  .skip { color:#8a6d00; font-weight:600; }
+  .miss { color:#8b1a1a; font-weight:600; }
+  code { background:#f0f0f2; padding:0 3px; border-radius:3px; }
+  .path { color:#5f6368; word-break:break-all; }
+  .err { background:#fde7e9; color:#8b1a1a; padding:8px; border-radius:8px; white-space:pre-wrap; }
+</style>
+</head>
+<body>
+  <h1>Canonical repair</h1>
+  <p class="sub">Dry Run never writes. Apply executes only what Dry Run marked READY.</p>
+
+  <div class="warn">Open the file containing both canonical pages before running. Apply cannot run until a Dry Run has been done in this session.</div>
+
+  <div class="row">
+    <button id="dry">1 · Dry Run</button>
+    <button id="apply" disabled>2 · Apply</button>
+  </div>
+  <div class="row">
+    <button id="delcol" class="danger" style="background:#f0f0f2;color:#8a8a8e">Delete empty semantic collection</button>
+  </div>
+
+  <div class="counts" id="counts"></div>
+  <div class="out" id="out">No dry run yet.</div>
+
+<script>
+  var out = document.getElementById("out");
+  var counts = document.getElementById("counts");
+  var applyBtn = document.getElementById("apply");
+
+  document.getElementById("dry").onclick = function () {
+    out.textContent = "Reading document…"; counts.innerHTML = "";
+    applyBtn.disabled = true; applyBtn.className = "";
+    parent.postMessage({ pluginMessage: { type: "dryrun" } }, "*");
+  };
+  applyBtn.onclick = function () {
+    if (applyBtn.disabled) return;
+    out.textContent = "Applying…";
+    parent.postMessage({ pluginMessage: { type: "apply" } }, "*");
+  };
+  document.getElementById("delcol").onclick = function () {
+    out.textContent = "Deleting empty collection…";
+    parent.postMessage({ pluginMessage: { type: "delete-empty-collection" } }, "*");
+  };
+
+  function cls(s) {
+    if (s === "READY" || s === "WILL_CREATE") return "ok";
+    if (s === "ALREADY_APPLIED") return "ok";
+    if (s.indexOf("MISSING") >= 0) return "miss";
+    return "skip";
+  }
+  function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+
+  onmessage = function (e) {
+    var m = e.data.pluginMessage;
+    if (!m) return;
+    if (m.type === "status") { out.textContent = m.text; return; }
+    if (m.type === "error") { out.innerHTML = '<div class="err">' + esc(m.text) + "</div>"; return; }
+
+    if (m.type === "dryrun-result") {
+      var r = m.report, c = r.counts, h = "";
+      counts.innerHTML =
+        "<div><b>" + c.mutationsReady + "</b> mutations remaining</div><div>" + c.mutationsApplied + " already applied</div>" +
+        "<div><b>" + c.bindingsReady + "</b> bindings remaining</div><div>" + c.bindingsApplied + " already applied</div>" +
+        "<div><b>" + c.variablesToCreate + "</b> variables to create</div><div>" + c.variablesExisting + " existing</div>" +
+        "<div><b>" + c.stylesToCreate + "</b> styles to create</div><div>" + c.stylesExisting + " existing</div>" +
+        (c.bindingsBlocked ? "<div class='skip'><b>" + c.bindingsBlocked + "</b> bindings skipped (plan limit)</div><div></div>" : "") +
+        (c.mutationsChanged || c.mutationsMissing ? "<div class='skip'>" + c.mutationsChanged + " changed, " + c.mutationsMissing + " missing</div><div></div>" : "");
+
+      // current document state first - this is the recovery view
+      var st = r.collection;
+      h += '<div class="grp">Current document state</div>';
+      h += '<div class="item">collection <code>' + esc(st.exists ? "EXISTS" : "not created") + "</code>" +
+           (st.exists ? " · modes: <code>" + esc(st.modes.join(", ") || "(none)") + "</code>" : "") +
+           (st.exists ? " · variables present: <b>" + Object.keys(st.variables).length + "</b> / " + (Object.keys(st.variables).length + st.missingVariables.length) : "") +
+           "</div>";
+      if (st.note) h += '<div class="item skip">' + esc(st.note) + "</div>";
+      if (r.warnings.length) r.warnings.forEach(function (w) { h += '<div class="item miss">' + esc(w) + "</div>"; });
+
+      h += '<div class="grp">Structural &amp; typography</div>';
+      r.mutations.forEach(function (x) {
+        h += '<div class="item"><span class="' + cls(x.status) + '">' + x.status + "</span> · " + x.theme + " · <code>" + x.op + "</code><br>" +
+             '<span class="path">' + esc(x.path) + "</span><br>" +
+             "current <code>" + esc(x.current) + "</code> → <code>" + esc(x.value) + "</code><br>" +
+             '<span class="path">' + esc(x.reason) + "</span></div>";
+      });
+
+      h += '<div class="grp">Semantic variables</div>';
+      r.variables.forEach(function (x) {
+        h += '<div class="item"><span class="' + cls(x.status) + '">' + x.status + "</span> <code>" + esc(x.name) +
+             "</code> dark " + x.dark + " / light " + x.light + (x.bound ? "" : " <span class='path'>(created, not bound)</span>") + "</div>";
+      });
+
+      h += '<div class="grp">Variable bindings</div>';
+      var byTok = {};
+      r.bindings.forEach(function (x) { var k = x.token + "|" + x.status; byTok[k] = (byTok[k] || 0) + 1; });
+      Object.keys(byTok).sort().forEach(function (k) {
+        var p = k.split("|");
+        h += '<div class="item"><span class="' + cls(p[1]) + '">' + p[1] + "</span> <code>" + p[0] + "</code> × " + byTok[k] + "</div>";
+      });
+
+      h += '<div class="grp">Text styles</div>';
+      r.textStyles.forEach(function (x) {
+        h += '<div class="item"><span class="' + cls(x.status) + '">' + x.status + "</span> <code>" + esc(x.name) + "</code> " + esc(x.spec) +
+             '<br><span class="path">' + esc(x.sample) + "</span></div>";
+      });
+
+      out.innerHTML = h;
+      applyBtn.disabled = false; applyBtn.className = "armed";
+    }
+
+    if (m.type === "apply-result") {
+      var d = m.done;
+      out.innerHTML = '<div class="grp">Applied (stopped in phase: ' + esc(d.phase) + ")</div>" +
+        "<div class='item'>mutations written: <b>" + d.mutations + "</b> · skipped/already done: " + d.mutationsSkipped + "</div>" +
+        "<div class='item'>variables created: <b>" + d.variables + "</b> · reused: " + d.variablesReused + "</div>" +
+        "<div class='item'>bindings: <b>" + d.bindings + "</b></div>" +
+        "<div class='item'>text styles created: <b>" + d.textStyles + "</b></div>" +
+        (d.modeError ? '<div class="grp">Blocked</div><div class="item miss">' + esc(d.modeError) + "</div>" : "") +
+        (d.notes.length ? '<div class="grp">Notes</div>' + d.notes.map(function (s) { return '<div class="item">' + esc(s) + "</div>"; }).join("") : "") +
+        (d.skipped.length ? '<div class="grp">Skipped</div>' + d.skipped.map(function (s) { return '<div class="item skip">' + esc(s) + "</div>"; }).join("") : "");
+      applyBtn.disabled = true; applyBtn.className = "";
+    }
+  };
+</script>
+</body>
+</html>

@@ -1,0 +1,535 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "APPROVED semantic mapping. Source of truth for the future Android values/colors.xml and values-night/colors.xml.",
+  "derivedFrom": {
+    "darkPage": "CURRENT ANDROID UI — DARK",
+    "lightPage": "CURRENT ANDROID UI - LIGHT",
+    "darkExportedAt": "2026-08-09T09:16:56.012Z",
+    "lightExportedAt": "2026-08-09T09:15:47.627Z",
+    "method": "Equivalent nodes matched one-to-one across the two canonical Figma pages; every theme-changing fill, stroke and text colour was collected and grouped by UI role."
+  },
+  "whyNotInFigma": {
+    "reason": "Figma limits a variable collection to a single mode on the Starter plan, so a Light/Dark variable pair cannot exist in the file.",
+    "consequence": "The mapping lives here instead. Nothing in Figma is bound to a variable; the pages keep their raw fills, which is correct - binding to single-mode variables would make both pages resolve to the same colour.",
+    "ifPlanChanges": "If the file ever moves to a plan with multiple modes, this file is the input: create Radio Myata / Semantic with modes Light and Dark and bind the listed node ids."
+  },
+  "androidMapping": {
+    "lightFile": "app/src/main/res/values/colors.xml",
+    "darkFile": "app/src/main/res/values-night/colors.xml",
+    "note": "Not generated yet. Names below are the intended resource names."
+  },
+  "tokens": [
+    {
+      "role": "background",
+      "inV1": true,
+      "light": "#f8f9fa",
+      "dark": "#0f253e",
+      "boundInFigma": false,
+      "usageCount": 0,
+      "confidence": "CONFIRMED",
+      "representativeNodes": [
+        {
+          "role": "screen root frames, second fill",
+          "note": "HOME, PLAYER, COLLECTION, COLLECTION pusto, ABOUT US on both pages"
+        }
+      ],
+      "notes": "Each screen frame has TWO solid fills. The first is a dead underlay that differs per screen (#edeeef / #ffffff / #142d47) and should be cleaned up separately. The SECOND fill is the real background and is identical across all five screens on each page: #0f253e dark, #f8f9fa light. The Header - TopAppBar uses the same pair, which corroborates it."
+    },
+    {
+      "role": "surface",
+      "inV1": true,
+      "light": "#ffffff",
+      "dark": "#142d47",
+      "boundInFigma": false,
+      "usageCount": 6,
+      "confidence": "CONFIRMED",
+      "representativeNodes": [
+        {
+          "role": "FRAME \"Broadcast History Section\"",
+          "property": "fills",
+          "darkNodeId": "2444:18288",
+          "lightNodeId": "2396:30784",
+          "path": "player > Main > Broadcast History Section"
+        },
+        {
+          "role": "FRAME \"COLLECTION_dark\"",
+          "property": "fills",
+          "darkNodeId": "2444:18376",
+          "lightNodeId": "2399:31129",
+          "path": "collection"
+        },
+        {
+          "role": "FRAME \"Track Item 1\"",
+          "property": "fills",
+          "darkNodeId": "2444:18387",
+          "lightNodeId": "2399:31142",
+          "path": "collection > Main > Collection List > Track Item 1"
+        },
+        {
+          "role": "FRAME \"Track Item 2\"",
+          "property": "fills",
+          "darkNodeId": "2444:18399",
+          "lightNodeId": "2399:31154",
+          "path": "collection > Main > Collection List > Track Item 2"
+        }
+      ],
+      "notes": "Cards and sheets: Broadcast History section, Collection screen body, Track Items."
+    },
+    {
+      "role": "surfaceContainer",
+      "inV1": true,
+      "light": "#f8f9fa",
+      "dark": "#1c4771",
+      "boundInFigma": false,
+      "usageCount": 9,
+      "confidence": "CONFIRMED",
+      "representativeNodes": [
+        {
+          "role": "FRAME \"Background+Border\"",
+          "property": "fills",
+          "darkNodeId": "2444:18585",
+          "lightNodeId": "2411:31638",
+          "path": "about us > Main > Section 1: Support the Project > Container > Boosty Subscription Card"
+        },
+        {
+          "role": "FRAME \"Telegram\"",
+          "property": "fills",
+          "darkNodeId": "2444:18624",
+          "lightNodeId": "2411:31678",
+          "path": "about us > Main > Section 3: Social Media > Container > Telegram"
+        },
+        {
+          "role": "FRAME \"Spotify\"",
+          "property": "fills",
+          "darkNodeId": "2444:18627",
+          "lightNodeId": "2419:99",
+          "path": "about us > Main > Section 3: Social Media > Container > Spotify"
+        },
+        {
+          "role": "FRAME \"Instagram\"",
+          "property": "fills",
+          "darkNodeId": "2444:18630",
+          "lightNodeId": "2419:105",
+          "path": "about us > Main > Section 3: Social Media > Container > Instagram"
+        }
+      ],
+      "notes": "Inset containers on a surface: social buttons, Boosty card border."
+    },
+    {
+      "role": "surfaceElevated",
+      "inV1": false,
+      "light": "#ffffff",
+      "dark": "#28557e",
+      "boundInFigma": false,
+      "usageCount": 0,
+      "confidence": "PROPOSED",
+      "representativeNodes": [],
+      "notes": "No node in the canonical screens distinguishes an elevated surface from `surface`. In light this would equal `surface` anyway, because elevation there is expressed with an outline plus shadow rather than a lighter fill."
+    },
+    {
+      "role": "navigationContainer",
+      "inV1": true,
+      "light": "#edeeef",
+      "dark": "#142d47",
+      "boundInFigma": false,
+      "usageCount": 5,
+      "confidence": "CONFIRMED",
+      "representativeNodes": [
+        {
+          "role": "FRAME \"BottomNavBar\"",
+          "property": "fills",
+          "darkNodeId": "2444:10351",
+          "lightNodeId": "2393:1629",
+          "path": "home > BottomNavBar"
+        },
+        {
+          "role": "FRAME \"BottomNavBar\"",
+          "property": "fills",
+          "darkNodeId": "2444:18355",
+          "lightNodeId": "2396:30914",
+          "path": "player > BottomNavBar"
+        },
+        {
+          "role": "FRAME \"BottomNavBar\"",
+          "property": "fills",
+          "darkNodeId": "2444:18430",
+          "lightNodeId": "2407:31502",
+          "path": "collection > BottomNavBar"
+        },
+        {
+          "role": "FRAME \"BottomNavBar\"",
+          "property": "fills",
+          "darkNodeId": "2444:18518",
+          "lightNodeId": "2429:239",
+          "path": "collection pusto > BottomNavBar"
+        }
+      ],
+      "notes": "BottomNavBar on all four screens. Note it equals `surface` in dark (#142d47) but differs in light (#edeeef vs #ffffff) - keep it separate."
+    },
+    {
+      "role": "menuSurface",
+      "inV1": true,
+      "light": "#f8f9fa",
+      "dark": "#142d47",
+      "boundInFigma": false,
+      "usageCount": 2,
+      "confidence": "CONFIRMED",
+      "representativeNodes": [
+        {
+          "role": "FRAME \"Button\"",
+          "property": "fills",
+          "darkNodeId": "2444:18618",
+          "lightNodeId": "2424:758",
+          "path": "about us > Main > Section 2: About Us > Button:margin > Button"
+        },
+        {
+          "role": "FRAME \"Menu / Плеер\"",
+          "property": "fills",
+          "darkNodeId": "2444:18707",
+          "lightNodeId": "2444:18763",
+          "path": "menu / плеер"
+        }
+      ],
+      "notes": "The Menu / Плеер popup background. Equals `surface` in dark, differs in light."
+    },
+    {
+      "role": "textPrimary",
+      "inV1": true,
+      "light": "#191c1d",
+      "dark": "#f5f7fa",
+      "boundInFigma": false,
+      "usageCount": 13,
+      "confidence": "CONFIRMED",
+      "representativeNodes": [
+        {
+          "role": "TEXT \"WHAT YOU KNOW\"",
+          "property": "fills",
+          "darkNodeId": "2444:18247",
+          "lightNodeId": "2396:30745",
+          "path": "player > Main > Player Section > Track Info:margin > Track Info"
+        },
+        {
+          "role": "TEXT \"История эфира\"",
+          "property": "fills",
+          "darkNodeId": "2444:18292",
+          "lightNodeId": "2396:30788",
+          "path": "player > Main > Broadcast History Section > Margin > Container"
+        },
+        {
+          "role": "TEXT \"CRYOGEN\"",
+          "property": "fills",
+          "darkNodeId": "2444:18306",
+          "lightNodeId": "2396:30802",
+          "path": "player > Main > Broadcast History Section > List > History Item 1"
+        },
+        {
+          "role": "TEXT \"MEET ME IN LOVE\"",
+          "property": "fills",
+          "darkNodeId": "2444:18324",
+          "lightNodeId": "2399:31080",
+          "path": "player > Main > Broadcast History Section > History Item 1 > Container"
+        }
+      ],
+      "notes": "Player screen body text: track title, 'История эфира', history rows."
+    },
+    {
+      "role": "textHeading",
+      "inV1": true,
+      "light": "#003056",
+      "dark": "#f5f7fa",
+      "boundInFigma": false,
+      "usageCount": 9,
+      "confidence": "CONFIRMED",
+      "representativeNodes": [
+        {
+          "role": "TEXT \"Привет, Денис!\"",
+          "property": "fills",
+          "darkNodeId": "2444:10388",
+          "lightNodeId": "2393:1669",
+          "path": "home > Header - TopAppBar > Heading 1 > Привет, Денис!"
+        },
+        {
+          "role": "TEXT \"Наши потоки\"",
+          "property": "fills",
+          "darkNodeId": "2444:10398",
+          "lightNodeId": "2393:1676",
+          "path": "home > Main > Live Streams Section > Heading 2 > Наши потоки"
+        },
+        {
+          "role": "TEXT \"Мятные плейлисты\"",
+          "property": "fills",
+          "darkNodeId": "2444:18212",
+          "lightNodeId": "2393:1725",
+          "path": "home > Main > Mint Playlists Section > Container > Heading 2"
+        },
+        {
+          "role": "TEXT \"Моя коллекция\"",
+          "property": "fills",
+          "darkNodeId": "2444:18425",
+          "lightNodeId": "2407:31460",
+          "path": "collection > Header - TopAppBar > Heading 1 > Моя коллекция"
+        }
+      ],
+      "notes": "Screen and section titles on Home, Collection and About. Collapses to the same value as textPrimary in dark; the split exists only in light and may be unintentional - preserved rather than merged, because merging would change the visual design."
+    },
+    {
+      "role": "textSecondary",
+      "inV1": true,
+      "light": "#42474e",
+      "dark": "#b3c4d1",
+      "boundInFigma": false,
+      "usageCount": 39,
+      "confidence": "CONFIRMED",
+      "representativeNodes": [
+        {
+          "role": "VECTOR \"Icon\"",
+          "property": "fills",
+          "darkNodeId": "2444:10359",
+          "lightNodeId": "2393:1637",
+          "path": "home > BottomNavBar > Container > Container > Icon"
+        },
+        {
+          "role": "TEXT \"Плеер\"",
+          "property": "fills",
+          "darkNodeId": "2444:10361",
+          "lightNodeId": "2393:1639",
+          "path": "home > BottomNavBar > Container > Margin > Плеер"
+        },
+        {
+          "role": "VECTOR \"Icon\"",
+          "property": "fills",
+          "darkNodeId": "2444:10364",
+          "lightNodeId": "2393:1642",
+          "path": "home > BottomNavBar > Container > Container > Icon"
+        },
+        {
+          "role": "TEXT \"Коллекция\"",
+          "property": "fills",
+          "darkNodeId": "2444:10366",
+          "lightNodeId": "2393:1644",
+          "path": "home > BottomNavBar > Container > Margin > Коллекция"
+        }
+      ],
+      "notes": "The most used token by far: inactive nav labels, timestamps, artist names and secondary icons."
+    },
+    {
+      "role": "textDisabled",
+      "inV1": false,
+      "light": "#8e969e",
+      "dark": "#6f899f",
+      "boundInFigma": false,
+      "usageCount": 0,
+      "confidence": "WEAK",
+      "representativeNodes": [
+        {
+          "id": "I2444:18242;58548:7250",
+          "name": "shape",
+          "type": "VECTOR",
+          "path": "PLAYER_dark > Main > Player Section > Mobile Header (Subtle):margin > swipe > Shape Set > shape"
+        },
+        {
+          "id": "2444:18243",
+          "name": "shape",
+          "type": "VECTOR",
+          "path": "PLAYER_dark > Main > Player Section > Mobile Header (Subtle):margin > swipe > shape"
+        }
+      ],
+      "notes": "One dark-only node (#6f899f on a Player shape) and no light counterpart. Light value proposed."
+    },
+    {
+      "role": "primary",
+      "inV1": true,
+      "light": "#1c4771",
+      "dark": "#5fd9b4",
+      "boundInFigma": false,
+      "usageCount": 9,
+      "confidence": "CONFIRMED",
+      "representativeNodes": [
+        {
+          "role": "VECTOR \"shape\"",
+          "property": "fills",
+          "darkNodeId": "I2444:18241;58548:7288",
+          "lightNodeId": "I2402:31398;58548:7288",
+          "path": "player > Main > Player Section > Mobile Header (Subtle):margin > swipe"
+        },
+        {
+          "role": "FRAME \"play/pause\"",
+          "property": "fills",
+          "darkNodeId": "2444:18271",
+          "lightNodeId": "2399:31218",
+          "path": "player > Main > Player Section > Controls:margin > Controls"
+        },
+        {
+          "role": "FRAME \"Button\"",
+          "property": "strokes",
+          "darkNodeId": "2444:18396",
+          "lightNodeId": "2409:31570",
+          "path": "collection > Main > Collection List > Track Item 1 > Container"
+        },
+        {
+          "role": "VECTOR \"icon\"",
+          "property": "fills",
+          "darkNodeId": "I2444:18398;54616:25402",
+          "lightNodeId": "I2409:31572;54616:25402",
+          "path": "collection > Main > Collection List > Track Item 1 > Container"
+        }
+      ],
+      "notes": "The play/pause fill, arrow icons and accent strokes. Mint in dark, navy in light."
+    },
+    {
+      "role": "onPrimary",
+      "inV1": true,
+      "light": "#ffffff",
+      "dark": "#0f253e",
+      "boundInFigma": false,
+      "usageCount": 0,
+      "confidence": "EVIDENCED_NOT_BOUND",
+      "representativeNodes": [
+        {
+          "id": "2444:18274",
+          "name": "Icon",
+          "type": "VECTOR",
+          "path": "PLAYER_dark > Main > Player Section > Controls:margin > Controls > play/pause > Container > Icon",
+          "theme": "dark"
+        },
+        {
+          "id": "2484:135",
+          "name": "Icon",
+          "type": "VECTOR",
+          "path": "play/pause > Container > Icon",
+          "theme": "dark"
+        },
+        {
+          "id": "2396:30777",
+          "name": "Icon",
+          "type": "VECTOR",
+          "path": "PLAYER > Main > Player Section > Controls:margin > Controls > play/pause > Container > Icon",
+          "theme": "light"
+        },
+        {
+          "id": "2399:31221",
+          "name": "Icon",
+          "type": "VECTOR",
+          "path": "PLAYER > Main > Player Section > Controls:margin > Controls > play/pause > Container > Icon",
+          "theme": "light"
+        }
+      ],
+      "notes": "Content sitting on `primary`: the play/pause glyph is #0f253e on the mint dark button and #ffffff on the navy light button. Not bound because the same hexes are also used for unrelated things elsewhere, so a blind hex match would over-reach."
+    },
+    {
+      "role": "secondary",
+      "inV1": false,
+      "light": "#0090a3",
+      "dark": "#00e5ff",
+      "boundInFigma": false,
+      "usageCount": 0,
+      "confidence": "PROPOSED",
+      "representativeNodes": [
+        {
+          "id": "2436:742",
+          "name": "Social / original Android logo",
+          "type": "RECTANGLE",
+          "path": "UI KIT / Radio Myata Dark > Component / Dark / Social Button / Telegram > Social / original Android logo"
+        },
+        {
+          "id": "2436:748",
+          "name": "Social / original Android logo",
+          "type": "RECTANGLE",
+          "path": "UI KIT / Radio Myata Dark > Component / Dark / Social Button / TikTok > Social / original Android logo"
+        }
+      ],
+      "notes": "The cyan #00e5ff appears mostly inside banner artwork, which must stay raw. No confirmed UI-role usage; light value proposed as the darkened cyan the app already uses."
+    },
+    {
+      "role": "outline",
+      "inV1": true,
+      "light": "#e1e3e4",
+      "dark": "#466d8f",
+      "boundInFigma": false,
+      "usageCount": 8,
+      "confidence": "CONFIRMED",
+      "representativeNodes": [
+        {
+          "role": "FRAME \"Broadcast History Section\"",
+          "property": "strokes",
+          "darkNodeId": "2444:18288",
+          "lightNodeId": "2396:30784",
+          "path": "player > Main > Broadcast History Section"
+        },
+        {
+          "role": "FRAME \"Button\"",
+          "property": "strokes",
+          "darkNodeId": "2444:18353",
+          "lightNodeId": "2396:30867",
+          "path": "player > Main > Broadcast History Section > Button:margin > Button"
+        },
+        {
+          "role": "FRAME \"Track Item 1\"",
+          "property": "strokes",
+          "darkNodeId": "2444:18387",
+          "lightNodeId": "2399:31142",
+          "path": "collection > Main > Collection List > Track Item 1"
+        },
+        {
+          "role": "FRAME \"Track Item 2\"",
+          "property": "strokes",
+          "darkNodeId": "2444:18399",
+          "lightNodeId": "2399:31154",
+          "path": "collection > Main > Collection List > Track Item 2"
+        }
+      ],
+      "notes": "Card and section borders: Broadcast History, Track Items, the 'Показать ещё' button."
+    },
+    {
+      "role": "divider",
+      "inV1": false,
+      "light": "#e1e3e4",
+      "dark": "#466d8f",
+      "boundInFigma": false,
+      "usageCount": 0,
+      "confidence": "PROPOSED",
+      "representativeNodes": [],
+      "notes": "Shares values with `outline`. No node in the canonical screens uses a divider distinct from a border; kept as a separate role because Android will need one."
+    },
+    {
+      "role": "error",
+      "inV1": false,
+      "light": "#b3261e",
+      "dark": "#ff8a80",
+      "boundInFigma": false,
+      "usageCount": 0,
+      "confidence": "WEAK",
+      "representativeNodes": [
+        {
+          "id": "2444:18506",
+          "name": "Vector",
+          "type": "VECTOR",
+          "path": "COLLECTION pusto_dark > Main > Collection List > Track Item 1 > Frame 5 > heart-svgrepo-com (1) 1 > Group > Vector"
+        }
+      ],
+      "notes": "#e74c3c appears on the empty-collection illustration in BOTH themes, so it carries no theme role there. #ff8a80 exists only as a swatch named 'Token / error' in the dark UI KIT. Values proposed accordingly."
+    },
+    {
+      "role": "disabled",
+      "inV1": false,
+      "light": "#e8eaed",
+      "dark": "#1e3754",
+      "boundInFigma": false,
+      "usageCount": 0,
+      "confidence": "PROPOSED",
+      "representativeNodes": [],
+      "notes": "No disabled state exists in the canonical screens. Values proposed for Android."
+    },
+    {
+      "role": "scrim",
+      "inV1": false,
+      "light": "#003056",
+      "dark": "#0f253e",
+      "boundInFigma": false,
+      "usageCount": 0,
+      "confidence": "PROPOSED",
+      "representativeNodes": [],
+      "notes": "The canonical menu and sheet frames are drawn without a scrim layer, so there is no evidence in the file. Values proposed."
+    }
+  ]
+}

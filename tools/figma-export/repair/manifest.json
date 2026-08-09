@@ -1,0 +1,12 @@
+{
+  "name": "Radio Myata · Canonical Repair (dry run / apply)",
+  "id": "radio-myata-canonical-repair",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "reasoning": "Operates only on the open document from a plan embedded in the plugin. It never contacts a server."
+  }
+}

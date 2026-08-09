@@ -20,6 +20,7 @@ var FONT_STYLES = ["Regular", "Medium", "Bold"];
 var GRID_GAP_X = 80, GRID_GAP_Y = 120, GRID_WRAP = 3200;
 
 var dryRunReport = null;   // set by dryRun(), consumed by apply()
+var missingAssets = [];    // asset keys that resolved to an empty slot during apply()
 
 /* ---------- helpers ---------- */
 
@@ -92,7 +93,62 @@ function applyBox(node, spec, theme) {
   if (spec.opacity != null) node.opacity = spec.opacity;
 }
 
-function buildNode(spec, theme) {
+/* Replace every solid fill and stroke in a cloned subtree, which is what makes a
+ * brand mark monochrome. Geometry is never touched beyond the uniform resize. */
+function retint(node, hex) {
+  var paint = solid(hex);
+  try { if ("fills" in node && node.fills !== figma.mixed && node.fills.length) node.fills = paint; } catch (e) {}
+  try { if ("strokes" in node && node.strokes.length) node.strokes = paint; } catch (e) {}
+  if ("children" in node) for (var i = 0; i < node.children.length; i++) retint(node.children[i], hex);
+}
+
+/* An ASSET is a reference to a real node in this file. We clone that node - we
+ * never author artwork for it. If the registry has no id, we leave a named empty
+ * slot so the gap is obvious in the file rather than filled with a guess. */
+async function buildAsset(spec, theme) {
+  var reg = SCREEN_SPEC.assets[spec.key];
+  var id = reg ? reg[theme === "dark" ? "darkNodeId" : "lightNodeId"] : null;
+  var tint = resolve(spec.tint, theme);
+
+  if (!id) {
+    var slot = figma.createFrame();
+    slot.name = "Asset slot / " + spec.key + " (PENDING)";
+    slot.x = spec.x; slot.y = spec.y;
+    slot.resizeWithoutConstraints(spec.w, spec.h);
+    slot.fills = [];
+    slot.strokes = solid(tint);
+    slot.strokeWeight = 1;
+    slot.dashPattern = [3, 3];
+    slot.cornerRadius = 4;
+    missingAssets.push(spec.key);
+    return slot;
+  }
+
+  var src = await figma.getNodeByIdAsync(id);
+  if (!src || !src.clone) {
+    var bad = figma.createFrame();
+    bad.name = "Asset slot / " + spec.key + " (NODE " + id + " NOT FOUND)";
+    bad.x = spec.x; bad.y = spec.y;
+    bad.resizeWithoutConstraints(spec.w, spec.h);
+    bad.fills = [];
+    bad.strokes = solid(tint);
+    bad.strokeWeight = 1;
+    bad.dashPattern = [3, 3];
+    missingAssets.push(spec.key + " (id " + id + " not found)");
+    return bad;
+  }
+
+  var c = src.clone();
+  c.name = spec.n;
+  if (c.rescale && c.width > 0) c.rescale(spec.w / c.width);
+  c.x = spec.x; c.y = spec.y;
+  retint(c, tint);
+  return c;
+}
+
+async function buildNode(spec, theme) {
+  if (spec.t === "ASSET") return buildAsset(spec, theme);
+
   if (spec.t === "TEXT") {
     var t = figma.createText();
     t.name = spec.n;
@@ -133,11 +189,11 @@ function buildNode(spec, theme) {
   fr.clipsContent = false;
   fr.layoutMode = "NONE";
   var kids = spec.ch || [];
-  for (var i = 0; i < kids.length; i++) fr.appendChild(buildNode(kids[i], theme));
+  for (var i = 0; i < kids.length; i++) fr.appendChild(await buildNode(kids[i], theme));
   return fr;
 }
 
-function buildScreen(screen, theme, x, y) {
+async function buildScreen(screen, theme, x, y) {
   var root = figma.createFrame();
   root.name = frameName(screen, theme);
   root.x = x; root.y = y;
@@ -145,7 +201,7 @@ function buildScreen(screen, theme, x, y) {
   root.fills = solid(resolve("background", theme));
   root.clipsContent = true;
   root.layoutMode = "NONE";
-  for (var i = 0; i < screen.nodes.length; i++) root.appendChild(buildNode(screen.nodes[i], theme));
+  for (var i = 0; i < screen.nodes.length; i++) root.appendChild(await buildNode(screen.nodes[i], theme));
   return root;
 }
 
@@ -171,6 +227,24 @@ async function dryRun() {
     var fn = { family: FONT_FAMILY, style: FONT_STYLES[fi] };
     try { await figma.loadFontAsync(fn); report.fonts.push({ style: FONT_STYLES[fi], status: "AVAILABLE" }); }
     catch (e) { report.fonts.push({ style: FONT_STYLES[fi], status: "MISSING" }); report.warnings.push("font missing: " + FONT_FAMILY + " " + FONT_STYLES[fi]); }
+  }
+
+  // Verify every referenced asset node actually resolves, per theme, before anything is written.
+  report.assets = [];
+  for (var key in SCREEN_SPEC.assets) {
+    if (!Object.prototype.hasOwnProperty.call(SCREEN_SPEC.assets, key)) continue;
+    var reg = SCREEN_SPEC.assets[key];
+    var row = { key: key, status: reg.status, resolved: {}, note: reg.note || "" };
+    for (var ai = 0; ai < THEMES.length; ai++) {
+      var th = THEMES[ai];
+      var nid = reg[th === "dark" ? "darkNodeId" : "lightNodeId"];
+      if (!nid) { row.resolved[th] = "NO_NODE"; continue; }
+      var found = await figma.getNodeByIdAsync(nid);
+      row.resolved[th] = found ? "OK" : "NOT_FOUND";
+      if (!found) report.warnings.push("asset " + key + " (" + th + "): node " + nid + " not found in this file");
+    }
+    report.assets.push(row);
+    if (reg.status === "PENDING_OWNER") report.blocked = (report.blocked || 0) + 1;
   }
 
   var layout = planLayout(SCREEN_SPEC.screens);
@@ -206,7 +280,8 @@ async function apply() {
   for (var fi = 0; fi < FONT_STYLES.length; fi++) await figma.loadFontAsync({ family: FONT_FAMILY, style: FONT_STYLES[fi] });
 
   var pages = await allPages();
-  var done = { created: 0, skipped: 0, pagesCreated: 0, notes: [], errors: [] };
+  missingAssets = [];
+  var done = { created: 0, skipped: 0, pagesCreated: 0, notes: [], errors: [], assetSlots: [] };
   var byId = {};
   for (var i = 0; i < SCREEN_SPEC.screens.length; i++) byId[SCREEN_SPEC.screens[i].id] = SCREEN_SPEC.screens[i];
 
@@ -226,7 +301,7 @@ async function apply() {
       if (existing[plan.name]) { done.skipped++; done.notes.push("already present, skipped: " + plan.name); continue; }
 
       try {
-        var frame = buildScreen(byId[plan.id], t.theme, plan.at.x, plan.at.y);
+        var frame = await buildScreen(byId[plan.id], t.theme, plan.at.x, plan.at.y);
         page.appendChild(frame);
         done.created++;
       } catch (e) {
@@ -234,6 +309,11 @@ async function apply() {
       }
     }
   }
+
+  var tally = {};
+  for (var mi = 0; mi < missingAssets.length; mi++) tally[missingAssets[mi]] = (tally[missingAssets[mi]] || 0) + 1;
+  for (var mk in tally) if (Object.prototype.hasOwnProperty.call(tally, mk))
+    done.assetSlots.push(mk + " x" + tally[mk] + " left as empty named slots");
 
   dryRunReport = null;   // force a fresh dry run before any further write
   return done;

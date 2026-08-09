@@ -75,6 +75,15 @@
              "</span> Muller " + esc(f.style) + "</div>";
       });
 
+      h += '<div class="grp">Assets (cloned from this file, never drawn)</div>';
+      (r.assets || []).forEach(function (a) {
+        var pending = a.status === "PENDING_OWNER";
+        h += '<div class="item"><span class="' + (pending ? "miss" : a.status === "CANONICAL_NODE_APPROXIMATE" ? "skip" : "ok") + '">' +
+             (pending ? "NEEDS ASSET" : a.status === "CANONICAL_NODE_APPROXIMATE" ? "CONFIRM" : "OK") + "</span> <code>" + esc(a.key) +
+             "</code> light:" + a.resolved.light + " dark:" + a.resolved.dark +
+             (a.note ? '<br><span style="color:#5f6368">' + esc(a.note) + "</span>" : "") + "</div>";
+      });
+
       if (r.warnings.length) {
         h += '<div class="grp">Warnings</div>';
         r.warnings.forEach(function (w) { h += '<div class="item miss">' + esc(w) + "</div>"; });
@@ -101,6 +110,7 @@
         "<div class='item'>frames created: <b>" + d.created + "</b></div>" +
         "<div class='item'>skipped: " + d.skipped + "</div>" +
         "<div class='item'>pages created: " + d.pagesCreated + "</div>" +
+        (d.assetSlots && d.assetSlots.length ? '<div class="grp">Assets still needed</div>' + d.assetSlots.map(function (s) { return '<div class="item miss">' + esc(s) + "</div>"; }).join("") : "") +
         (d.notes.length ? '<div class="grp">Notes</div>' + d.notes.map(function (s) { return '<div class="item">' + esc(s) + "</div>"; }).join("") : "") +
         (d.errors.length ? '<div class="grp">Errors</div>' + d.errors.map(function (s) { return '<div class="item miss">' + esc(s) + "</div>"; }).join("") : "");
       applyBtn.disabled = true; applyBtn.className = "";

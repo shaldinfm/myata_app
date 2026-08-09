@@ -8,9 +8,9 @@
  */
 import { TYPE } from "./tokens.mjs";
 import {
-  SCREEN_W, MARGIN, CONTENT_W, APPBAR_H, NAV_H, F, T, V, E, icon,
+  SCREEN_W, MARGIN, CONTENT_W, APPBAR_H, NAV_H, F, T, V, E, A, icon,
   topAppBar, bottomNav, sheetShell, sheetRow, SHEET, menu, button, card,
-  historyItem, snackbar
+  historyItem, HISTORY_ART, snackbar
 } from "./primitives.mjs";
 
 const S = [];
@@ -27,26 +27,53 @@ const field = (label, value, o) => [
   ])
 ];
 
+/* Row track, left to right, with a fixed slot for every element:
+ *
+ *   16  leading icon 24   56  label ... status   306 | 12 gap | 318 chevron 24  342
+ *
+ * The chevron slot is reserved whether or not the row has one, so a status
+ * string can never reach it. The status is right-aligned and ends at 306; the
+ * label ends at 200 when a status is present and at the status edge otherwise.
+ * Row height stays 64 (72 when a sub-line is used instead of a status). */
+const ROW = { iconX: 16, labelX: 56, statusRight: 306, chevronX: 318, gap: 8 };
+
 const listRow = (label, o = {}) => {
   const h = o.sub ? 72 : 64;
   const ch = [];
-  if (o.ic) ch.push(icon(o.ic, { x: 16, y: (h - 24) / 2, color: o.danger ? "error" : "textSecondary" }));
-  const lx = o.ic ? 56 : 16;
-  // A trailing value costs the label most of the row; a sub-line costs it nothing.
-  // Anything that does not fit in 176 belongs on a sub-line, not a value.
-  const lw = o.value ? 176 : (o.chevron || o.check ? CONTENT_W - lx - 48 : CONTENT_W - lx - 16);
-  ch.push(T("label", label, { x: lx, y: o.sub ? 14 : 21, w: lw, h: 22, ty: TYPE.sheetRow,
+  const lx = o.ic || o.asset ? ROW.labelX : ROW.iconX;
+
+  if (o.asset) ch.push(A(o.asset, { x: ROW.iconX, y: (h - 24) / 2, w: 24, h: 24,
+                                    tint: o.danger ? "error" : "textSecondary" }));
+  else if (o.ic) ch.push(icon(o.ic, { x: ROW.iconX, y: (h - 24) / 2, color: o.danger ? "error" : "textSecondary" }));
+
+  // Reserve the trailing slot even when empty, so nothing can grow into it.
+  const trailingEdge = (o.chevron || o.check) ? ROW.chevronX - ROW.gap : ROW.statusRight + ROW.gap;
+  const statusW = 106;
+  const labelRight = o.value ? ROW.statusRight - statusW - ROW.gap : trailingEdge;
+
+  ch.push(T("label", label, { x: lx, y: o.sub ? 14 : 21, w: labelRight - lx, h: 22, ty: TYPE.sheetRow,
                               fill: o.danger ? "error" : "textPrimary" }));
-  if (o.sub) ch.push(T("sub", o.sub, { x: lx, y: 38, w: CONTENT_W - lx - 48, h: 20, ty: TYPE.bodySecondary, fill: "textSecondary" }));
-  if (o.value) ch.push(T("value", o.value, { x: 200, y: (h - 20) / 2, w: 142, h: 20, ty: TYPE.bodySecondary,
-                                             align: "RIGHT", fill: o.valueAccent ? "primary" : "textSecondary" }));
-  if (o.chevron) ch.push(F("chevron", { x: 326, y: (h - 24) / 2, w: 24, h: 24 }, [
+  if (o.sub) ch.push(T("sub", o.sub, { x: lx, y: 38, w: trailingEdge - lx, h: 20, ty: TYPE.bodySecondary, fill: "textSecondary" }));
+  if (o.value) ch.push(T("value", o.value, { x: ROW.statusRight - statusW, y: (h - 20) / 2, w: statusW, h: 20,
+                                             ty: TYPE.bodySecondary, align: "RIGHT",
+                                             fill: o.valueAccent ? "primary" : "textSecondary" }));
+  if (o.chevron) ch.push(F("chevron", { x: ROW.chevronX, y: (h - 24) / 2, w: 24, h: 24 }, [
     V("chevron", { w: 24, h: 24, path: "M9 5 L16 12 L9 19", stroke: "textSecondary", sw: 1.8 })
   ]));
-  if (o.check) ch.push(icon("check", { x: 318, y: (h - 24) / 2, color: "primary" }));
+  if (o.check) ch.push(icon("check", { x: ROW.chevronX, y: (h - 24) / 2, color: "primary" }));
   return F("Row / " + label, { x: MARGIN, y: o.y, w: CONTENT_W, h, r: 12, fill: "surface",
                                stroke: o.selected ? "primary" : "outline", sw: o.selected ? 2 : 1 }, ch);
 };
+
+/* Real marks, referenced by node id out of the open file - see spec/assets.json.
+ * Apple Music has no mark anywhere in the file, so its slot stays empty rather
+ * than being filled with a drawn approximation. */
+const SERVICES = [
+  { label: "Spotify", asset: "logo/spotify" },
+  { label: "Apple Music", asset: "logo/apple-music" },
+  { label: "YouTube Music", asset: "logo/youtube-music" },
+  { label: "Яндекс Музыка", asset: "logo/yandex-music" }
+];
 
 const sectionLabel = (text, y) =>
   T("Section / " + text, text, { x: MARGIN, y, w: CONTENT_W, h: 20, ty: TYPE.bodySecondary, fill: "textSecondary" });
@@ -225,11 +252,12 @@ const HIST_PITCH = 82;
     topAppBar("История эфира", { back: true }),
     ...Array.from({ length: n }, (_, i) =>
       F("Skeleton " + (i + 1), { x: MARGIN, y: 80 + i * HIST_PITCH, w: CONTENT_W, h: 74, r: 8, stroke: "outline" }, [
-        F("s-time", { x: 13, y: 30, w: 40, h: 14, r: 7, fill: "outline", opacity: 0.5 }),
-        F("s-title", { x: 76, y: 18, w: 168, h: 16, r: 8, fill: "outline", opacity: 0.5 }),
-        F("s-artist", { x: 76, y: 44, w: 104, h: 12, r: 6, fill: "outline", opacity: 0.35 })
+        F("s-art", { ...HISTORY_ART, fill: "outline", opacity: 0.5 }),
+        F("s-title", { x: 116, y: 18, w: 150, h: 16, r: 8, fill: "outline", opacity: 0.5 }),
+        F("s-artist", { x: 116, y: 44, w: 96, h: 12, r: 6, fill: "outline", opacity: 0.35 })
       ]))
-  ], "Skeletons keep the exact row geometry so nothing shifts when the data lands.");
+  ], "The skeleton is the square album-art thumbnail at the real geometry, not a bar. " +
+     "Row height, art position and text baselines match the loaded row exactly, so nothing shifts.");
 }
 
 {
@@ -240,6 +268,18 @@ const HIST_PITCH = 82;
   add("history-empty", "История эфира", "История эфира · пусто", SCREEN_W, b.h, b.nodes,
     "Shown when the endpoint answers with an empty list - distinct from the error state below.");
 }
+
+/* The find action on a history row opens this sheet - the same four services as
+ * Collection, without the destructive row, since there is nothing saved to delete.
+ * It is the canonical 'Bottom Sheet / Найти трек' with the generic disc icons
+ * replaced by the real marks; the canonical frame itself is not touched. */
+add("find-track-sheet", "История эфира", "Найти трек · общий шит", SHEET.w,
+  rowY(3) + SHEET.rowH + SHEET.padBottom,
+  [sheetShell("Bottom Sheet / Найти трек", "CRYOGEN", rowY(3) + SHEET.rowH + SHEET.padBottom,
+    SERVICES.map((s, i) => sheetRow(s.label, { y: rowY(i), asset: s.asset })),
+    { subtitle: "MUSE" })],
+  "One find-track pattern shared by Broadcast History, the player menu and Collection. " +
+  "Collection adds a divider and a destructive row below these four; nothing else differs.");
 
 {
   const b = centeredState({
@@ -252,20 +292,13 @@ const HIST_PITCH = 82;
 
 /* ================= 4. COLLECTION UX ================= */
 
-const SERVICES = [
-  { label: "Spotify", ic: "disc" },
-  { label: "Apple Music", ic: "disc" },
-  { label: "YouTube Music", ic: "disc" },
-  { label: "Яндекс Музыка", ic: "disc" }
-];
-
 {
   const dividerY = rowY(3) + SHEET.rowH + 12;
   const delY = dividerY + 13;
   const h = delY + SHEET.rowH + SHEET.padBottom;
   add("collection-track-sheet", "Коллекция", "Коллекция · действия с треком", SHEET.w, h,
     [sheetShell("Bottom Sheet / Действия с треком", "CRYOGEN", h,
-      SERVICES.map((s, i) => sheetRow(s.label, { y: rowY(i), ic: s.ic }))
+      SERVICES.map((s, i) => sheetRow(s.label, { y: rowY(i), asset: s.asset }))
         .concat([
           F("Divider", { x: MARGIN, y: dividerY, w: SHEET.w - 2 * MARGIN, h: 1, fill: "outline" }),
           sheetRow("Удалить из коллекции", { y: delY, ic: "trash", iconColor: "error", labelColor: "error" })
@@ -311,18 +344,20 @@ add("auth-create-account", "Аккаунт", "Создание аккаунта"
   T("have", "Уже есть аккаунт? Войти", { x: MARGIN, y: 488, w: CONTENT_W, h: 20, ty: TYPE.bodySecondary, align: "CENTER", fill: "primary" })
 ], "Focused field uses a 2px primary border - the only focus treatment in the system, since no canonical screen shows one.");
 
-add("profile-guest", "Аккаунт", "Профиль · гость", SCREEN_W, 660, [
+/* Card padding: 32 top, 32 bottom, 24 between the avatar and the headline and
+ * 12 between headline and body - was 28/18/18/6, which read as cramped. */
+add("profile-guest", "Аккаунт", "Профиль · гость", SCREEN_W, 700, [
   topAppBar("Профиль", { back: true }),
-  card("Guest card", { y: 96, h: 196 }, [
-    F("Avatar", { x: 143, y: 28, w: 72, h: 72, r: 36, fill: "surfaceContainer" }, [icon("question", { x: 24, y: 24, color: "textSecondary" })]),
-    T("h", "Вы не вошли", { x: 0, y: 118, w: CONTENT_W, h: 32, ty: TYPE.sheetTitle, align: "CENTER", fill: "textHeading" }),
-    T("b", "Коллекция хранится только на этом устройстве.", { x: 0, y: 156, w: CONTENT_W, h: 22, ty: TYPE.fieldText, align: "CENTER", fill: "textSecondary" })
+  card("Guest card", { y: 96, h: 226 }, [
+    F("Avatar", { x: 143, y: 32, w: 72, h: 72, r: 36, fill: "surfaceContainer" }, [icon("person", { x: 24, y: 24, color: "textSecondary" })]),
+    T("h", "Вы не вошли", { x: 0, y: 128, w: CONTENT_W, h: 32, ty: TYPE.sheetTitle, align: "CENTER", fill: "textHeading" }),
+    T("b", "Коллекция хранится только на этом устройстве.", { x: 0, y: 172, w: CONTENT_W, h: 22, ty: TYPE.fieldText, align: "CENTER", fill: "textSecondary" })
   ]),
-  button("Войти", { x: MARGIN, y: 316 }),
-  button("Создать аккаунт", { x: MARGIN, y: 384, kind: "outline" }),
-  sectionLabel("Что даёт аккаунт", 464),
-  listRow("Синхронизация коллекции", { y: 492, ic: "disc" }),
-  listRow("Восстановление коллекции", { y: 564, ic: "download" })
+  button("Войти", { x: MARGIN, y: 346 }),
+  button("Создать аккаунт", { x: MARGIN, y: 414, kind: "outline" }),
+  sectionLabel("Что даёт аккаунт", 494),
+  listRow("Синхронизация коллекции", { y: 522, ic: "sync" }),
+  listRow("Восстановление коллекции", { y: 594, ic: "download" })
 ], "Guest is a first-class state, not a degraded one. Nothing on this screen blocks playback.");
 
 add("profile-authenticated", "Аккаунт", "Профиль · вошли", SCREEN_W, 620, [
@@ -335,27 +370,27 @@ add("profile-authenticated", "Аккаунт", "Профиль · вошли", S
     T("email", "denis@example.com", { x: 96, y: 58, w: 240, h: 20, ty: TYPE.bodySecondary, fill: "textSecondary" })
   ]),
   sectionLabel("Синхронизация", 224),
-  listRow("Облачная синхронизация", { y: 252, ic: "download", sub: "Включена" }),
+  listRow("Облачная синхронизация", { y: 252, ic: "sync", sub: "Включена" }),
   listRow("Последняя синхронизация", { y: 332, ic: "clock", sub: "2 мин назад" }),
   sectionLabel("Аккаунт", 428),
   listRow("Сменить пароль", { y: 456, ic: "doc", chevron: true }),
-  listRow("Выйти", { y: 528, ic: "back", danger: true })
+  listRow("Выйти", { y: 528, ic: "logout", danger: true })
 ], "Sign-out is destructive-styled but does not delete the local collection - that is stated in the confirm dialog, not here.");
 
 add("settings", "Настройки", "Настройки", SCREEN_W, 792, [
   topAppBar("Настройки", { back: true }),
   sectionLabel("Аккаунт", 84),
-  listRow("Профиль", { y: 112, ic: "question", value: "Не вошли", chevron: true }),
+  listRow("Профиль", { y: 112, ic: "person", value: "Не вошли", chevron: true }),
   sectionLabel("Внешний вид", 196),
-  listRow("Тема", { y: 224, ic: "layout", value: "Системная", chevron: true }),
+  listRow("Тема", { y: 224, ic: "theme", value: "Системная", chevron: true }),
   sectionLabel("Воспроизведение", 308),
-  listRow("Качество потока", { y: 336, ic: "playNote", value: "Авто", chevron: true }),
+  listRow("Качество потока", { y: 336, ic: "equalizer", value: "Авто", chevron: true }),
   listRow("Таймер сна", { y: 408, ic: "clock", value: "Выключен", chevron: true }),
   sectionLabel("Интеграции", 492),
-  listRow("Last.fm", { y: 520, ic: "disc", value: "Не подключён", chevron: true }),
+  listRow("Last.fm", { y: 520, asset: "logo/lastfm", value: "Не подключён", chevron: true }),
   sectionLabel("Прочее", 604),
-  listRow("Сообщить о проблеме", { y: 632, ic: "alert", chevron: true }),
-  listRow("О приложении", { y: 704, ic: "doc", value: "3.6.6", chevron: true })
+  listRow("Сообщить о проблеме", { y: 632, ic: "message", chevron: true }),
+  listRow("О приложении", { y: 704, ic: "info", value: "3.6.6", chevron: true })
 ], "Revised from PR #23: the same groups, but Sleep Timer is surfaced here as well as in " +
    "the player menu, because a timer you can only reach mid-playback is hard to find.");
 
@@ -376,32 +411,36 @@ add("settings-sync", "Настройки", "Настройки · синхрон
     T("t", "2 мин назад · 48 треков", { x: 96, y: 62, w: 240, h: 20, ty: TYPE.bodySecondary, fill: "textSecondary" })
   ]),
   sectionLabel("Остальные состояния этой карточки", 232),
-  listRow("Синхронизация…", { y: 260, ic: "download", sub: "24 из 48 треков" }),
+  listRow("Синхронизация…", { y: 260, ic: "sync", sub: "24 из 48 треков" }),
   listRow("Не удалось синхронизировать", { y: 340, ic: "alert", sub: "Нажмите, чтобы повторить" }),
   listRow("Синхронизация выключена", { y: 420, ic: "timerOff", sub: "Включите её в профиле" }),
   sectionLabel("Управление", 512),
-  listRow("Синхронизировать сейчас", { y: 540, ic: "download" }),
+  listRow("Синхронизировать сейчас", { y: 540, ic: "sync" }),
   listRow("Удалить копию в облаке", { y: 612, ic: "trash", danger: true })
 ], "The three rows under 'Состояния' are the alternate states of the card above, drawn " +
    "inline so all four can be reviewed on one frame. In the app only one is visible at a time.");
 
-add("settings-lastfm", "Настройки", "Настройки · Last.fm", SCREEN_W, 560, [
+/* Card padding is 16 on every edge, so the button bottom sits at h-16 rather
+ * than the 4px it had before. Cards are 16 + 28 + 6 + 44 + 22 + 12 + 44 + 16. */
+add("settings-lastfm", "Настройки", "Настройки · Last.fm", SCREEN_W, 570, [
   topAppBar("Last.fm", { back: true }),
-  card("Not connected", { y: 92, h: 156 }, [
-    T("h", "Не подключён", { x: 16, y: 20, w: 240, h: 28, ty: TYPE.historyTitle, fill: "textPrimary" }),
-    T("b0", "Подключите Last.fm, чтобы отмечать", { x: 16, y: 54, w: 326, h: 22, ty: TYPE.fieldText, fill: "textSecondary" }),
-    T("b1", "прослушанные треки.", { x: 16, y: 76, w: 326, h: 22, ty: TYPE.fieldText, fill: "textSecondary" }),
-    button("Подключить", { x: 16, y: 108, w: 326, h: 44, name: "connect" })
+  card("Not connected", { y: 92, h: 172 }, [
+    A("logo/lastfm", { x: 16, y: 18, w: 24, h: 24, tint: "textSecondary" }),
+    T("h", "Не подключён", { x: 48, y: 16, w: 240, h: 28, ty: TYPE.historyTitle, fill: "textPrimary" }),
+    T("b0", "Подключите Last.fm, чтобы отмечать", { x: 16, y: 56, w: 326, h: 22, ty: TYPE.fieldText, fill: "textSecondary" }),
+    T("b1", "прослушанные треки.", { x: 16, y: 78, w: 326, h: 22, ty: TYPE.fieldText, fill: "textSecondary" }),
+    button("Подключить", { x: 16, y: 112, w: 326, h: 44, name: "connect" })
   ]),
-  card("Connected", { y: 272, h: 156 }, [
-    T("h", "Подключён", { x: 16, y: 20, w: 240, h: 28, ty: TYPE.historyTitle, fill: "textPrimary" }),
-    icon("check", { x: 318, y: 22, color: "primary" }),
-    T("b0", "denis_fm · 1 248 скробблов", { x: 16, y: 54, w: 326, h: 22, ty: TYPE.fieldText, fill: "textSecondary" }),
-    T("b1", "Последний: CRYOGEN — MUSE", { x: 16, y: 76, w: 326, h: 22, ty: TYPE.fieldText, fill: "textSecondary" }),
-    button("Отключить", { x: 16, y: 108, w: 326, h: 44, kind: "outline", name: "disconnect" })
+  card("Connected", { y: 288, h: 172 }, [
+    A("logo/lastfm", { x: 16, y: 18, w: 24, h: 24, tint: "primary" }),
+    T("h", "Подключён", { x: 48, y: 16, w: 240, h: 28, ty: TYPE.historyTitle, fill: "textPrimary" }),
+    icon("check", { x: 318, y: 18, color: "primary" }),
+    T("b0", "denis_fm · 1 248 скробблов", { x: 16, y: 56, w: 326, h: 22, ty: TYPE.fieldText, fill: "textSecondary" }),
+    T("b1", "Последний: CRYOGEN — MUSE", { x: 16, y: 78, w: 326, h: 22, ty: TYPE.fieldText, fill: "textSecondary" }),
+    button("Отключить", { x: 16, y: 112, w: 326, h: 44, kind: "outline", name: "disconnect" })
   ]),
-  T("note0", "Пароль Last.fm не хранится в приложении:", { x: MARGIN, y: 456, w: CONTENT_W, h: 20, ty: TYPE.bodySecondary, fill: "textSecondary" }),
-  T("note1", "используется веб-авторизация.", { x: MARGIN, y: 478, w: CONTENT_W, h: 20, ty: TYPE.bodySecondary, fill: "textSecondary" })
+  T("note0", "Пароль Last.fm не хранится в приложении:", { x: MARGIN, y: 488, w: CONTENT_W, h: 20, ty: TYPE.bodySecondary, fill: "textSecondary" }),
+  T("note1", "используется веб-авторизация.", { x: MARGIN, y: 510, w: CONTENT_W, h: 20, ty: TYPE.bodySecondary, fill: "textSecondary" })
 ], "Both connection states on one frame for review. Authorisation goes through Last.fm's " +
    "own web flow, so no credentials are entered in the app.");
 

@@ -192,6 +192,74 @@
       "lh": 22
     }
   },
+  "assets": {
+    "logo/spotify": {
+      "status": "CANONICAL_NODE",
+      "darkNodeId": "2444:18629",
+      "lightNodeId": "2424:733",
+      "source": "ABOUT US > Main > Section 3: Social Media > Container > Spotify > Container > Vector",
+      "nativeSize": [
+        48,
+        48
+      ],
+      "note": "Real Spotify mark, already in the file and already used on the About screen."
+    },
+    "logo/yandex-music": {
+      "status": "CANONICAL_NODE",
+      "darkNodeId": "2444:18647",
+      "lightNodeId": "2420:138",
+      "source": "ABOUT US > Main > Section 3: Social Media > Container > ЯМузыка > Container > Vector",
+      "nativeSize": [
+        48,
+        48
+      ],
+      "note": "Real Яндекс Музыка mark."
+    },
+    "logo/youtube-music": {
+      "status": "CANONICAL_NODE_APPROXIMATE",
+      "darkNodeId": "2444:18638",
+      "lightNodeId": "2424:753",
+      "source": "ABOUT US > Main > Section 3: Social Media > Container > YouTube > Container > Social Icons",
+      "nativeSize": [
+        48,
+        48
+      ],
+      "note": "This is the YouTube mark, not the YouTube Music mark - they are different logos. Used here because it is the closest authentic asset in the file. NEEDS OWNER CONFIRMATION: either accept the YouTube mark for this row, or supply the YouTube Music mark and move this entry to CANONICAL_NODE."
+    },
+    "logo/apple-music": {
+      "status": "PENDING_OWNER",
+      "darkNodeId": null,
+      "lightNodeId": null,
+      "source": null,
+      "nativeSize": [
+        48,
+        48
+      ],
+      "note": "No Apple Music mark exists anywhere in the Figma file. Not drawn, not downloaded. The owner needs to place the mark in the file and put its node ids here."
+    },
+    "logo/lastfm": {
+      "status": "PENDING_OWNER",
+      "darkNodeId": null,
+      "lightNodeId": null,
+      "source": null,
+      "nativeSize": [
+        48,
+        48
+      ],
+      "note": "No Last.fm mark exists anywhere in the Figma file. Not drawn, not downloaded. Needed by the Settings row and the Last.fm screen."
+    },
+    "control/find-track": {
+      "status": "CANONICAL_NODE",
+      "darkNodeId": "2444:18396",
+      "lightNodeId": "2409:31570",
+      "source": "COLLECTION > Main > Collection List > Track Item 1 > Container > Button",
+      "nativeSize": [
+        40,
+        40
+      ],
+      "note": "The canonical per-track 'find track' control: 40x40, 1px primary stroke, radius 9999, primary glyph inside. Reused verbatim by Broadcast History so there is one action pattern, not two."
+    }
+  },
   "screens": [
     {
       "id": "sleep-timer-select",
@@ -1642,7 +1710,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -1699,7 +1767,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -1756,7 +1824,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -1813,7 +1881,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -1870,7 +1938,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -2269,7 +2337,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -2410,7 +2478,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -2467,7 +2535,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -2524,7 +2592,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -2939,7 +3007,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -3080,7 +3148,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -3137,7 +3205,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -3194,7 +3262,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -3609,7 +3677,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -3750,7 +3818,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -3807,7 +3875,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -3864,7 +3932,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -4533,11 +4601,24 @@
               }
             },
             {
+              "n": "Album art",
+              "t": "FRAME",
+              "x": 60,
+              "y": 13,
+              "w": 48,
+              "h": 48,
+              "fill": "surfaceContainer",
+              "stroke": null,
+              "sw": 0,
+              "r": 8,
+              "ch": []
+            },
+            {
               "n": "title",
               "t": "TEXT",
-              "x": 76,
+              "x": 116,
               "y": 12,
-              "w": 200,
+              "w": 181,
               "h": 28,
               "fill": "textPrimary",
               "text": {
@@ -4551,9 +4632,9 @@
             {
               "n": "artist",
               "t": "TEXT",
-              "x": 76,
+              "x": 116,
               "y": 40,
-              "w": 200,
+              "w": 181,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -4565,100 +4646,15 @@
               }
             },
             {
-              "n": "Container",
-              "t": "FRAME",
-              "x": 293,
-              "y": 25,
-              "w": 52,
-              "h": 24,
-              "fill": null,
-              "stroke": null,
-              "sw": 0,
-              "r": 0,
-              "ch": [
-                {
-                  "n": "Button / find",
-                  "t": "FRAME",
-                  "x": 0,
-                  "y": 0,
-                  "w": 24,
-                  "h": 24,
-                  "fill": null,
-                  "stroke": null,
-                  "sw": 0,
-                  "r": 0,
-                  "ch": [
-                    {
-                      "n": "Icon / disc",
-                      "t": "FRAME",
-                      "x": 0,
-                      "y": 0,
-                      "w": 24,
-                      "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "disc",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 4 A8 8 0 1 0 12.01 4 M12 10.5 A1.5 1.5 0 1 0 12.01 10.5",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "n": "Button / save",
-                  "t": "FRAME",
-                  "x": 28,
-                  "y": 0,
-                  "w": 24,
-                  "h": 24,
-                  "fill": null,
-                  "stroke": null,
-                  "sw": 0,
-                  "r": 0,
-                  "ch": [
-                    {
-                      "n": "Icon / download",
-                      "t": "FRAME",
-                      "x": 0,
-                      "y": 0,
-                      "w": 24,
-                      "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "download",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 3 V15 M7 10.5 L12 15.5 L17 10.5 M4 20 H20",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
+              "n": "Button / find track",
+              "t": "ASSET",
+              "key": "control/find-track",
+              "x": 305,
+              "y": 17,
+              "w": 40,
+              "h": 40,
+              "tint": "primary",
+              "slotRadius": 20
             }
           ]
         },
@@ -4691,11 +4687,24 @@
               }
             },
             {
+              "n": "Album art",
+              "t": "FRAME",
+              "x": 60,
+              "y": 13,
+              "w": 48,
+              "h": 48,
+              "fill": "surfaceContainer",
+              "stroke": null,
+              "sw": 0,
+              "r": 8,
+              "ch": []
+            },
+            {
               "n": "title",
               "t": "TEXT",
-              "x": 76,
+              "x": 116,
               "y": 12,
-              "w": 200,
+              "w": 181,
               "h": 28,
               "fill": "textPrimary",
               "text": {
@@ -4709,9 +4718,9 @@
             {
               "n": "artist",
               "t": "TEXT",
-              "x": 76,
+              "x": 116,
               "y": 40,
-              "w": 200,
+              "w": 181,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -4723,100 +4732,15 @@
               }
             },
             {
-              "n": "Container",
-              "t": "FRAME",
-              "x": 293,
-              "y": 25,
-              "w": 52,
-              "h": 24,
-              "fill": null,
-              "stroke": null,
-              "sw": 0,
-              "r": 0,
-              "ch": [
-                {
-                  "n": "Button / find",
-                  "t": "FRAME",
-                  "x": 0,
-                  "y": 0,
-                  "w": 24,
-                  "h": 24,
-                  "fill": null,
-                  "stroke": null,
-                  "sw": 0,
-                  "r": 0,
-                  "ch": [
-                    {
-                      "n": "Icon / disc",
-                      "t": "FRAME",
-                      "x": 0,
-                      "y": 0,
-                      "w": 24,
-                      "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "disc",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 4 A8 8 0 1 0 12.01 4 M12 10.5 A1.5 1.5 0 1 0 12.01 10.5",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "n": "Button / save",
-                  "t": "FRAME",
-                  "x": 28,
-                  "y": 0,
-                  "w": 24,
-                  "h": 24,
-                  "fill": null,
-                  "stroke": null,
-                  "sw": 0,
-                  "r": 0,
-                  "ch": [
-                    {
-                      "n": "Icon / download",
-                      "t": "FRAME",
-                      "x": 0,
-                      "y": 0,
-                      "w": 24,
-                      "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "download",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 3 V15 M7 10.5 L12 15.5 L17 10.5 M4 20 H20",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
+              "n": "Button / find track",
+              "t": "ASSET",
+              "key": "control/find-track",
+              "x": 305,
+              "y": 17,
+              "w": 40,
+              "h": 40,
+              "tint": "primary",
+              "slotRadius": 20
             }
           ]
         },
@@ -4849,11 +4773,24 @@
               }
             },
             {
+              "n": "Album art",
+              "t": "FRAME",
+              "x": 60,
+              "y": 13,
+              "w": 48,
+              "h": 48,
+              "fill": "surfaceContainer",
+              "stroke": null,
+              "sw": 0,
+              "r": 8,
+              "ch": []
+            },
+            {
               "n": "title",
               "t": "TEXT",
-              "x": 76,
+              "x": 116,
               "y": 12,
-              "w": 200,
+              "w": 181,
               "h": 28,
               "fill": "textPrimary",
               "text": {
@@ -4867,9 +4804,9 @@
             {
               "n": "artist",
               "t": "TEXT",
-              "x": 76,
+              "x": 116,
               "y": 40,
-              "w": 200,
+              "w": 181,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -4881,100 +4818,15 @@
               }
             },
             {
-              "n": "Container",
-              "t": "FRAME",
-              "x": 293,
-              "y": 25,
-              "w": 52,
-              "h": 24,
-              "fill": null,
-              "stroke": null,
-              "sw": 0,
-              "r": 0,
-              "ch": [
-                {
-                  "n": "Button / find",
-                  "t": "FRAME",
-                  "x": 0,
-                  "y": 0,
-                  "w": 24,
-                  "h": 24,
-                  "fill": null,
-                  "stroke": null,
-                  "sw": 0,
-                  "r": 0,
-                  "ch": [
-                    {
-                      "n": "Icon / disc",
-                      "t": "FRAME",
-                      "x": 0,
-                      "y": 0,
-                      "w": 24,
-                      "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "disc",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 4 A8 8 0 1 0 12.01 4 M12 10.5 A1.5 1.5 0 1 0 12.01 10.5",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "n": "Button / save",
-                  "t": "FRAME",
-                  "x": 28,
-                  "y": 0,
-                  "w": 24,
-                  "h": 24,
-                  "fill": null,
-                  "stroke": null,
-                  "sw": 0,
-                  "r": 0,
-                  "ch": [
-                    {
-                      "n": "Icon / download",
-                      "t": "FRAME",
-                      "x": 0,
-                      "y": 0,
-                      "w": 24,
-                      "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "download",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 3 V15 M7 10.5 L12 15.5 L17 10.5 M4 20 H20",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
+              "n": "Button / find track",
+              "t": "ASSET",
+              "key": "control/find-track",
+              "x": 305,
+              "y": 17,
+              "w": 40,
+              "h": 40,
+              "tint": "primary",
+              "slotRadius": 20
             }
           ]
         },
@@ -5007,11 +4859,24 @@
               }
             },
             {
+              "n": "Album art",
+              "t": "FRAME",
+              "x": 60,
+              "y": 13,
+              "w": 48,
+              "h": 48,
+              "fill": "surfaceContainer",
+              "stroke": null,
+              "sw": 0,
+              "r": 8,
+              "ch": []
+            },
+            {
               "n": "title",
               "t": "TEXT",
-              "x": 76,
+              "x": 116,
               "y": 12,
-              "w": 200,
+              "w": 181,
               "h": 28,
               "fill": "textPrimary",
               "text": {
@@ -5025,9 +4890,9 @@
             {
               "n": "artist",
               "t": "TEXT",
-              "x": 76,
+              "x": 116,
               "y": 40,
-              "w": 200,
+              "w": 181,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -5039,100 +4904,15 @@
               }
             },
             {
-              "n": "Container",
-              "t": "FRAME",
-              "x": 293,
-              "y": 25,
-              "w": 52,
-              "h": 24,
-              "fill": null,
-              "stroke": null,
-              "sw": 0,
-              "r": 0,
-              "ch": [
-                {
-                  "n": "Button / find",
-                  "t": "FRAME",
-                  "x": 0,
-                  "y": 0,
-                  "w": 24,
-                  "h": 24,
-                  "fill": null,
-                  "stroke": null,
-                  "sw": 0,
-                  "r": 0,
-                  "ch": [
-                    {
-                      "n": "Icon / disc",
-                      "t": "FRAME",
-                      "x": 0,
-                      "y": 0,
-                      "w": 24,
-                      "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "disc",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 4 A8 8 0 1 0 12.01 4 M12 10.5 A1.5 1.5 0 1 0 12.01 10.5",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "n": "Button / save",
-                  "t": "FRAME",
-                  "x": 28,
-                  "y": 0,
-                  "w": 24,
-                  "h": 24,
-                  "fill": null,
-                  "stroke": null,
-                  "sw": 0,
-                  "r": 0,
-                  "ch": [
-                    {
-                      "n": "Icon / download",
-                      "t": "FRAME",
-                      "x": 0,
-                      "y": 0,
-                      "w": 24,
-                      "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "download",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 3 V15 M7 10.5 L12 15.5 L17 10.5 M4 20 H20",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
+              "n": "Button / find track",
+              "t": "ASSET",
+              "key": "control/find-track",
+              "x": 305,
+              "y": 17,
+              "w": 40,
+              "h": 40,
+              "tint": "primary",
+              "slotRadius": 20
             }
           ]
         },
@@ -5165,11 +4945,24 @@
               }
             },
             {
+              "n": "Album art",
+              "t": "FRAME",
+              "x": 60,
+              "y": 13,
+              "w": 48,
+              "h": 48,
+              "fill": "surfaceContainer",
+              "stroke": null,
+              "sw": 0,
+              "r": 8,
+              "ch": []
+            },
+            {
               "n": "title",
               "t": "TEXT",
-              "x": 76,
+              "x": 116,
               "y": 12,
-              "w": 200,
+              "w": 181,
               "h": 28,
               "fill": "textPrimary",
               "text": {
@@ -5183,9 +4976,9 @@
             {
               "n": "artist",
               "t": "TEXT",
-              "x": 76,
+              "x": 116,
               "y": 40,
-              "w": 200,
+              "w": 181,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -5197,100 +4990,15 @@
               }
             },
             {
-              "n": "Container",
-              "t": "FRAME",
-              "x": 293,
-              "y": 25,
-              "w": 52,
-              "h": 24,
-              "fill": null,
-              "stroke": null,
-              "sw": 0,
-              "r": 0,
-              "ch": [
-                {
-                  "n": "Button / find",
-                  "t": "FRAME",
-                  "x": 0,
-                  "y": 0,
-                  "w": 24,
-                  "h": 24,
-                  "fill": null,
-                  "stroke": null,
-                  "sw": 0,
-                  "r": 0,
-                  "ch": [
-                    {
-                      "n": "Icon / disc",
-                      "t": "FRAME",
-                      "x": 0,
-                      "y": 0,
-                      "w": 24,
-                      "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "disc",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 4 A8 8 0 1 0 12.01 4 M12 10.5 A1.5 1.5 0 1 0 12.01 10.5",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "n": "Button / save",
-                  "t": "FRAME",
-                  "x": 28,
-                  "y": 0,
-                  "w": 24,
-                  "h": 24,
-                  "fill": null,
-                  "stroke": null,
-                  "sw": 0,
-                  "r": 0,
-                  "ch": [
-                    {
-                      "n": "Icon / download",
-                      "t": "FRAME",
-                      "x": 0,
-                      "y": 0,
-                      "w": 24,
-                      "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "download",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 3 V15 M7 10.5 L12 15.5 L17 10.5 M4 20 H20",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
+              "n": "Button / find track",
+              "t": "ASSET",
+              "key": "control/find-track",
+              "x": 305,
+              "y": 17,
+              "w": 40,
+              "h": 40,
+              "tint": "primary",
+              "slotRadius": 20
             }
           ]
         },
@@ -5323,11 +5031,24 @@
               }
             },
             {
+              "n": "Album art",
+              "t": "FRAME",
+              "x": 60,
+              "y": 13,
+              "w": 48,
+              "h": 48,
+              "fill": "surfaceContainer",
+              "stroke": null,
+              "sw": 0,
+              "r": 8,
+              "ch": []
+            },
+            {
               "n": "title",
               "t": "TEXT",
-              "x": 76,
+              "x": 116,
               "y": 12,
-              "w": 200,
+              "w": 181,
               "h": 28,
               "fill": "textPrimary",
               "text": {
@@ -5341,9 +5062,9 @@
             {
               "n": "artist",
               "t": "TEXT",
-              "x": 76,
+              "x": 116,
               "y": 40,
-              "w": 200,
+              "w": 181,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -5355,100 +5076,15 @@
               }
             },
             {
-              "n": "Container",
-              "t": "FRAME",
-              "x": 293,
-              "y": 25,
-              "w": 52,
-              "h": 24,
-              "fill": null,
-              "stroke": null,
-              "sw": 0,
-              "r": 0,
-              "ch": [
-                {
-                  "n": "Button / find",
-                  "t": "FRAME",
-                  "x": 0,
-                  "y": 0,
-                  "w": 24,
-                  "h": 24,
-                  "fill": null,
-                  "stroke": null,
-                  "sw": 0,
-                  "r": 0,
-                  "ch": [
-                    {
-                      "n": "Icon / disc",
-                      "t": "FRAME",
-                      "x": 0,
-                      "y": 0,
-                      "w": 24,
-                      "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "disc",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 4 A8 8 0 1 0 12.01 4 M12 10.5 A1.5 1.5 0 1 0 12.01 10.5",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "n": "Button / save",
-                  "t": "FRAME",
-                  "x": 28,
-                  "y": 0,
-                  "w": 24,
-                  "h": 24,
-                  "fill": null,
-                  "stroke": null,
-                  "sw": 0,
-                  "r": 0,
-                  "ch": [
-                    {
-                      "n": "Icon / download",
-                      "t": "FRAME",
-                      "x": 0,
-                      "y": 0,
-                      "w": 24,
-                      "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "download",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 3 V15 M7 10.5 L12 15.5 L17 10.5 M4 20 H20",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
+              "n": "Button / find track",
+              "t": "ASSET",
+              "key": "control/find-track",
+              "x": 305,
+              "y": 17,
+              "w": 40,
+              "h": 40,
+              "tint": "primary",
+              "slotRadius": 20
             }
           ]
         },
@@ -5481,11 +5117,24 @@
               }
             },
             {
+              "n": "Album art",
+              "t": "FRAME",
+              "x": 60,
+              "y": 13,
+              "w": 48,
+              "h": 48,
+              "fill": "surfaceContainer",
+              "stroke": null,
+              "sw": 0,
+              "r": 8,
+              "ch": []
+            },
+            {
               "n": "title",
               "t": "TEXT",
-              "x": 76,
+              "x": 116,
               "y": 12,
-              "w": 200,
+              "w": 181,
               "h": 28,
               "fill": "textPrimary",
               "text": {
@@ -5499,9 +5148,9 @@
             {
               "n": "artist",
               "t": "TEXT",
-              "x": 76,
+              "x": 116,
               "y": 40,
-              "w": 200,
+              "w": 181,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -5513,100 +5162,15 @@
               }
             },
             {
-              "n": "Container",
-              "t": "FRAME",
-              "x": 293,
-              "y": 25,
-              "w": 52,
-              "h": 24,
-              "fill": null,
-              "stroke": null,
-              "sw": 0,
-              "r": 0,
-              "ch": [
-                {
-                  "n": "Button / find",
-                  "t": "FRAME",
-                  "x": 0,
-                  "y": 0,
-                  "w": 24,
-                  "h": 24,
-                  "fill": null,
-                  "stroke": null,
-                  "sw": 0,
-                  "r": 0,
-                  "ch": [
-                    {
-                      "n": "Icon / disc",
-                      "t": "FRAME",
-                      "x": 0,
-                      "y": 0,
-                      "w": 24,
-                      "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "disc",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 4 A8 8 0 1 0 12.01 4 M12 10.5 A1.5 1.5 0 1 0 12.01 10.5",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "n": "Button / save",
-                  "t": "FRAME",
-                  "x": 28,
-                  "y": 0,
-                  "w": 24,
-                  "h": 24,
-                  "fill": null,
-                  "stroke": null,
-                  "sw": 0,
-                  "r": 0,
-                  "ch": [
-                    {
-                      "n": "Icon / download",
-                      "t": "FRAME",
-                      "x": 0,
-                      "y": 0,
-                      "w": 24,
-                      "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "download",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 3 V15 M7 10.5 L12 15.5 L17 10.5 M4 20 H20",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
+              "n": "Button / find track",
+              "t": "ASSET",
+              "key": "control/find-track",
+              "x": 305,
+              "y": 17,
+              "w": 40,
+              "h": 40,
+              "tint": "primary",
+              "slotRadius": 20
             }
           ]
         },
@@ -5639,11 +5203,24 @@
               }
             },
             {
+              "n": "Album art",
+              "t": "FRAME",
+              "x": 60,
+              "y": 13,
+              "w": 48,
+              "h": 48,
+              "fill": "surfaceContainer",
+              "stroke": null,
+              "sw": 0,
+              "r": 8,
+              "ch": []
+            },
+            {
               "n": "title",
               "t": "TEXT",
-              "x": 76,
+              "x": 116,
               "y": 12,
-              "w": 200,
+              "w": 181,
               "h": 28,
               "fill": "textPrimary",
               "text": {
@@ -5657,9 +5234,9 @@
             {
               "n": "artist",
               "t": "TEXT",
-              "x": 76,
+              "x": 116,
               "y": 40,
-              "w": 200,
+              "w": 181,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -5671,100 +5248,15 @@
               }
             },
             {
-              "n": "Container",
-              "t": "FRAME",
-              "x": 293,
-              "y": 25,
-              "w": 52,
-              "h": 24,
-              "fill": null,
-              "stroke": null,
-              "sw": 0,
-              "r": 0,
-              "ch": [
-                {
-                  "n": "Button / find",
-                  "t": "FRAME",
-                  "x": 0,
-                  "y": 0,
-                  "w": 24,
-                  "h": 24,
-                  "fill": null,
-                  "stroke": null,
-                  "sw": 0,
-                  "r": 0,
-                  "ch": [
-                    {
-                      "n": "Icon / disc",
-                      "t": "FRAME",
-                      "x": 0,
-                      "y": 0,
-                      "w": 24,
-                      "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "disc",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 4 A8 8 0 1 0 12.01 4 M12 10.5 A1.5 1.5 0 1 0 12.01 10.5",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "n": "Button / save",
-                  "t": "FRAME",
-                  "x": 28,
-                  "y": 0,
-                  "w": 24,
-                  "h": 24,
-                  "fill": null,
-                  "stroke": null,
-                  "sw": 0,
-                  "r": 0,
-                  "ch": [
-                    {
-                      "n": "Icon / download",
-                      "t": "FRAME",
-                      "x": 0,
-                      "y": 0,
-                      "w": 24,
-                      "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "download",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 3 V15 M7 10.5 L12 15.5 L17 10.5 M4 20 H20",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
+              "n": "Button / find track",
+              "t": "ASSET",
+              "key": "control/find-track",
+              "x": 305,
+              "y": 17,
+              "w": 40,
+              "h": 40,
+              "tint": "primary",
+              "slotRadius": 20
             }
           ]
         },
@@ -5792,7 +5284,7 @@
       "title": "История эфира · загрузка",
       "w": 390,
       "h": 752,
-      "notes": "Skeletons keep the exact row geometry so nothing shifts when the data lands.",
+      "notes": "The skeleton is the square album-art thumbnail at the real geometry, not a bar. Row height, art position and text baselines match the loaded row exactly, so nothing shifts.",
       "nodes": [
         {
           "n": "Header - TopAppBar",
@@ -5892,25 +5384,25 @@
           "r": 8,
           "ch": [
             {
-              "n": "s-time",
+              "n": "s-art",
               "t": "FRAME",
-              "x": 13,
-              "y": 30,
-              "w": 40,
-              "h": 14,
+              "x": 60,
+              "y": 13,
+              "w": 48,
+              "h": 48,
               "fill": "outline",
               "stroke": null,
               "sw": 0,
-              "r": 7,
+              "r": 8,
               "opacity": 0.5,
               "ch": []
             },
             {
               "n": "s-title",
               "t": "FRAME",
-              "x": 76,
+              "x": 116,
               "y": 18,
-              "w": 168,
+              "w": 150,
               "h": 16,
               "fill": "outline",
               "stroke": null,
@@ -5922,9 +5414,9 @@
             {
               "n": "s-artist",
               "t": "FRAME",
-              "x": 76,
+              "x": 116,
               "y": 44,
-              "w": 104,
+              "w": 96,
               "h": 12,
               "fill": "outline",
               "stroke": null,
@@ -5948,25 +5440,25 @@
           "r": 8,
           "ch": [
             {
-              "n": "s-time",
+              "n": "s-art",
               "t": "FRAME",
-              "x": 13,
-              "y": 30,
-              "w": 40,
-              "h": 14,
+              "x": 60,
+              "y": 13,
+              "w": 48,
+              "h": 48,
               "fill": "outline",
               "stroke": null,
               "sw": 0,
-              "r": 7,
+              "r": 8,
               "opacity": 0.5,
               "ch": []
             },
             {
               "n": "s-title",
               "t": "FRAME",
-              "x": 76,
+              "x": 116,
               "y": 18,
-              "w": 168,
+              "w": 150,
               "h": 16,
               "fill": "outline",
               "stroke": null,
@@ -5978,9 +5470,9 @@
             {
               "n": "s-artist",
               "t": "FRAME",
-              "x": 76,
+              "x": 116,
               "y": 44,
-              "w": 104,
+              "w": 96,
               "h": 12,
               "fill": "outline",
               "stroke": null,
@@ -6004,25 +5496,25 @@
           "r": 8,
           "ch": [
             {
-              "n": "s-time",
+              "n": "s-art",
               "t": "FRAME",
-              "x": 13,
-              "y": 30,
-              "w": 40,
-              "h": 14,
+              "x": 60,
+              "y": 13,
+              "w": 48,
+              "h": 48,
               "fill": "outline",
               "stroke": null,
               "sw": 0,
-              "r": 7,
+              "r": 8,
               "opacity": 0.5,
               "ch": []
             },
             {
               "n": "s-title",
               "t": "FRAME",
-              "x": 76,
+              "x": 116,
               "y": 18,
-              "w": 168,
+              "w": 150,
               "h": 16,
               "fill": "outline",
               "stroke": null,
@@ -6034,9 +5526,9 @@
             {
               "n": "s-artist",
               "t": "FRAME",
-              "x": 76,
+              "x": 116,
               "y": 44,
-              "w": 104,
+              "w": 96,
               "h": 12,
               "fill": "outline",
               "stroke": null,
@@ -6060,25 +5552,25 @@
           "r": 8,
           "ch": [
             {
-              "n": "s-time",
+              "n": "s-art",
               "t": "FRAME",
-              "x": 13,
-              "y": 30,
-              "w": 40,
-              "h": 14,
+              "x": 60,
+              "y": 13,
+              "w": 48,
+              "h": 48,
               "fill": "outline",
               "stroke": null,
               "sw": 0,
-              "r": 7,
+              "r": 8,
               "opacity": 0.5,
               "ch": []
             },
             {
               "n": "s-title",
               "t": "FRAME",
-              "x": 76,
+              "x": 116,
               "y": 18,
-              "w": 168,
+              "w": 150,
               "h": 16,
               "fill": "outline",
               "stroke": null,
@@ -6090,9 +5582,9 @@
             {
               "n": "s-artist",
               "t": "FRAME",
-              "x": 76,
+              "x": 116,
               "y": 44,
-              "w": 104,
+              "w": 96,
               "h": 12,
               "fill": "outline",
               "stroke": null,
@@ -6116,25 +5608,25 @@
           "r": 8,
           "ch": [
             {
-              "n": "s-time",
+              "n": "s-art",
               "t": "FRAME",
-              "x": 13,
-              "y": 30,
-              "w": 40,
-              "h": 14,
+              "x": 60,
+              "y": 13,
+              "w": 48,
+              "h": 48,
               "fill": "outline",
               "stroke": null,
               "sw": 0,
-              "r": 7,
+              "r": 8,
               "opacity": 0.5,
               "ch": []
             },
             {
               "n": "s-title",
               "t": "FRAME",
-              "x": 76,
+              "x": 116,
               "y": 18,
-              "w": 168,
+              "w": 150,
               "h": 16,
               "fill": "outline",
               "stroke": null,
@@ -6146,9 +5638,9 @@
             {
               "n": "s-artist",
               "t": "FRAME",
-              "x": 76,
+              "x": 116,
               "y": 44,
-              "w": 104,
+              "w": 96,
               "h": 12,
               "fill": "outline",
               "stroke": null,
@@ -6172,25 +5664,25 @@
           "r": 8,
           "ch": [
             {
-              "n": "s-time",
+              "n": "s-art",
               "t": "FRAME",
-              "x": 13,
-              "y": 30,
-              "w": 40,
-              "h": 14,
+              "x": 60,
+              "y": 13,
+              "w": 48,
+              "h": 48,
               "fill": "outline",
               "stroke": null,
               "sw": 0,
-              "r": 7,
+              "r": 8,
               "opacity": 0.5,
               "ch": []
             },
             {
               "n": "s-title",
               "t": "FRAME",
-              "x": 76,
+              "x": 116,
               "y": 18,
-              "w": 168,
+              "w": 150,
               "h": 16,
               "fill": "outline",
               "stroke": null,
@@ -6202,9 +5694,9 @@
             {
               "n": "s-artist",
               "t": "FRAME",
-              "x": 76,
+              "x": 116,
               "y": 44,
-              "w": 104,
+              "w": 96,
               "h": 12,
               "fill": "outline",
               "stroke": null,
@@ -6228,25 +5720,25 @@
           "r": 8,
           "ch": [
             {
-              "n": "s-time",
+              "n": "s-art",
               "t": "FRAME",
-              "x": 13,
-              "y": 30,
-              "w": 40,
-              "h": 14,
+              "x": 60,
+              "y": 13,
+              "w": 48,
+              "h": 48,
               "fill": "outline",
               "stroke": null,
               "sw": 0,
-              "r": 7,
+              "r": 8,
               "opacity": 0.5,
               "ch": []
             },
             {
               "n": "s-title",
               "t": "FRAME",
-              "x": 76,
+              "x": 116,
               "y": 18,
-              "w": 168,
+              "w": 150,
               "h": 16,
               "fill": "outline",
               "stroke": null,
@@ -6258,9 +5750,9 @@
             {
               "n": "s-artist",
               "t": "FRAME",
-              "x": 76,
+              "x": 116,
               "y": 44,
-              "w": 104,
+              "w": 96,
               "h": 12,
               "fill": "outline",
               "stroke": null,
@@ -6284,25 +5776,25 @@
           "r": 8,
           "ch": [
             {
-              "n": "s-time",
+              "n": "s-art",
               "t": "FRAME",
-              "x": 13,
-              "y": 30,
-              "w": 40,
-              "h": 14,
+              "x": 60,
+              "y": 13,
+              "w": 48,
+              "h": 48,
               "fill": "outline",
               "stroke": null,
               "sw": 0,
-              "r": 7,
+              "r": 8,
               "opacity": 0.5,
               "ch": []
             },
             {
               "n": "s-title",
               "t": "FRAME",
-              "x": 76,
+              "x": 116,
               "y": 18,
-              "w": 168,
+              "w": 150,
               "h": 16,
               "fill": "outline",
               "stroke": null,
@@ -6314,9 +5806,9 @@
             {
               "n": "s-artist",
               "t": "FRAME",
-              "x": 76,
+              "x": 116,
               "y": 44,
-              "w": 104,
+              "w": 96,
               "h": 12,
               "fill": "outline",
               "stroke": null,
@@ -6538,6 +6030,295 @@
                 "lh": 28,
                 "align": "CENTER"
               }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "find-track-sheet",
+      "group": "История эфира",
+      "title": "Найти трек · общий шит",
+      "w": 358,
+      "h": 366,
+      "notes": "One find-track pattern shared by Broadcast History, the player menu and Collection. Collection adds a divider and a destructive row below these four; nothing else differs.",
+      "nodes": [
+        {
+          "n": "Bottom Sheet / Найти трек",
+          "t": "FRAME",
+          "x": 0,
+          "y": 0,
+          "w": 358,
+          "h": 366,
+          "fill": "menuSurface",
+          "stroke": "menuOutline",
+          "sw": 1,
+          "r": 28,
+          "ch": [
+            {
+              "n": "Bottom Sheet / drag handle",
+              "t": "FRAME",
+              "x": 159,
+              "y": 16,
+              "w": 40,
+              "h": 4,
+              "fill": "outline",
+              "stroke": null,
+              "sw": 0,
+              "r": 2,
+              "ch": []
+            },
+            {
+              "n": "Bottom Sheet / title",
+              "t": "TEXT",
+              "x": 24,
+              "y": 40,
+              "w": 300,
+              "h": 32,
+              "fill": "textHeading",
+              "text": {
+                "s": "CRYOGEN",
+                "font": "Medium",
+                "size": 24,
+                "lh": 32,
+                "align": "LEFT"
+              }
+            },
+            {
+              "n": "Bottom Sheet / subtitle",
+              "t": "TEXT",
+              "x": 24,
+              "y": 78,
+              "w": 310,
+              "h": 20,
+              "fill": "textSecondary",
+              "text": {
+                "s": "MUSE",
+                "font": "Regular",
+                "size": 14,
+                "lh": 20,
+                "align": "LEFT"
+              }
+            },
+            {
+              "n": "Sheet row / Spotify",
+              "t": "FRAME",
+              "x": 0,
+              "y": 112,
+              "w": 358,
+              "h": 56,
+              "fill": null,
+              "stroke": null,
+              "sw": 0,
+              "r": 0,
+              "ch": [
+                {
+                  "n": "Sheet / leading icon",
+                  "t": "FRAME",
+                  "x": 16,
+                  "y": 4,
+                  "w": 48,
+                  "h": 48,
+                  "fill": null,
+                  "stroke": null,
+                  "sw": 0,
+                  "r": 24,
+                  "ch": [
+                    {
+                      "n": "Asset / logo/spotify",
+                      "t": "ASSET",
+                      "key": "logo/spotify",
+                      "x": 12,
+                      "y": 12,
+                      "w": 24,
+                      "h": 24,
+                      "tint": "textPrimary",
+                      "slotRadius": 4
+                    }
+                  ]
+                },
+                {
+                  "n": "Sheet / label",
+                  "t": "TEXT",
+                  "x": 76,
+                  "y": 16,
+                  "w": 266,
+                  "h": 24,
+                  "fill": "textPrimary",
+                  "text": {
+                    "s": "Spotify",
+                    "font": "Medium",
+                    "size": 16,
+                    "lh": 22,
+                    "align": "LEFT"
+                  }
+                }
+              ]
+            },
+            {
+              "n": "Sheet row / Apple Music",
+              "t": "FRAME",
+              "x": 0,
+              "y": 170,
+              "w": 358,
+              "h": 56,
+              "fill": null,
+              "stroke": null,
+              "sw": 0,
+              "r": 0,
+              "ch": [
+                {
+                  "n": "Sheet / leading icon",
+                  "t": "FRAME",
+                  "x": 16,
+                  "y": 4,
+                  "w": 48,
+                  "h": 48,
+                  "fill": null,
+                  "stroke": null,
+                  "sw": 0,
+                  "r": 24,
+                  "ch": [
+                    {
+                      "n": "Asset / logo/apple-music",
+                      "t": "ASSET",
+                      "key": "logo/apple-music",
+                      "x": 12,
+                      "y": 12,
+                      "w": 24,
+                      "h": 24,
+                      "tint": "textPrimary",
+                      "slotRadius": 4
+                    }
+                  ]
+                },
+                {
+                  "n": "Sheet / label",
+                  "t": "TEXT",
+                  "x": 76,
+                  "y": 16,
+                  "w": 266,
+                  "h": 24,
+                  "fill": "textPrimary",
+                  "text": {
+                    "s": "Apple Music",
+                    "font": "Medium",
+                    "size": 16,
+                    "lh": 22,
+                    "align": "LEFT"
+                  }
+                }
+              ]
+            },
+            {
+              "n": "Sheet row / YouTube Music",
+              "t": "FRAME",
+              "x": 0,
+              "y": 228,
+              "w": 358,
+              "h": 56,
+              "fill": null,
+              "stroke": null,
+              "sw": 0,
+              "r": 0,
+              "ch": [
+                {
+                  "n": "Sheet / leading icon",
+                  "t": "FRAME",
+                  "x": 16,
+                  "y": 4,
+                  "w": 48,
+                  "h": 48,
+                  "fill": null,
+                  "stroke": null,
+                  "sw": 0,
+                  "r": 24,
+                  "ch": [
+                    {
+                      "n": "Asset / logo/youtube-music",
+                      "t": "ASSET",
+                      "key": "logo/youtube-music",
+                      "x": 12,
+                      "y": 12,
+                      "w": 24,
+                      "h": 24,
+                      "tint": "textPrimary",
+                      "slotRadius": 4
+                    }
+                  ]
+                },
+                {
+                  "n": "Sheet / label",
+                  "t": "TEXT",
+                  "x": 76,
+                  "y": 16,
+                  "w": 266,
+                  "h": 24,
+                  "fill": "textPrimary",
+                  "text": {
+                    "s": "YouTube Music",
+                    "font": "Medium",
+                    "size": 16,
+                    "lh": 22,
+                    "align": "LEFT"
+                  }
+                }
+              ]
+            },
+            {
+              "n": "Sheet row / Яндекс Музыка",
+              "t": "FRAME",
+              "x": 0,
+              "y": 286,
+              "w": 358,
+              "h": 56,
+              "fill": null,
+              "stroke": null,
+              "sw": 0,
+              "r": 0,
+              "ch": [
+                {
+                  "n": "Sheet / leading icon",
+                  "t": "FRAME",
+                  "x": 16,
+                  "y": 4,
+                  "w": 48,
+                  "h": 48,
+                  "fill": null,
+                  "stroke": null,
+                  "sw": 0,
+                  "r": 24,
+                  "ch": [
+                    {
+                      "n": "Asset / logo/yandex-music",
+                      "t": "ASSET",
+                      "key": "logo/yandex-music",
+                      "x": 12,
+                      "y": 12,
+                      "w": 24,
+                      "h": 24,
+                      "tint": "textPrimary",
+                      "slotRadius": 4
+                    }
+                  ]
+                },
+                {
+                  "n": "Sheet / label",
+                  "t": "TEXT",
+                  "x": 76,
+                  "y": 16,
+                  "w": 266,
+                  "h": 24,
+                  "fill": "textPrimary",
+                  "text": {
+                    "s": "Яндекс Музыка",
+                    "font": "Medium",
+                    "size": 16,
+                    "lh": 22,
+                    "align": "LEFT"
+                  }
+                }
+              ]
             }
           ]
         }
@@ -6847,31 +6628,15 @@
                   "r": 24,
                   "ch": [
                     {
-                      "n": "Icon / disc",
-                      "t": "FRAME",
+                      "n": "Asset / logo/spotify",
+                      "t": "ASSET",
+                      "key": "logo/spotify",
                       "x": 12,
                       "y": 12,
                       "w": 24,
                       "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "disc",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 4 A8 8 0 1 0 12.01 4 M12 10.5 A1.5 1.5 0 1 0 12.01 10.5",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
+                      "tint": "textPrimary",
+                      "slotRadius": 4
                     }
                   ]
                 },
@@ -6918,31 +6683,15 @@
                   "r": 24,
                   "ch": [
                     {
-                      "n": "Icon / disc",
-                      "t": "FRAME",
+                      "n": "Asset / logo/apple-music",
+                      "t": "ASSET",
+                      "key": "logo/apple-music",
                       "x": 12,
                       "y": 12,
                       "w": 24,
                       "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "disc",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 4 A8 8 0 1 0 12.01 4 M12 10.5 A1.5 1.5 0 1 0 12.01 10.5",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
+                      "tint": "textPrimary",
+                      "slotRadius": 4
                     }
                   ]
                 },
@@ -6989,31 +6738,15 @@
                   "r": 24,
                   "ch": [
                     {
-                      "n": "Icon / disc",
-                      "t": "FRAME",
+                      "n": "Asset / logo/youtube-music",
+                      "t": "ASSET",
+                      "key": "logo/youtube-music",
                       "x": 12,
                       "y": 12,
                       "w": 24,
                       "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "disc",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 4 A8 8 0 1 0 12.01 4 M12 10.5 A1.5 1.5 0 1 0 12.01 10.5",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
+                      "tint": "textPrimary",
+                      "slotRadius": 4
                     }
                   ]
                 },
@@ -7060,31 +6793,15 @@
                   "r": 24,
                   "ch": [
                     {
-                      "n": "Icon / disc",
-                      "t": "FRAME",
+                      "n": "Asset / logo/yandex-music",
+                      "t": "ASSET",
+                      "key": "logo/yandex-music",
                       "x": 12,
                       "y": 12,
                       "w": 24,
                       "h": 24,
-                      "fill": null,
-                      "stroke": null,
-                      "sw": 0,
-                      "r": 0,
-                      "ch": [
-                        {
-                          "n": "disc",
-                          "t": "VECTOR",
-                          "x": 0,
-                          "y": 0,
-                          "w": 24,
-                          "h": 24,
-                          "path": "M12 4 A8 8 0 1 0 12.01 4 M12 10.5 A1.5 1.5 0 1 0 12.01 10.5",
-                          "fill": null,
-                          "stroke": "primary",
-                          "sw": 1.8,
-                          "cap": "ROUND"
-                        }
-                      ]
+                      "tint": "textPrimary",
+                      "slotRadius": 4
                     }
                   ]
                 },
@@ -7971,7 +7688,7 @@
       "group": "Аккаунт",
       "title": "Профиль · гость",
       "w": 390,
-      "h": 660,
+      "h": 700,
       "notes": "Guest is a first-class state, not a degraded one. Nothing on this screen blocks playback.",
       "nodes": [
         {
@@ -8065,7 +7782,7 @@
           "x": 16,
           "y": 96,
           "w": 358,
-          "h": 196,
+          "h": 226,
           "fill": "surface",
           "stroke": "outline",
           "sw": 1,
@@ -8075,7 +7792,7 @@
               "n": "Avatar",
               "t": "FRAME",
               "x": 143,
-              "y": 28,
+              "y": 32,
               "w": 72,
               "h": 72,
               "fill": "surfaceContainer",
@@ -8084,7 +7801,7 @@
               "r": 36,
               "ch": [
                 {
-                  "n": "Icon / question",
+                  "n": "Icon / person",
                   "t": "FRAME",
                   "x": 24,
                   "y": 24,
@@ -8096,13 +7813,13 @@
                   "r": 0,
                   "ch": [
                     {
-                      "n": "question",
+                      "n": "person",
                       "t": "VECTOR",
                       "x": 0,
                       "y": 0,
                       "w": 24,
                       "h": 24,
-                      "path": "M12 3 A9 9 0 1 0 12.01 3 M9.2 9.2 A3 3 0 1 1 12 13 V15 M12 18 V18.1",
+                      "path": "M12 4 A4 4 0 1 0 12.01 4 M4.5 20.5 A7.5 7.5 0 0 1 19.5 20.5",
                       "fill": null,
                       "stroke": "textSecondary",
                       "sw": 1.8,
@@ -8116,7 +7833,7 @@
               "n": "h",
               "t": "TEXT",
               "x": 0,
-              "y": 118,
+              "y": 128,
               "w": 358,
               "h": 32,
               "fill": "textHeading",
@@ -8132,7 +7849,7 @@
               "n": "b",
               "t": "TEXT",
               "x": 0,
-              "y": 156,
+              "y": 172,
               "w": 358,
               "h": 22,
               "fill": "textSecondary",
@@ -8150,7 +7867,7 @@
           "n": "Button",
           "t": "FRAME",
           "x": 16,
-          "y": 316,
+          "y": 346,
           "w": 358,
           "h": 52,
           "fill": "primary",
@@ -8180,7 +7897,7 @@
           "n": "Button",
           "t": "FRAME",
           "x": 16,
-          "y": 384,
+          "y": 414,
           "w": 358,
           "h": 52,
           "fill": "buttonOutlineContainer",
@@ -8210,7 +7927,7 @@
           "n": "Section / Что даёт аккаунт",
           "t": "TEXT",
           "x": 16,
-          "y": 464,
+          "y": 494,
           "w": 358,
           "h": 20,
           "fill": "textSecondary",
@@ -8226,7 +7943,7 @@
           "n": "Row / Синхронизация коллекции",
           "t": "FRAME",
           "x": 16,
-          "y": 492,
+          "y": 522,
           "w": 358,
           "h": 64,
           "fill": "surface",
@@ -8235,7 +7952,7 @@
           "r": 12,
           "ch": [
             {
-              "n": "Icon / disc",
+              "n": "Icon / sync",
               "t": "FRAME",
               "x": 16,
               "y": 20,
@@ -8247,13 +7964,13 @@
               "r": 0,
               "ch": [
                 {
-                  "n": "disc",
+                  "n": "sync",
                   "t": "VECTOR",
                   "x": 0,
                   "y": 0,
                   "w": 24,
                   "h": 24,
-                  "path": "M12 4 A8 8 0 1 0 12.01 4 M12 10.5 A1.5 1.5 0 1 0 12.01 10.5",
+                  "path": "M4.5 12 A7.5 7.5 0 0 1 17.6 7.1 M18 3.5 V7.5 H14 M19.5 12 A7.5 7.5 0 0 1 6.4 16.9 M6 20.5 V16.5 H10",
                   "fill": null,
                   "stroke": "textSecondary",
                   "sw": 1.8,
@@ -8266,7 +7983,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -8283,7 +8000,7 @@
           "n": "Row / Восстановление коллекции",
           "t": "FRAME",
           "x": 16,
-          "y": 564,
+          "y": 594,
           "w": 358,
           "h": 64,
           "fill": "surface",
@@ -8323,7 +8040,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -8536,7 +8253,7 @@
           "r": 12,
           "ch": [
             {
-              "n": "Icon / download",
+              "n": "Icon / sync",
               "t": "FRAME",
               "x": 16,
               "y": 24,
@@ -8548,13 +8265,13 @@
               "r": 0,
               "ch": [
                 {
-                  "n": "download",
+                  "n": "sync",
                   "t": "VECTOR",
                   "x": 0,
                   "y": 0,
                   "w": 24,
                   "h": 24,
-                  "path": "M12 3 V15 M7 10.5 L12 15.5 L17 10.5 M4 20 H20",
+                  "path": "M4.5 12 A7.5 7.5 0 0 1 17.6 7.1 M18 3.5 V7.5 H14 M19.5 12 A7.5 7.5 0 0 1 6.4 16.9 M6 20.5 V16.5 H10",
                   "fill": null,
                   "stroke": "textSecondary",
                   "sw": 1.8,
@@ -8567,7 +8284,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 14,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -8583,7 +8300,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 38,
-              "w": 254,
+              "w": 258,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -8640,7 +8357,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 14,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -8656,7 +8373,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 38,
-              "w": 254,
+              "w": 258,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -8743,7 +8460,7 @@
             {
               "n": "chevron",
               "t": "FRAME",
-              "x": 326,
+              "x": 318,
               "y": 20,
               "w": 24,
               "h": 24,
@@ -8782,7 +8499,7 @@
           "r": 12,
           "ch": [
             {
-              "n": "Icon / back",
+              "n": "Icon / logout",
               "t": "FRAME",
               "x": 16,
               "y": 20,
@@ -8794,13 +8511,13 @@
               "r": 0,
               "ch": [
                 {
-                  "n": "back",
+                  "n": "logout",
                   "t": "VECTOR",
                   "x": 0,
                   "y": 0,
                   "w": 24,
                   "h": 24,
-                  "path": "M15 4 L7 12 L15 20",
+                  "path": "M14 4 H19 V20 H14 M10 8 L6 12 L10 16 M6 12 H16",
                   "fill": null,
                   "stroke": "error",
                   "sw": 1.8,
@@ -8813,7 +8530,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "error",
               "text": {
@@ -8950,7 +8667,7 @@
           "r": 12,
           "ch": [
             {
-              "n": "Icon / question",
+              "n": "Icon / person",
               "t": "FRAME",
               "x": 16,
               "y": 20,
@@ -8962,13 +8679,13 @@
               "r": 0,
               "ch": [
                 {
-                  "n": "question",
+                  "n": "person",
                   "t": "VECTOR",
                   "x": 0,
                   "y": 0,
                   "w": 24,
                   "h": 24,
-                  "path": "M12 3 A9 9 0 1 0 12.01 3 M9.2 9.2 A3 3 0 1 1 12 13 V15 M12 18 V18.1",
+                  "path": "M12 4 A4 4 0 1 0 12.01 4 M4.5 20.5 A7.5 7.5 0 0 1 19.5 20.5",
                   "fill": null,
                   "stroke": "textSecondary",
                   "sw": 1.8,
@@ -8981,7 +8698,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 176,
+              "w": 136,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -8997,7 +8714,7 @@
               "t": "TEXT",
               "x": 200,
               "y": 22,
-              "w": 142,
+              "w": 106,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -9011,7 +8728,7 @@
             {
               "n": "chevron",
               "t": "FRAME",
-              "x": 326,
+              "x": 318,
               "y": 20,
               "w": 24,
               "h": 24,
@@ -9066,7 +8783,7 @@
           "r": 12,
           "ch": [
             {
-              "n": "Icon / layout",
+              "n": "Icon / theme",
               "t": "FRAME",
               "x": 16,
               "y": 20,
@@ -9078,13 +8795,13 @@
               "r": 0,
               "ch": [
                 {
-                  "n": "layout",
+                  "n": "theme",
                   "t": "VECTOR",
                   "x": 0,
                   "y": 0,
                   "w": 24,
                   "h": 24,
-                  "path": "M4 5 H20 V19 H4 Z M4 10 H20 M10 10 V19",
+                  "path": "M12 3 A9 9 0 1 0 12.01 3 M12 3 V21 M12 6 A6 6 0 0 1 12 18",
                   "fill": null,
                   "stroke": "textSecondary",
                   "sw": 1.8,
@@ -9097,7 +8814,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 176,
+              "w": 136,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -9113,7 +8830,7 @@
               "t": "TEXT",
               "x": 200,
               "y": 22,
-              "w": 142,
+              "w": 106,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -9127,7 +8844,7 @@
             {
               "n": "chevron",
               "t": "FRAME",
-              "x": 326,
+              "x": 318,
               "y": 20,
               "w": 24,
               "h": 24,
@@ -9182,7 +8899,7 @@
           "r": 12,
           "ch": [
             {
-              "n": "Icon / playNote",
+              "n": "Icon / equalizer",
               "t": "FRAME",
               "x": 16,
               "y": 20,
@@ -9194,13 +8911,13 @@
               "r": 0,
               "ch": [
                 {
-                  "n": "playNote",
+                  "n": "equalizer",
                   "t": "VECTOR",
                   "x": 0,
                   "y": 0,
                   "w": 24,
                   "h": 24,
-                  "path": "M9 18 A2.5 2.5 0 1 0 9 13 A2.5 2.5 0 1 0 9 18 M11.5 15.5 V4 L20 6 V17 M17.5 19.5 A2.5 2.5 0 1 0 17.5 14.5 A2.5 2.5 0 1 0 17.5 19.5",
+                  "path": "M5 20 V12 M10 20 V4 M15 20 V15 M20 20 V8",
                   "fill": null,
                   "stroke": "textSecondary",
                   "sw": 1.8,
@@ -9213,7 +8930,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 176,
+              "w": 136,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -9229,7 +8946,7 @@
               "t": "TEXT",
               "x": 200,
               "y": 22,
-              "w": 142,
+              "w": 106,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -9243,7 +8960,7 @@
             {
               "n": "chevron",
               "t": "FRAME",
-              "x": 326,
+              "x": 318,
               "y": 20,
               "w": 24,
               "h": 24,
@@ -9313,7 +9030,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 176,
+              "w": 136,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -9329,7 +9046,7 @@
               "t": "TEXT",
               "x": 200,
               "y": 22,
-              "w": 142,
+              "w": 106,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -9343,7 +9060,7 @@
             {
               "n": "chevron",
               "t": "FRAME",
-              "x": 326,
+              "x": 318,
               "y": 20,
               "w": 24,
               "h": 24,
@@ -9398,38 +9115,22 @@
           "r": 12,
           "ch": [
             {
-              "n": "Icon / disc",
-              "t": "FRAME",
+              "n": "Asset / logo/lastfm",
+              "t": "ASSET",
+              "key": "logo/lastfm",
               "x": 16,
               "y": 20,
               "w": 24,
               "h": 24,
-              "fill": null,
-              "stroke": null,
-              "sw": 0,
-              "r": 0,
-              "ch": [
-                {
-                  "n": "disc",
-                  "t": "VECTOR",
-                  "x": 0,
-                  "y": 0,
-                  "w": 24,
-                  "h": 24,
-                  "path": "M12 4 A8 8 0 1 0 12.01 4 M12 10.5 A1.5 1.5 0 1 0 12.01 10.5",
-                  "fill": null,
-                  "stroke": "textSecondary",
-                  "sw": 1.8,
-                  "cap": "ROUND"
-                }
-              ]
+              "tint": "textSecondary",
+              "slotRadius": 4
             },
             {
               "n": "label",
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 176,
+              "w": 136,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -9445,7 +9146,7 @@
               "t": "TEXT",
               "x": 200,
               "y": 22,
-              "w": 142,
+              "w": 106,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -9459,7 +9160,7 @@
             {
               "n": "chevron",
               "t": "FRAME",
-              "x": 326,
+              "x": 318,
               "y": 20,
               "w": 24,
               "h": 24,
@@ -9514,7 +9215,7 @@
           "r": 12,
           "ch": [
             {
-              "n": "Icon / alert",
+              "n": "Icon / message",
               "t": "FRAME",
               "x": 16,
               "y": 20,
@@ -9526,13 +9227,13 @@
               "r": 0,
               "ch": [
                 {
-                  "n": "alert",
+                  "n": "message",
                   "t": "VECTOR",
                   "x": 0,
                   "y": 0,
                   "w": 24,
                   "h": 24,
-                  "path": "M12 3 A9 9 0 1 0 12.01 3 M12 7 V13 M12 16.5 V16.6",
+                  "path": "M4 5 H20 V16 H12 L7 20.5 V16 H4 Z M8 10.5 H16",
                   "fill": null,
                   "stroke": "textSecondary",
                   "sw": 1.8,
@@ -9559,7 +9260,7 @@
             {
               "n": "chevron",
               "t": "FRAME",
-              "x": 326,
+              "x": 318,
               "y": 20,
               "w": 24,
               "h": 24,
@@ -9598,7 +9299,7 @@
           "r": 12,
           "ch": [
             {
-              "n": "Icon / doc",
+              "n": "Icon / info",
               "t": "FRAME",
               "x": 16,
               "y": 20,
@@ -9610,13 +9311,13 @@
               "r": 0,
               "ch": [
                 {
-                  "n": "doc",
+                  "n": "info",
                   "t": "VECTOR",
                   "x": 0,
                   "y": 0,
                   "w": 24,
                   "h": 24,
-                  "path": "M6 3 H14 L18 7 V21 H6 Z M14 3 V7 H18 M9 12 H15 M9 16 H15",
+                  "path": "M12 3 A9 9 0 1 0 12.01 3 M12 11 V17 M12 7.4 V7.5",
                   "fill": null,
                   "stroke": "textSecondary",
                   "sw": 1.8,
@@ -9629,7 +9330,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 176,
+              "w": 136,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -9645,7 +9346,7 @@
               "t": "TEXT",
               "x": 200,
               "y": 22,
-              "w": 142,
+              "w": 106,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -9659,7 +9360,7 @@
             {
               "n": "chevron",
               "t": "FRAME",
-              "x": 326,
+              "x": 318,
               "y": 20,
               "w": 24,
               "h": 24,
@@ -9924,7 +9625,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -9981,7 +9682,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -10221,7 +9922,7 @@
           "r": 12,
           "ch": [
             {
-              "n": "Icon / download",
+              "n": "Icon / sync",
               "t": "FRAME",
               "x": 16,
               "y": 24,
@@ -10233,13 +9934,13 @@
               "r": 0,
               "ch": [
                 {
-                  "n": "download",
+                  "n": "sync",
                   "t": "VECTOR",
                   "x": 0,
                   "y": 0,
                   "w": 24,
                   "h": 24,
-                  "path": "M12 3 V15 M7 10.5 L12 15.5 L17 10.5 M4 20 H20",
+                  "path": "M4.5 12 A7.5 7.5 0 0 1 17.6 7.1 M18 3.5 V7.5 H14 M19.5 12 A7.5 7.5 0 0 1 6.4 16.9 M6 20.5 V16.5 H10",
                   "fill": null,
                   "stroke": "textSecondary",
                   "sw": 1.8,
@@ -10252,7 +9953,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 14,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -10268,7 +9969,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 38,
-              "w": 254,
+              "w": 258,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -10325,7 +10026,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 14,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -10341,7 +10042,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 38,
-              "w": 254,
+              "w": 258,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -10398,7 +10099,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 14,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -10414,7 +10115,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 38,
-              "w": 254,
+              "w": 258,
               "h": 20,
               "fill": "textSecondary",
               "text": {
@@ -10456,7 +10157,7 @@
           "r": 12,
           "ch": [
             {
-              "n": "Icon / download",
+              "n": "Icon / sync",
               "t": "FRAME",
               "x": 16,
               "y": 20,
@@ -10468,13 +10169,13 @@
               "r": 0,
               "ch": [
                 {
-                  "n": "download",
+                  "n": "sync",
                   "t": "VECTOR",
                   "x": 0,
                   "y": 0,
                   "w": 24,
                   "h": 24,
-                  "path": "M12 3 V15 M7 10.5 L12 15.5 L17 10.5 M4 20 H20",
+                  "path": "M4.5 12 A7.5 7.5 0 0 1 17.6 7.1 M18 3.5 V7.5 H14 M19.5 12 A7.5 7.5 0 0 1 6.4 16.9 M6 20.5 V16.5 H10",
                   "fill": null,
                   "stroke": "textSecondary",
                   "sw": 1.8,
@@ -10487,7 +10188,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "textPrimary",
               "text": {
@@ -10544,7 +10245,7 @@
               "t": "TEXT",
               "x": 56,
               "y": 21,
-              "w": 286,
+              "w": 258,
               "h": 22,
               "fill": "error",
               "text": {
@@ -10564,7 +10265,7 @@
       "group": "Настройки",
       "title": "Настройки · Last.fm",
       "w": 390,
-      "h": 560,
+      "h": 570,
       "notes": "Both connection states on one frame for review. Authorisation goes through Last.fm's own web flow, so no credentials are entered in the app.",
       "nodes": [
         {
@@ -10658,17 +10359,28 @@
           "x": 16,
           "y": 92,
           "w": 358,
-          "h": 156,
+          "h": 172,
           "fill": "surface",
           "stroke": "outline",
           "sw": 1,
           "r": 24,
           "ch": [
             {
+              "n": "Asset / logo/lastfm",
+              "t": "ASSET",
+              "key": "logo/lastfm",
+              "x": 16,
+              "y": 18,
+              "w": 24,
+              "h": 24,
+              "tint": "textSecondary",
+              "slotRadius": 4
+            },
+            {
               "n": "h",
               "t": "TEXT",
-              "x": 16,
-              "y": 20,
+              "x": 48,
+              "y": 16,
               "w": 240,
               "h": 28,
               "fill": "textPrimary",
@@ -10684,7 +10396,7 @@
               "n": "b0",
               "t": "TEXT",
               "x": 16,
-              "y": 54,
+              "y": 56,
               "w": 326,
               "h": 22,
               "fill": "textSecondary",
@@ -10700,7 +10412,7 @@
               "n": "b1",
               "t": "TEXT",
               "x": 16,
-              "y": 76,
+              "y": 78,
               "w": 326,
               "h": 22,
               "fill": "textSecondary",
@@ -10716,7 +10428,7 @@
               "n": "Button / connect",
               "t": "FRAME",
               "x": 16,
-              "y": 108,
+              "y": 112,
               "w": 326,
               "h": 44,
               "fill": "primary",
@@ -10748,19 +10460,30 @@
           "n": "Connected",
           "t": "FRAME",
           "x": 16,
-          "y": 272,
+          "y": 288,
           "w": 358,
-          "h": 156,
+          "h": 172,
           "fill": "surface",
           "stroke": "outline",
           "sw": 1,
           "r": 24,
           "ch": [
             {
+              "n": "Asset / logo/lastfm",
+              "t": "ASSET",
+              "key": "logo/lastfm",
+              "x": 16,
+              "y": 18,
+              "w": 24,
+              "h": 24,
+              "tint": "primary",
+              "slotRadius": 4
+            },
+            {
               "n": "h",
               "t": "TEXT",
-              "x": 16,
-              "y": 20,
+              "x": 48,
+              "y": 16,
               "w": 240,
               "h": 28,
               "fill": "textPrimary",
@@ -10776,7 +10499,7 @@
               "n": "Icon / check",
               "t": "FRAME",
               "x": 318,
-              "y": 22,
+              "y": 18,
               "w": 24,
               "h": 24,
               "fill": null,
@@ -10803,7 +10526,7 @@
               "n": "b0",
               "t": "TEXT",
               "x": 16,
-              "y": 54,
+              "y": 56,
               "w": 326,
               "h": 22,
               "fill": "textSecondary",
@@ -10819,7 +10542,7 @@
               "n": "b1",
               "t": "TEXT",
               "x": 16,
-              "y": 76,
+              "y": 78,
               "w": 326,
               "h": 22,
               "fill": "textSecondary",
@@ -10835,7 +10558,7 @@
               "n": "Button / disconnect",
               "t": "FRAME",
               "x": 16,
-              "y": 108,
+              "y": 112,
               "w": 326,
               "h": 44,
               "fill": "buttonOutlineContainer",
@@ -10867,7 +10590,7 @@
           "n": "note0",
           "t": "TEXT",
           "x": 16,
-          "y": 456,
+          "y": 488,
           "w": 358,
           "h": 20,
           "fill": "textSecondary",
@@ -10883,7 +10606,7 @@
           "n": "note1",
           "t": "TEXT",
           "x": 16,
-          "y": 478,
+          "y": 510,
           "w": 358,
           "h": 20,
           "fill": "textSecondary",

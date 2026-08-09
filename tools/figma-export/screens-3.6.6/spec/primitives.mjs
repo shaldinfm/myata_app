@@ -41,6 +41,19 @@ export const E = (n, o = {}) => ({
   fill: o.fill ?? null, stroke: o.stroke ?? null, sw: o.sw ?? (o.stroke ? 1 : 0)
 });
 
+/* A reference to a real node elsewhere in the Figma file - a brand mark or a
+ * canonical control. The plugin clones that node and retints it; nothing about
+ * the artwork is authored here. See spec/assets.json. */
+export const A = (key, o = {}) => ({
+  n: o.n || ("Asset / " + key), t: "ASSET", key,
+  x: o.x || 0, y: o.y || 0, w: o.w ?? 24, h: o.h ?? 24,
+  tint: o.tint ?? "textSecondary",
+  // Shape of the placeholder slot in the HTML preview only. The plugin clones
+  // the real node and ignores this. Set it where the container geometry is a
+  // known canonical fact and only the glyph inside is unknown.
+  slotRadius: o.slotRadius ?? 4
+});
+
 /* ---------- icons ----------
  * Authored here as plain 24x24 geometry. The canonical icon set is artwork and
  * is deliberately not copied; these read correctly at size and are meant to be
@@ -61,7 +74,15 @@ export const ICON = {
   inbox:     "M3 13 H8 L10 16 H14 L16 13 H21 M3 13 L5.5 5 H18.5 L21 13 V19 H3 Z",
   disc:      "M12 4 A8 8 0 1 0 12.01 4 M12 10.5 A1.5 1.5 0 1 0 12.01 10.5",
   doc:       "M6 3 H14 L18 7 V21 H6 Z M14 3 V7 H18 M9 12 H15 M9 16 H15",
-  timerOff:  "M12 3 A9 9 0 1 0 12.01 3 M6 6 L18 18"
+  timerOff:  "M12 3 A9 9 0 1 0 12.01 3 M6 6 L18 18",
+  // semantic replacements for the generic circle, per the visual review
+  person:    "M12 4 A4 4 0 1 0 12.01 4 M4.5 20.5 A7.5 7.5 0 0 1 19.5 20.5",
+  theme:     "M12 3 A9 9 0 1 0 12.01 3 M12 3 V21 M12 6 A6 6 0 0 1 12 18",
+  equalizer: "M5 20 V12 M10 20 V4 M15 20 V15 M20 20 V8",
+  message:   "M4 5 H20 V16 H12 L7 20.5 V16 H4 Z M8 10.5 H16",
+  info:      "M12 3 A9 9 0 1 0 12.01 3 M12 11 V17 M12 7.4 V7.5",
+  sync:      "M4.5 12 A7.5 7.5 0 0 1 17.6 7.1 M18 3.5 V7.5 H14 M19.5 12 A7.5 7.5 0 0 1 6.4 16.9 M6 20.5 V16.5 H10",
+  logout:    "M14 4 H19 V20 H14 M10 8 L6 12 L10 16 M6 12 H16"
 };
 
 export const icon = (name, o = {}) =>
@@ -126,8 +147,11 @@ export function sheetShell(name, title, h, ch, o = {}) {
 
 /* 'Sheet row / …', 358x56. Icon 48x48 at (16,+4) r24, label at x=76 Medium/16/22. */
 export function sheetRow(label, o = {}) {
+  const leading = o.asset
+    ? A(o.asset, { x: 12, y: 12, w: 24, h: 24, tint: o.iconColor || "textPrimary" })
+    : icon(o.ic || "disc", { x: 12, y: 12, color: o.iconColor || "primary" });
   const ch = [
-    F("Sheet / leading icon", { x: 16, y: 4, w: 48, h: 48, r: 24 }, [icon(o.ic || "disc", { x: 12, y: 12, color: o.iconColor || "primary" })]),
+    F("Sheet / leading icon", { x: 16, y: 4, w: 48, h: 48, r: 24 }, [leading]),
     T("Sheet / label", label, { x: 76, y: 16, w: o.trailing ? 180 : 266, h: 24, ty: TYPE.sheetRow, fill: o.labelColor || "textPrimary" })
   ];
   if (o.trailing)
@@ -180,16 +204,23 @@ export const card = (n, o, ch) =>
 
 /* 'History Item', 324x74 r8 inside the PLAYER card. Promoted to full content
  * width here because the standalone screen has no outer card to sit in.
- * Internal offsets are unchanged: time x=13, text x=116, both baselines as measured. */
+ *
+ * The canonical row leaves a 64px gap between the time column (ends at +39) and
+ * the text column (starts at +103) with no child in it - that gap is the album
+ * art slot, and a 48px thumbnail centred in it lands the text back on the
+ * canonical x. The 48x48 r8 thumbnail geometry is the mini player's.
+ *
+ * One trailing action only: the canonical 'find track' control cloned from the
+ * Collection track item, so History and Collection share a single pattern. */
+export const HISTORY_ART = { x: 60, y: 13, w: 48, h: 48, r: 8 };
+
 export function historyItem(o) {
   return F("History Item / " + o.title, { x: MARGIN, y: o.y, w: CONTENT_W, h: 74, r: 8, stroke: "outline" }, [
     T("time", o.time, { x: 13, y: 27, w: 45, h: 20, ty: TYPE.bodySecondary, fill: "textSecondary" }),
-    T("title", o.title, { x: 76, y: 12, w: 200, h: 28, ty: TYPE.historyTitle, fill: "textPrimary" }),
-    T("artist", o.artist, { x: 76, y: 40, w: 200, h: 20, ty: TYPE.bodySecondary, fill: "textSecondary" }),
-    F("Container", { x: 293, y: 25, w: 52, h: 24 }, [
-      F("Button / find", { x: 0, y: 0, w: 24, h: 24 }, [icon("disc", { color: "primary" })]),
-      F("Button / save", { x: 28, y: 0, w: 24, h: 24 }, [icon("download", { color: "primary" })])
-    ])
+    F("Album art", { ...HISTORY_ART, fill: "surfaceContainer" }),
+    T("title", o.title, { x: 116, y: 12, w: 181, h: 28, ty: TYPE.historyTitle, fill: "textPrimary" }),
+    T("artist", o.artist, { x: 116, y: 40, w: 181, h: 20, ty: TYPE.bodySecondary, fill: "textSecondary" }),
+    A("control/find-track", { n: "Button / find track", x: 305, y: 17, w: 40, h: 40, tint: "primary", slotRadius: 20 })
   ]);
 }
 

@@ -28,6 +28,19 @@ function node(n, theme) {
     return `<div class="t" style="${st.join(";")}" title="${esc(n.n)}">${esc(n.text.s)}</div>`;
   }
 
+  if (n.t === "ASSET") {
+    // Never drawn. The preview shows a labelled slot; the plugin clones the real
+    // node. An approximation here would be exactly what the review rejected.
+    const a = spec.assets[n.key];
+    const pending = a.status === "PENDING_OWNER";
+    st.push(`border:1px dashed ${pending ? col("error", theme) : col(n.tint, theme)}`);
+    st.push(`color:${pending ? col("error", theme) : col(n.tint, theme)}`);
+    st.push(`border-radius:${px(n.slotRadius ?? 4)}`, "font-size:6px", "line-height:1.1", "overflow:hidden",
+            "display:flex", "align-items:center", "justify-content:center", "text-align:center", "opacity:.9");
+    const short = n.key.replace(/^(logo|control)\//, "");
+    return `<div class="f" style="${st.join(";")}" title="${esc(n.key)} — ${esc(a.status)}">${esc(short)}</div>`;
+  }
+
   if (n.t === "VECTOR") {
     const s = col(n.stroke, theme), f = col(n.fill, theme);
     return `<svg class="v" style="${st.join(";")}" viewBox="0 0 24 24" fill="none">` +
@@ -90,6 +103,9 @@ const html = `<!doctype html><html lang="ru"><head><meta charset="utf-8">
 <p class="lead">${esc(spec.status)} Generated from <code>spec.json</code>; both themes come from one node tree with the token table swapped.</p>
 <div class="warn"><strong>Muller is not embedded here.</strong> Unless Muller is installed locally this page falls back to a
 system face, so letterforms and text widths will differ from Figma. Colour, layout and hierarchy are accurate.</div>
+<div class="warn"><strong>Dashed boxes are asset slots, not artwork.</strong> Brand marks are never drawn here — the plugin clones
+the real node out of the Figma file. A slot outlined in <em>red</em> has no node yet and needs one supplied by the owner:
+${Object.keys(spec.assets).filter((k) => spec.assets[k].status === "PENDING_OWNER").map((k) => `<code>${esc(k)}</code>`).join(", ") || "none"}.</div>
 ${body}
 </body></html>`;
 

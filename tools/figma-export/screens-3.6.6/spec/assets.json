@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "1.0.0",
+  "purpose": "Brand marks and canonical controls are REFERENCED, never redrawn. The plugin clones the node id listed here out of the open file and retints it; it never embeds path data for a logo. Where no node exists, the slot stays PENDING_OWNER and the plugin draws an empty, clearly-named placeholder instead of an approximation.",
+  "retint": "A cloned asset has every solid fill and stroke in its subtree replaced with the `tint` token from the spec node, which is what makes it monochrome. Geometry is never modified beyond a uniform resize.",
+  "assets": {
+    "logo/spotify": {
+      "status": "CANONICAL_NODE",
+      "darkNodeId": "2444:18629",
+      "lightNodeId": "2424:733",
+      "source": "ABOUT US > Main > Section 3: Social Media > Container > Spotify > Container > Vector",
+      "nativeSize": [48, 48],
+      "note": "Real Spotify mark, already in the file and already used on the About screen."
+    },
+    "logo/yandex-music": {
+      "status": "CANONICAL_NODE",
+      "darkNodeId": "2444:18647",
+      "lightNodeId": "2420:138",
+      "source": "ABOUT US > Main > Section 3: Social Media > Container > ЯМузыка > Container > Vector",
+      "nativeSize": [48, 48],
+      "note": "Real Яндекс Музыка mark."
+    },
+    "logo/youtube-music": {
+      "status": "CANONICAL_NODE_APPROXIMATE",
+      "darkNodeId": "2444:18638",
+      "lightNodeId": "2424:753",
+      "source": "ABOUT US > Main > Section 3: Social Media > Container > YouTube > Container > Social Icons",
+      "nativeSize": [48, 48],
+      "note": "This is the YouTube mark, not the YouTube Music mark - they are different logos. Used here because it is the closest authentic asset in the file. NEEDS OWNER CONFIRMATION: either accept the YouTube mark for this row, or supply the YouTube Music mark and move this entry to CANONICAL_NODE."
+    },
+    "logo/apple-music": {
+      "status": "PENDING_OWNER",
+      "darkNodeId": null,
+      "lightNodeId": null,
+      "source": null,
+      "nativeSize": [48, 48],
+      "note": "No Apple Music mark exists anywhere in the Figma file. Not drawn, not downloaded. The owner needs to place the mark in the file and put its node ids here."
+    },
+    "logo/lastfm": {
+      "status": "PENDING_OWNER",
+      "darkNodeId": null,
+      "lightNodeId": null,
+      "source": null,
+      "nativeSize": [48, 48],
+      "note": "No Last.fm mark exists anywhere in the Figma file. Not drawn, not downloaded. Needed by the Settings row and the Last.fm screen."
+    },
+    "control/find-track": {
+      "status": "CANONICAL_NODE",
+      "darkNodeId": "2444:18396",
+      "lightNodeId": "2409:31570",
+      "source": "COLLECTION > Main > Collection List > Track Item 1 > Container > Button",
+      "nativeSize": [40, 40],
+      "note": "The canonical per-track 'find track' control: 40x40, 1px primary stroke, radius 9999, primary glyph inside. Reused verbatim by Broadcast History so there is one action pattern, not two."
+    }
+  },
+  "howToSupply": [
+    "1. Place the mark in the Figma file, on either canonical page or the UI KIT page.",
+    "2. Right-click the node > Copy link, and take the node-id from the URL.",
+    "3. Put the dark-page and light-page ids in this file and set status to CANONICAL_NODE.",
+    "4. Re-run build-spec.mjs and create-plugin/build-plugin.mjs.",
+    "Until then the plugin creates an empty named slot and lists the asset as BLOCKED in its dry run."
+  ]
+}

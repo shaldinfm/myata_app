@@ -13,12 +13,19 @@ import { TOKENS, TYPE } from "./spec/tokens.mjs";
 import { SCREENS } from "./spec/screens.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+const ASSETS = JSON.parse(fs.readFileSync(path.join(here, "spec", "assets.json"), "utf8"));
 
 /* Fail loudly rather than silently shipping a screen with a bad colour or a
  * node that falls outside its parent. */
 const errors = [];
+const assetUse = {};
 function check(node, parent, screen, trail) {
   const where = `${screen.id} :: ${trail}`;
+  if (node.t === "ASSET") {
+    if (!ASSETS.assets[node.key]) errors.push(`${where}: unknown asset key '${node.key}' - add it to spec/assets.json`);
+    else (assetUse[node.key] = assetUse[node.key] || []).push(screen.id);
+    if (node.tint && !TOKENS[node.tint]) errors.push(`${where}: unknown tint token '${node.tint}'`);
+  }
   for (const key of ["fill", "stroke"]) {
     const v = node[key];
     if (v == null) continue;
@@ -61,6 +68,7 @@ const spec = {
   figmaPages: { dark: "3.6.6 PROPOSALS — DARK", light: "3.6.6 PROPOSALS - LIGHT" },
   tokens: TOKENS,
   type: TYPE,
+  assets: ASSETS.assets,
   screens: SCREENS.map((s) => ({ id: s.id, group: s.group, title: s.title, w: s.w, h: s.h, notes: s.notes, nodes: s.nodes }))
 };
 
@@ -73,3 +81,12 @@ let count = 0;
 
 console.log(`spec.json written: ${SCREENS.length} screens x 2 themes = ${SCREENS.length * 2} frames, ${count} nodes per theme.`);
 for (const g of Object.keys(byGroup)) console.log(`  ${g}: ${byGroup[g].length} - ${byGroup[g].join(", ")}`);
+
+console.log("\nassets referenced:");
+for (const key of Object.keys(assetUse)) {
+  const a = ASSETS.assets[key];
+  const n = assetUse[key].length;
+  console.log(`  ${a.status === "PENDING_OWNER" ? "BLOCKED " : a.status === "CANONICAL_NODE_APPROXIMATE" ? "CONFIRM " : "ok      "} ${key.padEnd(22)} ${n} use${n > 1 ? "s" : " "}  ${a.status}`);
+}
+const blocked = Object.keys(assetUse).filter((k) => ASSETS.assets[k].status === "PENDING_OWNER");
+if (blocked.length) console.log(`\n${blocked.length} asset(s) need owner-supplied Figma nodes: ${blocked.join(", ")}`);

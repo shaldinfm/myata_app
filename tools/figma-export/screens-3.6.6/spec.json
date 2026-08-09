@@ -452,6 +452,124 @@
       "family": "avatar/m3"
     }
   },
+  "canonicalBaseline": [
+    {
+      "theme": "dark",
+      "pageName": "CURRENT ANDROID UI — DARK",
+      "pageId": "2436:531",
+      "exportedAt": "2026-08-09T10:21:05.941Z",
+      "topLevel": [
+        {
+          "id": "2436:532",
+          "name": "UI KIT / Radio Myata Dark",
+          "type": "FRAME"
+        },
+        {
+          "id": "2444:18707",
+          "name": "Menu / Плеер",
+          "type": "FRAME"
+        },
+        {
+          "id": "2444:18729",
+          "name": "Bottom Sheet / Найти трек в музыкальном сервисе",
+          "type": "FRAME"
+        },
+        {
+          "id": "2444:10350",
+          "name": "HOME_dark",
+          "type": "FRAME"
+        },
+        {
+          "id": "2444:18225",
+          "name": "PLAYER_dark",
+          "type": "FRAME"
+        },
+        {
+          "id": "2444:18376",
+          "name": "COLLECTION_dark",
+          "type": "FRAME"
+        },
+        {
+          "id": "2444:18479",
+          "name": "COLLECTION pusto_dark",
+          "type": "FRAME"
+        },
+        {
+          "id": "2444:18567",
+          "name": "ABOUT US_dark",
+          "type": "FRAME"
+        },
+        {
+          "id": "2484:132",
+          "name": "play/pause",
+          "type": "FRAME"
+        },
+        {
+          "id": "2484:136",
+          "name": "play/pause",
+          "type": "FRAME"
+        }
+      ]
+    },
+    {
+      "theme": "light",
+      "pageName": "CURRENT ANDROID UI - LIGHT",
+      "pageId": "2388:366",
+      "exportedAt": "2026-08-09T10:20:14.218Z",
+      "topLevel": [
+        {
+          "id": "2393:1628",
+          "name": "HOME",
+          "type": "FRAME"
+        },
+        {
+          "id": "2396:30727",
+          "name": "PLAYER",
+          "type": "FRAME"
+        },
+        {
+          "id": "2484:68",
+          "name": "play/pause",
+          "type": "FRAME"
+        },
+        {
+          "id": "2484:61",
+          "name": "play/pause",
+          "type": "FRAME"
+        },
+        {
+          "id": "2399:31129",
+          "name": "COLLECTION",
+          "type": "FRAME"
+        },
+        {
+          "id": "2429:185",
+          "name": "COLLECTION pusto",
+          "type": "FRAME"
+        },
+        {
+          "id": "2411:31594",
+          "name": "ABOUT US",
+          "type": "FRAME"
+        },
+        {
+          "id": "2436:1367",
+          "name": "Selected indicator",
+          "type": "RECTANGLE"
+        },
+        {
+          "id": "2444:18763",
+          "name": "Menu / Плеер",
+          "type": "FRAME"
+        },
+        {
+          "id": "2444:18768",
+          "name": "Bottom Sheet / Найти трек на стриминге",
+          "type": "FRAME"
+        }
+      ]
+    }
+  ],
   "screens": [
     {
       "id": "sleep-timer-select",

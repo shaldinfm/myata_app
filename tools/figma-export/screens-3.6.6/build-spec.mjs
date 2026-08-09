@@ -95,6 +95,21 @@ for (const s of SCREENS) {
   s.nodes.forEach((n) => check(n, root, s, n.n));
 }
 
+/* The expected top-level contents of the two canonical pages, read from the
+ * committed normalized baselines. The plugin uses this for a read-only audit:
+ * anything on a canonical page that is not in this list is unexpected. */
+const CANONICAL_BASELINE = ["dark", "light"].map((theme) => {
+  const f = path.join(here, "..", "canonical", `figma-canonical-${theme}-normalized.json`);
+  const doc = JSON.parse(fs.readFileSync(f, "utf8"));
+  return {
+    theme,
+    pageName: doc.source.pageName,
+    pageId: doc.source.pageId,
+    exportedAt: doc.source.exportedAt,
+    topLevel: doc.frames.map((n) => ({ id: n.id, name: n.name, type: n.type }))
+  };
+});
+
 const ids = SCREENS.map((s) => s.id);
 ids.forEach((id, i) => { if (ids.indexOf(id) !== i) errors.push(`duplicate screen id: ${id}`); });
 
@@ -119,6 +134,7 @@ const spec = {
   tokens: TOKENS,
   type: TYPE,
   assets: ASSETS.assets,
+  canonicalBaseline: CANONICAL_BASELINE,
   screens: SCREENS.map((s) => ({ id: s.id, group: s.group, title: s.title, w: s.w, h: s.h, notes: s.notes, nodes: s.nodes }))
 };
 

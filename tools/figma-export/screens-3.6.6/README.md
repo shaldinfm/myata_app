@@ -118,19 +118,52 @@ accurate, letterforms and text widths are not.
   auto-layout frame that hugs a wrapped title ends up taller than its nominal
   height.
 
+### What blocks Create, and what does not
+
+Two separate buckets, so an expected outcome can never be mistaken for a fault:
+
+| Blocking — Create stays disabled | Informational — Create still runs |
+|---|---|
+| a vector path that would fail at create time | `NEEDS ASSET`: a slot with no artwork yet |
+| Muller Regular / Medium / Bold unavailable | `CONFIRM`: the YouTube Music mark, an owner choice |
+| a canonical page named as a destination | a frame already present, so it will be skipped |
+| an asset id registered in `assets.json` that no longer resolves — a stale spec | avatar components found in the file |
+| any structural or plugin error | |
+
+An asset slot is a designed outcome, not a defect: the frames are meant to be
+created with named empty slots so the artwork can be dropped in by hand. Those
+notices must never gate Create, and no longer can — `apply()` refuses only on
+`blocking`, and the button arms on `blocking.length === 0`.
+
+### Auditing the canonical pages
+
+**0 · Audit canonical pages** is read-only. It matches each canonical page,
+compares its top-level children against the committed normalized baseline, and
+reports anything extra or missing. A stray node is called *likely residue* only
+when its name is one this plugin generates; anything else is flagged as merely
+unexpected, to be checked rather than deleted on sight.
+
+Page matching is dash- and case-insensitive, because the DARK page is spelled
+with an em dash and the LIGHT one with a hyphen. The same normalisation hardens
+the refuse-canonical-page guard.
+
 ### Steps
 
 1. Open the Figma file that holds both canonical pages.
 2. **Menu → Plugins → Development → Import plugin from manifest…** and pick
-   `tools/figma-export/screens-3.6.6/create-plugin/manifest.json`.
+   `tools/figma-export/screens-3.6.6/create-plugin/manifest.json`. Re-import
+   after any change to `code.js` — Figma caches the old build otherwise.
 3. Run **Radio Myata · 3.6.6 proposal screens**.
-4. Press **1 · Dry Run**. Nothing is written. Check that Muller Regular, Medium
-   and Bold all report `AVAILABLE`, that the frame count reads 58, that the
-   vector preflight reads **116 of 116 validated**, and that the asset list shows
-   only the expected `NEEDS ASSET` rows.
-5. Press **2 · Create frames**. It stays disabled until a dry run has succeeded,
-   and stays disabled if any warning was raised.
-6. Stop there. Do not export or normalize the proposal pages yet.
+4. Press **0 · Audit canonical pages**. Read-only. Delete only what it calls
+   residue, and only after looking at it.
+5. Delete `3.6.6 PROPOSALS - LIGHT` and `3.6.6 PROPOSALS - DARK` if a previous
+   run left them behind.
+6. Press **1 · Dry Run**. Nothing is written. Expect **58 frames to create**,
+   vector preflight **116 / 116**, **0 blocking**, Muller Regular/Medium/Bold
+   `AVAILABLE`, and four informational asset notices.
+7. Press **2 · Create frames**, which arms only after a dry run with no blocking
+   problems.
+8. Stop there. Do not export or normalize the proposal pages yet.
 
 Re-exporting is a later step, and when it happens the canonical pages must show
 **no diff** — that is the check that the plugin stayed off them.

@@ -14,7 +14,6 @@
  */
 
 var THEMES = ["light", "dark"];
-var CANONICAL_PAGES = ["CURRENT ANDROID UI — DARK", "CURRENT ANDROID UI - LIGHT"];
 var FONT_FAMILY = "Muller";
 var FONT_STYLES = ["Regular", "Medium", "Bold"];
 var GRID_GAP_X = 80, GRID_GAP_Y = 120, GRID_WRAP = 3200;
@@ -88,9 +87,19 @@ function findPage(pages, name) {
   return null;
 }
 
+/* The DARK canonical page is spelled with an em dash and the LIGHT one with a
+ * hyphen, so an exact string match is a poor guard. Compare on a normalised
+ * form: any dash is a dash, whitespace collapses, case is ignored. */
+function pageKey(name) {
+  return String(name).replace(/[‐-―−-]/g, "-").replace(/\s+/g, " ").trim().toUpperCase();
+}
+
 function isCanonical(name) {
-  for (var i = 0; i < CANONICAL_PAGES.length; i++) if (CANONICAL_PAGES[i] === name) return true;
-  return false;
+  var k = pageKey(name);
+  var base = SCREEN_SPEC.canonicalBaseline || [];
+  for (var i = 0; i < base.length; i++) if (pageKey(base[i].pageName) === k) return true;
+  // belt and braces: refuse anything that looks like the canonical naming
+  return /^CURRENT ANDROID UI\b/.test(k);
 }
 
 function existingFrameNames(page) {
@@ -306,6 +315,59 @@ async function buildScreen(screen, theme, x, y) {
   return root;
 }
 
+/* ---------- read-only audit of the canonical pages ----------
+ * Writes nothing. Compares the live top-level children of each canonical page
+ * against the committed normalized baseline and flags anything extra. A stray
+ * node is called residue when its name is one this plugin generates, which is
+ * a much stronger signal than "unfamiliar". */
+async function auditCanonical() {
+  var pages = await allPages();
+  var base = SCREEN_SPEC.canonicalBaseline || [];
+
+  // every layer name this plugin would ever create
+  var generated = {};
+  for (var s = 0; s < SCREEN_SPEC.screens.length; s++) {
+    var scr = SCREEN_SPEC.screens[s];
+    generated[scr.id] = true;
+    generated[scr.id + "_dark"] = true;
+    (function walk(nodes) {
+      for (var i = 0; i < nodes.length; i++) { generated[nodes[i].n] = true; if (nodes[i].ch) walk(nodes[i].ch); }
+    })(scr.nodes);
+  }
+
+  var out = { pages: [], checkedAt: new Date().toISOString() };
+
+  for (var b = 0; b < base.length; b++) {
+    var spec = base[b];
+    var page = null;
+    for (var p = 0; p < pages.length; p++) if (pageKey(pages[p].name) === pageKey(spec.pageName)) page = pages[p];
+
+    var entry = { pageName: spec.pageName, theme: spec.theme, found: !!page,
+                  expected: spec.topLevel.length, actual: 0, extra: [], missing: [], baselineExportedAt: spec.exportedAt };
+
+    if (page) {
+      if (page.loadAsync) { try { await page.loadAsync(); } catch (e) {} }
+      var byId = {}, seen = {};
+      for (var e2 = 0; e2 < spec.topLevel.length; e2++) byId[spec.topLevel[e2].id] = spec.topLevel[e2];
+
+      entry.actual = page.children.length;
+      for (var c = 0; c < page.children.length; c++) {
+        var node = page.children[c];
+        if (byId[node.id]) { seen[node.id] = true; continue; }
+        entry.extra.push({
+          id: node.id, name: node.name, type: node.type,
+          w: Math.round(node.width || 0), h: Math.round(node.height || 0),
+          residue: !!generated[node.name]
+        });
+      }
+      for (var e3 = 0; e3 < spec.topLevel.length; e3++)
+        if (!seen[spec.topLevel[e3].id]) entry.missing.push(spec.topLevel[e3]);
+    }
+    out.pages.push(entry);
+  }
+  return out;
+}
+
 /* ---------- dry run ---------- */
 
 function planLayout(screens) {
@@ -322,12 +384,18 @@ function planLayout(screens) {
 
 async function dryRun() {
   var pages = await allPages();
-  var report = { themes: [], warnings: [], fonts: [], counts: { create: 0, skip: 0 } };
+  /* Two buckets, deliberately separate.
+   *   blocking - Create must not run: bad vector, missing font, invalid spec,
+   *              a canonical page targeted, a structural failure.
+   *   info     - expected and owner-resolvable: asset slots waiting on artwork,
+   *              the YouTube Music choice, frames already present.
+   * An asset slot is a designed outcome, not a fault, and must never gate Create. */
+  var report = { themes: [], blocking: [], info: [], fonts: [], counts: { create: 0, skip: 0 } };
 
   for (var fi = 0; fi < FONT_STYLES.length; fi++) {
     var fn = { family: FONT_FAMILY, style: FONT_STYLES[fi] };
     try { await figma.loadFontAsync(fn); report.fonts.push({ style: FONT_STYLES[fi], status: "AVAILABLE" }); }
-    catch (e) { report.fonts.push({ style: FONT_STYLES[fi], status: "MISSING" }); report.warnings.push("font missing: " + FONT_FAMILY + " " + FONT_STYLES[fi]); }
+    catch (e) { report.fonts.push({ style: FONT_STYLES[fi], status: "MISSING" }); report.blocking.push("font missing: " + FONT_FAMILY + " " + FONT_STYLES[fi]); }
   }
 
   // Verify every referenced asset node actually resolves, per theme, before anything is written.
@@ -343,7 +411,9 @@ async function dryRun() {
       if (!nid) { row.resolved[th] = "NO_NODE"; continue; }
       var found = await figma.getNodeByIdAsync(nid);
       row.resolved[th] = found ? "OK" : "NOT_FOUND";
-      if (!found) report.warnings.push("asset " + key + " (" + th + "): node " + nid + " not found in this file");
+      // A registered id that no longer resolves means assets.json is stale, which
+      // is an invalid spec - that does block. A slot with no id at all does not.
+      if (!found) report.blocking.push("asset " + key + " (" + th + "): node " + nid + " is registered but not in this file");
     }
     if (reg.status === "PENDING_OWNER") report.blocked = (report.blocked || 0) + 1;
 
@@ -359,6 +429,16 @@ async function dryRun() {
     } else {
       report.assets.push(row);
     }
+  }
+
+  // Expected, owner-resolvable states. Reported so they are visible, and kept
+  // out of `blocking` so they cannot disable Create.
+  for (var ri = 0; ri < report.assets.length; ri++) {
+    var ar = report.assets[ri];
+    if (ar.status === "PENDING_OWNER")
+      report.info.push("asset slot: " + ar.key + " has no artwork yet - it will be created as an editable named slot");
+    else if (ar.status === "CANONICAL_NODE_APPROXIMATE")
+      report.info.push("owner choice: " + ar.key + " uses the closest authentic mark in this file - confirm or replace it in Figma");
   }
 
   // Read-only sweep for anything in this file that could serve as an avatar
@@ -394,14 +474,14 @@ async function dryRun() {
     })(scr.nodes, scr.id);
   }
   if (report.vectors.failed.length)
-    report.warnings.push(report.vectors.failed.length + " vector path(s) would fail at create time - see the vector preflight below");
+    report.blocking.push(report.vectors.failed.length + " vector path(s) would fail at create time - see the vector preflight below");
 
   var layout = planLayout(SCREEN_SPEC.screens);
 
   for (var ti = 0; ti < THEMES.length; ti++) {
     var theme = THEMES[ti];
     var pageName = SCREEN_SPEC.figmaPages[theme];
-    if (isCanonical(pageName)) { report.warnings.push("refusing: target page '" + pageName + "' is a canonical page"); continue; }
+    if (isCanonical(pageName)) { report.blocking.push("refusing: target page '" + pageName + "' is a canonical page"); continue; }
 
     var page = findPage(pages, pageName);
     var existing = existingFrameNames(page);
@@ -411,7 +491,8 @@ async function dryRun() {
       var s = SCREEN_SPEC.screens[si];
       var name = frameName(s, theme);
       var status = existing[name] ? "ALREADY_EXISTS" : "WILL_CREATE";
-      if (status === "WILL_CREATE") report.counts.create++; else report.counts.skip++;
+      if (status === "WILL_CREATE") report.counts.create++;
+      else { report.counts.skip++; report.info.push("already present, will be skipped: " + name); }
       entry.screens.push({ id: s.id, group: s.group, title: s.title, name: name, w: s.w, h: s.h, status: status, at: layout[si] });
     }
     report.themes.push(entry);
@@ -451,6 +532,8 @@ function relayout(page, frames) {
 
 async function apply() {
   if (!dryRunReport) throw new Error("Run Dry Run first.");
+  if (dryRunReport.blocking && dryRunReport.blocking.length)
+    throw new Error("Dry Run reported " + dryRunReport.blocking.length + " blocking problem(s); refusing to create.");
 
   for (var fi = 0; fi < FONT_STYLES.length; fi++) await figma.loadFontAsync({ family: FONT_FAMILY, style: FONT_STYLES[fi] });
 
@@ -527,6 +610,10 @@ figma.ui.onmessage = async function (msg) {
       figma.ui.postMessage({ type: "status", text: "Creating frames…" });
       var d = await apply();
       figma.ui.postMessage({ type: "apply-result", done: d });
+    } else if (msg.type === "audit") {
+      figma.ui.postMessage({ type: "status", text: "Reading canonical pages…" });
+      var a = await auditCanonical();
+      figma.ui.postMessage({ type: "audit-result", audit: a });
     }
   } catch (e) {
     figma.ui.postMessage({ type: "error", text: (e && e.stack) ? e.stack : String(e) });

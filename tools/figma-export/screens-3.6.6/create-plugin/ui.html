@@ -31,6 +31,9 @@
   canonical page, so the exported baselines stay comparable. Re-running skips frames that already exist.</div>
 
   <div class="row">
+    <button id="audit" style="background:#f0f0f2;color:#3c4043">0 · Audit canonical pages (read-only)</button>
+  </div>
+  <div class="row">
     <button id="dry">1 · Dry Run</button>
     <button id="apply" disabled>2 · Create frames</button>
   </div>
@@ -42,6 +45,11 @@
   var out = document.getElementById("out");
   var counts = document.getElementById("counts");
   var applyBtn = document.getElementById("apply");
+
+  document.getElementById("audit").onclick = function () {
+    out.textContent = "Reading canonical pages…"; counts.innerHTML = "";
+    parent.postMessage({ pluginMessage: { type: "audit" } }, "*");
+  };
 
   document.getElementById("dry").onclick = function () {
     out.textContent = "Reading document…"; counts.innerHTML = "";
@@ -104,9 +112,13 @@
         h += '<div class="grp">Avatar components</div><div class="item skip">None found locally. Avatar cells will be created as empty named slots.</div>';
       }
 
-      if (r.warnings.length) {
-        h += '<div class="grp">Warnings</div>';
-        r.warnings.forEach(function (w) { h += '<div class="item miss">' + esc(w) + "</div>"; });
+      if (r.blocking.length) {
+        h += '<div class="grp">Blocking — Create is disabled</div>';
+        r.blocking.forEach(function (w) { h += '<div class="item miss">' + esc(w) + "</div>"; });
+      }
+      if (r.info.length) {
+        h += '<div class="grp">Informational — expected, does not block</div>';
+        r.info.forEach(function (w) { h += '<div class="item skip">' + esc(w) + "</div>"; });
       }
 
       r.themes.forEach(function (t) {
@@ -120,8 +132,39 @@
         });
       });
 
+      counts.innerHTML +=
+        "<div><b>" + (r.vectors ? r.vectors.ok : 0) + "/" + (r.vectors ? r.vectors.total : 0) + "</b> vectors validated</div>" +
+        "<div class='" + (r.blocking.length ? "miss" : "ok") + "'>" + r.blocking.length + " blocking</div>";
+
       out.innerHTML = h;
-      if (r.counts.create > 0 && !r.warnings.length) { applyBtn.disabled = false; applyBtn.className = "armed"; }
+      // Only blocking problems gate Create. Asset slots and the YouTube Music
+      // choice are expected outcomes and must not disable it.
+      if (r.counts.create > 0 && !r.blocking.length) { applyBtn.disabled = false; applyBtn.className = "armed"; }
+    }
+
+    if (m.type === "audit-result") {
+      var a = m.audit, ah = '<div class="grp">Canonical pages — read-only audit</div>';
+      a.pages.forEach(function (p) {
+        ah += '<div class="item"><b>' + esc(p.pageName) + "</b><br>" +
+              (p.found
+                ? "expected " + p.expected + " top-level nodes, found <b>" + p.actual + "</b> · baseline exported " + esc(p.baselineExportedAt)
+                : '<span class="miss">page not found in this file</span>') + "</div>";
+        if (!p.found) return;
+        if (!p.extra.length && !p.missing.length)
+          ah += '<div class="item ok">clean — matches the committed baseline exactly</div>';
+        p.extra.forEach(function (n) {
+          ah += '<div class="item ' + (n.residue ? "miss" : "skip") + '">' +
+                (n.residue ? "LIKELY RESIDUE" : "UNEXPECTED") + " · <code>" + esc(n.id) + "</code> " +
+                esc(n.name) + " &lt;" + esc(n.type) + "&gt; " + n.w + "×" + n.h +
+                (n.residue ? "<br>name matches a layer this plugin generates" : "<br>not a name this plugin generates — check before deleting") +
+                "</div>";
+        });
+        p.missing.forEach(function (n) {
+          ah += '<div class="item miss">MISSING from the page · <code>' + esc(n.id) + "</code> " + esc(n.name) + "</div>";
+        });
+      });
+      ah += '<div class="item skip">This audit wrote nothing. Delete only what you have confirmed.</div>';
+      out.innerHTML = ah;
     }
 
     if (m.type === "apply-result") {

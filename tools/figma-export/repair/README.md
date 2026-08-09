@@ -40,11 +40,11 @@ node tools/figma-export/repair/build-plugin.mjs
 
 ## What it does
 
-**22 structural and typography mutations**
+**20 structural and typography mutations**
 
 | Op | Count | What |
 |---|---|---|
-| `setConstraints` | 5 | control icon containers → CENTER/CENTER |
+| `setConstraints` | 3 | Player control icon containers → CENTER/CENTER |
 | `setFontFamily` | 8 | Hanken Grotesk → Muller Regular, same size and line height |
 | `setAutoLayoutHug` | 3 | TikTok (dark) and Threads (both) → HORIZONTAL + HUG/HUG |
 | `setVisible` | 2 | two light-only About blurs → hidden |
@@ -60,6 +60,27 @@ use them unambiguously.
 
 **15 text styles** under `Radio Myata/…`, created from the styles the design actually
 uses. Existing styles with the same name are reused, not duplicated.
+
+## Removed from the plan after review: the standalone `play/pause` frames
+
+An earlier revision also set CENTER/CENTER on `2484:138` (dark) and `2484:63` (light).
+Both were removed, because the evidence does not support calling them a defect:
+
+- They sit in **loose top-level canvas frames** named `play/pause` — dark at x=428 y=1227,
+  light at x=1077 y=1130 — parked below the screens, not inside any screen.
+- They are plain `FRAME`s, **not components**, and **no instance anywhere references
+  them**. They are detached working copies.
+- Their container is **23.33 × 29.69** (the taller pause glyph), while the CENTER/CENTER
+  sibling next to it is **23.33 × 23.33** (the square play glyph). Different icons with
+  different intrinsic sizes — MIN/MIN may well be deliberate there, and nothing renders
+  them either way.
+- The agreed decision covered the Player's like/dislike containers and the `like` found in
+  the second controls set. All three of those **are** in the plan
+  (`2444:18269`, `2399:31216`, `2399:31223`) and are genuine: they sit in the same
+  controls row as identically-sized siblings that use CENTER/CENTER.
+
+Those two loose frames look like leftover scratch copies. Tidying the canvas is a
+housekeeping decision for the designer, not drift repair.
 
 ## Deliberately left raw, and why
 

@@ -34,16 +34,6 @@
     },
     {
       "group": "structural",
-      "theme": "dark",
-      "op": "setConstraints",
-      "id": "2484:138",
-      "path": "play/pause (standalone component) > Container",
-      "expect": "{\"horizontal\":\"MIN\",\"vertical\":\"MIN\"}",
-      "value": "{\"horizontal\":\"CENTER\",\"vertical\":\"CENTER\"}",
-      "reason": "Icon inside a 48dp touch target; CENTER/CENTER is the pattern on 5 of 6 control containers."
-    },
-    {
-      "group": "structural",
       "theme": "light",
       "op": "setConstraints",
       "id": "2399:31216",
@@ -58,16 +48,6 @@
       "op": "setConstraints",
       "id": "2399:31223",
       "path": "PLAYER > Controls > dislike > Container",
-      "expect": "{\"horizontal\":\"MIN\",\"vertical\":\"MIN\"}",
-      "value": "{\"horizontal\":\"CENTER\",\"vertical\":\"CENTER\"}",
-      "reason": "Icon inside a 48dp touch target; CENTER/CENTER is the pattern on 5 of 6 control containers."
-    },
-    {
-      "group": "structural",
-      "theme": "light",
-      "op": "setConstraints",
-      "id": "2484:63",
-      "path": "play/pause (standalone component) > Container",
       "expect": "{\"horizontal\":\"MIN\",\"vertical\":\"MIN\"}",
       "value": "{\"horizontal\":\"CENTER\",\"vertical\":\"CENTER\"}",
       "reason": "Icon inside a 48dp touch target; CENTER/CENTER is the pattern on 5 of 6 control containers."

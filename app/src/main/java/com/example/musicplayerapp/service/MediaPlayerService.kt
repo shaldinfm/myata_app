@@ -81,13 +81,41 @@ class MediaPlayerService(): MediaSessionService(){
     val xtraItemHttp = MediaItem.fromUri("http://radio.dline-media.com/myata_hits")
     val goldItemHttp = MediaItem.fromUri("http://radio.dline-media.com/gold")
     
-    // Флаг: использовать HTTP fallback (включается при сетевой ошибке на TV)
+    // Cleartext fallback for legacy TV/projector devices whose TLS stack cannot
+    // complete the handshake at all. Scoped to ONE recovery episode: any explicit
+    // user Play or stream switch starts from HTTPS again. It is never a session-wide
+    // state, and on phones it is never used at all (issue #16).
     private var useHttpFallback = false
-    
+
     // Геттеры: HTTPS по умолчанию, HTTP как fallback на TV
     val myataItem: MediaItem get() = if (useHttpFallback) myataItemHttp else myataItemHttps
     val xtraItem: MediaItem get() = if (useHttpFallback) xtraItemHttp else xtraItemHttps
     val goldItem: MediaItem get() = if (useHttpFallback) goldItemHttp else goldItemHttps
+
+    // ============== RECOVERY STATE (issues #15, #16) ==============
+
+    /**
+     * Does the user currently want audio? Recovery only ever runs when this is
+     * true, so an intentional pause/stop, an audio-focus loss or headphones being
+     * unplugged can never be undone by an automatic reconnect.
+     */
+    private var userWantsPlayback = false
+
+    /** Consecutive failed attempts in the current episode; drives the backoff. */
+    private var recoveryAttempt = 0
+
+    /** At most one retry may be in flight. */
+    private var pendingRetry: Runnable? = null
+    private val retryHandler by lazy { android.os.Handler(android.os.Looper.getMainLooper()) }
+
+    /** Parked because there is no network; resumed by the connectivity callback. */
+    private var waitingForNetwork = false
+
+    /** When the current uninterrupted playback started, for the stability reset. */
+    private var playingSinceMs = 0L
+
+    /** How long the last uninterrupted stretch of playback lasted. */
+    private var lastPlaybackRunMs = 0L
 
     var song: String = ""
     var artist: String = ""
@@ -159,6 +187,7 @@ class MediaPlayerService(): MediaSessionService(){
                 "startStop"->{
                     if(exoPlayer.isPlaying) {
                         PlaybackLog.event("PLAYER_STOP", "source" to "intent", "reason" to "startStop_toggle_off")
+                        onPlaybackNoLongerWanted("startStop_toggle_off")
                         exoPlayer.stop()
                         exoPlayer.clearMediaItems()
                         artist = ""
@@ -170,6 +199,7 @@ class MediaPlayerService(): MediaSessionService(){
                         if (intentStream != null) {
                             stream = intentStream
                         }
+                        onUserWantsPlayback("startStop_toggle_on")
                         // Always set MediaItem (it may have been cleared by stop)
                         when(stream){
                             "myata"->{exoPlayer.setMediaItem(myataItem)}
@@ -190,6 +220,7 @@ class MediaPlayerService(): MediaSessionService(){
                     }
                 }
                 "play"->{
+                    onUserWantsPlayback("play_action")
                     val intentStream = intent.getStringExtra("STREAM")
                     if (intentStream != null && stream != intentStream)
                     {
@@ -221,6 +252,7 @@ class MediaPlayerService(): MediaSessionService(){
                     if (isStreamChange) {
                         // DIFFERENT stream - need to set up new media item
                         stream = intentStream
+                        onUserWantsPlayback("stream_switch")
                         
                         val switchSong = intent.getStringExtra("SONG") ?: ""
                         val switchArtist = intent.getStringExtra("ARTIST") ?: ""
@@ -252,6 +284,7 @@ class MediaPlayerService(): MediaSessionService(){
                     } else {
                         // SAME stream - only start if forcePlay requested AND not already playing
                         if (forcePlay && !exoPlayer.isPlaying) {
+                            onUserWantsPlayback("switch_forcePlay")
                             PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "switch_forcePlay")
                             exoPlayer.prepare()
                             PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "switch_forcePlay")
@@ -301,6 +334,7 @@ class MediaPlayerService(): MediaSessionService(){
                 "stop" -> {
                     Log.d("MediaPlayerService", "Stop action received - shutting down")
                     PlaybackLog.event("PLAYER_STOP", "source" to "intent", "reason" to "stop_action_shutdown")
+                    onPlaybackNoLongerWanted("stop_action")
                     exoPlayer.stop()
                     exoPlayer.clearMediaItems()
                     stopSelf()
@@ -392,6 +426,9 @@ class MediaPlayerService(): MediaSessionService(){
                     // Start/stop metadata polling based on playback state
                     // AND manage WakeLock
                     if (isPlaying) {
+                        // Track how long each uninterrupted run lasts; a long healthy
+                        // run is what resets the recovery budget, not STATE_READY.
+                        playingSinceMs = android.os.SystemClock.elapsedRealtime()
                         startMetadataPolling()
                         if (wakeLock?.isHeld == false) {
                             wakeLock?.acquire()
@@ -399,6 +436,10 @@ class MediaPlayerService(): MediaSessionService(){
                             PlaybackLog.event("WAKELOCK_ACQUIRED")
                         }
                     } else {
+                        if (playingSinceMs > 0L) {
+                            lastPlaybackRunMs = android.os.SystemClock.elapsedRealtime() - playingSinceMs
+                            playingSinceMs = 0L
+                        }
                         stopMetadataPolling()
 
                         if (wakeLock?.isHeld == true) {
@@ -422,6 +463,15 @@ class MediaPlayerService(): MediaSessionService(){
                         "reason" to PlaybackLog.playWhenReadyReason(reason),
                         "stream" to (stream.ifEmpty { "none" })
                     )
+
+                    // Headphones pulled out or another app took audio focus: the user
+                    // has to press Play again. Recovery must not undo that (#13).
+                    if (!playWhenReady &&
+                        (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY ||
+                                reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS)
+                    ) {
+                        onPlaybackNoLongerWanted(PlaybackLog.playWhenReadyReason(reason))
+                    }
                 }
 
                 /** Transient audio-focus loss shows up here rather than as a pause. */
@@ -458,6 +508,20 @@ class MediaPlayerService(): MediaSessionService(){
                                     .sendBroadcast(intent)
                             }
                         }
+                        Player.STATE_ENDED -> {
+                            // A live radio stream has no end. Reaching ENDED while the
+                            // user still wants audio means the server closed the
+                            // connection, so treat it as a disconnect (issue #15).
+                            if (userWantsPlayback) {
+                                PlaybackLog.problem(
+                                    "LIVE_STREAM_ENDED", "stream" to (stream.ifEmpty { "none" }),
+                                    "interpretation" to "server_closed_connection"
+                                )
+                                startRecovery("state_ended", tlsFailure = false)
+                            } else {
+                                PlaybackLog.event("STATE_ENDED_IGNORED", "reason" to "user_does_not_want_playback")
+                            }
+                        }
                     }
                 }
 
@@ -473,63 +537,15 @@ class MediaPlayerService(): MediaSessionService(){
                         "state" to PlaybackLog.stateName(this@apply.playbackState)
                     )
 
-                    // Auto-retry logic remains same
-                    if (error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
-                        error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
-                        error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ||
-                        error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE ||
-                        error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED) {
-                        
-                        if (!useHttpFallback) {
-                            Log.d("MediaPlayerService", "HTTPS failed, switching to HTTP fallback...")
-                            PlaybackLog.problem(
-                                "TRANSPORT_FALLBACK", "from" to "https", "to" to "http",
-                                "trigger" to error.errorCodeName, "stream" to (stream.ifEmpty { "none" })
-                            )
-                            useHttpFallback = true
-                            LocalBroadcastManager.getInstance(this@MediaPlayerService).sendBroadcast(Intent("buffering"))
+                    val recoverable = StreamErrorPolicy.isRecoverable(error)
+                    val tlsFailure = StreamErrorPolicy.isTlsFailure(error)
 
-                            PlaybackLog.event("RECONNECT_SCHEDULED", "delayMs" to 1000, "reason" to "transport_fallback")
-                            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                if (stream.isNotEmpty()) {
-                                    when(stream) {
-                                        "myata" -> setMediaItem(myataItem)
-                                        "gold" -> setMediaItem(goldItem)
-                                        "myata_hits" -> setMediaItem(xtraItem)
-                                    }
-                                    PlaybackLog.event(
-                                        "RECONNECT_ATTEMPT", "reason" to "transport_fallback",
-                                        "transport" to "http", "stream" to stream
-                                    )
-                                    prepare()
-                                    play()
-                                } else {
-                                    PlaybackLog.problem("RECONNECT_SKIPPED", "reason" to "no_stream_selected")
-                                }
-                            }, 1000)
-                        } else {
-                            Log.d("MediaPlayerService", "Network error, attempting to reconnect...")
-                            LocalBroadcastManager.getInstance(this@MediaPlayerService).sendBroadcast(Intent("buffering"))
-
-                            PlaybackLog.event("RECONNECT_SCHEDULED", "delayMs" to 2000, "reason" to "network_error")
-                            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                if (stream.isNotEmpty()) {
-                                    PlaybackLog.event(
-                                        "RECONNECT_ATTEMPT", "reason" to "network_error",
-                                        "transport" to "http", "stream" to stream
-                                    )
-                                    prepare()
-                                    play()
-                                } else {
-                                    PlaybackLog.problem("RECONNECT_SKIPPED", "reason" to "no_stream_selected")
-                                }
-                            }, 2000)
-                        }
+                    if (recoverable) {
+                        startRecovery("player_error:${error.errorCodeName}", tlsFailure)
                     } else {
-                        // No retry path exists for these codes - see issue #15.
                         PlaybackLog.problem(
                             "ERROR_NOT_RETRIED", "errorCodeName" to error.errorCodeName,
-                            "outcome" to "playback_stopped_silently"
+                            "reason" to "not_recoverable", "outcome" to "playback_stopped"
                         )
                         LocalBroadcastManager.getInstance(this@MediaPlayerService).sendBroadcast(Intent("pause"))
                     }
@@ -549,6 +565,7 @@ class MediaPlayerService(): MediaSessionService(){
                     "PLAYER_PAUSE", "source" to "session",
                     "reason" to "pause_as_stop", "state" to PlaybackLog.stateName(playbackState)
                 )
+                onPlaybackNoLongerWanted("user_pause")
                 stop()
                 Log.d("MediaPlayerService", "Pause action: Stream stopped (buffer cleared) for radio edge")
             }
@@ -566,6 +583,7 @@ class MediaPlayerService(): MediaSessionService(){
                     "PLAYER_PLAY", "source" to "session",
                     "state" to PlaybackLog.stateName(playbackState)
                 )
+                onUserWantsPlayback("session_play")
                 // When resuming from pause, re-prepare to jump to live edge
                 // This handles both STATE_READY (paused) and STATE_IDLE (stopped) cases
                 if (playbackState == Player.STATE_READY && !playWhenReady) {
@@ -625,6 +643,158 @@ class MediaPlayerService(): MediaSessionService(){
         super.onTaskRemoved(rootIntent)
     }
 
+    // ============== STREAM RECOVERY (issues #15, #16) ==============
+
+    private fun isNetworkAvailable(): Boolean {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+            ?: return true // Cannot tell - assume yes rather than refuse to try.
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+        return caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    /** Policy delay plus jitter, so many clients do not reconnect in lockstep. */
+    private fun backoffDelayMs(attempt: Int): Long =
+        StreamErrorPolicy.backoffDelayMs(attempt, RECOVERY_BASE_DELAY_MS, RECOVERY_MAX_DELAY_MS) +
+                (0..250).random()
+
+    /**
+     * Called when the user explicitly asks for audio. Ends any recovery episode:
+     * the budget starts fresh and the transport goes back to HTTPS.
+     */
+    private fun onUserWantsPlayback(reason: String) {
+        userWantsPlayback = true
+        cancelPendingRetry()
+        waitingForNetwork = false
+        if (recoveryAttempt != 0 || useHttpFallback) {
+            PlaybackLog.event(
+                "RECOVERY_RESET", "reason" to reason,
+                "wasAttempt" to recoveryAttempt, "wasTransport" to (if (useHttpFallback) "http" else "https")
+            )
+        }
+        recoveryAttempt = 0
+        useHttpFallback = false
+    }
+
+    /** Called when the user - or the system on the user's behalf - stops playback. */
+    private fun onPlaybackNoLongerWanted(reason: String) {
+        if (userWantsPlayback) {
+            PlaybackLog.event("USER_INTENT_CLEARED", "reason" to reason)
+        }
+        userWantsPlayback = false
+        cancelPendingRetry()
+        waitingForNetwork = false
+        recoveryAttempt = 0
+    }
+
+    private fun cancelPendingRetry() {
+        pendingRetry?.let {
+            retryHandler.removeCallbacks(it)
+            PlaybackLog.event("RECOVERY_CANCELLED", "reason" to "superseded_or_user_action")
+        }
+        pendingRetry = null
+    }
+
+    /**
+     * Single entry point for both failure sources - onPlayerError and a live stream
+     * reaching STATE_ENDED - so the two can never schedule two retries at once.
+     */
+    private fun startRecovery(trigger: String, tlsFailure: Boolean) {
+        if (!userWantsPlayback) {
+            PlaybackLog.event("RECOVERY_SKIPPED", "trigger" to trigger, "reason" to "user_does_not_want_playback")
+            return
+        }
+        if (pendingRetry != null) {
+            PlaybackLog.event("RECOVERY_SKIPPED", "trigger" to trigger, "reason" to "retry_already_pending")
+            return
+        }
+        if (stream.isEmpty()) {
+            PlaybackLog.problem("RECOVERY_SKIPPED", "trigger" to trigger, "reason" to "no_stream_selected")
+            return
+        }
+
+        // A long, healthy run means this is a new problem, not a continuing one.
+        if (lastPlaybackRunMs >= RECOVERY_STABILITY_RESET_MS && recoveryAttempt != 0) {
+            PlaybackLog.event(
+                "RECOVERY_RESET", "reason" to "stable_playback",
+                "stableForMs" to lastPlaybackRunMs, "wasAttempt" to recoveryAttempt
+            )
+            recoveryAttempt = 0
+        }
+
+        if (!isNetworkAvailable()) {
+            // Do not spend the budget on attempts that cannot possibly succeed.
+            waitingForNetwork = true
+            PlaybackLog.event(
+                "RECOVERY_WAITING_FOR_NETWORK", "trigger" to trigger, "attempt" to recoveryAttempt
+            )
+            LocalBroadcastManager.getInstance(this).sendBroadcast(Intent("buffering"))
+            return
+        }
+
+        if (recoveryAttempt >= RECOVERY_MAX_ATTEMPTS) {
+            PlaybackLog.problem(
+                "RECOVERY_GAVE_UP", "trigger" to trigger, "attempts" to recoveryAttempt,
+                "outcome" to "playback_stopped_until_user_acts"
+            )
+            LocalBroadcastManager.getInstance(this).sendBroadcast(Intent("pause"))
+            return
+        }
+
+        // TV/projector only, and only when TLS itself failed - see issue #16.
+        if (tlsFailure && isTv && !useHttpFallback) {
+            useHttpFallback = true
+            PlaybackLog.problem(
+                "TRANSPORT_FALLBACK", "from" to "https", "to" to "http",
+                "reason" to "tls_failure_on_tv", "scope" to "current_episode_only"
+            )
+        }
+
+        val attempt = recoveryAttempt
+        val delay = backoffDelayMs(attempt)
+        recoveryAttempt++
+
+        PlaybackLog.event(
+            "RECOVERY_SCHEDULED", "trigger" to trigger, "attempt" to (attempt + 1),
+            "maxAttempts" to RECOVERY_MAX_ATTEMPTS, "delayMs" to delay,
+            "transport" to (if (useHttpFallback) "http" else "https")
+        )
+        LocalBroadcastManager.getInstance(this).sendBroadcast(Intent("buffering"))
+
+        val task = Runnable {
+            pendingRetry = null
+            if (!userWantsPlayback) {
+                PlaybackLog.event("RECOVERY_ABORTED", "reason" to "user_stopped_while_pending")
+                return@Runnable
+            }
+            PlaybackLog.event(
+                "RECOVERY_ATTEMPT", "attempt" to (attempt + 1),
+                "transport" to (if (useHttpFallback) "http" else "https"), "stream" to stream
+            )
+            // Re-set the item so a transport change actually takes effect.
+            when (stream) {
+                "myata" -> exoPlayer.setMediaItem(myataItem)
+                "gold" -> exoPlayer.setMediaItem(goldItem)
+                "myata_hits" -> exoPlayer.setMediaItem(xtraItem)
+            }
+            exoPlayer.prepare()
+            exoPlayer.play()
+        }
+        pendingRetry = task
+        retryHandler.postDelayed(task, delay)
+    }
+
+    /** Resumes a parked recovery once, when connectivity actually comes back. */
+    private fun onNetworkRegained() {
+        if (!waitingForNetwork) return
+        waitingForNetwork = false
+        if (!userWantsPlayback) {
+            PlaybackLog.event("RECOVERY_NOT_RESUMED", "reason" to "user_does_not_want_playback")
+            return
+        }
+        PlaybackLog.event("RECOVERY_RESUMED_ON_NETWORK", "attempt" to recoveryAttempt)
+        startRecovery("network_regained", tlsFailure = false)
+    }
+
     // ============== DIAGNOSTICS (logging only, no playback behaviour) ==============
 
     /**
@@ -656,6 +826,8 @@ class MediaPlayerService(): MediaSessionService(){
         val callback = object : android.net.ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: android.net.Network) {
                 PlaybackLog.event("NETWORK_AVAILABLE")
+                // Callbacks arrive off the main thread; recovery touches the player.
+                retryHandler.post { onNetworkRegained() }
             }
 
             override fun onLost(network: android.net.Network) {
@@ -689,6 +861,7 @@ class MediaPlayerService(): MediaSessionService(){
             "stream" to (stream.ifEmpty { "none" })
         )
         unregisterNetworkLogging()
+        cancelPendingRetry()
 
         metadataJob?.cancel()
         serviceScope.cancel()
@@ -997,5 +1170,21 @@ class MediaPlayerService(): MediaSessionService(){
     private fun updateMediaSessionWithArt(bitmap: Bitmap?, currentArtist: String, currentSong: String) {
         currentAlbumArt = bitmap
         // Notification is automatically updated by Media3 when metadata changes
+    }
+
+    private companion object {
+        /** First backoff step; doubles per attempt up to the cap. */
+        const val RECOVERY_BASE_DELAY_MS = 1_000L
+        const val RECOVERY_MAX_DELAY_MS = 30_000L
+
+        /** Consecutive attempts before giving up: 1+2+4+8+16+30 is about a minute of trying. */
+        const val RECOVERY_MAX_ATTEMPTS = 6
+
+        /**
+         * How long playback must run uninterrupted for the next failure to count as
+         * a fresh problem. Resetting on STATE_READY instead would let a stream that
+         * plays for two seconds and dies retry forever.
+         */
+        const val RECOVERY_STABILITY_RESET_MS = 60_000L
     }
 }

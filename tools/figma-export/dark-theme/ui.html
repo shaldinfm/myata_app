@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    :root { color-scheme: dark; font-family: Inter, Arial, sans-serif; }
+    body { margin: 0; padding: 18px; background: #142d47; color: #f5f7fa; font-size: 12px; }
+    h1 { margin: 0 0 8px; font-size: 16px; }
+    p { margin: 8px 0 14px; color: #b3c4d1; line-height: 1.4; }
+    label { display: block; padding: 10px 0; color: #b3c4d1; }
+    input[type=file] { width: 100%; margin-top: 8px; }
+    button { width: 100%; min-height: 48px; margin-top: 10px; border: 0; border-radius: 12px; background: #5fd9b4; color: #0f253e; font-weight: 700; cursor: pointer; }
+    button.secondary { background: #204971; color: #f5f7fa; }
+    button:disabled { opacity: .55; cursor: default; }
+    #status { margin-top: 14px; white-space: pre-wrap; color: #b3c4d1; line-height: 1.45; }
+    .small { margin-top: 10px; font-size: 11px; color: #8fa9bd; line-height: 1.4; }
+    a { color: #5fd9b4; }
+  </style>
+</head>
+<body>
+  <h1>Radio Myata · Dark Screens</h1>
+  <p>Создаёт 11 dark-фреймов и UI KIT на странице <b>CURRENT ANDROID UI — DARK</b>. Reference-скриншот не используется.</p>
+  <label>
+    Дополнительные реальные обложки (необязательно):
+    <input id="artwork" type="file" accept="image/png,image/jpeg,image/webp" multiple />
+  </label>
+  <button id="run">Создать dark-фреймы</button>
+  <button id="skip" class="secondary">Использовать Android-ресурсы</button>
+  <div id="status">Проверяю локальные Android-ресурсы…</div>
+  <div class="small">Повторный запуск обновляет только слои этого плагина на его отдельной странице. Все интерактивные контейнеры имеют минимум 48×48.</div>
+
+  <script>
+    const status = document.getElementById("status");
+    const run = document.getElementById("run");
+    const skip = document.getElementById("skip");
+    const artwork = document.getElementById("artwork");
+
+    function esc(value) {
+      return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
+    }
+
+    function androidAttr(node, name) {
+      return node.getAttribute(name) || node.getAttribute("android:" + name) || "";
+    }
+
+    function color(value) {
+      if (!value || value === "@android:color/transparent" || value === "#00000000") return { color: "none", opacity: 1 };
+      if (value[0] === "@") return { color: "#000000", opacity: 1 };
+      const raw = value.replace("#", "");
+      if (raw.length === 6) return { color: "#" + raw, opacity: 1 };
+      if (raw.length === 8) return { color: "#" + raw.slice(2), opacity: parseInt(raw.slice(0, 2), 16) / 255 };
+      return { color: "#000000", opacity: 1 };
+    }
+
+    function groupTransform(node) {
+      const tx = androidAttr(node, "translateX") || "0";
+      const ty = androidAttr(node, "translateY") || "0";
+      const sx = androidAttr(node, "scaleX") || "1";
+      const sy = androidAttr(node, "scaleY") || "1";
+      const rotation = androidAttr(node, "rotation") || "0";
+      const pivotX = androidAttr(node, "pivotX") || "0";
+      const pivotY = androidAttr(node, "pivotY") || "0";
+      const transforms = [];
+      if (tx !== "0" || ty !== "0") transforms.push(`translate(${tx} ${ty})`);
+      if (rotation !== "0") transforms.push(`rotate(${rotation} ${pivotX} ${pivotY})`);
+      if (sx !== "1" || sy !== "1") transforms.push(`scale(${sx} ${sy})`);
+      return transforms.join(" ");
+    }
+
+    function vectorNode(node) {
+      const tag = node.tagName.toLowerCase();
+      if (tag === "path") {
+        const fill = color(androidAttr(node, "fillColor") || androidAttr(node, "fill"));
+        const stroke = color(androidAttr(node, "strokeColor") || androidAttr(node, "stroke"));
+        const d = androidAttr(node, "pathData");
+        if (!d) return "";
+        return `<path d="${esc(d)}" fill="${esc(fill.color)}" fill-opacity="${fill.opacity}" stroke="${esc(stroke.color)}" stroke-opacity="${stroke.opacity}" stroke-width="${esc(androidAttr(node, "strokeWidth") || "0")}" fill-rule="evenodd"/>`;
+      }
+      if (tag === "group" || tag === "vector") {
+        const transform = groupTransform(node);
+        const children = Array.from(node.children || []).map(vectorNode).join("");
+        return `<g${transform ? ` transform="${esc(transform)}"` : ""}>${children}</g>`;
+      }
+      return Array.from(node.children || []).map(vectorNode).join("");
+    }
+
+    function xmlToSvg(xml, name) {
+      const doc = new DOMParser().parseFromString(xml, "application/xml");
+      const root = doc.documentElement;
+      if (!root || root.tagName.toLowerCase() !== "vector") throw new Error("Invalid Android vector: " + name);
+      const width = androidAttr(root, "width").replace(/dp$/, "") || "316";
+      const height = androidAttr(root, "height").replace(/dp$/, "") || "198";
+      const viewportWidth = androidAttr(root, "viewportWidth") || width;
+      const viewportHeight = androidAttr(root, "viewportHeight") || height;
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${esc(width)}" height="${esc(height)}" viewBox="0 0 ${esc(viewportWidth)} ${esc(viewportHeight)}">${vectorNode(root)}</svg>`;
+    }
+
+    async function bytes(path, name, mime, source) {
+      const response = await fetch("../assets/" + path);
+      if (!response.ok) throw new Error("Не удалось загрузить " + path);
+      return { name, mime, bytes: Array.from(new Uint8Array(await response.arrayBuffer())), source };
+    }
+
+    async function vector(path, name, source) {
+      const response = await fetch("../assets/" + path);
+      if (!response.ok) throw new Error("Не удалось загрузить " + path);
+      return { name, kind: "svg", svg: xmlToSvg(await response.text(), name), source };
+    }
+
+    async function selectedArtwork() {
+      const files = Array.from(artwork.files || []).slice(0, 8);
+      return Promise.all(files.map(async (file, index) => ({
+        name: "selected-artwork-" + String(index + 1).padStart(2, "0") + "." + (file.name.split(".").pop() || "png"),
+        mime: file.type || "image/png",
+        bytes: Array.from(new Uint8Array(await file.arrayBuffer())),
+        source: "user-selected artwork"
+      })));
+    }
+
+    async function prepare() {
+      const assets = [];
+      const errors = [];
+      const pngs = [
+        ["zaglushka_1_img.png", "zaglushka_1_img.png", "image/png", "app/src/main/res/drawable/zaglushka_1_img.png"],
+        ["zaglushka_3_img.png", "zaglushka_3_img.png", "image/png", "app/src/main/res/drawable/zaglushka_3_img.png"],
+        ["zaglushka_4_img.png", "zaglushka_4_img.png", "image/png", "app/src/main/res/drawable/zaglushka_4_img.png"],
+        ["real-artwork/player-what-you-know.png", "player-what-you-know.png", "image/png", "supplied reference crop · player artwork image fill"],
+        ["real-artwork/playlist-seasonal-topping.png", "playlist-seasonal-topping.png", "image/png", "supplied reference crop · playlist cover image fill"],
+        ["real-artwork/playlist-xtra.png", "playlist-xtra.png", "image/png", "supplied reference crop · playlist cover image fill"],
+        ["real-artwork/track-homewrecker.png", "track-homewrecker.png", "image/png", "supplied reference crop · saved track artwork image fill"],
+        ["real-artwork/track-leila.png", "track-leila.png", "image/png", "supplied reference crop · saved track artwork image fill"],
+        ["real-artwork/track-forever.png", "track-forever.png", "image/png", "supplied reference crop · saved track artwork image fill"],
+        ["telegram_info.png", "telegram_info.png", "image/png", "app/src/main/res/drawable/telegram_info.png"],
+        ["spotify_info.png", "spotify_info.png", "image/png", "app/src/main/res/drawable/spotify_info.png"],
+        ["insta_info.png", "insta_info.png", "image/png", "app/src/main/res/drawable/insta_info.png"],
+        ["tiktok_info.png", "tiktok_info.png", "image/png", "app/src/main/res/drawable/tiktok_info.png"],
+        ["youtube_info.png", "youtube_info.png", "image/png", "app/src/main/res/drawable/youtube_info.png"],
+        ["twitter_info.png", "twitter_info.png", "image/png", "app/src/main/res/drawable/twitter_info.png"],
+        ["vk_info.png", "vk_info.png", "image/png", "app/src/main/res/drawable/vk_info.png"],
+        ["yandex_info.png", "yandex_info.png", "image/png", "app/src/main/res/drawable/yandex_info.png"]
+      ];
+      for (const item of pngs) {
+        try { assets.push(await bytes(item[0], item[1], item[2], item[3])); } catch (error) { errors.push(error.message); }
+      }
+      const vectors = [
+        ["myata_banner_new.xml", "myata_banner_new.xml", "app/src/main/res/drawable/myata_banner_new.xml"],
+        ["gold_banner_new.xml", "gold_banner_new.xml", "app/src/main/res/drawable/gold_banner_new.xml"],
+        ["xtra_banner_new.xml", "xtra_banner_new.xml", "app/src/main/res/drawable/xtra_banner_new.xml"]
+      ];
+      for (const item of vectors) {
+        try { assets.push(await vector(item[0], item[1], item[2])); } catch (error) { errors.push(error.message); }
+      }
+      assets.push(...await selectedArtwork());
+      status.textContent = "Подготовлено ресурсов: " + assets.length + (errors.length ? "\nПредупреждения:\n" + errors.join("\n") : "") + "\nСоздаю редактируемые фреймы…";
+      return assets;
+    }
+
+    function send(type, assets) {
+      run.disabled = true;
+      skip.disabled = true;
+      parent.postMessage({ pluginMessage: { type, assets } }, "*");
+    }
+
+    run.addEventListener("click", async () => {
+      try { send("assets-ready", await prepare()); }
+      catch (error) { status.textContent = "Ошибка подготовки: " + error.message; run.disabled = false; skip.disabled = false; }
+    });
+    skip.addEventListener("click", () => send("assets-ready", []));
+    window.onmessage = (event) => {
+      const message = event.data && event.data.pluginMessage;
+      if (!message) return;
+      if (message.type === "error") {
+        status.textContent = "Ошибка плагина:\n" + message.message;
+        run.disabled = false;
+        skip.disabled = false;
+        return;
+      }
+      if (message.type === "result") {
+        const result = message.result;
+        const lines = result.links.map((link) => link.href ? `<a href="${link.href}" target="_blank">${esc(link.name)}</a> · ${esc(link.id)}` : `${esc(link.name)} · ${esc(link.id)}`);
+        status.innerHTML = "Готово. Страница: <b>" + esc(result.pageName) + "</b>\n" +
+          "Фреймов: " + result.frames.length + " · variables: " + result.variableCount + "\n" +
+          "Muller: " + (result.mullerAvailable ? "доступен" : "недоступен — отмечены Inter fallback-слои") + "\n\n" + lines.join("<br>");
+        run.disabled = false;
+        skip.disabled = false;
+      }
+    };
+    status.textContent = "Android PNG и XML-баннеры будут загружены локально после запуска.";
+  </script>
+</body>
+</html>

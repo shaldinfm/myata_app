@@ -1,0 +1,9 @@
+{
+  "name": "Radio Myata · Dark Screens",
+  "id": "202608050001",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page"
+}

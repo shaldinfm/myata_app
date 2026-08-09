@@ -1,0 +1,10 @@
+# Third-party track/playlist artwork cropped from reference screenshots by
+# build-dark-assets.mjs. Not ours to redistribute, and regenerable — see
+# assets/real-artwork/SOURCES.md for what each crop is and where it comes from.
+assets/real-artwork/*.png
+assets/real-artwork/sources.json
+
+# Reference screenshot of the running app. Large, and it contains the same
+# third-party cover art as the crops above. Supply your own locally if you want
+# the plugin to fill covers from a reference instead of colour placeholders.
+assets/reference-home.png

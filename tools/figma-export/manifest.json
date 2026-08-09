@@ -1,0 +1,11 @@
+{
+  "name": "Current Android UI Export",
+  "id": "202608010001",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": [
+    "figma"
+  ],
+  "documentAccess": "dynamic-page"
+}

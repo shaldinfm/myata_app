@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    :root { color-scheme: light dark; font-family: Inter, Arial, sans-serif; }
+    body { margin: 0; padding: 18px; background: #1c3f5f; color: #f5f7fa; font-size: 12px; }
+    h1 { margin: 0 0 8px; font-size: 16px; }
+    p { margin: 6px 0 12px; line-height: 1.35; opacity: .9; }
+    button, input { font: inherit; }
+    button { border: 0; border-radius: 12px; padding: 9px 12px; margin: 0 6px 8px 0; cursor: pointer; }
+    #run { background: #00e5ff; color: #071421; font-weight: 700; }
+    #skip { background: #132740; color: #f5f7fa; border: 1px solid #88ffffff; }
+    label { display: block; margin: 2px 0 6px; }
+    #status { min-height: 34px; margin-top: 4px; color: #ffccff; }
+    .small { font-size: 11px; opacity: .75; }
+  </style>
+</head>
+<body>
+  <h1>Current Android UI · Home v2</h1>
+  <p>Баннеры берутся из Android XML, обложки — из приложенных ресурсов/эталона. Reference добавится отдельным заблокированным слоем.</p>
+  <label><input id="covers" type="file" accept="image/png,image/jpeg,image/webp" multiple /> Дополнительные обложки (необязательно)</label>
+  <button id="run">Создать Home</button>
+  <button id="skip">Продолжить без растров</button>
+  <div id="status">Загружаю локальные ресурсы…</div>
+  <div class="small">После запуска этот диалог закроется. Повторный запуск обновляет только созданный плагином Home.</div>
+<script>
+  const ANDROID_NS = "http://schemas.android.com/apk/res/android";
+  const status = document.getElementById("status");
+  const runButton = document.getElementById("run");
+  const skipButton = document.getElementById("skip");
+  const coverInput = document.getElementById("covers");
+  let preparedAssets = [];
+  let customAssets = [];
+
+  function getAndroidAttr(node, name) {
+    return node.getAttributeNS(ANDROID_NS, name) || node.getAttribute("android:" + name) || node.getAttribute(name) || "";
+  }
+
+  function escapeXml(value) {
+    return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function normalizeColor(value) {
+    if (!value || value === "@android:color/transparent" || value === "#00000000") return {color: "none", opacity: 1};
+    if (value[0] !== "#") return {color: value, opacity: 1};
+    const raw = value.slice(1);
+    if (raw.length === 8) return {color: "#" + raw.slice(2), opacity: parseInt(raw.slice(0, 2), 16) / 255};
+    return {color: value, opacity: 1};
+  }
+
+  function groupTransform(node) {
+    const tx = getAndroidAttr(node, "translateX") || "0";
+    const ty = getAndroidAttr(node, "translateY") || "0";
+    const sx = getAndroidAttr(node, "scaleX") || "1";
+    const sy = getAndroidAttr(node, "scaleY") || "1";
+    const rotation = getAndroidAttr(node, "rotation") || "0";
+    const pivotX = getAndroidAttr(node, "pivotX") || "0";
+    const pivotY = getAndroidAttr(node, "pivotY") || "0";
+    const transforms = [];
+    if (tx !== "0" || ty !== "0") transforms.push(`translate(${tx} ${ty})`);
+    if (rotation !== "0") transforms.push(`rotate(${rotation} ${pivotX} ${pivotY})`);
+    if (sx !== "1" || sy !== "1") transforms.push(`scale(${sx} ${sy})`);
+    return transforms.join(" ");
+  }
+
+  function emitAndroidNode(node) {
+    const tag = node.tagName.toLowerCase();
+    if (tag === "path") {
+      const d = getAndroidAttr(node, "pathData");
+      if (!d) return "";
+      const fill = normalizeColor(getAndroidAttr(node, "fillColor"));
+      const stroke = normalizeColor(getAndroidAttr(node, "strokeColor"));
+      const fillAlpha = parseFloat(getAndroidAttr(node, "fillAlpha") || "1");
+      const strokeAlpha = parseFloat(getAndroidAttr(node, "strokeAlpha") || "1");
+      const strokeWidth = getAndroidAttr(node, "strokeWidth");
+      const attrs = [
+        `d="${escapeXml(d)}"`,
+        `fill="${escapeXml(fill.color)}"`,
+        `fill-rule="evenodd"`,
+        `fill-opacity="${fill.opacity * fillAlpha}"`,
+        `stroke="${escapeXml(stroke.color)}"`,
+        `stroke-opacity="${stroke.opacity * strokeAlpha}"`
+      ];
+      if (strokeWidth) attrs.push(`stroke-width="${escapeXml(strokeWidth)}"`);
+      return `<path ${attrs.join(" ")} />`;
+    }
+    if (tag === "clip-path") return "";
+    const children = Array.from(node.children || []).map(emitAndroidNode).join("");
+    if (tag === "group" || tag === "vector") {
+      const transform = groupTransform(node);
+      return `<g${transform ? ` transform="${escapeXml(transform)}"` : ""}>${children}</g>`;
+    }
+    return children;
+  }
+
+  function androidVectorToSvg(xmlText, sourceName) {
+    const document = new DOMParser().parseFromString(xmlText, "application/xml");
+    const vector = document.documentElement;
+    if (!vector || vector.tagName.toLowerCase() !== "vector") throw new Error("Не найден Android vector root: " + sourceName);
+    const width = (getAndroidAttr(vector, "width") || "316").replace(/dp$/, "");
+    const height = (getAndroidAttr(vector, "height") || "198").replace(/dp$/, "");
+    const viewportWidth = getAndroidAttr(vector, "viewportWidth") || width;
+    const viewportHeight = getAndroidAttr(vector, "viewportHeight") || height;
+    const body = Array.from(vector.children || []).map(emitAndroidNode).join("");
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${escapeXml(width)}" height="${escapeXml(height)}" viewBox="0 0 ${escapeXml(viewportWidth)} ${escapeXml(viewportHeight)}">${body}</svg>`;
+  }
+
+  function bytesFromBase64(dataUrl) {
+    const base64 = dataUrl.split(",")[1] || "";
+    const binary = atob(base64);
+    const bytes = new Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+
+  async function fetchBytes(path, name, mime, source) {
+    const response = await fetch("./assets/" + path);
+    if (!response.ok) throw new Error("Не удалось загрузить " + path);
+    const buffer = await response.arrayBuffer();
+    return {name, mime, bytes: Array.from(new Uint8Array(buffer)), source};
+  }
+
+  async function fetchVector(path, name, source) {
+    const response = await fetch("./assets/" + path);
+    if (!response.ok) throw new Error("Не удалось загрузить " + path);
+    const xml = await response.text();
+    return {name, kind: "svg", svg: androidVectorToSvg(xml, name), source};
+  }
+
+  async function cropReferenceCover(referenceAsset, index, x, y, size) {
+    const blob = new Blob([new Uint8Array(referenceAsset.bytes)], {type: "image/png"});
+    const bitmap = typeof createImageBitmap === "function"
+      ? await createImageBitmap(blob)
+      : await new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = reject;
+          image.src = URL.createObjectURL(blob);
+        });
+    if (x + size > bitmap.width || y + size > bitmap.height) return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    canvas.getContext("2d").drawImage(bitmap, x, y, size, size, 0, 0, size, size);
+    const dataUrl = canvas.toDataURL("image/png");
+    return {
+      name: `reference-cover-0${index}.png`,
+      mime: "image/png",
+      bytes: bytesFromBase64(dataUrl),
+      source: "supplied reference screenshot crop · remote playlist cover unavailable",
+      fromReference: true
+    };
+  }
+
+  async function readCustomCovers() {
+    const files = Array.from(coverInput.files || []).slice(0, 3);
+    const result = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      result.push({
+        name: `custom-cover-0${i + 1}.png`,
+        mime: file.type || "image/png",
+        bytes: Array.from(new Uint8Array(await file.arrayBuffer())),
+        source: "user-selected playlist cover",
+        fromReference: false
+      });
+    }
+    return result;
+  }
+
+  async function prepare() {
+    const assets = [];
+    const errors = [];
+    const pngs = [
+      ["reference-home.png", "reference-home.png", "image/png", "supplied screenshot · locked Reference only"],
+      ["zaglushka_1_img.png", "zaglushka_1_img.png", "image/png", "app/src/main/res/drawable/zaglushka_1_img.png"],
+      ["zaglushka_3_img.png", "zaglushka_3_img.png", "image/png", "app/src/main/res/drawable/zaglushka_3_img.png"],
+      ["zaglushka_4_img.png", "zaglushka_4_img.png", "image/png", "app/src/main/res/drawable/zaglushka_4_img.png"]
+    ];
+    for (const [path, name, mime, source] of pngs) {
+      try { assets.push(await fetchBytes(path, name, mime, source)); } catch (error) { errors.push(error.message); }
+    }
+    const vectors = [
+      ["myata_banner_new.xml", "myata_banner_new.xml", "app/src/main/res/drawable/myata_banner_new.xml"],
+      ["gold_banner_new.xml", "gold_banner_new.xml", "app/src/main/res/drawable/gold_banner_new.xml"],
+      ["xtra_banner_new.xml", "xtra_banner_new.xml", "app/src/main/res/drawable/xtra_banner_new.xml"]
+    ];
+    for (const [path, name, source] of vectors) {
+      try { assets.push(await fetchVector(path, name, source)); } catch (error) { errors.push(error.message); }
+    }
+    const reference = assets.find((asset) => asset.name === "reference-home.png");
+    if (reference) {
+      const crops = await Promise.all([
+        cropReferenceCover(reference, 1, 14, 792, 216),
+        cropReferenceCover(reference, 2, 249, 792, 216)
+      ]);
+      crops.filter(Boolean).forEach((crop) => assets.push(crop));
+    }
+    customAssets = await readCustomCovers();
+    customAssets.forEach((asset) => assets.push(asset));
+    preparedAssets = assets;
+    status.textContent = `${assets.length} локальных ресурсов готовы${errors.length ? "; часть не загрузилась" : ""}.`;
+    if (errors.length) status.title = errors.join("\n");
+    return assets;
+  }
+
+  function send(type, assets) {
+    parent.postMessage({pluginMessage: {type, assets}}, "*");
+    runButton.disabled = true;
+    skipButton.disabled = true;
+    status.textContent = "Передаю ресурсы в Figma…";
+  }
+
+  coverInput.addEventListener("change", async () => {
+    try {
+      customAssets = await readCustomCovers();
+      status.textContent = `${customAssets.length} пользовательских обложки готовы; нажмите «Создать Home».`;
+    } catch (error) {
+      status.textContent = "Не удалось прочитать выбранные обложки: " + error.message;
+    }
+  });
+  runButton.addEventListener("click", async () => send("assets-ready", await prepare()));
+  skipButton.addEventListener("click", () => send("skip", []));
+  prepare().catch((error) => { status.textContent = "Ошибка подготовки ресурсов: " + error.message; });
+</script>
+</body>
+</html>

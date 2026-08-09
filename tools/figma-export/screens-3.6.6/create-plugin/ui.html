@@ -1,0 +1,111 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  body { margin:0; padding:14px; font:11px/1.5 Inter,-apple-system,system-ui,sans-serif; color:#1b1b1f; }
+  h1 { margin:0 0 2px; font-size:13px; }
+  .sub { margin:0 0 12px; color:#5f6368; }
+  .row { display:flex; gap:8px; margin-bottom:10px; }
+  button { flex:1; height:34px; border:0; border-radius:8px; font-weight:600; font-size:12px; cursor:pointer; }
+  #dry { background:#0d99ff; color:#fff; }
+  #apply { background:#e3e3e5; color:#8a8a8e; }
+  #apply.armed { background:#0a7c42; color:#fff; cursor:pointer; }
+  .warn { background:#fff4e5; border:1px solid #ffd8a8; border-radius:8px; padding:8px 10px; margin-bottom:10px; color:#7a4a00; }
+  .counts { display:grid; grid-template-columns:1fr 1fr; gap:4px 10px; margin-bottom:10px; }
+  .out { border:1px solid #e0e0e2; border-radius:8px; max-height:380px; overflow:auto; padding:8px; background:#fbfbfc; }
+  .grp { font-weight:700; margin:8px 0 4px; text-transform:uppercase; letter-spacing:.4px; color:#5f6368; font-size:10px; }
+  .item { border-bottom:1px solid #eee; padding:3px 0; }
+  .ok { color:#0a7c42; font-weight:600; }
+  .skip { color:#8a6d00; font-weight:600; }
+  .miss { color:#8b1a1a; font-weight:600; }
+  code { background:#f0f0f2; padding:0 3px; border-radius:3px; }
+  .err { background:#fde7e9; color:#8b1a1a; padding:8px; border-radius:8px; white-space:pre-wrap; }
+</style>
+</head>
+<body>
+  <h1>3.6.6 proposal screens</h1>
+  <p class="sub">Dry Run never writes. Apply creates only what Dry Run marked WILL_CREATE.</p>
+
+  <div class="warn">Frames go to two new pages, <b>3.6.6 PROPOSALS</b>. The plugin refuses to write to a
+  canonical page, so the exported baselines stay comparable. Re-running skips frames that already exist.</div>
+
+  <div class="row">
+    <button id="dry">1 · Dry Run</button>
+    <button id="apply" disabled>2 · Create frames</button>
+  </div>
+
+  <div class="counts" id="counts"></div>
+  <div class="out" id="out">No dry run yet.</div>
+
+<script>
+  var out = document.getElementById("out");
+  var counts = document.getElementById("counts");
+  var applyBtn = document.getElementById("apply");
+
+  document.getElementById("dry").onclick = function () {
+    out.textContent = "Reading document…"; counts.innerHTML = "";
+    applyBtn.disabled = true; applyBtn.className = "";
+    parent.postMessage({ pluginMessage: { type: "dryrun" } }, "*");
+  };
+  applyBtn.onclick = function () {
+    if (applyBtn.disabled) return;
+    out.textContent = "Creating…";
+    parent.postMessage({ pluginMessage: { type: "apply" } }, "*");
+  };
+
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+  function cls(s) { return s === "WILL_CREATE" ? "ok" : s === "ALREADY_EXISTS" ? "skip" : "miss"; }
+
+  onmessage = function (e) {
+    var m = e.data.pluginMessage;
+    if (!m) return;
+    if (m.type === "status") { out.textContent = m.text; return; }
+    if (m.type === "error") { out.innerHTML = '<div class="err">' + esc(m.text) + "</div>"; return; }
+
+    if (m.type === "dryrun-result") {
+      var r = m.report, h = "";
+      counts.innerHTML =
+        "<div><b>" + r.counts.create + "</b> frames to create</div>" +
+        "<div>" + r.counts.skip + " already present</div>";
+
+      h += '<div class="grp">Fonts</div>';
+      r.fonts.forEach(function (f) {
+        h += '<div class="item"><span class="' + (f.status === "AVAILABLE" ? "ok" : "miss") + '">' + f.status +
+             "</span> Muller " + esc(f.style) + "</div>";
+      });
+
+      if (r.warnings.length) {
+        h += '<div class="grp">Warnings</div>';
+        r.warnings.forEach(function (w) { h += '<div class="item miss">' + esc(w) + "</div>"; });
+      }
+
+      r.themes.forEach(function (t) {
+        h += '<div class="grp">' + esc(t.theme) + " · " + esc(t.page) +
+             (t.pageExists ? "" : " <span class='ok'>(will be created)</span>") + "</div>";
+        var group = "";
+        t.screens.forEach(function (s) {
+          if (s.group !== group) { group = s.group; h += '<div class="item" style="background:#f4f4f6"><b>' + esc(group) + "</b></div>"; }
+          h += '<div class="item"><span class="' + cls(s.status) + '">' + s.status + "</span> <code>" +
+               esc(s.name) + "</code> " + s.w + "×" + s.h + "</div>";
+        });
+      });
+
+      out.innerHTML = h;
+      if (r.counts.create > 0 && !r.warnings.length) { applyBtn.disabled = false; applyBtn.className = "armed"; }
+    }
+
+    if (m.type === "apply-result") {
+      var d = m.done;
+      out.innerHTML = '<div class="grp">Done</div>' +
+        "<div class='item'>frames created: <b>" + d.created + "</b></div>" +
+        "<div class='item'>skipped: " + d.skipped + "</div>" +
+        "<div class='item'>pages created: " + d.pagesCreated + "</div>" +
+        (d.notes.length ? '<div class="grp">Notes</div>' + d.notes.map(function (s) { return '<div class="item">' + esc(s) + "</div>"; }).join("") : "") +
+        (d.errors.length ? '<div class="grp">Errors</div>' + d.errors.map(function (s) { return '<div class="item miss">' + esc(s) + "</div>"; }).join("") : "");
+      applyBtn.disabled = true; applyBtn.className = "";
+    }
+  };
+</script>
+</body>
+</html>

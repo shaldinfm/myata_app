@@ -2288,8 +2288,9 @@ async function readCollectionState() {
 
   state.canBind = !!(state.modeLight && state.modeDark);
   if (!state.modeDark) {
-    state.note = "The collection has no Dark mode. Figma limits variable collections to a single mode on the Starter plan; addMode() throws there. " +
-      "Binding is BLOCKED on purpose: with one mode both pages would resolve to the same colour and the light/dark distinction would be destroyed.";
+    state.note = "Single mode only. A Light/Dark variable pair needs a Figma plan that allows multiple modes, so the semantic phase is skipped by design " +
+      "and the mapping lives in tools/figma-export/canonical/semantic-tokens.json instead. This is NOT an error.";
+    state.emptyAndUnused = Object.keys(state.variables).length === 0;
   }
   return state;
 }
@@ -2301,7 +2302,11 @@ async function dryRun() {
   var report = { mutations: [], bindings: [], variables: [], textStyles: [], collection: null, counts: {}, warnings: [] };
 
   report.collection = await readCollectionState();
-  if (report.collection.exists && !report.collection.modeDark) report.warnings.push(report.collection.note);
+  report.starterMode = !report.collection.canBind;
+  if (report.collection.note) report.warnings.push(report.collection.note);
+  if (report.collection.emptyAndUnused)
+    report.warnings.push("The '" + REPAIR_PLAN.collectionName + "' collection is empty (0 variables) and nothing binds to it. " +
+      "It is a leftover from the failed run and carries no value. Deleting it is offered as a separate, explicit action - it is never part of Apply.");
 
   for (var i = 0; i < REPAIR_PLAN.mutations.length; i++) {
     var m = REPAIR_PLAN.mutations[i];
@@ -2316,7 +2321,7 @@ async function dryRun() {
     var name = names[t], tok = REPAIR_PLAN.tokens[name];
     var existing = report.collection.variables[name];
     report.variables.push({ name: name, dark: tok.dark, light: tok.light, bound: tok.bind,
-      status: existing ? "ALREADY_APPLIED" : "WILL_CREATE" });
+      status: existing ? "ALREADY_APPLIED" : (report.starterMode ? "SKIPPED_PLAN_LIMIT" : "WILL_CREATE") });
   }
 
   // bindings: READY only if the collection can actually carry two modes
@@ -2334,8 +2339,7 @@ async function dryRun() {
         var boundTo = paint && paint.boundVariables && paint.boundVariables.color ? paint.boundVariables.color.id : null;
         var want = report.collection.variables[bind.token];
         if (boundTo && want && boundTo === want.id) e.status = "ALREADY_APPLIED";
-        else if (!report.collection.canBind && !report.collection.exists) e.status = "READY";
-        else if (!report.collection.canBind) e.status = "BLOCKED_NO_DARK_MODE";
+        else if (report.starterMode) e.status = "SKIPPED_PLAN_LIMIT";
         else e.status = paint && e.current === s.current ? "READY" : "SKIP_CHANGED";
       }
       report.bindings.push(e);
@@ -2359,8 +2363,8 @@ async function dryRun() {
     mutationsMissing: count(report.mutations, "SKIP_MISSING"),
     bindingsReady: count(report.bindings, "READY"),
     bindingsApplied: count(report.bindings, "ALREADY_APPLIED"),
-    bindingsBlocked: count(report.bindings, "BLOCKED_NO_DARK_MODE"),
-    bindingsOther: report.bindings.length - count(report.bindings, "READY") - count(report.bindings, "ALREADY_APPLIED") - count(report.bindings, "BLOCKED_NO_DARK_MODE"),
+    bindingsBlocked: count(report.bindings, "SKIPPED_PLAN_LIMIT"),
+    bindingsOther: report.bindings.length - count(report.bindings, "READY") - count(report.bindings, "ALREADY_APPLIED") - count(report.bindings, "SKIPPED_PLAN_LIMIT"),
     variablesToCreate: count(report.variables, "WILL_CREATE"),
     variablesExisting: count(report.variables, "ALREADY_APPLIED"),
     stylesToCreate: count(report.textStyles, "WILL_CREATE"),
@@ -2373,41 +2377,42 @@ async function dryRun() {
 
 // ---------------- apply ----------------
 
-async function ensureCollection(done) {
+/*
+ * Starter-compatible: this NEVER calls addMode(). A Light/Dark variable pair needs
+ * a plan that allows multiple modes; without it the semantic phase is skipped
+ * entirely and the mapping lives in canonical/semantic-tokens.json instead.
+ *
+ * Nothing is created here either - creating an unbound single-mode collection is
+ * what produced the leftover we now have to clean up.
+ */
+async function inspectCollection(done) {
   var collections = await figma.variables.getLocalVariableCollectionsAsync();
   var col = null;
   for (var i = 0; i < collections.length; i++) if (collections[i].name === REPAIR_PLAN.collectionName) col = collections[i];
-
-  if (!col) {
-    try { col = figma.variables.createVariableCollection(REPAIR_PLAN.collectionName); }
-    catch (e) { throw new Error("createVariableCollection('" + REPAIR_PLAN.collectionName + "') failed: " + errText(e)); }
-    done.notes.push("Created collection " + REPAIR_PLAN.collectionName);
-  } else {
-    done.notes.push("Reusing existing collection " + REPAIR_PLAN.collectionName);
-  }
+  if (!col) return { collection: null, modeLight: null, modeDark: null };
 
   var modeLight = null, modeDark = null;
   for (var m = 0; m < col.modes.length; m++) {
     if (col.modes[m].name === "Light") modeLight = col.modes[m].modeId;
     if (col.modes[m].name === "Dark") modeDark = col.modes[m].modeId;
   }
-
-  if (!modeLight) {
-    // rename the default mode rather than adding one
-    try { col.renameMode(col.modes[0].modeId, "Light"); modeLight = col.modes[0].modeId; done.notes.push("Renamed default mode to Light"); }
-    catch (e) { throw new Error("renameMode(default -> 'Light') failed: " + errText(e)); }
-  }
-
-  if (!modeDark) {
-    try { modeDark = col.addMode("Dark"); done.notes.push("Added Dark mode"); }
-    catch (e) {
-      done.modeError = "addMode('Dark') failed: " + errText(e) +
-        "\nFigma limits a variable collection to one mode on the Starter plan. " +
-        "Variables and bindings are skipped on purpose - binding with a single mode would make both pages resolve to the same colour.";
-      return { collection: col, modeLight: modeLight, modeDark: null };
-    }
-  }
   return { collection: col, modeLight: modeLight, modeDark: modeDark };
+}
+
+// Explicit, separate action. Never part of Apply.
+async function deleteEmptyCollection() {
+  var collections = await figma.variables.getLocalVariableCollectionsAsync();
+  var col = null;
+  for (var i = 0; i < collections.length; i++) if (collections[i].name === REPAIR_PLAN.collectionName) col = collections[i];
+  if (!col) return { ok: false, reason: "No collection named " + REPAIR_PLAN.collectionName + " exists." };
+
+  var vars = await figma.variables.getLocalVariablesAsync("COLOR");
+  var mine = 0;
+  for (var v = 0; v < vars.length; v++) if (vars[v].variableCollectionId === col.id) mine++;
+  if (mine > 0) return { ok: false, reason: "Refusing to delete: the collection holds " + mine + " variable(s). Only an empty collection is removed." };
+
+  col.remove();
+  return { ok: true, reason: "Deleted the empty collection " + REPAIR_PLAN.collectionName + "." };
 }
 
 async function ensureVariables(col, modeLight, modeDark, done) {
@@ -2435,7 +2440,7 @@ async function ensureVariables(col, modeLight, modeDark, done) {
 async function apply() {
   if (!verifiedPlan) throw new Error("Run Dry Run first. Apply only executes what a Dry Run in this session marked READY.");
   await loadAllPages();
-  var done = { mutations: 0, mutationsSkipped: 0, variables: 0, variablesReused: 0, bindings: 0, textStyles: 0, skipped: [], notes: [], modeError: null, phase: "start" };
+  var done = { mutations: 0, mutationsSkipped: 0, variables: 0, variablesReused: 0, bindings: 0, textStyles: 0, skipped: [], notes: [], semanticSkipped: null, phase: "start" };
 
   // ---- phase 1: structural + typography ----
   done.phase = "structural";
@@ -2466,49 +2471,50 @@ async function apply() {
     }
   }
 
-  // ---- phase 2: semantic collection ----
-  done.phase = "collection";
-  var col, modeLight, modeDark;
+  // ---- phase 2: semantic variables (skipped unless two modes already exist) ----
+  done.phase = "semantic";
+  var col = null, modeLight = null, modeDark = null;
   try {
-    var res = await ensureCollection(done);
+    var res = await inspectCollection(done);
     col = res.collection; modeLight = res.modeLight; modeDark = res.modeDark;
-  } catch (e) {
-    done.skipped.push("collection: " + errText(e));
-    return done;
+  } catch (e) { done.skipped.push("collection inspect: " + errText(e)); }
+
+  var vars = null;
+  if (!col || !modeLight || !modeDark) {
+    done.semanticSkipped = "SKIPPED_PLAN_LIMIT - a Light/Dark variable pair needs a Figma plan that allows multiple modes. " +
+      "The approved mapping lives in tools/figma-export/canonical/semantic-tokens.json and is the source of truth for Android. " +
+      "Nothing was created, and no node was bound: binding to a single-mode variable would make both pages resolve to the same colour.";
+    done.notes.push("Semantic phase skipped (Starter-compatible path). Text styles still run.");
+  } else {
+    done.phase = "variables";
+    try { vars = await ensureVariables(col, modeLight, modeDark, done); }
+    catch (e) { done.skipped.push("variables: " + errText(e)); vars = null; }
+
+    if (vars) {
+      done.phase = "bindings";
+      for (var b = 0; b < verifiedPlan.bindings.length; b++) {
+        var e2 = verifiedPlan.bindings[b];
+        if (e2.status !== "READY") continue;
+        try {
+          var n = await getNode(e2.id);
+          if (!n) { done.skipped.push(e2.id + " vanished"); continue; }
+          var paint = solidOf(n, e2.prop);
+          if (!paint) { done.skipped.push(e2.id + " has no solid paint"); continue; }
+          if (paint.boundVariables && paint.boundVariables.color) continue;
+          if (rgbToHex(paint.color) !== e2.expect) { done.skipped.push(e2.id + " colour changed since dry run"); continue; }
+          var variable = vars[e2.token];
+          if (!variable) { done.skipped.push(e2.id + ": no variable " + e2.token); continue; }
+          var bound = figma.variables.setBoundVariableForPaint(paint, "color", variable);
+          var arr = n[e2.prop].slice();
+          for (var k = 0; k < arr.length; k++) if (arr[k] === paint) { arr[k] = bound; break; }
+          n[e2.prop] = arr;
+          done.bindings++;
+        } catch (err) { done.skipped.push("binding " + e2.id + " threw: " + errText(err)); }
+      }
+    }
   }
 
-  if (!modeDark) return done; // modeError already recorded; binding deliberately skipped
-
-  // ---- phase 3: variables ----
-  done.phase = "variables";
-  var vars;
-  try { vars = await ensureVariables(col, modeLight, modeDark, done); }
-  catch (e) { done.skipped.push("variables: " + errText(e)); return done; }
-
-  // ---- phase 4: bindings ----
-  done.phase = "bindings";
-  for (var b = 0; b < verifiedPlan.bindings.length; b++) {
-    var e2 = verifiedPlan.bindings[b];
-    if (e2.status !== "READY") continue;
-    try {
-      var n = await getNode(e2.id);
-      if (!n) { done.skipped.push(e2.id + " vanished"); continue; }
-      var paint = solidOf(n, e2.prop);
-      if (!paint) { done.skipped.push(e2.id + " has no solid paint"); continue; }
-      var already = paint.boundVariables && paint.boundVariables.color;
-      if (already) continue;
-      if (rgbToHex(paint.color) !== e2.expect) { done.skipped.push(e2.id + " colour changed since dry run"); continue; }
-      var variable = vars[e2.token];
-      if (!variable) { done.skipped.push(e2.id + ": no variable " + e2.token); continue; }
-      var bound = figma.variables.setBoundVariableForPaint(paint, "color", variable);
-      var arr = n[e2.prop].slice();
-      for (var k = 0; k < arr.length; k++) if (arr[k] === paint) { arr[k] = bound; break; }
-      n[e2.prop] = arr;
-      done.bindings++;
-    } catch (err) { done.skipped.push("binding " + e2.id + " threw: " + errText(err)); }
-  }
-
-  // ---- phase 5: text styles ----
+  // ---- phase 3: text styles (independent of everything above) ----
   done.phase = "textStyles";
   var localStyles = await figma.getLocalTextStylesAsync();
   for (var t = 0; t < REPAIR_PLAN.textStyles.length; t++) {
@@ -2541,6 +2547,12 @@ figma.ui.onmessage = async function (msg) {
       figma.ui.postMessage({ type: "dryrun-result", report: await dryRun() });
     } catch (e) {
       figma.ui.postMessage({ type: "error", text: "Dry Run failed: " + errText(e) });
+    }
+  } else if (msg.type === "delete-empty-collection") {
+    try {
+      figma.ui.postMessage({ type: "delete-result", result: await deleteEmptyCollection() });
+    } catch (e) {
+      figma.ui.postMessage({ type: "error", text: "Delete failed: " + errText(e) });
     }
   } else if (msg.type === "apply") {
     var phase = "unknown";

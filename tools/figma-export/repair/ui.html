@@ -35,6 +35,9 @@
     <button id="dry">1 · Dry Run</button>
     <button id="apply" disabled>2 · Apply</button>
   </div>
+  <div class="row">
+    <button id="delcol" class="danger" style="background:#f0f0f2;color:#8a8a8e">Delete empty semantic collection</button>
+  </div>
 
   <div class="counts" id="counts"></div>
   <div class="out" id="out">No dry run yet.</div>
@@ -54,8 +57,17 @@
     out.textContent = "Applying…";
     parent.postMessage({ pluginMessage: { type: "apply" } }, "*");
   };
+  document.getElementById("delcol").onclick = function () {
+    out.textContent = "Deleting empty collection…";
+    parent.postMessage({ pluginMessage: { type: "delete-empty-collection" } }, "*");
+  };
 
-  function cls(s) { return s === "READY" || s === "WILL_CREATE" ? "ok" : s.indexOf("MISSING") >= 0 ? "miss" : "skip"; }
+  function cls(s) {
+    if (s === "READY" || s === "WILL_CREATE") return "ok";
+    if (s === "ALREADY_APPLIED") return "ok";
+    if (s.indexOf("MISSING") >= 0) return "miss";
+    return "skip";
+  }
   function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
 
   onmessage = function (e) {
@@ -71,7 +83,7 @@
         "<div><b>" + c.bindingsReady + "</b> bindings remaining</div><div>" + c.bindingsApplied + " already applied</div>" +
         "<div><b>" + c.variablesToCreate + "</b> variables to create</div><div>" + c.variablesExisting + " existing</div>" +
         "<div><b>" + c.stylesToCreate + "</b> styles to create</div><div>" + c.stylesExisting + " existing</div>" +
-        (c.bindingsBlocked ? "<div class='miss'><b>" + c.bindingsBlocked + "</b> bindings BLOCKED</div><div></div>" : "") +
+        (c.bindingsBlocked ? "<div class='skip'><b>" + c.bindingsBlocked + "</b> bindings skipped (plan limit)</div><div></div>" : "") +
         (c.mutationsChanged || c.mutationsMissing ? "<div class='skip'>" + c.mutationsChanged + " changed, " + c.mutationsMissing + " missing</div><div></div>" : "");
 
       // current document state first - this is the recovery view

@@ -1,8 +1,12 @@
 {
-  "version": "3.6.6-design.1",
-  "status": "proposal - not implemented in Android",
+  "version": "3.6.6-concepts.1",
+  "status": "UNAPPROVED CONCEPTS - not implemented in Android, not signed off",
   "extends": "../dark-theme/dark-screens.json",
-  "summary": "Light counterparts of the approved dark screens, plus the missing auth / profile / settings screens and two splash directions. Same visual language, same layout system, same component set.",
+  "summary": "Concepts for screens that do not exist yet (auth, profile, settings), plus two splash directions and a proposed light token set. Contains NO light versions of the existing screens.",
+  "scopeLimit": {
+    "existingScreensNotIncluded": "Light duplicates of home, player, collection, collection-empty, about, the two menus, the three sheets and full-history are deliberately absent. Their canonical source is the real Figma project. An earlier attempt reconstructed them from preview.html and the rendered PNGs and drifted from the approved design (wrong header text, section titles at y=96 instead of y=80, three stream cards instead of two, mini-player in the wrong state). Those reconstructions were removed rather than corrected.",
+    "blockedOn": "Direct access to the Figma frames. Once available: compare Figma against dark-theme/code.js, dark-theme/preview.html and dark-screens.json, record any drift with Figma taking precedence, and only then produce 1:1 light duplicates changing nothing but semantic tokens and contrast-driven details."
+  },
 
   "referenceWidth": 390,
   "layout": {
@@ -111,12 +115,10 @@
   ],
 
   "screens": {
-    "existingInLight": [
-      "home", "player", "collection", "collection-empty", "about",
-      "player-menu", "collection-menu",
-      "sheet-music-service", "sheet-sleep-timer", "sheet-report-problem",
-      "full-history"
-    ],
+    "existingInLight": {
+      "status": "NOT PRODUCED - blocked on Figma source, see scopeLimit",
+      "screens": []
+    },
     "new": [
       { "name": "auth-sign-in", "themes": ["light", "dark"], "notes": "Email + password, one primary action, Continue as guest always visible." },
       { "name": "auth-create-account", "themes": ["light", "dark"], "notes": "Same shell as sign in; display name added." },

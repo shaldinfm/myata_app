@@ -243,37 +243,10 @@ const head=(t,k="account")=>`<h1 class="title">${t}</h1><div class="icon-btn ${k
 const rows=(n=3)=>hist.slice(0,n).map(r=>`<div class="history-row"><span class="time">${r[0]}</span><div class="art"><img src="${r[3]}"></div><div class="history-copy"><b>${r[1]}</b><span>${r[2]}</span></div></div>`).join("");
 
 const S={};
-S.home=()=>`${head("Радио Мята")}<h2 class="section-title" style="top:96px">Наши потоки</h2>
-<div class="scroll-x streams">${["myata","gold","xtra"].map(n=>`<div class="stream" data-banner="${n}"></div>`).join("")}</div>
-<h2 class="section-title" style="top:372px">Мятные плейлисты</h2>
-<div class="scroll-x playlists">${[art.a,art.b,art.c].map(s=>`<div class="playlist"><img src="${s}"></div>`).join("")}</div>
-${mini("pause",600)}${nav("home")}`;
-S.player=()=>`<div class="now-playing">СЕЙЧАС ИГРАЕТ</div><div class="pager"><i></i><i></i><i></i></div>
-<div class="album"><img src="${art.a}"></div><div class="track-title">WHAT YOU KNOW</div><div class="track-artist">TWO DOOR CINEMA CLUB</div>
-<div class="controls"><div class="reaction">${ic.up}</div><div class="play-pause">${ic.pause}</div><div class="reaction" style="color:var(--muted)">${ic.down}</div></div>
-<div class="hint">Сохранить в Коллекцию · Отрицательная реакция</div>
-<div class="history"><h2>История эфира</h2>${rows(3)}<div class="wide-button">Показать ещё</div></div>${nav("player")}`;
-S.collection=()=>`${head("Коллекция","dots")}<div class="description">Треки, которые вы сохранили</div>${tracks.map((t,i)=>`<div class="track-card" style="top:${133+i*114}px"><div class="art"><img src="${t[2]}"></div><div class="track-copy"><b>${t[0]}</b><span>${t[1]}</span></div><div class="open">${ic.open}</div></div>`).join("")}${mini("play",600)}${nav("collection")}`;
-S["collection-empty"]=()=>`${head("Коллекция","dots")}<div class="description">Треки, которые вы сохранили</div>
-<div class="empty-card"><div class="disc-outer"></div><div class="disc-inner"></div><div class="disc-center"></div><div class="disc-hole"></div><div class="empty-heart">${ic.heart}</div>
-<div class="empty-title">Здесь пока пусто</div><div class="empty-copy">Нажмите ${ic.up} в плеере,<br>чтобы сохранить трек</div></div>${nav("collection")}`;
-S.about=()=>`${head("О нас","dots")}
-<div class="support monthly"><span class="chip">ЕЖЕМЕСЯЧНО</span><h2>Поддержать проект</h2><p>Регулярная поддержка помогает нам оставаться в эфире и без рекламы.</p><div class="button">Оформить</div></div>
-<div class="support one"><span class="chip">РАЗОВО</span><h2>Разовый донат</h2><p>Любая сумма — тоже поддержка. Спасибо, что вы с нами.</p><div class="button">Поддержать</div></div>
-<div class="about-card"><h2>Радио Мята</h2><p>Мы играем музыку, которую любим сами. Три потока, живой эфир и никакой рекламы.</p><div class="button">Сообщить о проблеме</div></div>
-<h2 class="social-title">Мы в сети</h2><div class="social-grid">${["telegram","vk","youtube","insta","spotify","yandex","tiktok","boosty"].map(s=>`<div class="social"><img src="${A+s}_info.png"></div>`).join("")}</div>${nav("about")}`;
-S["player-menu"]=()=>`${S.player()}<div class="scrim"></div><div class="popup">
-${[["Найти в сервисе",ic.search],["Таймер сна",ic.timer],["История эфира",ic.collection],["Сообщить о проблеме",ic.warn]].map(r=>`<div class="popup-row"><i>${r[1]}</i>${r[0]}</div>`).join("")}</div>`;
-S["collection-menu"]=()=>`${S.collection()}<div class="scrim"></div><div class="popup">
-<div class="popup-row"><i>${ic.open}</i>Открыть в сервисе</div><div class="popup-row"><i>${ic.search}</i>Найти в браузере</div><div class="popup-row danger"><i>${ic.close}</i>Удалить из коллекции</div></div>`;
-S["sheet-music-service"]=()=>`${S.player()}<div class="scrim"></div><div class="sheet" style="bottom:16px"><div class="handle"></div><h2>Открыть трек в</h2>
-${[["Spotify",1],["Apple Music",0],["YouTube Music",0],["Яндекс Музыка",0],["Найти в браузере",0]].map(r=>`<div class="sheet-row ${r[1]?"selected":""}"><i>${r[1]?ic.check:ic.open}</i>${r[0]}</div>`).join("")}</div>`;
-S["sheet-sleep-timer"]=()=>`${S.player()}<div class="scrim"></div><div class="sheet" style="bottom:16px"><div class="handle"></div><h2>Таймер сна</h2>
-${[["15 минут",0],["30 минут",1],["1 час",0],["Выключить",0]].map(r=>`<div class="sheet-row ${r[1]?"selected":""}"><i>${r[1]?ic.check:ic.timer}</i>${r[0]}</div>`).join("")}</div>`;
-S["sheet-report-problem"]=()=>`${S.player()}<div class="scrim"></div><div class="sheet" style="bottom:16px"><div class="handle"></div><h2>Сообщить о проблеме</h2>
-<div class="message-box">Опишите, что произошло…</div><div class="send">Отправить</div><div class="error-note">${ic.warn} Не удалось отправить. Проверьте соединение.</div></div>`;
-S["full-history"]=()=>`${S.player()}<div class="scrim"></div><div class="full-history"><h2>ИСТОРИЯ ЭФИРА</h2>
-${hist.map((r,i)=>`${i?'<hr>':''}<div class="history-row"><span class="time">${r[0]}</span><div class="art"><img src="${r[3]}"></div><div class="history-copy"><b>${r[1]}</b><span>${r[2]}</span></div></div>`).join("")}</div><div class="close">${ic.close}</div>`;
+// Existing screens (home, player, collection, about, menus, sheets) are NOT
+// defined here. Their canonical source is the Figma project; reconstructing them
+// from preview.html/PNG was wrong and has been removed. Light duplicates wait on
+// the real Figma frames - see README.
 
 // ---- new screens ----
 const authShell=(title,sub)=>`<div class="back">${ic.back}</div><h1 class="screen-title">${title}</h1><p class="screen-sub">${sub}</p>`;
@@ -352,7 +325,6 @@ S["splash-option-b"]=()=>`<div class="splash" style="background:linear-gradient(
 
 const H={home:757,player:1022,collection:740,"collection-empty":740,about:1418,"player-menu":1022,"collection-menu":740,"sheet-music-service":1022,"sheet-sleep-timer":1022,"sheet-report-problem":1022,"full-history":1022,"auth-sign-in":700,"auth-create-account":660,"auth-error":700,"auth-loading":640,"profile-authenticated":740,"profile-guest":740,settings:820,"settings-appearance":500,"splash-option-a":740,"splash-option-b":740};
 const PLAN=[
-  ...["home","player","collection","collection-empty","about","player-menu","collection-menu","sheet-music-service","sheet-sleep-timer","sheet-report-problem","full-history"].map(n=>[n,"light"]),
   ...["auth-sign-in","auth-create-account","auth-error","auth-loading","profile-authenticated","profile-guest","settings","settings-appearance"].flatMap(n=>[[n,"light"],[n,"dark"]]),
   ["splash-option-a","dark"],["splash-option-b","dark"]
 ];

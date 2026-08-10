@@ -162,7 +162,7 @@ class MediaPlayerService(): MediaSessionService(){
                     (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
                 }
                 // NotificationCompat, not Notification.Builder: the platform builder
-                // that takes a channel id requires API 26, and minSdk here is 21.
+                // that takes a channel id requires API 26, and minSdk here is 24.
                 val notification = androidx.core.app.NotificationCompat.Builder(this, channelId)
                     .setSmallIcon(R.drawable.ic_launcher_foreground)
                     .setContentTitle("Radio Myata")

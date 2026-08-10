@@ -6,7 +6,7 @@ Read [AGENTS.md](AGENTS.md) (hard rules) before doing anything.
 ## Project overview
 
 - Android internet-radio app "Myata Radio" (package `com.example.musicplayerapp`).
-- Kotlin + Gradle. `minSdk 21`, `targetSdk 35`.
+- Kotlin + Gradle. `minSdk 24`, `targetSdk 36`, `compileSdk 36`.
 - Playback: AndroidX **Media3 / ExoPlayer** (`media3-exoplayer`, `media3-session`, `media3-datasource-okhttp`), foreground `MediaPlayerService`.
 - **Firebase**: Crashlytics + Analytics (BoM). `app/google-services.json` is present — never print or modify it.
 - Current released/imported state: **versionName 3.6.4 / versionCode 202610**.

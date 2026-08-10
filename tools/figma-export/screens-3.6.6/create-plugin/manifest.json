@@ -1,0 +1,12 @@
+{
+  "name": "Radio Myata · 3.6.6 proposal screens (dry run / create)",
+  "id": "radio-myata-366-proposal-screens",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "reasoning": "Builds frames from a spec inlined into the plugin. It never contacts a server."
+  }
+}

@@ -1,0 +1,2107 @@
+{
+  "schemaVersion": "cleanup-2.0.0",
+  "status": "RECOVERY DRY RUN - not applied.",
+  "generatedFrom": {
+    "light": {
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "exportedAt": "2026-08-10T08:37:52.026Z"
+    },
+    "dark": {
+      "page": "3.6.6 PROPOSALS - DARK",
+      "exportedAt": "2026-08-10T08:37:33.568Z"
+    },
+    "ownerBaseline": "history-baseline.json"
+  },
+  "alreadyComplete": {
+    "history-row-autolayout": 0,
+    "history-text-hug": 16,
+    "text-box-hug": 0,
+    "lastfm-leftover": 3,
+    "avatar-naming": 32
+  },
+  "rootCause": {
+    "historyRows": "Figma measures auto-layout padding from the inside of an INSIDE-aligned stroke and adds the stroke to a hugged size. The rows carry a 1px INSIDE stroke, so padding copied from the measured child offsets placed every child at stroke+padding (+1,+1) and hugged to 2*stroke+padTop+content+padBottom (+2). Padding is now reduced by the stroke weight on every side.",
+    "textBoxes": "Any write to a TEXT node requires its font to be loaded first. The plan now records each node's family and style, the plugin loads them before writing, and a MIXED fontName blocks the mutation rather than being guessed at.",
+    "revertGap": "The failed revert restored layoutMode and child offsets but not the frame height, so all 16 rows are still 2px taller than the owner designed. Recovery targets history-baseline.json, which restores them."
+  },
+  "counts": {
+    "total": 26,
+    "blocked": 0,
+    "byGroup": {
+      "history-row-autolayout": 16,
+      "text-box-hug": 10
+    }
+  },
+  "mutations": [
+    {
+      "id": "A-light-2523:32",
+      "group": "history-row-autolayout",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "history-content",
+      "node": "History Item / CRYOGEN",
+      "nodeId": "2523:32",
+      "path": "history-content > Screen > Broadcast History List > History Item / CRYOGEN",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 78,
+        "strokeWeight": 1,
+        "strokeAlign": "INSIDE",
+        "children": [
+          {
+            "name": "time",
+            "x": 15,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 62,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 118,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 305,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 13,
+          "right": 12,
+          "bottom": 13,
+          "left": 14
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
+      "expect": {
+        "height": 76,
+        "width": 358,
+        "children": [
+          {
+            "name": "time",
+            "x": 15,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 62,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 118,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 305,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "current": "layoutMode NONE, 358x78, stroke 1px INSIDE — 2px taller than the owner's 76",
+      "proposed": "HORIZONTAL auto-layout, gap 8, padding 13/12/13/14 (stroke-compensated), counterAxisAlignItems CENTER, height hugs to 76",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "restoresOwnerGeometry": true,
+      "heightDeltaVsCurrent": -2,
+      "evidence": "stroke 1px INSIDE: content box is inset by 1px, so padding 14 puts the first child at 15 and the hugged height is 2x1 + 13 + 48 + 13 = 76. All 4 predicted child positions match the owner's geometry.",
+      "blockedBy": null
+    },
+    {
+      "id": "A-light-2523:41",
+      "group": "history-row-autolayout",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "history-content",
+      "node": "History Item / Краснознамённая дивизия имени моей бабушки",
+      "nodeId": "2523:41",
+      "path": "history-content > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 118,
+        "strokeWeight": 1,
+        "strokeAlign": "INSIDE",
+        "children": [
+          {
+            "name": "time",
+            "x": 15,
+            "y": 44,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 62,
+            "y": 34,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 118,
+            "y": 14,
+            "w": 179,
+            "h": 88
+          },
+          {
+            "name": "Button / find track",
+            "x": 305,
+            "y": 38,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 13,
+          "right": 12,
+          "bottom": 13,
+          "left": 14
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
+      "expect": {
+        "height": 116,
+        "width": 358,
+        "children": [
+          {
+            "name": "time",
+            "x": 15,
+            "y": 44,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 62,
+            "y": 34,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 118,
+            "y": 14,
+            "w": 179,
+            "h": 88
+          },
+          {
+            "name": "Button / find track",
+            "x": 305,
+            "y": 38,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "current": "layoutMode NONE, 358x118, stroke 1px INSIDE — 2px taller than the owner's 116",
+      "proposed": "HORIZONTAL auto-layout, gap 8, padding 13/12/13/14 (stroke-compensated), counterAxisAlignItems CENTER, height hugs to 116",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "restoresOwnerGeometry": true,
+      "heightDeltaVsCurrent": -2,
+      "evidence": "stroke 1px INSIDE: content box is inset by 1px, so padding 14 puts the first child at 15 and the hugged height is 2x1 + 13 + 88 + 13 = 116. All 4 predicted child positions match the owner's geometry.",
+      "blockedBy": null
+    },
+    {
+      "id": "A-light-2523:50",
+      "group": "history-row-autolayout",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "history-content",
+      "node": "History Item / CITY WALLS",
+      "nodeId": "2523:50",
+      "path": "history-content > Screen > Broadcast History List > History Item / CITY WALLS",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 78,
+        "strokeWeight": 1,
+        "strokeAlign": "INSIDE",
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 13,
+          "right": 13,
+          "bottom": 13,
+          "left": 13
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
+      "expect": {
+        "height": 76,
+        "width": 358,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "current": "layoutMode NONE, 358x78, stroke 1px INSIDE — 2px taller than the owner's 76",
+      "proposed": "HORIZONTAL auto-layout, gap 8, padding 13/13/13/13 (stroke-compensated), counterAxisAlignItems CENTER, height hugs to 76",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "restoresOwnerGeometry": true,
+      "heightDeltaVsCurrent": -2,
+      "evidence": "stroke 1px INSIDE: content box is inset by 1px, so padding 13 puts the first child at 14 and the hugged height is 2x1 + 13 + 48 + 13 = 76. All 4 predicted child positions match the owner's geometry.",
+      "blockedBy": null
+    },
+    {
+      "id": "A-light-2523:59",
+      "group": "history-row-autolayout",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "history-content",
+      "node": "History Item / WHAT YOU KNOW",
+      "nodeId": "2523:59",
+      "path": "history-content > Screen > Broadcast History List > History Item / WHAT YOU KNOW",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 78,
+        "strokeWeight": 1,
+        "strokeAlign": "INSIDE",
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 13,
+          "right": 13,
+          "bottom": 13,
+          "left": 13
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
+      "expect": {
+        "height": 76,
+        "width": 358,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "current": "layoutMode NONE, 358x78, stroke 1px INSIDE — 2px taller than the owner's 76",
+      "proposed": "HORIZONTAL auto-layout, gap 8, padding 13/13/13/13 (stroke-compensated), counterAxisAlignItems CENTER, height hugs to 76",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "restoresOwnerGeometry": true,
+      "heightDeltaVsCurrent": -2,
+      "evidence": "stroke 1px INSIDE: content box is inset by 1px, so padding 13 puts the first child at 14 and the hugged height is 2x1 + 13 + 48 + 13 = 76. All 4 predicted child positions match the owner's geometry.",
+      "blockedBy": null
+    },
+    {
+      "id": "A-light-2523:68",
+      "group": "history-row-autolayout",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "history-content",
+      "node": "History Item / Прогулка по воде под дождём в конце ноября",
+      "nodeId": "2523:68",
+      "path": "history-content > Screen > Broadcast History List > History Item / Прогулка по воде под дождём в конце ноября",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 106,
+        "strokeWeight": 1,
+        "strokeAlign": "INSIDE",
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 38,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 28,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 76
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 32,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 13,
+          "right": 13,
+          "bottom": 13,
+          "left": 13
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
+      "expect": {
+        "height": 104,
+        "width": 358,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 38,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 28,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 76
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 32,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "current": "layoutMode NONE, 358x106, stroke 1px INSIDE — 2px taller than the owner's 104",
+      "proposed": "HORIZONTAL auto-layout, gap 8, padding 13/13/13/13 (stroke-compensated), counterAxisAlignItems CENTER, height hugs to 104",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "restoresOwnerGeometry": true,
+      "heightDeltaVsCurrent": -2,
+      "evidence": "stroke 1px INSIDE: content box is inset by 1px, so padding 13 puts the first child at 14 and the hugged height is 2x1 + 13 + 76 + 13 = 104. All 4 predicted child positions match the owner's geometry.",
+      "blockedBy": null
+    },
+    {
+      "id": "A-light-2523:77",
+      "group": "history-row-autolayout",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "history-content",
+      "node": "History Item / NORTHERN LINE",
+      "nodeId": "2523:77",
+      "path": "history-content > Screen > Broadcast History List > History Item / NORTHERN LINE",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 78,
+        "strokeWeight": 1,
+        "strokeAlign": "INSIDE",
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 13,
+          "right": 13,
+          "bottom": 13,
+          "left": 13
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
+      "expect": {
+        "height": 76,
+        "width": 358,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "current": "layoutMode NONE, 358x78, stroke 1px INSIDE — 2px taller than the owner's 76",
+      "proposed": "HORIZONTAL auto-layout, gap 8, padding 13/13/13/13 (stroke-compensated), counterAxisAlignItems CENTER, height hugs to 76",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "restoresOwnerGeometry": true,
+      "heightDeltaVsCurrent": -2,
+      "evidence": "stroke 1px INSIDE: content box is inset by 1px, so padding 13 puts the first child at 14 and the hugged height is 2x1 + 13 + 48 + 13 = 76. All 4 predicted child positions match the owner's geometry.",
+      "blockedBy": null
+    },
+    {
+      "id": "A-light-2523:86",
+      "group": "history-row-autolayout",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "history-content",
+      "node": "History Item / PAPER BOATS",
+      "nodeId": "2523:86",
+      "path": "history-content > Screen > Broadcast History List > History Item / PAPER BOATS",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 78,
+        "strokeWeight": 1,
+        "strokeAlign": "INSIDE",
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 13,
+          "right": 13,
+          "bottom": 13,
+          "left": 13
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
+      "expect": {
+        "height": 76,
+        "width": 358,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "current": "layoutMode NONE, 358x78, stroke 1px INSIDE — 2px taller than the owner's 76",
+      "proposed": "HORIZONTAL auto-layout, gap 8, padding 13/13/13/13 (stroke-compensated), counterAxisAlignItems CENTER, height hugs to 76",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "restoresOwnerGeometry": true,
+      "heightDeltaVsCurrent": -2,
+      "evidence": "stroke 1px INSIDE: content box is inset by 1px, so padding 13 puts the first child at 14 and the hugged height is 2x1 + 13 + 48 + 13 = 76. All 4 predicted child positions match the owner's geometry.",
+      "blockedBy": null
+    },
+    {
+      "id": "A-light-2523:95",
+      "group": "history-row-autolayout",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "history-content",
+      "node": "History Item / SLOW BURN",
+      "nodeId": "2523:95",
+      "path": "history-content > Screen > Broadcast History List > History Item / SLOW BURN",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 78,
+        "strokeWeight": 1,
+        "strokeAlign": "INSIDE",
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 13,
+          "right": 13,
+          "bottom": 13,
+          "left": 13
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
+      "expect": {
+        "height": 76,
+        "width": 358,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "current": "layoutMode NONE, 358x78, stroke 1px INSIDE — 2px taller than the owner's 76",
+      "proposed": "HORIZONTAL auto-layout, gap 8, padding 13/13/13/13 (stroke-compensated), counterAxisAlignItems CENTER, height hugs to 76",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "restoresOwnerGeometry": true,
+      "heightDeltaVsCurrent": -2,
+      "evidence": "stroke 1px INSIDE: content box is inset by 1px, so padding 13 puts the first child at 14 and the hugged height is 2x1 + 13 + 48 + 13 = 76. All 4 predicted child positions match the owner's geometry.",
+      "blockedBy": null
+    },
+    {
+      "id": "A-dark-2517:3305",
+      "group": "history-row-autolayout",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "history-content_dark",
+      "node": "History Item / CRYOGEN",
+      "nodeId": "2517:3305",
+      "path": "history-content_dark > Screen > Broadcast History List > History Item / CRYOGEN",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 78,
+        "strokeWeight": 1,
+        "strokeAlign": "INSIDE",
+        "children": [
+          {
+            "name": "time",
+            "x": 15,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 62,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 118,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 305,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 13,
+          "right": 12,
+          "bottom": 13,
+          "left": 14
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
+      "expect": {
+        "height": 76,
+        "width": 358,
+        "children": [
+          {
+            "name": "time",
+            "x": 15,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 62,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 118,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 305,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "current": "layoutMode NONE, 358x78, stroke 1px INSIDE — 2px taller than the owner's 76",
+      "proposed": "HORIZONTAL auto-layout, gap 8, padding 13/12/13/14 (stroke-compensated), counterAxisAlignItems CENTER, height hugs to 76",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "restoresOwnerGeometry": true,
+      "heightDeltaVsCurrent": -2,
+      "evidence": "stroke 1px INSIDE: content box is inset by 1px, so padding 14 puts the first child at 15 and the hugged height is 2x1 + 13 + 48 + 13 = 76. All 4 predicted child positions match the owner's geometry.",
+      "blockedBy": null
+    },
+    {
+      "id": "A-dark-2517:3315",
+      "group": "history-row-autolayout",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "history-content_dark",
+      "node": "History Item / Краснознамённая дивизия имени моей бабушки",
+      "nodeId": "2517:3315",
+      "path": "history-content_dark > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 118,
+        "strokeWeight": 1,
+        "strokeAlign": "INSIDE",
+        "children": [
+          {
+            "name": "time",
+            "x": 15,
+            "y": 44,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 62,
+            "y": 34,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 118,
+            "y": 14,
+            "w": 179,
+            "h": 88
+          },
+          {
+            "name": "Button / find track",
+            "x": 305,
+            "y": 38,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 13,
+          "right": 12,
+          "bottom": 13,
+          "left": 14
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
+      "expect": {
+        "height": 116,
+        "width": 358,
+        "children": [
+          {
+            "name": "time",
+            "x": 15,
+            "y": 44,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 62,
+            "y": 34,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 118,
+            "y": 14,
+            "w": 179,
+            "h": 88
+          },
+          {
+            "name": "Button / find track",
+            "x": 305,
+            "y": 38,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "current": "layoutMode NONE, 358x118, stroke 1px INSIDE — 2px taller than the owner's 116",
+      "proposed": "HORIZONTAL auto-layout, gap 8, padding 13/12/13/14 (stroke-compensated), counterAxisAlignItems CENTER, height hugs to 116",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "restoresOwnerGeometry": true,
+      "heightDeltaVsCurrent": -2,
+      "evidence": "stroke 1px INSIDE: content box is inset by 1px, so padding 14 puts the first child at 15 and the hugged height is 2x1 + 13 + 88 + 13 = 116. All 4 predicted child positions match the owner's geometry.",
+      "blockedBy": null
+    },
+    {
+      "id": "A-dark-2517:3325",
+      "group": "history-row-autolayout",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "history-content_dark",
+      "node": "History Item / CITY WALLS",
+      "nodeId": "2517:3325",
+      "path": "history-content_dark > Screen > Broadcast History List > History Item / CITY WALLS",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 78,
+        "strokeWeight": 1,
+        "strokeAlign": "INSIDE",
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 13,
+          "right": 13,
+          "bottom": 13,
+          "left": 13
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
+      "expect": {
+        "height": 76,
+        "width": 358,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "current": "layoutMode NONE, 358x78, stroke 1px INSIDE — 2px taller than the owner's 76",
+      "proposed": "HORIZONTAL auto-layout, gap 8, padding 13/13/13/13 (stroke-compensated), counterAxisAlignItems CENTER, height hugs to 76",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "restoresOwnerGeometry": true,
+      "heightDeltaVsCurrent": -2,
+      "evidence": "stroke 1px INSIDE: content box is inset by 1px, so padding 13 puts the first child at 14 and the hugged height is 2x1 + 13 + 48 + 13 = 76. All 4 predicted child positions match the owner's geometry.",
+      "blockedBy": null
+    },
+    {
+      "id": "A-dark-2517:3335",
+      "group": "history-row-autolayout",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "history-content_dark",
+      "node": "History Item / WHAT YOU KNOW",
+      "nodeId": "2517:3335",
+      "path": "history-content_dark > Screen > Broadcast History List > History Item / WHAT YOU KNOW",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 78,
+        "strokeWeight": 1,
+        "strokeAlign": "INSIDE",
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 13,
+          "right": 13,
+          "bottom": 13,
+          "left": 13
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
+      "expect": {
+        "height": 76,
+        "width": 358,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "current": "layoutMode NONE, 358x78, stroke 1px INSIDE — 2px taller than the owner's 76",
+      "proposed": "HORIZONTAL auto-layout, gap 8, padding 13/13/13/13 (stroke-compensated), counterAxisAlignItems CENTER, height hugs to 76",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "restoresOwnerGeometry": true,
+      "heightDeltaVsCurrent": -2,
+      "evidence": "stroke 1px INSIDE: content box is inset by 1px, so padding 13 puts the first child at 14 and the hugged height is 2x1 + 13 + 48 + 13 = 76. All 4 predicted child positions match the owner's geometry.",
+      "blockedBy": null
+    },
+    {
+      "id": "A-dark-2517:3345",
+      "group": "history-row-autolayout",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "history-content_dark",
+      "node": "History Item / Прогулка по воде под дождём в конце ноября",
+      "nodeId": "2517:3345",
+      "path": "history-content_dark > Screen > Broadcast History List > History Item / Прогулка по воде под дождём в конце ноября",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 106,
+        "strokeWeight": 1,
+        "strokeAlign": "INSIDE",
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 38,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 28,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 76
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 32,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 13,
+          "right": 13,
+          "bottom": 13,
+          "left": 13
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
+      "expect": {
+        "height": 104,
+        "width": 358,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 38,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 28,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 76
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 32,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "current": "layoutMode NONE, 358x106, stroke 1px INSIDE — 2px taller than the owner's 104",
+      "proposed": "HORIZONTAL auto-layout, gap 8, padding 13/13/13/13 (stroke-compensated), counterAxisAlignItems CENTER, height hugs to 104",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "restoresOwnerGeometry": true,
+      "heightDeltaVsCurrent": -2,
+      "evidence": "stroke 1px INSIDE: content box is inset by 1px, so padding 13 puts the first child at 14 and the hugged height is 2x1 + 13 + 76 + 13 = 104. All 4 predicted child positions match the owner's geometry.",
+      "blockedBy": null
+    },
+    {
+      "id": "A-dark-2517:3355",
+      "group": "history-row-autolayout",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "history-content_dark",
+      "node": "History Item / NORTHERN LINE",
+      "nodeId": "2517:3355",
+      "path": "history-content_dark > Screen > Broadcast History List > History Item / NORTHERN LINE",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 78,
+        "strokeWeight": 1,
+        "strokeAlign": "INSIDE",
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 13,
+          "right": 13,
+          "bottom": 13,
+          "left": 13
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
+      "expect": {
+        "height": 76,
+        "width": 358,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "current": "layoutMode NONE, 358x78, stroke 1px INSIDE — 2px taller than the owner's 76",
+      "proposed": "HORIZONTAL auto-layout, gap 8, padding 13/13/13/13 (stroke-compensated), counterAxisAlignItems CENTER, height hugs to 76",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "restoresOwnerGeometry": true,
+      "heightDeltaVsCurrent": -2,
+      "evidence": "stroke 1px INSIDE: content box is inset by 1px, so padding 13 puts the first child at 14 and the hugged height is 2x1 + 13 + 48 + 13 = 76. All 4 predicted child positions match the owner's geometry.",
+      "blockedBy": null
+    },
+    {
+      "id": "A-dark-2517:3365",
+      "group": "history-row-autolayout",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "history-content_dark",
+      "node": "History Item / PAPER BOATS",
+      "nodeId": "2517:3365",
+      "path": "history-content_dark > Screen > Broadcast History List > History Item / PAPER BOATS",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 78,
+        "strokeWeight": 1,
+        "strokeAlign": "INSIDE",
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 13,
+          "right": 13,
+          "bottom": 13,
+          "left": 13
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
+      "expect": {
+        "height": 76,
+        "width": 358,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "current": "layoutMode NONE, 358x78, stroke 1px INSIDE — 2px taller than the owner's 76",
+      "proposed": "HORIZONTAL auto-layout, gap 8, padding 13/13/13/13 (stroke-compensated), counterAxisAlignItems CENTER, height hugs to 76",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "restoresOwnerGeometry": true,
+      "heightDeltaVsCurrent": -2,
+      "evidence": "stroke 1px INSIDE: content box is inset by 1px, so padding 13 puts the first child at 14 and the hugged height is 2x1 + 13 + 48 + 13 = 76. All 4 predicted child positions match the owner's geometry.",
+      "blockedBy": null
+    },
+    {
+      "id": "A-dark-2517:3375",
+      "group": "history-row-autolayout",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "history-content_dark",
+      "node": "History Item / SLOW BURN",
+      "nodeId": "2517:3375",
+      "path": "history-content_dark > Screen > Broadcast History List > History Item / SLOW BURN",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 78,
+        "strokeWeight": 1,
+        "strokeAlign": "INSIDE",
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 13,
+          "right": 13,
+          "bottom": 13,
+          "left": 13
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
+      "expect": {
+        "height": 76,
+        "width": 358,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "current": "layoutMode NONE, 358x78, stroke 1px INSIDE — 2px taller than the owner's 76",
+      "proposed": "HORIZONTAL auto-layout, gap 8, padding 13/13/13/13 (stroke-compensated), counterAxisAlignItems CENTER, height hugs to 76",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "restoresOwnerGeometry": true,
+      "heightDeltaVsCurrent": -2,
+      "evidence": "stroke 1px INSIDE: content box is inset by 1px, so padding 13 puts the first child at 14 and the hugged height is 2x1 + 13 + 48 + 13 = 76. All 4 predicted child positions match the owner's geometry.",
+      "blockedBy": null
+    },
+    {
+      "id": "C-light-2517:1978",
+      "group": "text-box-hug",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "sleep-timer-custom",
+      "node": "value",
+      "nodeId": "2517:1978",
+      "path": "sleep-timer-custom > Bottom Sheet / Своё время > Stepper / Часы > value",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "1",
+        "x": 200,
+        "y": 18
+      },
+      "font": {
+        "family": "Muller",
+        "style": "Medium"
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
+      "expect": {
+        "height": 32,
+        "x": 200,
+        "y": 18
+      },
+      "current": "height 28, lineHeight 32, textAutoResize NONE, font Muller Medium",
+      "proposed": "textAutoResize HEIGHT (height resolves to 32); font loaded first, family and style untouched",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "evidence": "vertical alignment is TOP, so the glyph keeps its top edge and the box grows 4px down into empty space. \"1\" is one line.",
+      "blockedBy": null
+    },
+    {
+      "id": "C-light-2517:1985",
+      "group": "text-box-hug",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "sleep-timer-custom",
+      "node": "value",
+      "nodeId": "2517:1985",
+      "path": "sleep-timer-custom > Bottom Sheet / Своё время > Stepper / Минуты > value",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "30",
+        "x": 200,
+        "y": 18
+      },
+      "font": {
+        "family": "Muller",
+        "style": "Medium"
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
+      "expect": {
+        "height": 32,
+        "x": 200,
+        "y": 18
+      },
+      "current": "height 28, lineHeight 32, textAutoResize NONE, font Muller Medium",
+      "proposed": "textAutoResize HEIGHT (height resolves to 32); font loaded first, family and style untouched",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "evidence": "vertical alignment is TOP, so the glyph keeps its top edge and the box grows 4px down into empty space. \"30\" is one line.",
+      "blockedBy": null
+    },
+    {
+      "id": "C-light-2517:2002",
+      "group": "text-box-hug",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "sleep-timer-custom-invalid",
+      "node": "value",
+      "nodeId": "2517:2002",
+      "path": "sleep-timer-custom-invalid > Bottom Sheet / Своё время > Stepper / Часы > value",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "0",
+        "x": 200,
+        "y": 18
+      },
+      "font": {
+        "family": "Muller",
+        "style": "Medium"
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
+      "expect": {
+        "height": 32,
+        "x": 200,
+        "y": 18
+      },
+      "current": "height 28, lineHeight 32, textAutoResize NONE, font Muller Medium",
+      "proposed": "textAutoResize HEIGHT (height resolves to 32); font loaded first, family and style untouched",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "evidence": "vertical alignment is TOP, so the glyph keeps its top edge and the box grows 4px down into empty space. \"0\" is one line.",
+      "blockedBy": null
+    },
+    {
+      "id": "C-light-2517:2009",
+      "group": "text-box-hug",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "sleep-timer-custom-invalid",
+      "node": "value",
+      "nodeId": "2517:2009",
+      "path": "sleep-timer-custom-invalid > Bottom Sheet / Своё время > Stepper / Минуты > value",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "0",
+        "x": 200,
+        "y": 18
+      },
+      "font": {
+        "family": "Muller",
+        "style": "Medium"
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
+      "expect": {
+        "height": 32,
+        "x": 200,
+        "y": 18
+      },
+      "current": "height 28, lineHeight 32, textAutoResize NONE, font Muller Medium",
+      "proposed": "textAutoResize HEIGHT (height resolves to 32); font loaded first, family and style untouched",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "evidence": "vertical alignment is TOP, so the glyph keeps its top edge and the box grows 4px down into empty space. \"0\" is one line.",
+      "blockedBy": null
+    },
+    {
+      "id": "C-light-2517:2680",
+      "group": "text-box-hug",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "profile-authenticated",
+      "node": "initial",
+      "nodeId": "2517:2680",
+      "path": "profile-authenticated > Account card > Avatar > initial",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "Д",
+        "x": 0,
+        "y": 18
+      },
+      "font": {
+        "family": "Muller",
+        "style": "Medium"
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
+      "expect": {
+        "height": 32,
+        "x": 0,
+        "y": 18
+      },
+      "current": "height 28, lineHeight 32, textAutoResize NONE, font Muller Medium",
+      "proposed": "textAutoResize HEIGHT (height resolves to 32); font loaded first, family and style untouched",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "evidence": "vertical alignment is TOP, so the glyph keeps its top edge and the box grows 4px down into empty space. \"Д\" is one line.",
+      "blockedBy": null
+    },
+    {
+      "id": "C-dark-2517:2945",
+      "group": "text-box-hug",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "sleep-timer-custom_dark",
+      "node": "value",
+      "nodeId": "2517:2945",
+      "path": "sleep-timer-custom_dark > Bottom Sheet / Своё время > Stepper / Часы > value",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "1",
+        "x": 200,
+        "y": 18
+      },
+      "font": {
+        "family": "Muller",
+        "style": "Medium"
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
+      "expect": {
+        "height": 32,
+        "x": 200,
+        "y": 18
+      },
+      "current": "height 28, lineHeight 32, textAutoResize NONE, font Muller Medium",
+      "proposed": "textAutoResize HEIGHT (height resolves to 32); font loaded first, family and style untouched",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "evidence": "vertical alignment is TOP, so the glyph keeps its top edge and the box grows 4px down into empty space. \"1\" is one line.",
+      "blockedBy": null
+    },
+    {
+      "id": "C-dark-2517:2952",
+      "group": "text-box-hug",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "sleep-timer-custom_dark",
+      "node": "value",
+      "nodeId": "2517:2952",
+      "path": "sleep-timer-custom_dark > Bottom Sheet / Своё время > Stepper / Минуты > value",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "30",
+        "x": 200,
+        "y": 18
+      },
+      "font": {
+        "family": "Muller",
+        "style": "Medium"
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
+      "expect": {
+        "height": 32,
+        "x": 200,
+        "y": 18
+      },
+      "current": "height 28, lineHeight 32, textAutoResize NONE, font Muller Medium",
+      "proposed": "textAutoResize HEIGHT (height resolves to 32); font loaded first, family and style untouched",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "evidence": "vertical alignment is TOP, so the glyph keeps its top edge and the box grows 4px down into empty space. \"30\" is one line.",
+      "blockedBy": null
+    },
+    {
+      "id": "C-dark-2517:2969",
+      "group": "text-box-hug",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "sleep-timer-custom-invalid_dark",
+      "node": "value",
+      "nodeId": "2517:2969",
+      "path": "sleep-timer-custom-invalid_dark > Bottom Sheet / Своё время > Stepper / Часы > value",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "0",
+        "x": 200,
+        "y": 18
+      },
+      "font": {
+        "family": "Muller",
+        "style": "Medium"
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
+      "expect": {
+        "height": 32,
+        "x": 200,
+        "y": 18
+      },
+      "current": "height 28, lineHeight 32, textAutoResize NONE, font Muller Medium",
+      "proposed": "textAutoResize HEIGHT (height resolves to 32); font loaded first, family and style untouched",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "evidence": "vertical alignment is TOP, so the glyph keeps its top edge and the box grows 4px down into empty space. \"0\" is one line.",
+      "blockedBy": null
+    },
+    {
+      "id": "C-dark-2517:2976",
+      "group": "text-box-hug",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "sleep-timer-custom-invalid_dark",
+      "node": "value",
+      "nodeId": "2517:2976",
+      "path": "sleep-timer-custom-invalid_dark > Bottom Sheet / Своё время > Stepper / Минуты > value",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "0",
+        "x": 200,
+        "y": 18
+      },
+      "font": {
+        "family": "Muller",
+        "style": "Medium"
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
+      "expect": {
+        "height": 32,
+        "x": 200,
+        "y": 18
+      },
+      "current": "height 28, lineHeight 32, textAutoResize NONE, font Muller Medium",
+      "proposed": "textAutoResize HEIGHT (height resolves to 32); font loaded first, family and style untouched",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "evidence": "vertical alignment is TOP, so the glyph keeps its top edge and the box grows 4px down into empty space. \"0\" is one line.",
+      "blockedBy": null
+    },
+    {
+      "id": "C-dark-2517:3647",
+      "group": "text-box-hug",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "profile-authenticated_dark",
+      "node": "initial",
+      "nodeId": "2517:3647",
+      "path": "profile-authenticated_dark > Account card > Avatar > initial",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "Д",
+        "x": 0,
+        "y": 18
+      },
+      "font": {
+        "family": "Muller",
+        "style": "Medium"
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
+      "expect": {
+        "height": 32,
+        "x": 0,
+        "y": 18
+      },
+      "current": "height 28, lineHeight 32, textAutoResize NONE, font Muller Medium",
+      "proposed": "textAutoResize HEIGHT (height resolves to 32); font loaded first, family and style untouched",
+      "pixelsMove": false,
+      "wrapChange": false,
+      "visualChange": false,
+      "evidence": "vertical alignment is TOP, so the glyph keeps its top edge and the box grows 4px down into empty space. \"Д\" is one line.",
+      "blockedBy": null
+    }
+  ]
+}

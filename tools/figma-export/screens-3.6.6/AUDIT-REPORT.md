@@ -4,9 +4,9 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
 
 | | |
 |---|---|
-| light page | `3.6.6 PROPOSALS - LIGHT` — 29 top-level frames, exported 2026-08-10T08:59:36.261Z |
-| dark page | `3.6.6 PROPOSALS - DARK` — 29 top-level frames, exported 2026-08-10T08:59:48.010Z |
-| findings | **0 blocking**, 758 to review, 72 informational — grouped into 101 distinct items |
+| light page | `3.6.6 PROPOSALS - LIGHT` — 29 top-level frames, exported 2026-08-10T09:11:36.654Z |
+| dark page | `3.6.6 PROPOSALS - DARK` — 29 top-level frames, exported 2026-08-10T09:11:53.612Z |
+| findings | **0 blocking**, 756 to review, 72 informational — grouped into 100 distinct items |
 
 ## Flow coverage
 
@@ -25,13 +25,7 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
 - **review** — needs an owner decision. Nothing is changed without approval.
 - **info** — expected, or noted for the record.
 
-## To review — 758 affected nodes in 79 groups
-
-### parity — 1 affected node in 1 group
-
-- `sleep-timer-menu-active`
-  - structure diverges: light "VECTOR:disc" vs dark "VECTOR:icon"
-  - *Proposed:* Check whether the divergence is intentional.
+## To review — 756 affected nodes in 78 groups
 
 ### text — 32 affected nodes in 2 groups
 
@@ -44,7 +38,7 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
   - e.g. `history-content_dark > Screen > Broadcast History List > History Item / CRYOGEN > Text > title`, `history-content_dark > Screen > Broadcast History List > History Item / CRYOGEN > Text > artist`, `history-content_dark > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки > Text > title`, …
   - *Proposed:* Set the text to Fill container, or widen "Text" to 181. Text wraps at its own width, so the wrap point today is 181, not the column width.
 
-### constraints — 709 affected nodes in 60 groups
+### constraints — 708 affected nodes in 60 groups
 
 - **light** · `sleep-timer-select` — **×11**
   - spans the parent width (left 0, right 0) but is pinned Left only
@@ -66,9 +60,9 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
   - spans the parent width (left 0, right 0) but is pinned Left only
   - e.g. `sleep-timer-active-custom > Bottom Sheet / Таймер сна активен (своё время)`, `sleep-timer-active-custom > Bottom Sheet / Таймер сна активен (своё время) > Sheet row / 15 минут`, `sleep-timer-active-custom > Bottom Sheet / Таймер сна активен (своё время) > Sheet row / 15 минут > Sheet / leading icon > Icon / clock > clock`, …
   - *Proposed:* Set horizontal constraint to Left and right. Pure metadata - no pixel moves.
-- **light** · `sleep-timer-menu-active` — **×8**
+- **light** · `sleep-timer-menu-active` — **×7**
   - spans the parent width (left 0, right 0) but is pinned Left only
-  - e.g. `sleep-timer-menu-active > Menu / Плеер (таймер активен)`, `sleep-timer-menu-active > Menu / Плеер (таймер активен) > Menu row / Найти трек`, `sleep-timer-menu-active > Menu / Плеер (таймер активен) > Menu row / Найти трек > Menu / action icon > Icon / disc > disc`, …
+  - e.g. `sleep-timer-menu-active > Menu / Плеер (таймер активен)`, `sleep-timer-menu-active > Menu / Плеер (таймер активен) > Menu row / Найти трек`, `sleep-timer-menu-active > Menu / Плеер (таймер активен) > Menu row / Таймер сна`, …
   - *Proposed:* Set horizontal constraint to Left and right. Pure metadata - no pixel moves.
 - **light** · `sleep-timer-cancelled` — **×2**
   - spans the parent width (left 0, right 0) but is pinned Left only

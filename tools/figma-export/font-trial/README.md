@@ -28,7 +28,7 @@ page when you are done.
 
 ## What it builds
 
-Seven frames × three columns, laid out left to right:
+Seven frames × four columns, laid out left to right:
 
 | column | what it is |
 |---|---|

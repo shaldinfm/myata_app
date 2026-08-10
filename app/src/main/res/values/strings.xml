@@ -24,4 +24,6 @@
     <string name="nav_player">Плеер</string>
     <string name="nav_collection">Коллекция</string>
     <string name="nav_about">О нас</string>
+    <!-- Donation CTA in "О нас". Copy is verbatim from the frozen ABOUT US page. -->
+    <string name="about_donate_cta">Поддержать эфир</string>
 </resources>

@@ -115,9 +115,17 @@ class MainActivity : AppCompatActivity() {
             // margin. The frozen design has it flush with the bottom edge, so the
             // inset becomes bottom padding instead: the surface still reaches the
             // edge while its content clears the system navigation.
-            val density = resources.displayMetrics.density
-            val basePadding = (17 * density).toInt()   // frozen 76dp bar: 13 top, 17 bottom
-            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, basePadding + bars.bottom)
+            // setPaddingRelative, and the horizontal values re-applied from
+            // resources: setPadding() reads paddingLeft/paddingRight before RTL
+            // resolution has run and switches the view out of relative-padding
+            // mode, which silently dropped the bar's frozen 23.32/18dp side
+            // padding and let the items span the full screen width.
+            v.setPaddingRelative(
+                resources.getDimensionPixelSize(R.dimen.bottom_nav_padding_start),
+                v.paddingTop,
+                resources.getDimensionPixelSize(R.dimen.bottom_nav_padding_end),
+                resources.getDimensionPixelSize(R.dimen.bottom_nav_padding_bottom) + bars.bottom
+            )
             insets
         }
 
@@ -136,7 +144,10 @@ class MainActivity : AppCompatActivity() {
                 Triple("info", binding.navItemInfo, binding.infoBtn to binding.infoLabel)
             )
             for ((key, container, views) in items) {
-                val active = key == current
+                // Donate is no longer a destination of its own - it is reached
+                // from inside "О нас" - so it keeps that item lit. Without this
+                // the bar would show no active item at all on the donate screen.
+                val active = key == current || (key == "info" && current == "donate")
                 val (icon, label) = views
                 container.setBackgroundResource(if (active) R.drawable.bg_nav_active_pill else 0)
                 icon.setColorFilter(if (active) activeColor else inactiveColor)

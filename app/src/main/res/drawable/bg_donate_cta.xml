@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Donation CTA in "О нас", frozen 3.6.6 canonical ABOUT US.
+
+  Button, 239x52 hug, corner radius 12, fill #003056 on both the light and the
+  dark page - hence a fixed brand colour rather than a semantic role.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/brand_donate_cta_container" />
+    <corners android:radius="12dp" />
+</shape>

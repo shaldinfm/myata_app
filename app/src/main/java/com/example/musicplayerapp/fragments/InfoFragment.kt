@@ -126,6 +126,17 @@ class InfoFragment : Fragment() {
         binding.description.text = spannable
 
 
+        // The frozen 3.6.6 bar has no Donate destination: donation lives inside
+        // "О нас". This is the entry point into the existing DonateFragment -
+        // payment form, YooMoney WebView and Boosty subscriptions unchanged.
+        // Navigating without popUpTo leaves info on the back stack, so Back
+        // returns here rather than jumping to Home.
+        binding.donateCta.setOnClickListener {
+            if (findNavController().currentDestination?.id != R.id.donate) {
+                findNavController().navigate(R.id.donate)
+            }
+        }
+
         vm.isInSplitMode.observe(viewLifecycleOwner, Observer {
             if(it){
 //                binding.bottomStreams.visibility = View.GONE

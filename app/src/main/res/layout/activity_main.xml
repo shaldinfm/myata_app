@@ -35,9 +35,14 @@
           the active one.
 
           The frozen items are content-sized at fixed offsets, which totals about
-          349dp and does not fit a 320dp screen. They are equally weighted here so
-          the bar adapts from 320dp upward; at 390dp that places each item within
-          a few dp of the frozen position.
+          395dp and so cannot be reproduced literally on a 320dp screen. Instead
+          the frozen structure is kept - 23.32/18dp side padding and 14.6dp gaps -
+          and each item is weighted by its frozen width (79, 68, 94, 64). At 390dp
+          that reproduces the canonical centres to within half a dp; below it the
+          items shrink in proportion rather than the bar clipping.
+
+          Equal weighting was measured at -14.24dp on the leading item at 390dp,
+          which is why the weights are not all 1.
         -->
         <LinearLayout
             android:id="@+id/bottomNavView"
@@ -45,8 +50,10 @@
             android:layout_height="wrap_content"
             android:background="@drawable/bg_bottom_nav"
             android:orientation="horizontal"
+            android:paddingStart="@dimen/bottom_nav_padding_start"
+            android:paddingEnd="@dimen/bottom_nav_padding_end"
             android:paddingTop="13dp"
-            android:paddingBottom="17dp"
+            android:paddingBottom="@dimen/bottom_nav_padding_bottom"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -54,7 +61,8 @@
 
             <LinearLayout
                 android:id="@+id/nav_item_home"
-                style="@style/BottomNavItem">
+                style="@style/BottomNavItem"
+                android:layout_weight="79">
 
                 <ImageView
                     android:id="@+id/home_btn"
@@ -69,7 +77,9 @@
 
             <LinearLayout
                 android:id="@+id/nav_item_player"
-                style="@style/BottomNavItem">
+                style="@style/BottomNavItem"
+                android:layout_weight="68"
+                android:layout_marginStart="14.6dp">
 
                 <ImageView
                     android:id="@+id/player_btn"
@@ -84,7 +94,9 @@
 
             <LinearLayout
                 android:id="@+id/nav_item_favorites"
-                style="@style/BottomNavItem">
+                style="@style/BottomNavItem"
+                android:layout_weight="94"
+                android:layout_marginStart="14.6dp">
 
                 <ImageView
                     android:id="@+id/favorites_btn"
@@ -99,7 +111,9 @@
 
             <LinearLayout
                 android:id="@+id/nav_item_info"
-                style="@style/BottomNavItem">
+                style="@style/BottomNavItem"
+                android:layout_weight="64"
+                android:layout_marginStart="14.6dp">
 
                 <ImageView
                     android:id="@+id/info_btn"

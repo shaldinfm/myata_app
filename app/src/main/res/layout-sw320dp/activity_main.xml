@@ -45,8 +45,10 @@
             android:layout_height="wrap_content"
             android:background="@drawable/bg_bottom_nav"
             android:orientation="horizontal"
+            android:paddingStart="@dimen/bottom_nav_padding_start"
+            android:paddingEnd="@dimen/bottom_nav_padding_end"
             android:paddingTop="13dp"
-            android:paddingBottom="17dp"
+            android:paddingBottom="@dimen/bottom_nav_padding_bottom"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -54,7 +56,8 @@
 
             <LinearLayout
                 android:id="@+id/nav_item_home"
-                style="@style/BottomNavItem">
+                style="@style/BottomNavItem"
+                android:layout_weight="79">
 
                 <ImageView
                     android:id="@+id/home_btn"
@@ -69,7 +72,9 @@
 
             <LinearLayout
                 android:id="@+id/nav_item_player"
-                style="@style/BottomNavItem">
+                style="@style/BottomNavItem"
+                android:layout_weight="68"
+                android:layout_marginStart="14.6dp">
 
                 <ImageView
                     android:id="@+id/player_btn"
@@ -84,7 +89,9 @@
 
             <LinearLayout
                 android:id="@+id/nav_item_favorites"
-                style="@style/BottomNavItem">
+                style="@style/BottomNavItem"
+                android:layout_weight="94"
+                android:layout_marginStart="14.6dp">
 
                 <ImageView
                     android:id="@+id/favorites_btn"
@@ -99,7 +106,9 @@
 
             <LinearLayout
                 android:id="@+id/nav_item_info"
-                style="@style/BottomNavItem">
+                style="@style/BottomNavItem"
+                android:layout_weight="64"
+                android:layout_marginStart="14.6dp">
 
                 <ImageView
                     android:id="@+id/info_btn"

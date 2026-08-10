@@ -65,4 +65,18 @@
     <color name="brand_nav_active_container">#FFCCFF</color>
     <!-- active nav icon and label, that node's Icon and Margin > label -->
     <color name="brand_nav_active_content">#00723D</color>
+
+    <!--
+      Donation CTA in "О нас". Same category as the nav pill above: the frozen
+      ABOUT US page carries these identical values on the light and the dark
+      page, so they are fixed brand colours and get no night variant.
+
+      on_primary cannot carry the label: it is #FFFFFF in Light but #0F253E in
+      Dark, and the frozen button is white in both.
+
+      Provenance: canonical ABOUT US, Section 1 "Помочь проекту" > Button
+      (239x52, r=12) - light node 2411:31659, dark page identical.
+    -->
+    <color name="brand_donate_cta_container">#003056</color>
+    <color name="brand_donate_cta_content">#FFFFFF</color>
 </resources>

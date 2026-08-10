@@ -130,30 +130,55 @@ the *family* therefore wins whenever the style is the generic `Regular` —
 otherwise `Muller Black / Regular` would silently map to Regular and lose the
 weight. All ten combinations are unit-checked.
 
-## Fitting the hybrid back onto the frozen geometry
+## Fitting the hybrid, growth first
 
 Two refinements apply to the HYBRID column only. The single-family columns stay
-uncorrected, so the raw effect of each font remains visible for comparison.
+uncorrected, so the raw effect of each font remains visible.
 
 **Button labels are Montserrat Medium 500**, not the Regular the frozen scale
-gives them — action labels carry more presence at Medium. Where that makes a
-label outgrow its frozen button, the label's `fontSize` drops by the smallest
-step that puts the button back inside its frozen width. Nothing is widened.
+gives them — action labels carry more presence at Medium.
 
-**A short heading that was one line stays one line.** If a swapped heading wraps,
-`fontSize` drops 1px at a time, up to 3. Only if that still wraps does a very
-small negative `letterSpacing` close the remaining gap — shrinking further would
-cost more hierarchy than tightening does.
+**A short heading that was one line stays one line.**
+
+The important part is *how* those are restored. A frozen width is usually just
+the box Muller's text happened to occupy, not a constraint anyone designed.
+Shrinking a 24px heading to protect such a number trades real hierarchy for an
+accident, so the order is:
+
+1. keep the size and let the box grow, if the surrounding space allows it;
+2. a small layout adjustment — a fixed single-child wrapper is released to hug;
+3. reduce `fontSize`, minimally, 1px at a time;
+4. a very small negative `letterSpacing` as the final trim.
+
+Nothing is ever widened beyond the space that already existed. Growth is only
+accepted when the containing row still fits: for a `SPACE_BETWEEN` header that
+means the children's own widths plus padding, since such a row absorbs growth by
+giving up gap rather than by overflowing.
+
+Measured against the frozen file, every affected element has room, so **no size
+is reduced anywhere**:
+
+| element | frozen | Montserrat needs | available | outcome |
+|---|---|---|---|---|
+| `Привет, Денис!` | 165dp box | 183.5dp | 318dp to the avatar | grow, stay 24px |
+| `Моя коллекция` | 172dp box | 190.2dp | 326dp to the button | grow, stay 24px |
+| `Поддержать радио` | 214dp box | 232.0dp | 318dp to the avatar | grow, stay 24px |
+| `Экспортировать список` | 321dp button | 327.2dp | 358dp column | grow +6dp, stay 22px |
+| `Подписаться` | 184dp button | 200.0dp | 310dp card | grow +16dp, stay 22px |
+| `Поддержать эфир` | 239dp button | 260.2dp | 310dp card | grow +21dp, stay 22px |
+
+The shrink path is still implemented and still tested — it is simply not reached
+by this design.
 
 Fitting is measured against **what Figma actually renders**, not a predicted
-advance width. Kerning is applied by the rasteriser and not by any offline
+advance width: kerning is applied by the rasteriser and not by any offline
 estimate, and that estimate runs several percent wide on strings with
-punctuation — measuring "Привет, Денис!" offline gives 174dp where the frozen
-node is 165dp and single-line. The loop therefore asks each node how wide or tall
-it became and reacts, rather than trusting a number computed in advance.
+punctuation. Measuring `Привет, Денис!` offline gives 174dp where the frozen node
+is 165dp and demonstrably one line — trusting the offline number would have
+shrunk headings that never needed shrinking.
 
-Every correction is reported: node, frame, old size, new size, any letter-spacing
-change, and whether the frozen geometry was restored.
+Every decision is reported: original geometry, available space, what was chosen,
+final size, geometry delta and why.
 
 ## Stress titles
 

@@ -101,20 +101,25 @@
     }
 
     if ((msg.fits || []).length) {
-      L.push("Corrections applied to HYBRID to hold the frozen geometry:");
+      L.push("HYBRID fit decisions (growth preferred, shrinking last):");
       msg.fits.forEach(function (f) {
+        var head = (f.solution === "grew" ? "GREW " : "SHRANK") + "  [" + esc(f.frame) + '] "' + esc(f.text) + '"';
+        L.push("  " + (f.solution === "grew" ? '<span class="good">' + head + "</span>" : '<span class="warn">' + head + "</span>"));
         if (f.kind === "button") {
-          L.push("  button   [" + esc(f.frame) + '] "' + esc(f.text) + '"');
-          L.push("      " + f.from + "px -> " + f.to + "px   button " + f.nowWidth +
-                 "dp vs frozen " + f.frozenWidth + "dp   " +
-                 (f.fits ? "fits" : '<span class="bad">STILL WIDER</span>'));
+          L.push("      size " + f.size + "px -> " + f.finalSize + "px" +
+                 "   button " + f.frozenWidth + "dp -> " + f.nowWidth + "dp (" +
+                 (f.delta >= 0 ? "+" : "") + f.delta + "dp)");
+          L.push("      available " + f.available + "dp in \"" + esc(f.holder || "?") + "\"" +
+                 (f.wrapperReleased ? "   wrapper released to hug" : ""));
         } else {
-          L.push("  heading  [" + esc(f.frame) + '] "' + esc(f.text) + '"');
-          L.push("      " + f.from + "px -> " + f.to + "px" +
-                 (f.letterSpacing ? "  letterSpacing " + f.letterSpacing + "px" : "") +
-                 "   now " + f.lines + " line" + (f.lines === 1 ? "" : "s") + "   " +
-                 (f.fits ? "one line restored" : '<span class="bad">STILL WRAPS</span>'));
+          L.push("      size " + f.size + "px -> " + f.finalSize + "px" +
+                 (f.letterSpacing ? "   letterSpacing " + f.letterSpacing + "px" : "") +
+                 "   text " + f.frozenWidth + "dp -> " + (f.nowWidth == null ? "unchanged" : f.nowWidth + "dp"));
+          if (f.rowInner != null) L.push("      row uses " + f.rowUsed + "dp of " + f.rowInner + "dp");
+          L.push("      " + f.lines + " line" + (f.lines === 1 ? "" : "s"));
         }
+        L.push("      " + esc(f.why));
+        if (!f.fits) L.push('      <span class="bad">still does not fit - review by eye</span>');
       });
       L.push("");
     }

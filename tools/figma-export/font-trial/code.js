@@ -416,10 +416,9 @@ async function injectStress(frame, problems, changed) {
 /* -------------------------------------------------------------- fitting -- */
 
 /*
- * How many lines a text node is currently rendering.
- *
- * Every frozen node pins lineHeight in PIXELS, and the trial pins the single
- * AUTO one before swapping, so height/lineHeight is exact rather than inferred.
+ * How many lines a text node is rendering. Every frozen node pins lineHeight in
+ * PIXELS and the trial pins the single AUTO one before swapping, so this is
+ * exact rather than inferred.
  */
 function lineCountOf(node) {
   try {
@@ -429,6 +428,8 @@ function lineCountOf(node) {
   } catch (e) { return 1; }
 }
 
+function widthOf(node) { try { return node.width; } catch (e) { return null; } }
+
 async function setSize(node, size) {
   try {
     await figma.loadFontAsync(node.fontName);
@@ -437,77 +438,178 @@ async function setSize(node, size) {
   } catch (e) { return false; }
 }
 
+function trySet(node, prop, value) {
+  try { node[prop] = value; return true; } catch (e) { return false; }
+}
+
 /*
- * Restore the frozen geometry after a swap, by the smallest typographic
- * correction that works - never by widening anything.
+ * Inner width available to the children of a horizontal auto-layout frame, and
+ * whether they currently fit inside it.
  *
- * Fitting is measured against what Figma actually renders, not against a
- * predicted advance width: kerning is applied by the rasteriser and not by any
- * offline estimate, and the estimate runs several percent wide on strings with
- * punctuation. The loop asks the node how tall or wide it became and reacts.
- *
- *   buttons  - the frozen button is hug-width, so a wider label grows it.
- *              Shrink the label until the button is back inside its frozen
- *              width. -1px first, further only if that button still needs it.
- *   headings - a short heading that was one line must stay one line. Shrink by
- *              1px at a time; if the minimum useful reduction still wraps, close
- *              the remaining gap with a very small negative letterSpacing rather
- *              than carving more off the size and losing the hierarchy.
+ * A SPACE_BETWEEN row absorbs growth by giving up gap, so the honest test is
+ * whether the children's own widths plus padding still fit - not whether the
+ * frozen gap survived.
  */
-async function fitToFrozen(entries, baselines, changes) {
+function containerFit(parent) {
+  try {
+    if (!parent || parent.layoutMode !== "HORIZONTAL") return null;
+    var inner = parent.width - (parent.paddingLeft || 0) - (parent.paddingRight || 0);
+    var sum = 0, kids = parent.children;
+    for (var i = 0; i < kids.length; i++) sum += kids[i].width;
+    var gaps = parent.primaryAxisAlignItems === "SPACE_BETWEEN"
+      ? 0
+      : (parent.itemSpacing || 0) * Math.max(0, kids.length - 1);
+    return { inner: inner, used: sum + gaps, fits: sum + gaps <= inner + 0.5 };
+  } catch (e) { return null; }
+}
+
+// Nearest ancestor that actually constrains width.
+function constrainingAncestor(node, maxUp) {
+  var cur = node, up = 0;
+  try {
+    while (cur && up < (maxUp || 5)) {
+      cur = cur.parent;
+      up++;
+      if (!cur || !cur.width) continue;
+      if (cur.layoutMode === "VERTICAL" || cur.layoutMode === "HORIZONTAL") return cur;
+    }
+  } catch (e) {}
+  return null;
+}
+
+function innerWidthOf(frame) {
+  try { return frame.width - (frame.paddingLeft || 0) - (frame.paddingRight || 0); }
+  catch (e) { return null; }
+}
+
+/*
+ * Restore the frozen INTENT after a swap, which is not the same as restoring the
+ * frozen numbers.
+ *
+ * A frozen width is often just the box Muller's text happened to occupy rather
+ * than a constraint anyone designed. Shrinking a 24px heading to protect such a
+ * number trades real hierarchy for an accident. So growth is tried first and
+ * shrinking is the last resort, in the owner's order:
+ *
+ *   1. keep the size and let the box grow, if the surrounding space allows it;
+ *   2. a small layout adjustment - a fixed wrapper is released to hug;
+ *   3. reduce fontSize, minimally, 1px at a time;
+ *   4. a very small negative letterSpacing as the final trim.
+ *
+ * Every decision is measured against what Figma actually renders, because
+ * kerning is applied by the rasteriser and not by any offline estimate.
+ */
+async function fitHybrid(entries, baselines, changes) {
   for (var i = 0; i < entries.length; i++) {
     var e = entries[i], b = baselines[i];
     if (!b) continue;
 
-    // --- buttons: hold the frozen button width --------------------------
+    /* ---- buttons: grow the button if its container has the room -------- */
     if (e.role === "button/CTA" && b.buttonWidth != null && e.button) {
-      var grew = false;
-      try { grew = e.button.width > b.buttonWidth + 0.5; } catch (err) { grew = false; }
-      if (grew) {
-        var size = b.size, applied = size;
-        for (var step = 1; step <= 4; step++) {
-          if (!(await setSize(e.node, size - step))) break;
-          applied = size - step;
-          var w = b.buttonWidth;
-          try { w = e.button.width; } catch (err) {}
-          if (w <= b.buttonWidth + 0.5) break;
+      var now = widthOf(e.button);
+      if (now == null || now <= b.buttonWidth + 0.5) continue;
+
+      var holder = constrainingAncestor(e.button, 4);
+      var avail = holder ? innerWidthOf(holder) : null;
+      var rec = {
+        kind: "button", frame: b.frame, text: b.text, size: b.size,
+        frozenWidth: Math.round(b.buttonWidth * 10) / 10,
+        available: avail == null ? null : Math.round(avail * 10) / 10,
+        holder: holder ? holder.name : null
+      };
+
+      if (avail != null && now <= avail + 0.5) {
+        // A fixed single-child wrapper would clip the button, so release it to
+        // hug. That is the small layout adjustment, not a redesign.
+        var wrapper = null;
+        try { wrapper = e.button.parent; } catch (err) {}
+        if (wrapper && /^button/i.test(wrapper.name || "") && widthOf(wrapper) < now - 0.5) {
+          if (!trySet(wrapper, "layoutSizingHorizontal", "HUG")) {
+            try { wrapper.resize(now, wrapper.height); } catch (err) {}
+          }
+          rec.wrapperReleased = wrapper.name;
         }
-        var finalW = null;
-        try { finalW = Math.round(e.button.width * 10) / 10; } catch (err) {}
-        changes.push({
-          kind: "button", frame: b.frame, text: b.text,
-          from: size, to: applied, frozenWidth: b.buttonWidth, nowWidth: finalW,
-          fits: finalW != null && finalW <= b.buttonWidth + 0.5,
-        });
+        rec.solution = "grew";
+        rec.finalSize = b.size;
+        rec.nowWidth = Math.round(widthOf(e.button) * 10) / 10;
+        rec.delta = Math.round((rec.nowWidth - rec.frozenWidth) * 10) / 10;
+        rec.fits = true;
+        rec.why = "container had the room, so the label keeps its frozen size and the button takes the extra width";
+      } else {
+        var applied = b.size;
+        for (var step = 1; step <= 4; step++) {
+          if (!(await setSize(e.node, b.size - step))) break;
+          applied = b.size - step;
+          var w = widthOf(e.button);
+          if (avail == null ? w <= b.buttonWidth + 0.5 : w <= avail + 0.5) break;
+        }
+        rec.solution = "shrank";
+        rec.finalSize = applied;
+        rec.nowWidth = Math.round(widthOf(e.button) * 10) / 10;
+        rec.delta = Math.round((rec.nowWidth - rec.frozenWidth) * 10) / 10;
+        rec.fits = avail == null ? rec.nowWidth <= rec.frozenWidth + 0.5 : rec.nowWidth <= avail + 0.5;
+        rec.why = "no horizontal room to grow into, so the label had to come down";
       }
+      changes.push(rec);
       continue;
     }
 
-    // --- headings: a one-line heading stays one line ---------------------
+    /* ---- headings: a one-line heading stays one line ------------------- */
     var isHeading = e.role === "heading" || e.role === "collection track title" || e.role === "player track metadata";
-    if (isHeading && b.lines === 1) {
-      var now = lineCountOf(e.node);
-      if (now <= 1) continue;
-      var hSize = b.size, hApplied = hSize, ls = null;
-      for (var hs = 1; hs <= 3; hs++) {
-        if (!(await setSize(e.node, hSize - hs))) break;
-        hApplied = hSize - hs;
+    if (!isHeading || b.lines !== 1) continue;
+    if (lineCountOf(e.node) <= 1) continue;
+
+    var rec2 = { kind: "heading", frame: b.frame, text: b.text, size: b.size,
+                 frozenWidth: b.width == null ? null : Math.round(b.width * 10) / 10 };
+
+    var box = null;
+    try { box = e.node.parent; } catch (err) {}
+    var prevAutoResize = null;
+    try { prevAutoResize = e.node.textAutoResize; } catch (err) {}
+
+    var grew = trySet(e.node, "textAutoResize", "WIDTH_AND_HEIGHT");
+    if (grew && box && /^heading/i.test(box.name || "")) trySet(box, "layoutSizingHorizontal", "HUG");
+
+    var row = box ? containerFit(box.parent) : null;
+    var oneLine = lineCountOf(e.node) <= 1;
+
+    if (grew && oneLine && (!row || row.fits)) {
+      rec2.solution = "grew";
+      rec2.finalSize = b.size;
+      rec2.nowWidth = Math.round(widthOf(e.node) * 10) / 10;
+      rec2.delta = rec2.frozenWidth == null ? null : Math.round((rec2.nowWidth - rec2.frozenWidth) * 10) / 10;
+      rec2.rowUsed = row ? Math.round(row.used * 10) / 10 : null;
+      rec2.rowInner = row ? Math.round(row.inner * 10) / 10 : null;
+      rec2.lines = 1;
+      rec2.fits = true;
+      rec2.why = "the frozen width was Muller's text box, not a constraint - the row still fits, so the size is kept";
+      changes.push(rec2);
+      continue;
+    }
+
+    if (prevAutoResize) trySet(e.node, "textAutoResize", prevAutoResize);
+    if (b.width != null) { try { e.node.resize(b.width, e.node.height); } catch (err) {} }
+
+    var hApplied = b.size, ls = null;
+    for (var hs = 1; hs <= 3; hs++) {
+      if (!(await setSize(e.node, b.size - hs))) break;
+      hApplied = b.size - hs;
+      if (lineCountOf(e.node) <= 1) break;
+    }
+    if (lineCountOf(e.node) > 1) {
+      for (var t = 1; t <= 4; t++) {
+        ls = -0.1 * t;
+        if (!trySet(e.node, "letterSpacing", { unit: "PIXELS", value: ls })) break;
         if (lineCountOf(e.node) <= 1) break;
       }
-      if (lineCountOf(e.node) > 1) {
-        // Still wrapping: tighten very slightly rather than shrink further.
-        for (var t = 1; t <= 4; t++) {
-          ls = -0.1 * t;
-          try { e.node.letterSpacing = { unit: "PIXELS", value: ls }; } catch (err) { break; }
-          if (lineCountOf(e.node) <= 1) break;
-        }
-      }
-      changes.push({
-        kind: "heading", frame: b.frame, text: b.text,
-        from: hSize, to: hApplied, letterSpacing: ls,
-        lines: lineCountOf(e.node), fits: lineCountOf(e.node) <= 1,
-      });
     }
+    rec2.solution = "shrank";
+    rec2.finalSize = hApplied;
+    rec2.letterSpacing = ls;
+    rec2.lines = lineCountOf(e.node);
+    rec2.fits = rec2.lines <= 1;
+    rec2.why = "growing the box would have collided with a neighbour, so the type came down instead";
+    changes.push(rec2);
   }
 }
 
@@ -590,9 +692,10 @@ async function run(msg) {
 
         // Frozen geometry, captured before anything is written to the clone.
         var baselines = entries.map(function (e) {
-          var out = { frame: spec.name, size: 0, text: "", lines: 1, buttonWidth: null };
+          var out = { frame: spec.name, size: 0, text: "", lines: 1, width: null, buttonWidth: null };
           try { out.size = e.node.fontSize; out.text = String(e.node.characters).slice(0, 40); } catch (err) {}
           out.lines = lineCountOf(e.node);
+          out.width = widthOf(e.node);
           if (e.button) { try { out.buttonWidth = e.button.width; } catch (err) {} }
           return out;
         });
@@ -626,7 +729,7 @@ async function run(msg) {
 
         // Only the hybrid is corrected back onto the frozen geometry; the
         // single-family columns stay untouched so the raw effect stays visible.
-        if (hybrid) await fitToFrozen(entries, baselines, fitChanges);
+        if (hybrid) await fitHybrid(entries, baselines, fitChanges);
       }
 
       measured.push({ column: columns[c], w: Math.round(clone.width * 100) / 100, h: Math.round(clone.height * 100) / 100 });

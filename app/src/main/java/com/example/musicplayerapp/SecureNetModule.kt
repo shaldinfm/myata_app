@@ -21,8 +21,8 @@ import java.util.concurrent.TimeUnit
  * Both roots are bundled in res/raw and declared as extra trust anchors in
  * res/xml/network_security_config.xml. That config is applied by the platform to
  * every connection - OkHttp, HttpsURLConnection, Media3 and WebView alike - so no
- * per-client TLS code is needed. Note it is honoured from API 24; on API 21-23 the
- * plain system trust store applies, same as HttpsURLConnection always did here.
+ * per-client TLS code is needed. It is honoured from API 24, which is this
+ * project's minSdk, so it applies on every device the app runs on.
  *
  * One client is shared so connection pool, dispatcher and cache are not duplicated
  * across the service, view models and Picasso.

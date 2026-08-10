@@ -251,6 +251,47 @@ same pixels exactly.
 Repeated findings are rolled up: the same habit across forty rows is one
 decision, reported once with a count and examples.
 
+## Bounded structural cleanup
+
+`build-cleanup-plan.mjs` derives the plan from the two snapshots; `cleanup-plugin/`
+applies it. Scope is exactly five approved groups and nothing else:
+
+| group | count | what |
+|---|---|---|
+| `history-row-autolayout` | 16 | restore Horizontal auto-layout with per-row padding measured from that row |
+| `history-text-hug` | 16 | the inner text column stops locking its height |
+| `text-box-hug` | 10 | boxes shorter than one line go to Hug |
+| `lastfm-leftover` | 3 | delete already-invisible placeholders |
+| `avatar-naming` | 32 | cells carry their asset key |
+
+**Nothing is created, moved or resized.** Cross-axis alignment is `CENTER`
+because every child already sits on its row's vertical midline — the owner's
+centred time, art and action are what the file contains and what the plan
+reproduces. Per-row padding is taken from each row's own geometry, which
+preserves the 1px difference between rows 1–2 and the rest rather than quietly
+correcting it.
+
+### Guarantees
+
+- Dry Run writes nothing and re-verifies every precondition against the live
+  node — type, name, visibility, geometry, layout mode, text settings, and each
+  child's position. A file that moved on since the snapshot blocks the mutation
+  rather than being overwritten.
+- Apply re-verifies immediately before each write.
+- Layout writes are **measured afterwards**: every descendant's absolute position
+  is captured before and after, and if anything moved by more than half a pixel
+  the row is reverted and reported.
+- Any group outside the approved five, or any node on a canonical page, disables
+  Apply.
+
+### Verified before shipping
+
+The plugin's own `verify()` was run against a Figma mocked from the exported
+snapshots: 77 ready, 0 blocked, 0 unexpected, Apply enabled. Negative controls
+confirm it fails closed — nudging one child 3px, making a leftover visible, or
+setting a text box to vertical-centre each block their mutation, and restoring
+the state clears the block.
+
 ---
 
 ## The 29 screens

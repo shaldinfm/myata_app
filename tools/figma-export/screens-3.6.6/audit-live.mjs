@@ -446,11 +446,15 @@ md += `- **info** — expected, or noted for the record.\n\n`;
 for (const sev of order) {
   const list = bySeverity(sev);
   if (!list.length) continue;
-  md += `## ${sev === "blocking" ? "Blocking" : sev === "review" ? "To review" : "Informational"} (${list.length})\n\n`;
+  md += `## ${sev === "blocking" ? "Blocking" : sev === "review" ? "To review" : "Informational"} — ` +
+        `${countOf(sev)} affected nodes in ${list.length} groups\n\n`;
   const groups = {};
   for (const f of list) (groups[f.check] = groups[f.check] || []).push(f);
   for (const [check, items] of Object.entries(groups)) {
-    md += `### ${check} (${items.length})\n\n`;
+    // Report occurrences as well as groups: "6" groups covering 10 affected
+    // nodes reads as six problems otherwise.
+    const occ = items.reduce((a, f) => a + f.count, 0);
+    md += `### ${check} — ${occ} affected node${occ === 1 ? "" : "s"} in ${items.length} group${items.length === 1 ? "" : "s"}\n\n`;
     for (const f of items.slice(0, 40)) {
       md += `- ${f.theme ? `**${f.theme}** · ` : ""}${f.frame ? `\`${f.frame}\`` : ""}${f.count > 1 ? ` — **×${f.count}**` : ""}\n`;
       md += `  - ${f.message}\n`;

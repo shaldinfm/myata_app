@@ -47,6 +47,57 @@
       "node": "History Item / CRYOGEN",
       "nodeId": "2523:32",
       "path": "history-content > Screen > Broadcast History List > History Item / CRYOGEN",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 76,
+        "children": [
+          {
+            "name": "time",
+            "x": 15,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 62,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 118,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 305,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 14,
+          "right": 13,
+          "bottom": 14,
+          "left": 15
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
       "current": "layoutMode NONE, height 76 fixed, children positioned absolutely",
       "proposed": "layoutMode HORIZONTAL, itemSpacing 8, padding 14/13/14/15, primaryAxisAlignItems MIN, counterAxisAlignItems CENTER, primaryAxisSizingMode FIXED (width 358), counterAxisSizingMode AUTO (hug height)",
       "pixelsMove": false,
@@ -63,6 +114,57 @@
       "node": "History Item / Краснознамённая дивизия имени моей бабушки",
       "nodeId": "2523:41",
       "path": "history-content > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 116,
+        "children": [
+          {
+            "name": "time",
+            "x": 15,
+            "y": 44,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 62,
+            "y": 34,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 118,
+            "y": 14,
+            "w": 179,
+            "h": 88
+          },
+          {
+            "name": "Button / find track",
+            "x": 305,
+            "y": 38,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 14,
+          "right": 13,
+          "bottom": 14,
+          "left": 15
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
       "current": "layoutMode NONE, height 116 fixed, children positioned absolutely",
       "proposed": "layoutMode HORIZONTAL, itemSpacing 8, padding 14/13/14/15, primaryAxisAlignItems MIN, counterAxisAlignItems CENTER, primaryAxisSizingMode FIXED (width 358), counterAxisSizingMode AUTO (hug height)",
       "pixelsMove": false,
@@ -79,6 +181,57 @@
       "node": "History Item / CITY WALLS",
       "nodeId": "2523:50",
       "path": "history-content > Screen > Broadcast History List > History Item / CITY WALLS",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 76,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 14,
+          "right": 14,
+          "bottom": 14,
+          "left": 14
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
       "current": "layoutMode NONE, height 76 fixed, children positioned absolutely",
       "proposed": "layoutMode HORIZONTAL, itemSpacing 8, padding 14/14/14/14, primaryAxisAlignItems MIN, counterAxisAlignItems CENTER, primaryAxisSizingMode FIXED (width 358), counterAxisSizingMode AUTO (hug height)",
       "pixelsMove": false,
@@ -95,6 +248,57 @@
       "node": "History Item / WHAT YOU KNOW",
       "nodeId": "2523:59",
       "path": "history-content > Screen > Broadcast History List > History Item / WHAT YOU KNOW",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 76,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 14,
+          "right": 14,
+          "bottom": 14,
+          "left": 14
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
       "current": "layoutMode NONE, height 76 fixed, children positioned absolutely",
       "proposed": "layoutMode HORIZONTAL, itemSpacing 8, padding 14/14/14/14, primaryAxisAlignItems MIN, counterAxisAlignItems CENTER, primaryAxisSizingMode FIXED (width 358), counterAxisSizingMode AUTO (hug height)",
       "pixelsMove": false,
@@ -111,6 +315,57 @@
       "node": "History Item / Прогулка по воде под дождём в конце ноября",
       "nodeId": "2523:68",
       "path": "history-content > Screen > Broadcast History List > History Item / Прогулка по воде под дождём в конце ноября",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 104,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 38,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 28,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 76
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 32,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 14,
+          "right": 14,
+          "bottom": 14,
+          "left": 14
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
       "current": "layoutMode NONE, height 104 fixed, children positioned absolutely",
       "proposed": "layoutMode HORIZONTAL, itemSpacing 8, padding 14/14/14/14, primaryAxisAlignItems MIN, counterAxisAlignItems CENTER, primaryAxisSizingMode FIXED (width 358), counterAxisSizingMode AUTO (hug height)",
       "pixelsMove": false,
@@ -127,6 +382,57 @@
       "node": "History Item / NORTHERN LINE",
       "nodeId": "2523:77",
       "path": "history-content > Screen > Broadcast History List > History Item / NORTHERN LINE",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 76,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 14,
+          "right": 14,
+          "bottom": 14,
+          "left": 14
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
       "current": "layoutMode NONE, height 76 fixed, children positioned absolutely",
       "proposed": "layoutMode HORIZONTAL, itemSpacing 8, padding 14/14/14/14, primaryAxisAlignItems MIN, counterAxisAlignItems CENTER, primaryAxisSizingMode FIXED (width 358), counterAxisSizingMode AUTO (hug height)",
       "pixelsMove": false,
@@ -143,6 +449,57 @@
       "node": "History Item / PAPER BOATS",
       "nodeId": "2523:86",
       "path": "history-content > Screen > Broadcast History List > History Item / PAPER BOATS",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 76,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 14,
+          "right": 14,
+          "bottom": 14,
+          "left": 14
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
       "current": "layoutMode NONE, height 76 fixed, children positioned absolutely",
       "proposed": "layoutMode HORIZONTAL, itemSpacing 8, padding 14/14/14/14, primaryAxisAlignItems MIN, counterAxisAlignItems CENTER, primaryAxisSizingMode FIXED (width 358), counterAxisSizingMode AUTO (hug height)",
       "pixelsMove": false,
@@ -159,6 +516,57 @@
       "node": "History Item / SLOW BURN",
       "nodeId": "2523:95",
       "path": "history-content > Screen > Broadcast History List > History Item / SLOW BURN",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 76,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 14,
+          "right": 14,
+          "bottom": 14,
+          "left": 14
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
       "current": "layoutMode NONE, height 76 fixed, children positioned absolutely",
       "proposed": "layoutMode HORIZONTAL, itemSpacing 8, padding 14/14/14/14, primaryAxisAlignItems MIN, counterAxisAlignItems CENTER, primaryAxisSizingMode FIXED (width 358), counterAxisSizingMode AUTO (hug height)",
       "pixelsMove": false,
@@ -175,6 +583,57 @@
       "node": "History Item / CRYOGEN",
       "nodeId": "2517:3305",
       "path": "history-content_dark > Screen > Broadcast History List > History Item / CRYOGEN",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 76,
+        "children": [
+          {
+            "name": "time",
+            "x": 15,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 62,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 118,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 305,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 14,
+          "right": 13,
+          "bottom": 14,
+          "left": 15
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
       "current": "layoutMode NONE, height 76 fixed, children positioned absolutely",
       "proposed": "layoutMode HORIZONTAL, itemSpacing 8, padding 14/13/14/15, primaryAxisAlignItems MIN, counterAxisAlignItems CENTER, primaryAxisSizingMode FIXED (width 358), counterAxisSizingMode AUTO (hug height)",
       "pixelsMove": false,
@@ -191,6 +650,57 @@
       "node": "History Item / Краснознамённая дивизия имени моей бабушки",
       "nodeId": "2517:3315",
       "path": "history-content_dark > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 116,
+        "children": [
+          {
+            "name": "time",
+            "x": 15,
+            "y": 44,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 62,
+            "y": 34,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 118,
+            "y": 14,
+            "w": 179,
+            "h": 88
+          },
+          {
+            "name": "Button / find track",
+            "x": 305,
+            "y": 38,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 14,
+          "right": 13,
+          "bottom": 14,
+          "left": 15
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
       "current": "layoutMode NONE, height 116 fixed, children positioned absolutely",
       "proposed": "layoutMode HORIZONTAL, itemSpacing 8, padding 14/13/14/15, primaryAxisAlignItems MIN, counterAxisAlignItems CENTER, primaryAxisSizingMode FIXED (width 358), counterAxisSizingMode AUTO (hug height)",
       "pixelsMove": false,
@@ -207,6 +717,57 @@
       "node": "History Item / CITY WALLS",
       "nodeId": "2517:3325",
       "path": "history-content_dark > Screen > Broadcast History List > History Item / CITY WALLS",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 76,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 14,
+          "right": 14,
+          "bottom": 14,
+          "left": 14
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
       "current": "layoutMode NONE, height 76 fixed, children positioned absolutely",
       "proposed": "layoutMode HORIZONTAL, itemSpacing 8, padding 14/14/14/14, primaryAxisAlignItems MIN, counterAxisAlignItems CENTER, primaryAxisSizingMode FIXED (width 358), counterAxisSizingMode AUTO (hug height)",
       "pixelsMove": false,
@@ -223,6 +784,57 @@
       "node": "History Item / WHAT YOU KNOW",
       "nodeId": "2517:3335",
       "path": "history-content_dark > Screen > Broadcast History List > History Item / WHAT YOU KNOW",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 76,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 14,
+          "right": 14,
+          "bottom": 14,
+          "left": 14
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
       "current": "layoutMode NONE, height 76 fixed, children positioned absolutely",
       "proposed": "layoutMode HORIZONTAL, itemSpacing 8, padding 14/14/14/14, primaryAxisAlignItems MIN, counterAxisAlignItems CENTER, primaryAxisSizingMode FIXED (width 358), counterAxisSizingMode AUTO (hug height)",
       "pixelsMove": false,
@@ -239,6 +851,57 @@
       "node": "History Item / Прогулка по воде под дождём в конце ноября",
       "nodeId": "2517:3345",
       "path": "history-content_dark > Screen > Broadcast History List > History Item / Прогулка по воде под дождём в конце ноября",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 104,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 38,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 28,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 76
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 32,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 14,
+          "right": 14,
+          "bottom": 14,
+          "left": 14
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
       "current": "layoutMode NONE, height 104 fixed, children positioned absolutely",
       "proposed": "layoutMode HORIZONTAL, itemSpacing 8, padding 14/14/14/14, primaryAxisAlignItems MIN, counterAxisAlignItems CENTER, primaryAxisSizingMode FIXED (width 358), counterAxisSizingMode AUTO (hug height)",
       "pixelsMove": false,
@@ -255,6 +918,57 @@
       "node": "History Item / NORTHERN LINE",
       "nodeId": "2517:3355",
       "path": "history-content_dark > Screen > Broadcast History List > History Item / NORTHERN LINE",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 76,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 14,
+          "right": 14,
+          "bottom": 14,
+          "left": 14
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
       "current": "layoutMode NONE, height 76 fixed, children positioned absolutely",
       "proposed": "layoutMode HORIZONTAL, itemSpacing 8, padding 14/14/14/14, primaryAxisAlignItems MIN, counterAxisAlignItems CENTER, primaryAxisSizingMode FIXED (width 358), counterAxisSizingMode AUTO (hug height)",
       "pixelsMove": false,
@@ -271,6 +985,57 @@
       "node": "History Item / PAPER BOATS",
       "nodeId": "2517:3365",
       "path": "history-content_dark > Screen > Broadcast History List > History Item / PAPER BOATS",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 76,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 14,
+          "right": 14,
+          "bottom": 14,
+          "left": 14
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
       "current": "layoutMode NONE, height 76 fixed, children positioned absolutely",
       "proposed": "layoutMode HORIZONTAL, itemSpacing 8, padding 14/14/14/14, primaryAxisAlignItems MIN, counterAxisAlignItems CENTER, primaryAxisSizingMode FIXED (width 358), counterAxisSizingMode AUTO (hug height)",
       "pixelsMove": false,
@@ -287,6 +1052,57 @@
       "node": "History Item / SLOW BURN",
       "nodeId": "2517:3375",
       "path": "history-content_dark > Screen > Broadcast History List > History Item / SLOW BURN",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "NONE",
+        "width": 358,
+        "height": 76,
+        "children": [
+          {
+            "name": "time",
+            "x": 14,
+            "y": 24,
+            "w": 39,
+            "h": 28
+          },
+          {
+            "name": "Album art",
+            "x": 61,
+            "y": 14,
+            "w": 48,
+            "h": 48
+          },
+          {
+            "name": "Text",
+            "x": 117,
+            "y": 14,
+            "w": 179,
+            "h": 48
+          },
+          {
+            "name": "Button / find track",
+            "x": 304,
+            "y": 18,
+            "w": 40,
+            "h": 40
+          }
+        ]
+      },
+      "apply": {
+        "op": "setAutoLayout",
+        "layoutMode": "HORIZONTAL",
+        "itemSpacing": 8,
+        "padding": {
+          "top": 14,
+          "right": 14,
+          "bottom": 14,
+          "left": 14
+        },
+        "primaryAxisAlignItems": "MIN",
+        "counterAxisAlignItems": "CENTER",
+        "primaryAxisSizingMode": "FIXED",
+        "counterAxisSizingMode": "AUTO"
+      },
       "current": "layoutMode NONE, height 76 fixed, children positioned absolutely",
       "proposed": "layoutMode HORIZONTAL, itemSpacing 8, padding 14/14/14/14, primaryAxisAlignItems MIN, counterAxisAlignItems CENTER, primaryAxisSizingMode FIXED (width 358), counterAxisSizingMode AUTO (hug height)",
       "pixelsMove": false,
@@ -303,6 +1119,17 @@
       "node": "Text",
       "nodeId": "2523:35",
       "path": "history-content > Screen > Broadcast History List > History Item / CRYOGEN > Text",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "VERTICAL",
+        "primaryAxisSizingMode": "FIXED",
+        "height": 48,
+        "width": 179
+      },
+      "apply": {
+        "op": "setSizing",
+        "primaryAxisSizingMode": "AUTO"
+      },
       "current": "VERTICAL auto-layout, primaryAxisSizingMode FIXED (height 48 locked)",
       "proposed": "primaryAxisSizingMode AUTO (hug height); width stays 179 FIXED",
       "pixelsMove": false,
@@ -319,6 +1146,17 @@
       "node": "Text",
       "nodeId": "2523:44",
       "path": "history-content > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки > Text",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "VERTICAL",
+        "primaryAxisSizingMode": "FIXED",
+        "height": 88,
+        "width": 179
+      },
+      "apply": {
+        "op": "setSizing",
+        "primaryAxisSizingMode": "AUTO"
+      },
       "current": "VERTICAL auto-layout, primaryAxisSizingMode FIXED (height 88 locked)",
       "proposed": "primaryAxisSizingMode AUTO (hug height); width stays 179 FIXED",
       "pixelsMove": false,
@@ -335,6 +1173,17 @@
       "node": "Text",
       "nodeId": "2523:53",
       "path": "history-content > Screen > Broadcast History List > History Item / CITY WALLS > Text",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "VERTICAL",
+        "primaryAxisSizingMode": "FIXED",
+        "height": 48,
+        "width": 179
+      },
+      "apply": {
+        "op": "setSizing",
+        "primaryAxisSizingMode": "AUTO"
+      },
       "current": "VERTICAL auto-layout, primaryAxisSizingMode FIXED (height 48 locked)",
       "proposed": "primaryAxisSizingMode AUTO (hug height); width stays 179 FIXED",
       "pixelsMove": false,
@@ -351,6 +1200,17 @@
       "node": "Text",
       "nodeId": "2523:62",
       "path": "history-content > Screen > Broadcast History List > History Item / WHAT YOU KNOW > Text",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "VERTICAL",
+        "primaryAxisSizingMode": "FIXED",
+        "height": 48,
+        "width": 179
+      },
+      "apply": {
+        "op": "setSizing",
+        "primaryAxisSizingMode": "AUTO"
+      },
       "current": "VERTICAL auto-layout, primaryAxisSizingMode FIXED (height 48 locked)",
       "proposed": "primaryAxisSizingMode AUTO (hug height); width stays 179 FIXED",
       "pixelsMove": false,
@@ -367,6 +1227,17 @@
       "node": "Text",
       "nodeId": "2523:71",
       "path": "history-content > Screen > Broadcast History List > History Item / Прогулка по воде под дождём в конце ноября > Text",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "VERTICAL",
+        "primaryAxisSizingMode": "FIXED",
+        "height": 76,
+        "width": 179
+      },
+      "apply": {
+        "op": "setSizing",
+        "primaryAxisSizingMode": "AUTO"
+      },
       "current": "VERTICAL auto-layout, primaryAxisSizingMode FIXED (height 76 locked)",
       "proposed": "primaryAxisSizingMode AUTO (hug height); width stays 179 FIXED",
       "pixelsMove": false,
@@ -383,6 +1254,17 @@
       "node": "Text",
       "nodeId": "2523:80",
       "path": "history-content > Screen > Broadcast History List > History Item / NORTHERN LINE > Text",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "VERTICAL",
+        "primaryAxisSizingMode": "FIXED",
+        "height": 48,
+        "width": 179
+      },
+      "apply": {
+        "op": "setSizing",
+        "primaryAxisSizingMode": "AUTO"
+      },
       "current": "VERTICAL auto-layout, primaryAxisSizingMode FIXED (height 48 locked)",
       "proposed": "primaryAxisSizingMode AUTO (hug height); width stays 179 FIXED",
       "pixelsMove": false,
@@ -399,6 +1281,17 @@
       "node": "Text",
       "nodeId": "2523:89",
       "path": "history-content > Screen > Broadcast History List > History Item / PAPER BOATS > Text",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "VERTICAL",
+        "primaryAxisSizingMode": "FIXED",
+        "height": 48,
+        "width": 179
+      },
+      "apply": {
+        "op": "setSizing",
+        "primaryAxisSizingMode": "AUTO"
+      },
       "current": "VERTICAL auto-layout, primaryAxisSizingMode FIXED (height 48 locked)",
       "proposed": "primaryAxisSizingMode AUTO (hug height); width stays 179 FIXED",
       "pixelsMove": false,
@@ -415,6 +1308,17 @@
       "node": "Text",
       "nodeId": "2523:98",
       "path": "history-content > Screen > Broadcast History List > History Item / SLOW BURN > Text",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "VERTICAL",
+        "primaryAxisSizingMode": "FIXED",
+        "height": 48,
+        "width": 179
+      },
+      "apply": {
+        "op": "setSizing",
+        "primaryAxisSizingMode": "AUTO"
+      },
       "current": "VERTICAL auto-layout, primaryAxisSizingMode FIXED (height 48 locked)",
       "proposed": "primaryAxisSizingMode AUTO (hug height); width stays 179 FIXED",
       "pixelsMove": false,
@@ -431,6 +1335,17 @@
       "node": "Text",
       "nodeId": "2517:3308",
       "path": "history-content_dark > Screen > Broadcast History List > History Item / CRYOGEN > Text",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "VERTICAL",
+        "primaryAxisSizingMode": "FIXED",
+        "height": 48,
+        "width": 179
+      },
+      "apply": {
+        "op": "setSizing",
+        "primaryAxisSizingMode": "AUTO"
+      },
       "current": "VERTICAL auto-layout, primaryAxisSizingMode FIXED (height 48 locked)",
       "proposed": "primaryAxisSizingMode AUTO (hug height); width stays 179 FIXED",
       "pixelsMove": false,
@@ -447,6 +1362,17 @@
       "node": "Text",
       "nodeId": "2517:3318",
       "path": "history-content_dark > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки > Text",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "VERTICAL",
+        "primaryAxisSizingMode": "FIXED",
+        "height": 88,
+        "width": 179
+      },
+      "apply": {
+        "op": "setSizing",
+        "primaryAxisSizingMode": "AUTO"
+      },
       "current": "VERTICAL auto-layout, primaryAxisSizingMode FIXED (height 88 locked)",
       "proposed": "primaryAxisSizingMode AUTO (hug height); width stays 179 FIXED",
       "pixelsMove": false,
@@ -463,6 +1389,17 @@
       "node": "Text",
       "nodeId": "2517:3328",
       "path": "history-content_dark > Screen > Broadcast History List > History Item / CITY WALLS > Text",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "VERTICAL",
+        "primaryAxisSizingMode": "FIXED",
+        "height": 48,
+        "width": 179
+      },
+      "apply": {
+        "op": "setSizing",
+        "primaryAxisSizingMode": "AUTO"
+      },
       "current": "VERTICAL auto-layout, primaryAxisSizingMode FIXED (height 48 locked)",
       "proposed": "primaryAxisSizingMode AUTO (hug height); width stays 179 FIXED",
       "pixelsMove": false,
@@ -479,6 +1416,17 @@
       "node": "Text",
       "nodeId": "2517:3338",
       "path": "history-content_dark > Screen > Broadcast History List > History Item / WHAT YOU KNOW > Text",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "VERTICAL",
+        "primaryAxisSizingMode": "FIXED",
+        "height": 48,
+        "width": 179
+      },
+      "apply": {
+        "op": "setSizing",
+        "primaryAxisSizingMode": "AUTO"
+      },
       "current": "VERTICAL auto-layout, primaryAxisSizingMode FIXED (height 48 locked)",
       "proposed": "primaryAxisSizingMode AUTO (hug height); width stays 179 FIXED",
       "pixelsMove": false,
@@ -495,6 +1443,17 @@
       "node": "Text",
       "nodeId": "2517:3348",
       "path": "history-content_dark > Screen > Broadcast History List > History Item / Прогулка по воде под дождём в конце ноября > Text",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "VERTICAL",
+        "primaryAxisSizingMode": "FIXED",
+        "height": 76,
+        "width": 179
+      },
+      "apply": {
+        "op": "setSizing",
+        "primaryAxisSizingMode": "AUTO"
+      },
       "current": "VERTICAL auto-layout, primaryAxisSizingMode FIXED (height 76 locked)",
       "proposed": "primaryAxisSizingMode AUTO (hug height); width stays 179 FIXED",
       "pixelsMove": false,
@@ -511,6 +1470,17 @@
       "node": "Text",
       "nodeId": "2517:3358",
       "path": "history-content_dark > Screen > Broadcast History List > History Item / NORTHERN LINE > Text",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "VERTICAL",
+        "primaryAxisSizingMode": "FIXED",
+        "height": 48,
+        "width": 179
+      },
+      "apply": {
+        "op": "setSizing",
+        "primaryAxisSizingMode": "AUTO"
+      },
       "current": "VERTICAL auto-layout, primaryAxisSizingMode FIXED (height 48 locked)",
       "proposed": "primaryAxisSizingMode AUTO (hug height); width stays 179 FIXED",
       "pixelsMove": false,
@@ -527,6 +1497,17 @@
       "node": "Text",
       "nodeId": "2517:3368",
       "path": "history-content_dark > Screen > Broadcast History List > History Item / PAPER BOATS > Text",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "VERTICAL",
+        "primaryAxisSizingMode": "FIXED",
+        "height": 48,
+        "width": 179
+      },
+      "apply": {
+        "op": "setSizing",
+        "primaryAxisSizingMode": "AUTO"
+      },
       "current": "VERTICAL auto-layout, primaryAxisSizingMode FIXED (height 48 locked)",
       "proposed": "primaryAxisSizingMode AUTO (hug height); width stays 179 FIXED",
       "pixelsMove": false,
@@ -543,6 +1524,17 @@
       "node": "Text",
       "nodeId": "2517:3378",
       "path": "history-content_dark > Screen > Broadcast History List > History Item / SLOW BURN > Text",
+      "check": {
+        "type": "FRAME",
+        "layoutMode": "VERTICAL",
+        "primaryAxisSizingMode": "FIXED",
+        "height": 48,
+        "width": 179
+      },
+      "apply": {
+        "op": "setSizing",
+        "primaryAxisSizingMode": "AUTO"
+      },
       "current": "VERTICAL auto-layout, primaryAxisSizingMode FIXED (height 48 locked)",
       "proposed": "primaryAxisSizingMode AUTO (hug height); width stays 179 FIXED",
       "pixelsMove": false,
@@ -559,6 +1551,20 @@
       "node": "value",
       "nodeId": "2517:1978",
       "path": "sleep-timer-custom > Bottom Sheet / Своё время > Stepper / Часы > value",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "1",
+        "x": 200,
+        "y": 18
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
       "current": "height 28, lineHeight 32, textAutoResize NONE, textAlignVertical TOP",
       "proposed": "textAutoResize HEIGHT (height resolves to 32)",
       "pixelsMove": false,
@@ -575,6 +1581,20 @@
       "node": "value",
       "nodeId": "2517:1985",
       "path": "sleep-timer-custom > Bottom Sheet / Своё время > Stepper / Минуты > value",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "30",
+        "x": 200,
+        "y": 18
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
       "current": "height 28, lineHeight 32, textAutoResize NONE, textAlignVertical TOP",
       "proposed": "textAutoResize HEIGHT (height resolves to 32)",
       "pixelsMove": false,
@@ -591,6 +1611,20 @@
       "node": "value",
       "nodeId": "2517:2002",
       "path": "sleep-timer-custom-invalid > Bottom Sheet / Своё время > Stepper / Часы > value",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "0",
+        "x": 200,
+        "y": 18
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
       "current": "height 28, lineHeight 32, textAutoResize NONE, textAlignVertical TOP",
       "proposed": "textAutoResize HEIGHT (height resolves to 32)",
       "pixelsMove": false,
@@ -607,6 +1641,20 @@
       "node": "value",
       "nodeId": "2517:2009",
       "path": "sleep-timer-custom-invalid > Bottom Sheet / Своё время > Stepper / Минуты > value",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "0",
+        "x": 200,
+        "y": 18
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
       "current": "height 28, lineHeight 32, textAutoResize NONE, textAlignVertical TOP",
       "proposed": "textAutoResize HEIGHT (height resolves to 32)",
       "pixelsMove": false,
@@ -623,6 +1671,20 @@
       "node": "initial",
       "nodeId": "2517:2680",
       "path": "profile-authenticated > Account card > Avatar > initial",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "Д",
+        "x": 0,
+        "y": 18
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
       "current": "height 28, lineHeight 32, textAutoResize NONE, textAlignVertical TOP",
       "proposed": "textAutoResize HEIGHT (height resolves to 32)",
       "pixelsMove": false,
@@ -639,6 +1701,20 @@
       "node": "value",
       "nodeId": "2517:2945",
       "path": "sleep-timer-custom_dark > Bottom Sheet / Своё время > Stepper / Часы > value",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "1",
+        "x": 200,
+        "y": 18
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
       "current": "height 28, lineHeight 32, textAutoResize NONE, textAlignVertical TOP",
       "proposed": "textAutoResize HEIGHT (height resolves to 32)",
       "pixelsMove": false,
@@ -655,6 +1731,20 @@
       "node": "value",
       "nodeId": "2517:2952",
       "path": "sleep-timer-custom_dark > Bottom Sheet / Своё время > Stepper / Минуты > value",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "30",
+        "x": 200,
+        "y": 18
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
       "current": "height 28, lineHeight 32, textAutoResize NONE, textAlignVertical TOP",
       "proposed": "textAutoResize HEIGHT (height resolves to 32)",
       "pixelsMove": false,
@@ -671,6 +1761,20 @@
       "node": "value",
       "nodeId": "2517:2969",
       "path": "sleep-timer-custom-invalid_dark > Bottom Sheet / Своё время > Stepper / Часы > value",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "0",
+        "x": 200,
+        "y": 18
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
       "current": "height 28, lineHeight 32, textAutoResize NONE, textAlignVertical TOP",
       "proposed": "textAutoResize HEIGHT (height resolves to 32)",
       "pixelsMove": false,
@@ -687,6 +1791,20 @@
       "node": "value",
       "nodeId": "2517:2976",
       "path": "sleep-timer-custom-invalid_dark > Bottom Sheet / Своё время > Stepper / Минуты > value",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "0",
+        "x": 200,
+        "y": 18
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
       "current": "height 28, lineHeight 32, textAutoResize NONE, textAlignVertical TOP",
       "proposed": "textAutoResize HEIGHT (height resolves to 32)",
       "pixelsMove": false,
@@ -703,6 +1821,20 @@
       "node": "initial",
       "nodeId": "2517:3647",
       "path": "profile-authenticated_dark > Account card > Avatar > initial",
+      "check": {
+        "type": "TEXT",
+        "textAutoResize": "NONE",
+        "height": 28,
+        "lineHeight": 32,
+        "textAlignVertical": "TOP",
+        "characters": "Д",
+        "x": 0,
+        "y": 18
+      },
+      "apply": {
+        "op": "setTextAutoResize",
+        "textAutoResize": "HEIGHT"
+      },
       "current": "height 28, lineHeight 32, textAutoResize NONE, textAlignVertical TOP",
       "proposed": "textAutoResize HEIGHT (height resolves to 32)",
       "pixelsMove": false,
@@ -719,6 +1851,14 @@
       "node": "Asset slot / logo/lastfm (PENDING)",
       "nodeId": "2517:2886",
       "path": "settings-lastfm > Not connected > Asset slot / logo/lastfm (PENDING)",
+      "check": {
+        "visible": false,
+        "namePrefix": "Asset slot / logo/lastfm",
+        "siblingMarkVisible": true
+      },
+      "apply": {
+        "op": "remove"
+      },
       "current": "hidden placeholder frame 24x24 at 16,18, visible=false",
       "proposed": "delete",
       "pixelsMove": false,
@@ -735,6 +1875,14 @@
       "node": "Asset slot / logo/lastfm (PENDING)",
       "nodeId": "2517:2893",
       "path": "settings-lastfm > Connected > Asset slot / logo/lastfm (PENDING)",
+      "check": {
+        "visible": false,
+        "namePrefix": "Asset slot / logo/lastfm",
+        "siblingMarkVisible": true
+      },
+      "apply": {
+        "op": "remove"
+      },
       "current": "hidden placeholder frame 24x24 at 16,18, visible=false",
       "proposed": "delete",
       "pixelsMove": false,
@@ -751,6 +1899,14 @@
       "node": "Asset slot / logo/lastfm (PENDING)",
       "nodeId": "2517:3765",
       "path": "settings_dark > Row / Last.fm > Asset slot / logo/lastfm (PENDING)",
+      "check": {
+        "visible": false,
+        "namePrefix": "Asset slot / logo/lastfm",
+        "siblingMarkVisible": true
+      },
+      "apply": {
+        "op": "remove"
+      },
       "current": "hidden placeholder frame 24x24 at 16,20, visible=false",
       "proposed": "delete",
       "pixelsMove": false,
@@ -767,6 +1923,17 @@
       "node": "Avatar cell 1",
       "nodeId": "2523:146",
       "path": "profile-avatar > Avatar cell 1",
+      "check": {
+        "name": "Avatar cell 1",
+        "x": 16,
+        "y": 244,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 01 · avatar/m3-01"
+      },
       "current": "name \"Avatar cell 1\", 76x76 at 16,244, 0 children",
       "proposed": "name \"Avatar cell 01 · avatar/m3-01\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -783,6 +1950,17 @@
       "node": "Avatar cell 2",
       "nodeId": "2523:147",
       "path": "profile-avatar > Avatar cell 2",
+      "check": {
+        "name": "Avatar cell 2",
+        "x": 110,
+        "y": 244,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 02 · avatar/m3-02"
+      },
       "current": "name \"Avatar cell 2\", 76x76 at 110,244, 0 children",
       "proposed": "name \"Avatar cell 02 · avatar/m3-02\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -799,6 +1977,17 @@
       "node": "Avatar cell 3",
       "nodeId": "2523:148",
       "path": "profile-avatar > Avatar cell 3",
+      "check": {
+        "name": "Avatar cell 3",
+        "x": 204,
+        "y": 244,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 03 · avatar/m3-03"
+      },
       "current": "name \"Avatar cell 3\", 76x76 at 204,244, 0 children",
       "proposed": "name \"Avatar cell 03 · avatar/m3-03\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -815,6 +2004,17 @@
       "node": "Avatar cell 4",
       "nodeId": "2523:149",
       "path": "profile-avatar > Avatar cell 4",
+      "check": {
+        "name": "Avatar cell 4",
+        "x": 298,
+        "y": 244,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 04 · avatar/m3-04"
+      },
       "current": "name \"Avatar cell 4\", 76x76 at 298,244, 0 children",
       "proposed": "name \"Avatar cell 04 · avatar/m3-04\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -831,6 +2031,17 @@
       "node": "Avatar cell 5",
       "nodeId": "2523:150",
       "path": "profile-avatar > Avatar cell 5",
+      "check": {
+        "name": "Avatar cell 5",
+        "x": 16,
+        "y": 338,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 05 · avatar/m3-05"
+      },
       "current": "name \"Avatar cell 5\", 76x76 at 16,338, 0 children",
       "proposed": "name \"Avatar cell 05 · avatar/m3-05\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -847,6 +2058,17 @@
       "node": "Avatar cell 6",
       "nodeId": "2523:151",
       "path": "profile-avatar > Avatar cell 6",
+      "check": {
+        "name": "Avatar cell 6",
+        "x": 110,
+        "y": 338,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 06 · avatar/m3-06"
+      },
       "current": "name \"Avatar cell 6\", 76x76 at 110,338, 1 children",
       "proposed": "name \"Avatar cell 06 · avatar/m3-06\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -863,6 +2085,17 @@
       "node": "Avatar cell 7",
       "nodeId": "2523:155",
       "path": "profile-avatar > Avatar cell 7",
+      "check": {
+        "name": "Avatar cell 7",
+        "x": 204,
+        "y": 338,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 07 · avatar/m3-07"
+      },
       "current": "name \"Avatar cell 7\", 76x76 at 204,338, 0 children",
       "proposed": "name \"Avatar cell 07 · avatar/m3-07\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -879,6 +2112,17 @@
       "node": "Avatar cell 8",
       "nodeId": "2523:156",
       "path": "profile-avatar > Avatar cell 8",
+      "check": {
+        "name": "Avatar cell 8",
+        "x": 298,
+        "y": 338,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 08 · avatar/m3-08"
+      },
       "current": "name \"Avatar cell 8\", 76x76 at 298,338, 0 children",
       "proposed": "name \"Avatar cell 08 · avatar/m3-08\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -895,6 +2139,17 @@
       "node": "Avatar cell 9",
       "nodeId": "2523:157",
       "path": "profile-avatar > Avatar cell 9",
+      "check": {
+        "name": "Avatar cell 9",
+        "x": 16,
+        "y": 432,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 09 · avatar/m3-09"
+      },
       "current": "name \"Avatar cell 9\", 76x76 at 16,432, 0 children",
       "proposed": "name \"Avatar cell 09 · avatar/m3-09\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -911,6 +2166,17 @@
       "node": "Avatar cell 10",
       "nodeId": "2523:158",
       "path": "profile-avatar > Avatar cell 10",
+      "check": {
+        "name": "Avatar cell 10",
+        "x": 110,
+        "y": 432,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 10 · avatar/m3-10"
+      },
       "current": "name \"Avatar cell 10\", 76x76 at 110,432, 0 children",
       "proposed": "name \"Avatar cell 10 · avatar/m3-10\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -927,6 +2193,17 @@
       "node": "Avatar cell 11",
       "nodeId": "2523:159",
       "path": "profile-avatar > Avatar cell 11",
+      "check": {
+        "name": "Avatar cell 11",
+        "x": 204,
+        "y": 432,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 11 · avatar/m3-11"
+      },
       "current": "name \"Avatar cell 11\", 76x76 at 204,432, 0 children",
       "proposed": "name \"Avatar cell 11 · avatar/m3-11\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -943,6 +2220,17 @@
       "node": "Avatar cell 12",
       "nodeId": "2523:160",
       "path": "profile-avatar > Avatar cell 12",
+      "check": {
+        "name": "Avatar cell 12",
+        "x": 298,
+        "y": 432,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 12 · avatar/m3-12"
+      },
       "current": "name \"Avatar cell 12\", 76x76 at 298,432, 0 children",
       "proposed": "name \"Avatar cell 12 · avatar/m3-12\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -959,6 +2247,17 @@
       "node": "Avatar cell 13",
       "nodeId": "2523:161",
       "path": "profile-avatar > Avatar cell 13",
+      "check": {
+        "name": "Avatar cell 13",
+        "x": 16,
+        "y": 526,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 13 · avatar/m3-13"
+      },
       "current": "name \"Avatar cell 13\", 76x76 at 16,526, 0 children",
       "proposed": "name \"Avatar cell 13 · avatar/m3-13\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -975,6 +2274,17 @@
       "node": "Avatar cell 14",
       "nodeId": "2523:162",
       "path": "profile-avatar > Avatar cell 14",
+      "check": {
+        "name": "Avatar cell 14",
+        "x": 110,
+        "y": 526,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 14 · avatar/m3-14"
+      },
       "current": "name \"Avatar cell 14\", 76x76 at 110,526, 0 children",
       "proposed": "name \"Avatar cell 14 · avatar/m3-14\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -991,6 +2301,17 @@
       "node": "Avatar cell 15",
       "nodeId": "2523:163",
       "path": "profile-avatar > Avatar cell 15",
+      "check": {
+        "name": "Avatar cell 15",
+        "x": 204,
+        "y": 526,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 15 · avatar/m3-15"
+      },
       "current": "name \"Avatar cell 15\", 76x76 at 204,526, 0 children",
       "proposed": "name \"Avatar cell 15 · avatar/m3-15\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -1007,6 +2328,17 @@
       "node": "Avatar cell 16",
       "nodeId": "2523:164",
       "path": "profile-avatar > Avatar cell 16",
+      "check": {
+        "name": "Avatar cell 16",
+        "x": 298,
+        "y": 526,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 16 · avatar/m3-16"
+      },
       "current": "name \"Avatar cell 16\", 76x76 at 298,526, 0 children",
       "proposed": "name \"Avatar cell 16 · avatar/m3-16\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -1023,6 +2355,17 @@
       "node": "Avatar cell 1",
       "nodeId": "2517:3688",
       "path": "profile-avatar_dark > Avatar cell 1",
+      "check": {
+        "name": "Avatar cell 1",
+        "x": 16,
+        "y": 244,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 01 · avatar/m3-01"
+      },
       "current": "name \"Avatar cell 1\", 76x76 at 16,244, 0 children",
       "proposed": "name \"Avatar cell 01 · avatar/m3-01\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -1039,6 +2382,17 @@
       "node": "Avatar cell 2",
       "nodeId": "2517:3690",
       "path": "profile-avatar_dark > Avatar cell 2",
+      "check": {
+        "name": "Avatar cell 2",
+        "x": 110,
+        "y": 244,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 02 · avatar/m3-02"
+      },
       "current": "name \"Avatar cell 2\", 76x76 at 110,244, 0 children",
       "proposed": "name \"Avatar cell 02 · avatar/m3-02\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -1055,6 +2409,17 @@
       "node": "Avatar cell 3",
       "nodeId": "2517:3692",
       "path": "profile-avatar_dark > Avatar cell 3",
+      "check": {
+        "name": "Avatar cell 3",
+        "x": 204,
+        "y": 244,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 03 · avatar/m3-03"
+      },
       "current": "name \"Avatar cell 3\", 76x76 at 204,244, 0 children",
       "proposed": "name \"Avatar cell 03 · avatar/m3-03\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -1071,6 +2436,17 @@
       "node": "Avatar cell 4",
       "nodeId": "2517:3694",
       "path": "profile-avatar_dark > Avatar cell 4",
+      "check": {
+        "name": "Avatar cell 4",
+        "x": 298,
+        "y": 244,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 04 · avatar/m3-04"
+      },
       "current": "name \"Avatar cell 4\", 76x76 at 298,244, 0 children",
       "proposed": "name \"Avatar cell 04 · avatar/m3-04\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -1087,6 +2463,17 @@
       "node": "Avatar cell 5",
       "nodeId": "2517:3696",
       "path": "profile-avatar_dark > Avatar cell 5",
+      "check": {
+        "name": "Avatar cell 5",
+        "x": 16,
+        "y": 338,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 05 · avatar/m3-05"
+      },
       "current": "name \"Avatar cell 5\", 76x76 at 16,338, 0 children",
       "proposed": "name \"Avatar cell 05 · avatar/m3-05\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -1103,6 +2490,17 @@
       "node": "Avatar cell 6",
       "nodeId": "2517:3698",
       "path": "profile-avatar_dark > Avatar cell 6",
+      "check": {
+        "name": "Avatar cell 6",
+        "x": 110,
+        "y": 338,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 06 · avatar/m3-06"
+      },
       "current": "name \"Avatar cell 6\", 76x76 at 110,338, 1 children",
       "proposed": "name \"Avatar cell 06 · avatar/m3-06\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -1119,6 +2517,17 @@
       "node": "Avatar cell 7",
       "nodeId": "2517:3703",
       "path": "profile-avatar_dark > Avatar cell 7",
+      "check": {
+        "name": "Avatar cell 7",
+        "x": 204,
+        "y": 338,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 07 · avatar/m3-07"
+      },
       "current": "name \"Avatar cell 7\", 76x76 at 204,338, 0 children",
       "proposed": "name \"Avatar cell 07 · avatar/m3-07\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -1135,6 +2544,17 @@
       "node": "Avatar cell 8",
       "nodeId": "2517:3705",
       "path": "profile-avatar_dark > Avatar cell 8",
+      "check": {
+        "name": "Avatar cell 8",
+        "x": 298,
+        "y": 338,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 08 · avatar/m3-08"
+      },
       "current": "name \"Avatar cell 8\", 76x76 at 298,338, 0 children",
       "proposed": "name \"Avatar cell 08 · avatar/m3-08\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -1151,6 +2571,17 @@
       "node": "Avatar cell 9",
       "nodeId": "2517:3707",
       "path": "profile-avatar_dark > Avatar cell 9",
+      "check": {
+        "name": "Avatar cell 9",
+        "x": 16,
+        "y": 432,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 09 · avatar/m3-09"
+      },
       "current": "name \"Avatar cell 9\", 76x76 at 16,432, 0 children",
       "proposed": "name \"Avatar cell 09 · avatar/m3-09\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -1167,6 +2598,17 @@
       "node": "Avatar cell 10",
       "nodeId": "2517:3709",
       "path": "profile-avatar_dark > Avatar cell 10",
+      "check": {
+        "name": "Avatar cell 10",
+        "x": 110,
+        "y": 432,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 10 · avatar/m3-10"
+      },
       "current": "name \"Avatar cell 10\", 76x76 at 110,432, 0 children",
       "proposed": "name \"Avatar cell 10 · avatar/m3-10\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -1183,6 +2625,17 @@
       "node": "Avatar cell 11",
       "nodeId": "2517:3711",
       "path": "profile-avatar_dark > Avatar cell 11",
+      "check": {
+        "name": "Avatar cell 11",
+        "x": 204,
+        "y": 432,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 11 · avatar/m3-11"
+      },
       "current": "name \"Avatar cell 11\", 76x76 at 204,432, 0 children",
       "proposed": "name \"Avatar cell 11 · avatar/m3-11\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -1199,6 +2652,17 @@
       "node": "Avatar cell 12",
       "nodeId": "2517:3713",
       "path": "profile-avatar_dark > Avatar cell 12",
+      "check": {
+        "name": "Avatar cell 12",
+        "x": 298,
+        "y": 432,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 12 · avatar/m3-12"
+      },
       "current": "name \"Avatar cell 12\", 76x76 at 298,432, 0 children",
       "proposed": "name \"Avatar cell 12 · avatar/m3-12\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -1215,6 +2679,17 @@
       "node": "Avatar cell 13",
       "nodeId": "2517:3715",
       "path": "profile-avatar_dark > Avatar cell 13",
+      "check": {
+        "name": "Avatar cell 13",
+        "x": 16,
+        "y": 526,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 13 · avatar/m3-13"
+      },
       "current": "name \"Avatar cell 13\", 76x76 at 16,526, 0 children",
       "proposed": "name \"Avatar cell 13 · avatar/m3-13\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -1231,6 +2706,17 @@
       "node": "Avatar cell 14",
       "nodeId": "2517:3717",
       "path": "profile-avatar_dark > Avatar cell 14",
+      "check": {
+        "name": "Avatar cell 14",
+        "x": 110,
+        "y": 526,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 14 · avatar/m3-14"
+      },
       "current": "name \"Avatar cell 14\", 76x76 at 110,526, 0 children",
       "proposed": "name \"Avatar cell 14 · avatar/m3-14\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -1247,6 +2733,17 @@
       "node": "Avatar cell 15",
       "nodeId": "2517:3719",
       "path": "profile-avatar_dark > Avatar cell 15",
+      "check": {
+        "name": "Avatar cell 15",
+        "x": 204,
+        "y": 526,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 15 · avatar/m3-15"
+      },
       "current": "name \"Avatar cell 15\", 76x76 at 204,526, 0 children",
       "proposed": "name \"Avatar cell 15 · avatar/m3-15\" — geometry, fills and strokes untouched",
       "pixelsMove": false,
@@ -1263,6 +2760,17 @@
       "node": "Avatar cell 16",
       "nodeId": "2517:3721",
       "path": "profile-avatar_dark > Avatar cell 16",
+      "check": {
+        "name": "Avatar cell 16",
+        "x": 298,
+        "y": 526,
+        "width": 76,
+        "height": 76
+      },
+      "apply": {
+        "op": "rename",
+        "name": "Avatar cell 16 · avatar/m3-16"
+      },
       "current": "name \"Avatar cell 16\", 76x76 at 298,526, 0 children",
       "proposed": "name \"Avatar cell 16 · avatar/m3-16\" — geometry, fills and strokes untouched",
       "pixelsMove": false,

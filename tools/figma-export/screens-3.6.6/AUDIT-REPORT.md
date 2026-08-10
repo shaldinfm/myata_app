@@ -25,9 +25,9 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
 - **review** — needs an owner decision. Nothing is changed without approval.
 - **info** — expected, or noted for the record.
 
-## Blocking (8)
+## Blocking — 26 affected nodes in 8 groups
 
-### text (6)
+### text — 10 affected nodes in 6 groups
 
 - **light** · `sleep-timer-custom` — **×2**
   - box is 28px against a 32px line height and an ancestor clips - the glyphs are cut
@@ -54,7 +54,7 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
   - `profile-authenticated_dark > Account card > Avatar > initial`
   - *Proposed:* Set vertical resizing to Hug, or raise the height to 32px. Both keep the current x/y.
 
-### history (2)
+### history — 16 affected nodes in 2 groups
 
 - **light** · `history-content` — **×8**
   - row is not an auto-layout frame, so it cannot grow with a long title
@@ -65,9 +65,9 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
   - e.g. `history-content_dark > Screen > Broadcast History List > History Item / CRYOGEN`, `history-content_dark > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки`, `history-content_dark > Screen > Broadcast History List > History Item / CITY WALLS`, …
   - *Proposed:* Restore Horizontal auto-layout, padding 13, gap 8, cross-axis align Top, vertical Hug. That reproduces the current single-line height of 74.
 
-## To review (88)
+## To review — 774 affected nodes in 88 groups
 
-### parity (5)
+### parity — 5 affected nodes in 5 groups
 
 - `sleep-timer-menu-active`
   - structure diverges: light "VECTOR:disc" vs dark "VECTOR:icon"
@@ -85,7 +85,7 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
   - structure diverges: light "FRAME:Asset slot / logo/lastfm (PENDING)" vs dark "VECTOR:Vector"; light "VECTOR:Vector" vs dark "TEXT:h"; light "TEXT:h" vs dark "TEXT:b0"; light "TEXT:b0" vs dark "TEXT:b1"
   - *Proposed:* Check whether the divergence is intentional.
 
-### text (2)
+### text — 32 affected nodes in 2 groups
 
 - **light** · `history-content` — **×16**
   - is 181px wide inside the 179px column "Text" - 2px hangs out
@@ -96,7 +96,7 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
   - e.g. `history-content_dark > Screen > Broadcast History List > History Item / CRYOGEN > Text > title`, `history-content_dark > Screen > Broadcast History List > History Item / CRYOGEN > Text > artist`, `history-content_dark > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки > Text > title`, …
   - *Proposed:* Set the text to Fill container, or widen "Text" to 181. Text wraps at its own width, so the wrap point today is 181, not the column width.
 
-### hidden (2)
+### hidden — 3 affected nodes in 2 groups
 
 - **light** · `settings-lastfm` — **×2**
   - hidden node <FRAME> 24x24
@@ -107,7 +107,7 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
   - `settings_dark > Row / Last.fm > Asset slot / logo/lastfm (PENDING)`
   - *Proposed:* Delete it if it is a leftover; keep it only if it documents an alternate state.
 
-### constraints (60)
+### constraints — 709 affected nodes in 60 groups
 
 - **light** · `sleep-timer-select` — **×11**
   - spans the parent width (left 0, right 0) but is pinned Left only
@@ -271,7 +271,7 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
   - *Proposed:* Set horizontal constraint to Left and right. Pure metadata - no pixel moves.
 - … and 20 more distinct items of this kind
 
-### sheet (14)
+### sheet — 14 affected nodes in 14 groups
 
 - **light** · `sleep-timer-select`
   - clipsContent is off
@@ -330,7 +330,7 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
   - `collection-track-sheet_dark > Bottom Sheet / Действия с треком`
   - *Proposed:* Turn it on so children cannot paint over the rounded corners. No geometry change.
 
-### history (2)
+### history — 8 affected nodes in 2 groups
 
 - **light** · `history-content` — **×4**
   - "time" is not at the same x in every row: 14, 15
@@ -341,7 +341,7 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
   - e.g. `time`, `Album art`, `Text`, …
   - *Proposed:* Rows should share one anchor. Fix by making the rows consistent auto-layouts rather than by dragging.
 
-### assets (3)
+### assets — 3 affected nodes in 3 groups
 
 - `-`
   - 3 hidden 'logo/lastfm' slot(s) remain beside real artwork: light · settings-lastfm, light · settings-lastfm, dark · settings_dark
@@ -353,9 +353,9 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
   - 15 of 16 avatar cells are empty rings - the pending slot was deleted rather than filled
   - *Proposed:* Expected while the Material 3 avatars are outstanding, but nothing in the file now records what goes in them. Consider restoring a named placeholder, or treat this note as the record.
 
-## Informational (18)
+## Informational — 32 affected nodes in 18 groups
 
-### autolayout (2)
+### autolayout — 16 affected nodes in 2 groups
 
 - **light** · `history-content` — **×8**
   - 6.06px of slack on a fixed axis with nothing set to grow
@@ -366,7 +366,7 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
   - e.g. `history-content_dark > Screen > Broadcast History List > History Item / CRYOGEN > Button / find track`, `history-content_dark > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки > Button / find track`, `history-content_dark > Screen > Broadcast History List > History Item / CITY WALLS > Button / find track`, …
   - *Proposed:* Harmless, but Hug or a growing child would make the intent explicit.
 
-### spacing (2)
+### spacing — 2 affected nodes in 2 groups
 
 - **light** · `sleep-timer-menu-active`
   - 4 evenly spaced children (gap 4), positioned absolutely
@@ -377,7 +377,7 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
   - `sleep-timer-menu-active_dark > Menu / Плеер (таймер активен)`
   - *Proposed:* A vertical auto-layout with gap 4 would reproduce the exact same pixels and make it robust. Zero pixel change - safe to apply on approval.
 
-### sheet (14)
+### sheet — 14 affected nodes in 14 groups
 
 - **light** · `sleep-timer-select`
   - uniform corner radius 28 (top and bottom)

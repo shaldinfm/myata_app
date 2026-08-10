@@ -51,6 +51,17 @@ for (const theme of ["light", "dark"]) {
       mutations.push({
         id: `A-${theme}-${n.id}`, group: "history-row-autolayout",
         page: DOC[theme].source.pageName, frame: frame.name, node: n.name, nodeId: n.id, path: trail,
+        // preconditions the plugin re-verifies against the live node before writing
+        check: {
+          type: "FRAME", layoutMode: "NONE", width: r2(n.width), height: r2(n.height),
+          children: kids.map((k) => ({ name: k.name, x: r2(k.x), y: r2(k.y), w: r2(k.width), h: r2(k.height) }))
+        },
+        apply: {
+          op: "setAutoLayout", layoutMode: "HORIZONTAL", itemSpacing: gap,
+          padding: { top: padTB, right: padR, bottom: padTB, left: padL },
+          primaryAxisAlignItems: "MIN", counterAxisAlignItems: "CENTER",
+          primaryAxisSizingMode: "FIXED", counterAxisSizingMode: "AUTO"
+        },
         current: `layoutMode NONE, height ${r2(n.height)} fixed, children positioned absolutely`,
         proposed: `layoutMode HORIZONTAL, itemSpacing ${gap}, padding ${padTB}/${padR}/${padTB}/${padL}, ` +
                   `primaryAxisAlignItems MIN, counterAxisAlignItems CENTER, ` +
@@ -77,6 +88,8 @@ for (const theme of ["light", "dark"]) {
         mutations.push({
           id: `B-${theme}-${col.id}`, group: "history-text-hug",
           page: DOC[theme].source.pageName, frame: frame.name, node: "Text", nodeId: col.id, path: trail + " > Text",
+          check: { type: "FRAME", layoutMode: "VERTICAL", primaryAxisSizingMode: "FIXED", height: r2(col.height), width: r2(col.width) },
+          apply: { op: "setSizing", primaryAxisSizingMode: "AUTO" },
           current: `VERTICAL auto-layout, primaryAxisSizingMode FIXED (height ${r2(col.height)} locked)`,
           proposed: `primaryAxisSizingMode AUTO (hug height); width stays ${r2(col.width)} FIXED`,
           pixelsMove: false, wrapChange: false, visualChange: false,
@@ -98,6 +111,9 @@ for (const theme of ["light", "dark"]) {
         mutations.push({
           id: `C-${theme}-${n.id}`, group: "text-box-hug",
           page: DOC[theme].source.pageName, frame: frame.name, node: n.name, nodeId: n.id, path: trail,
+          check: { type: "TEXT", textAutoResize: "NONE", height: r2(n.height), lineHeight: lh,
+                   textAlignVertical: n.text.textAlignVertical, characters: n.text.characters, x: r2(n.x), y: r2(n.y) },
+          apply: { op: "setTextAutoResize", textAutoResize: "HEIGHT" },
           current: `height ${r2(n.height)}, lineHeight ${lh}, textAutoResize NONE, textAlignVertical ${n.text.textAlignVertical}`,
           proposed: `textAutoResize HEIGHT (height resolves to ${lh})`,
           pixelsMove: false, wrapChange: false, visualChange: false,
@@ -120,6 +136,8 @@ for (const theme of ["light", "dark"]) {
         mutations.push({
           id: `D-${theme}-${c.id}`, group: "lastfm-leftover",
           page: DOC[theme].source.pageName, frame: frame.name, node: c.name, nodeId: c.id, path: trail + " > " + c.name,
+          check: { visible: false, namePrefix: "Asset slot / logo/lastfm", siblingMarkVisible: siblingMark },
+          apply: { op: "remove" },
           current: `hidden placeholder frame ${r2(c.width)}x${r2(c.height)} at ${r2(c.x)},${r2(c.y)}, visible=${c.visible !== false}`,
           proposed: "delete",
           pixelsMove: false, wrapChange: false, visualChange: false,
@@ -148,6 +166,8 @@ for (const theme of ["light", "dark"]) {
     mutations.push({
       id: `E-${theme}-${c.id}`, group: "avatar-naming",
       page: DOC[theme].source.pageName, frame: frame.name, node: c.name, nodeId: c.id, path: frame.name + " > " + c.name,
+      check: { name: c.name, x: r2(c.x), y: r2(c.y), width: r2(c.width), height: r2(c.height) },
+      apply: { op: "rename", name: proposedName },
       current: `name "${c.name}", ${r2(c.width)}x${r2(c.height)} at ${r2(c.x)},${r2(c.y)}, ${(c.children || []).length} children`,
       proposed: `name "${proposedName}" — geometry, fills and strokes untouched`,
       pixelsMove: false, wrapChange: false, visualChange: false,

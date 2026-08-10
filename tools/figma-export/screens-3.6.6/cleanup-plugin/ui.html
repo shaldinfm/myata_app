@@ -71,7 +71,8 @@
         "<div class='" + (r.unexpected.length ? "miss" : "ok") + "'>" + r.unexpected.length + " unexpected nodes</div>" +
         "<div class='" + (r.declared.pixelsMove ? "miss" : "ok") + "'>" + r.declared.pixelsMove + " move pixels</div>" +
         "<div class='" + (r.declared.wrapChange ? "miss" : "ok") + "'>" + r.declared.wrapChange + " change wrapping</div>" +
-        "<div class='" + (r.declared.visualChange ? "miss" : "ok") + "'>" + r.declared.visualChange + " change visuals</div>";
+        "<div class='" + (r.declared.visualChange ? "miss" : "ok") + "'>" + r.declared.visualChange + " unintended visual changes</div>" +
+        "<div><b>" + (r.declared.restoresOwnerGeometry || 0) + "</b> restored to owner height</div><div></div>";
 
       if (r.unexpected.length) {
         h += '<div class="grp">Unexpected scope — Apply disabled</div>';

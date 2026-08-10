@@ -1,0 +1,619 @@
+{
+  "schemaVersion": "history-baseline-1.0.0",
+  "purpose": "The owner-edited row geometry as it stood BEFORE the failed apply, captured from the pre-apply snapshots. The failed revert left every row 2px taller, so the live file is no longer the owner baseline; this file is. Recovery targets these numbers.",
+  "capturedFrom": {
+    "plan": "CLEANUP-PLAN.json at commit 5386e51",
+    "lightExportedAt": "2026-08-10T07:44:22.219Z",
+    "darkExportedAt": "2026-08-10T07:45:07.213Z"
+  },
+  "rows": [
+    {
+      "nodeId": "2523:32",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "history-content",
+      "node": "History Item / CRYOGEN",
+      "width": 358,
+      "height": 76,
+      "children": [
+        {
+          "name": "time",
+          "x": 15,
+          "y": 24,
+          "w": 39,
+          "h": 28
+        },
+        {
+          "name": "Album art",
+          "x": 62,
+          "y": 14,
+          "w": 48,
+          "h": 48
+        },
+        {
+          "name": "Text",
+          "x": 118,
+          "y": 14,
+          "w": 179,
+          "h": 48
+        },
+        {
+          "name": "Button / find track",
+          "x": 305,
+          "y": 18,
+          "w": 40,
+          "h": 40
+        }
+      ]
+    },
+    {
+      "nodeId": "2523:41",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "history-content",
+      "node": "History Item / Краснознамённая дивизия имени моей бабушки",
+      "width": 358,
+      "height": 116,
+      "children": [
+        {
+          "name": "time",
+          "x": 15,
+          "y": 44,
+          "w": 39,
+          "h": 28
+        },
+        {
+          "name": "Album art",
+          "x": 62,
+          "y": 34,
+          "w": 48,
+          "h": 48
+        },
+        {
+          "name": "Text",
+          "x": 118,
+          "y": 14,
+          "w": 179,
+          "h": 88
+        },
+        {
+          "name": "Button / find track",
+          "x": 305,
+          "y": 38,
+          "w": 40,
+          "h": 40
+        }
+      ]
+    },
+    {
+      "nodeId": "2523:50",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "history-content",
+      "node": "History Item / CITY WALLS",
+      "width": 358,
+      "height": 76,
+      "children": [
+        {
+          "name": "time",
+          "x": 14,
+          "y": 24,
+          "w": 39,
+          "h": 28
+        },
+        {
+          "name": "Album art",
+          "x": 61,
+          "y": 14,
+          "w": 48,
+          "h": 48
+        },
+        {
+          "name": "Text",
+          "x": 117,
+          "y": 14,
+          "w": 179,
+          "h": 48
+        },
+        {
+          "name": "Button / find track",
+          "x": 304,
+          "y": 18,
+          "w": 40,
+          "h": 40
+        }
+      ]
+    },
+    {
+      "nodeId": "2523:59",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "history-content",
+      "node": "History Item / WHAT YOU KNOW",
+      "width": 358,
+      "height": 76,
+      "children": [
+        {
+          "name": "time",
+          "x": 14,
+          "y": 24,
+          "w": 39,
+          "h": 28
+        },
+        {
+          "name": "Album art",
+          "x": 61,
+          "y": 14,
+          "w": 48,
+          "h": 48
+        },
+        {
+          "name": "Text",
+          "x": 117,
+          "y": 14,
+          "w": 179,
+          "h": 48
+        },
+        {
+          "name": "Button / find track",
+          "x": 304,
+          "y": 18,
+          "w": 40,
+          "h": 40
+        }
+      ]
+    },
+    {
+      "nodeId": "2523:68",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "history-content",
+      "node": "History Item / Прогулка по воде под дождём в конце ноября",
+      "width": 358,
+      "height": 104,
+      "children": [
+        {
+          "name": "time",
+          "x": 14,
+          "y": 38,
+          "w": 39,
+          "h": 28
+        },
+        {
+          "name": "Album art",
+          "x": 61,
+          "y": 28,
+          "w": 48,
+          "h": 48
+        },
+        {
+          "name": "Text",
+          "x": 117,
+          "y": 14,
+          "w": 179,
+          "h": 76
+        },
+        {
+          "name": "Button / find track",
+          "x": 304,
+          "y": 32,
+          "w": 40,
+          "h": 40
+        }
+      ]
+    },
+    {
+      "nodeId": "2523:77",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "history-content",
+      "node": "History Item / NORTHERN LINE",
+      "width": 358,
+      "height": 76,
+      "children": [
+        {
+          "name": "time",
+          "x": 14,
+          "y": 24,
+          "w": 39,
+          "h": 28
+        },
+        {
+          "name": "Album art",
+          "x": 61,
+          "y": 14,
+          "w": 48,
+          "h": 48
+        },
+        {
+          "name": "Text",
+          "x": 117,
+          "y": 14,
+          "w": 179,
+          "h": 48
+        },
+        {
+          "name": "Button / find track",
+          "x": 304,
+          "y": 18,
+          "w": 40,
+          "h": 40
+        }
+      ]
+    },
+    {
+      "nodeId": "2523:86",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "history-content",
+      "node": "History Item / PAPER BOATS",
+      "width": 358,
+      "height": 76,
+      "children": [
+        {
+          "name": "time",
+          "x": 14,
+          "y": 24,
+          "w": 39,
+          "h": 28
+        },
+        {
+          "name": "Album art",
+          "x": 61,
+          "y": 14,
+          "w": 48,
+          "h": 48
+        },
+        {
+          "name": "Text",
+          "x": 117,
+          "y": 14,
+          "w": 179,
+          "h": 48
+        },
+        {
+          "name": "Button / find track",
+          "x": 304,
+          "y": 18,
+          "w": 40,
+          "h": 40
+        }
+      ]
+    },
+    {
+      "nodeId": "2523:95",
+      "page": "3.6.6 PROPOSALS - LIGHT",
+      "frame": "history-content",
+      "node": "History Item / SLOW BURN",
+      "width": 358,
+      "height": 76,
+      "children": [
+        {
+          "name": "time",
+          "x": 14,
+          "y": 24,
+          "w": 39,
+          "h": 28
+        },
+        {
+          "name": "Album art",
+          "x": 61,
+          "y": 14,
+          "w": 48,
+          "h": 48
+        },
+        {
+          "name": "Text",
+          "x": 117,
+          "y": 14,
+          "w": 179,
+          "h": 48
+        },
+        {
+          "name": "Button / find track",
+          "x": 304,
+          "y": 18,
+          "w": 40,
+          "h": 40
+        }
+      ]
+    },
+    {
+      "nodeId": "2517:3305",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "history-content_dark",
+      "node": "History Item / CRYOGEN",
+      "width": 358,
+      "height": 76,
+      "children": [
+        {
+          "name": "time",
+          "x": 15,
+          "y": 24,
+          "w": 39,
+          "h": 28
+        },
+        {
+          "name": "Album art",
+          "x": 62,
+          "y": 14,
+          "w": 48,
+          "h": 48
+        },
+        {
+          "name": "Text",
+          "x": 118,
+          "y": 14,
+          "w": 179,
+          "h": 48
+        },
+        {
+          "name": "Button / find track",
+          "x": 305,
+          "y": 18,
+          "w": 40,
+          "h": 40
+        }
+      ]
+    },
+    {
+      "nodeId": "2517:3315",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "history-content_dark",
+      "node": "History Item / Краснознамённая дивизия имени моей бабушки",
+      "width": 358,
+      "height": 116,
+      "children": [
+        {
+          "name": "time",
+          "x": 15,
+          "y": 44,
+          "w": 39,
+          "h": 28
+        },
+        {
+          "name": "Album art",
+          "x": 62,
+          "y": 34,
+          "w": 48,
+          "h": 48
+        },
+        {
+          "name": "Text",
+          "x": 118,
+          "y": 14,
+          "w": 179,
+          "h": 88
+        },
+        {
+          "name": "Button / find track",
+          "x": 305,
+          "y": 38,
+          "w": 40,
+          "h": 40
+        }
+      ]
+    },
+    {
+      "nodeId": "2517:3325",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "history-content_dark",
+      "node": "History Item / CITY WALLS",
+      "width": 358,
+      "height": 76,
+      "children": [
+        {
+          "name": "time",
+          "x": 14,
+          "y": 24,
+          "w": 39,
+          "h": 28
+        },
+        {
+          "name": "Album art",
+          "x": 61,
+          "y": 14,
+          "w": 48,
+          "h": 48
+        },
+        {
+          "name": "Text",
+          "x": 117,
+          "y": 14,
+          "w": 179,
+          "h": 48
+        },
+        {
+          "name": "Button / find track",
+          "x": 304,
+          "y": 18,
+          "w": 40,
+          "h": 40
+        }
+      ]
+    },
+    {
+      "nodeId": "2517:3335",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "history-content_dark",
+      "node": "History Item / WHAT YOU KNOW",
+      "width": 358,
+      "height": 76,
+      "children": [
+        {
+          "name": "time",
+          "x": 14,
+          "y": 24,
+          "w": 39,
+          "h": 28
+        },
+        {
+          "name": "Album art",
+          "x": 61,
+          "y": 14,
+          "w": 48,
+          "h": 48
+        },
+        {
+          "name": "Text",
+          "x": 117,
+          "y": 14,
+          "w": 179,
+          "h": 48
+        },
+        {
+          "name": "Button / find track",
+          "x": 304,
+          "y": 18,
+          "w": 40,
+          "h": 40
+        }
+      ]
+    },
+    {
+      "nodeId": "2517:3345",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "history-content_dark",
+      "node": "History Item / Прогулка по воде под дождём в конце ноября",
+      "width": 358,
+      "height": 104,
+      "children": [
+        {
+          "name": "time",
+          "x": 14,
+          "y": 38,
+          "w": 39,
+          "h": 28
+        },
+        {
+          "name": "Album art",
+          "x": 61,
+          "y": 28,
+          "w": 48,
+          "h": 48
+        },
+        {
+          "name": "Text",
+          "x": 117,
+          "y": 14,
+          "w": 179,
+          "h": 76
+        },
+        {
+          "name": "Button / find track",
+          "x": 304,
+          "y": 32,
+          "w": 40,
+          "h": 40
+        }
+      ]
+    },
+    {
+      "nodeId": "2517:3355",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "history-content_dark",
+      "node": "History Item / NORTHERN LINE",
+      "width": 358,
+      "height": 76,
+      "children": [
+        {
+          "name": "time",
+          "x": 14,
+          "y": 24,
+          "w": 39,
+          "h": 28
+        },
+        {
+          "name": "Album art",
+          "x": 61,
+          "y": 14,
+          "w": 48,
+          "h": 48
+        },
+        {
+          "name": "Text",
+          "x": 117,
+          "y": 14,
+          "w": 179,
+          "h": 48
+        },
+        {
+          "name": "Button / find track",
+          "x": 304,
+          "y": 18,
+          "w": 40,
+          "h": 40
+        }
+      ]
+    },
+    {
+      "nodeId": "2517:3365",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "history-content_dark",
+      "node": "History Item / PAPER BOATS",
+      "width": 358,
+      "height": 76,
+      "children": [
+        {
+          "name": "time",
+          "x": 14,
+          "y": 24,
+          "w": 39,
+          "h": 28
+        },
+        {
+          "name": "Album art",
+          "x": 61,
+          "y": 14,
+          "w": 48,
+          "h": 48
+        },
+        {
+          "name": "Text",
+          "x": 117,
+          "y": 14,
+          "w": 179,
+          "h": 48
+        },
+        {
+          "name": "Button / find track",
+          "x": 304,
+          "y": 18,
+          "w": 40,
+          "h": 40
+        }
+      ]
+    },
+    {
+      "nodeId": "2517:3375",
+      "page": "3.6.6 PROPOSALS - DARK",
+      "frame": "history-content_dark",
+      "node": "History Item / SLOW BURN",
+      "width": 358,
+      "height": 76,
+      "children": [
+        {
+          "name": "time",
+          "x": 14,
+          "y": 24,
+          "w": 39,
+          "h": 28
+        },
+        {
+          "name": "Album art",
+          "x": 61,
+          "y": 14,
+          "w": 48,
+          "h": 48
+        },
+        {
+          "name": "Text",
+          "x": 117,
+          "y": 14,
+          "w": 179,
+          "h": 48
+        },
+        {
+          "name": "Button / find track",
+          "x": 304,
+          "y": 18,
+          "w": 40,
+          "h": 40
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "run": "after",
-  "capturedAt": "2026-08-10T10:34:30.334Z",
+  "capturedAt": "2026-08-10T11:52:23.144Z",
   "env": {
     "ro.build.version.sdk": "36",
     "ro.build.version.release": "16",
@@ -13,8 +13,8 @@
     "nightMode": "2 (yes)",
     "size": "Physical size: 1920x1080",
     "density": "Physical density: 320",
-    "emulator": "INFO         | Android emulator version 37.1.11.0 (build_id 15917651) (CL:N/A)",
-    "appCommit": "6a142810c2328cc01430d1ab6356a315d9dfa94f",
+    "emulator": "Android emulator version 37.1.11.0 (build_id 15917651) (CL:N/A)",
+    "appCommit": "03c2e1fc40a0751897b10f54f9d8d2280a2468e0",
     "appVersion": "3.6.5"
   },
   "steps": [

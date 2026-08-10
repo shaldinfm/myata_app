@@ -7,7 +7,7 @@
   density                      Physical density: 320
   emulator                     Android emulator version 37.1.11.0 (build_id 15917651) (CL:N/A)
   app commit                   before bea34c97d8aaf2ebe346a3336f08cb676d5e8c9d
-                               after  6a142810c2328cc01430d1ab6356a315d9dfa94f
+                               after  03c2e1fc40a0751897b10f54f9d8d2280a2468e0
 
 === focus chain ===
   before: card_myata > card_gold > card_xtra > card_myata > btn_stream_myata > btn_stream_myata > btn_stream_myata > btn_stream_gold > btn_stream_gold > btn_stream_xtra > btn_stream_xtra > btn_play_pause > btn_play_pause > btn_stream_xtra > card_myata
@@ -67,6 +67,6 @@ file                                    differing px      %      max Î”   mean Î
   10-player-focus-right-2.png              2068961   99.776%    255     37.5   REVIEW
   11-player-switch-xtra.png                2069138   99.785%    247     28.7   REVIEW
   12-player-focus-up-to-playpause.png      2068692   99.763%    247     28.7   REVIEW
-  13-player-pause.png                      2068898   99.773%    251     41.6   REVIEW
-  14-player-resume.png                     2072217   99.933%    251     41.8   REVIEW
+  13-player-pause.png                      2069092   99.783%    247     28.7   REVIEW
+  14-player-resume.png                     2072030   99.924%    250     29.9   REVIEW
   15-back-to-selection.png                       0    0.000%      0      0.0   identical

@@ -114,7 +114,12 @@ try {
 } catch { env.leanback = false; env.television = false; }
 try { env.nightMode = /mNightMode=(\S+\s*\([^)]*\))/.exec(sh(["shell", "dumpsys", "uimode"]))?.[1]; } catch {}
 try { env.size = sh(["shell", "wm", "size"]).trim(); env.density = sh(["shell", "wm", "density"]).trim(); } catch {}
-try { env.emulator = execFileSync(process.env.EMULATOR || "emulator", ["-version"], { encoding: "utf8" }).split("\n")[0].trim(); } catch {}
+// `emulator -version` sometimes prefixes its output with "INFO | ". Store just
+// the version, or two runs of the same binary compare as different.
+try {
+  const raw = execFileSync(process.env.EMULATOR || "emulator", ["-version"], { encoding: "utf8" });
+  env.emulator = (/Android emulator version [^\r\n]+/.exec(raw) || [raw.split("\n")[0]])[0].trim();
+} catch {}
 try { env.appCommit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", cwd: here }).trim(); } catch {}
 try { env.appVersion = sh(["shell", "dumpsys", "package", PKG]).match(/versionName=(\S+)/)?.[1]; } catch {}
 

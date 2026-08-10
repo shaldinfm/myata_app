@@ -1,0 +1,30 @@
+=== 0. self-check: framework attribute ids ===
+  PASS  AppTheme declares all four expected framework attributes - id mapping confirmed
+
+=== 1. MainActivity selection ===
+  PASS  selects (0..9).random()
+  PASS  all 10 branches map i -> AppTheme<i>
+
+=== 2/3. compiled resource table (what actually ships) ===
+  PASS  AppTheme0 -> @drawable/screen0   parent=Theme.Myata.Base
+  PASS  AppTheme1 -> @drawable/screen1   parent=Theme.Myata.Base
+  PASS  AppTheme2 -> @drawable/screen2   parent=Theme.Myata.Base
+  PASS  AppTheme3 -> @drawable/screen3   parent=Theme.Myata.Base
+  PASS  AppTheme4 -> @drawable/screen4   parent=Theme.Myata.Base
+  PASS  AppTheme5 -> @drawable/screen5   parent=Theme.Myata.Base
+  PASS  AppTheme6 -> @drawable/screen6   parent=Theme.Myata.Base
+  PASS  AppTheme7 -> @drawable/screen7   parent=Theme.Myata.Base
+  PASS  AppTheme8 -> @drawable/screen8   parent=Theme.Myata.Base
+  PASS  AppTheme9 -> @drawable/screen9   parent=Theme.Myata.Base
+
+=== 4. before vs after ===
+  PASS  all 10 windowBackground mappings identical: 0->0 1->1 2->2 3->3 4->4 5->5 6->6 7->7 8->8 9->9
+  note  parent before: Theme.MaterialComponents.Light.NoActionBar
+  note  parent after : Theme.Myata.Base
+
+=== 5. window flags on AppTheme0..9 ===
+  PASS  none of AppTheme0..9 declares fullscreen / translucent / disablePreview
+  note  this is the declaration level. Inheritance through the parent chain is
+        covered on-device by RandomWindowBackgroundTest.
+
+ALL DETERMINISTIC CHECKS PASSED

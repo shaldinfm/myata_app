@@ -1,6 +1,6 @@
 {
   "run": "after",
-  "capturedAt": "2026-08-10T10:08:12.918Z",
+  "capturedAt": "2026-08-10T11:52:23.144Z",
   "env": {
     "ro.build.version.sdk": "36",
     "ro.build.version.release": "16",
@@ -14,7 +14,7 @@
     "size": "Physical size: 1920x1080",
     "density": "Physical density: 320",
     "emulator": "Android emulator version 37.1.11.0 (build_id 15917651) (CL:N/A)",
-    "appCommit": "bea34c97d8aaf2ebe346a3336f08cb676d5e8c9d",
+    "appCommit": "03c2e1fc40a0751897b10f54f9d8d2280a2468e0",
     "appVersion": "3.6.5"
   },
   "steps": [
@@ -789,6 +789,12 @@
           "bounds": "[0,0][1920,1080]"
         },
         {
+          "id": "btn_back",
+          "cls": "ImageButton",
+          "bounds": "[28,30][66,68]",
+          "focusable": true
+        },
+        {
           "id": "iv_album_art",
           "cls": "ImageView",
           "bounds": "[680,35][1240,595]"
@@ -1243,6 +1249,12 @@
           "bounds": "[0,0][1920,1080]"
         },
         {
+          "id": "btn_back",
+          "cls": "ImageButton",
+          "bounds": "[28,30][66,68]",
+          "focusable": true
+        },
+        {
           "id": "iv_album_art",
           "cls": "ImageView",
           "bounds": "[680,35][1240,595]"
@@ -1353,6 +1365,12 @@
           "id": "view_scrim",
           "cls": "View",
           "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "btn_back",
+          "cls": "ImageButton",
+          "bounds": "[28,30][66,68]",
+          "focusable": true
         },
         {
           "id": "iv_album_art",

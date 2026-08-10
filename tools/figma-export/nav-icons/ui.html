@@ -1,0 +1,79 @@
+<style>
+  body { font: 12px -apple-system, "Segoe UI", sans-serif; margin: 0; padding: 14px; color: #191c1d; }
+  h1 { font-size: 13px; margin: 0 0 6px; }
+  p { margin: 0 0 10px; color: #42474e; line-height: 1.45; }
+  button { font: inherit; padding: 7px 14px; border-radius: 6px; border: 1px solid #1c4771;
+           background: #1c4771; color: #fff; cursor: pointer; }
+  button.secondary { background: #fff; color: #1c4771; }
+  button[disabled] { opacity: .5; cursor: default; }
+  #status { margin-top: 10px; white-space: pre-wrap; font-family: ui-monospace, Consolas, monospace;
+            font-size: 11px; background: #f8f9fa; border: 1px solid #e1e3e4; border-radius: 6px;
+            padding: 8px; max-height: 340px; overflow: auto; }
+  .bad { color: #b3261e; }
+  .good { color: #00723d; }
+</style>
+
+<h1>BottomNav icon vectors</h1>
+<p>
+  Reads <code>vectorPaths</code> from the twelve frozen canonical icon nodes and writes
+  <code>nav-icons.json</code>, containing the raw geometry plus ready-to-paste Android
+  VectorDrawable XML. Read-only &mdash; nothing in the document is modified.
+</p>
+
+<button id="run">Extract</button>
+<button id="save" class="secondary" disabled>Download JSON</button>
+
+<div id="status">Ready.</div>
+
+<script>
+  var out = null;
+  var statusEl = document.getElementById("status");
+  var saveBtn = document.getElementById("save");
+
+  document.getElementById("run").onclick = function () {
+    statusEl.textContent = "Working…";
+    saveBtn.disabled = true;
+    parent.postMessage({ pluginMessage: { type: "extract" } }, "*");
+  };
+
+  saveBtn.onclick = function () {
+    if (!out) return;
+    var blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "nav-icons.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  onmessage = function (event) {
+    var msg = event.data.pluginMessage;
+    if (!msg) return;
+
+    if (msg.type === "status") {
+      statusEl.textContent = msg.text;
+    } else if (msg.type === "error") {
+      statusEl.innerHTML = '<span class="bad">' + msg.text + "</span>";
+    } else if (msg.type === "result") {
+      out = msg.payload;
+      saveBtn.disabled = false;
+      var lines = [];
+      if (msg.missing && msg.missing.length) {
+        lines.push('<span class="bad">Could not read ' + msg.missing.length + " node(s):</span>");
+        msg.missing.forEach(function (m) { lines.push("  " + m); });
+        lines.push("");
+      } else {
+        lines.push('<span class="good">All twelve nodes read.</span>');
+        lines.push("");
+      }
+      lines.push("Findings:");
+      (msg.findings || []).forEach(function (f) { lines.push("  - " + f); });
+      lines.push("");
+      lines.push("Drawables produced:");
+      Object.keys(out.drawables).forEach(function (k) { lines.push("  " + k); });
+      lines.push("");
+      lines.push("Download the JSON and hand it back to continue.");
+      statusEl.innerHTML = lines.join("\n");
+    }
+  };
+</script>

@@ -133,7 +133,10 @@ var RULES = [
 {
     role: "button/CTA",
     family: MONTSERRAT,
-    why: "button or call to action",
+    // Action labels carry more presence at Medium than at Regular, and the
+    // frozen scale sets them Regular only because that is Muller's habit.
+    weight: "Medium",
+    why: "button or call to action - Montserrat Medium 500",
     test: function (ctx) { return /(^|>\s*)button/i.test(ctx.path) || /^button/i.test(ctx.name); },
   },
   // --- flagged judgement calls --------------------------------------------
@@ -148,6 +151,7 @@ var RULES = [
   {
     role: "inline action / CTA link",
     family: MONTSERRAT,
+    weight: "Medium",
     // Owner-resolved: Montserrat. The split the owner asked for is between a
     // small actionable affordance - which is action typography, like a button -
     // and a link that is really part of the reading experience.
@@ -200,10 +204,10 @@ function classify(ctx) {
   for (var i = 0; i < RULES.length; i++) {
     var r = RULES[i];
     try {
-      if (r.test(ctx)) return { role: r.role, family: r.family, why: r.why, ambiguous: r.ambiguous || null };
+      if (r.test(ctx)) return { role: r.role, family: r.family, weight: r.weight || null, why: r.why, ambiguous: r.ambiguous || null };
     } catch (e) { /* a rule must never break the run */ }
   }
-  return { role: DEFAULT_RULE.role, family: DEFAULT_RULE.family, why: DEFAULT_RULE.why, ambiguous: null };
+  return { role: DEFAULT_RULE.role, family: DEFAULT_RULE.family, weight: null, why: DEFAULT_RULE.why, ambiguous: null };
 }
 
 // Test hook: the mock harness imports this file and calls the classifier
@@ -274,14 +278,25 @@ function search(node, name) {
 
 // Carries the ancestor path with each node: the role classifier keys off what a
 // node is in the structure, which only the path can tell it.
-function collectText(node, out, path) {
+function collectText(node, out, path, ancestors) {
   var ty = "", nm = "";
   try { ty = node.type; nm = node.name || ""; } catch (e) { return out; }
   var here = path ? path.concat(nm) : [nm];
-  if (ty === "TEXT") { out.push({ node: node, path: here.join(" > "), name: nm }); return out; }
+  var chain = ancestors ? ancestors.concat([node]) : [node];
+  if (ty === "TEXT") {
+    // Nearest Button ancestor, so the fit pass can hold the frozen geometry.
+    var btn = null;
+    for (var a = chain.length - 2; a >= 0; a--) {
+      var an = "";
+      try { an = chain[a].name || ""; } catch (e) {}
+      if (/^button/i.test(an)) { btn = chain[a]; break; }
+    }
+    out.push({ node: node, path: here.join(" > "), name: nm, button: btn });
+    return out;
+  }
   var kids;
   try { kids = node.children; } catch (e) { return out; }
-  if (kids) for (var i = 0; i < kids.length; i++) collectText(kids[i], out, here);
+  if (kids) for (var i = 0; i < kids.length; i++) collectText(kids[i], out, here, chain);
   return out;
 }
 
@@ -305,7 +320,7 @@ function resolveStyle(family, style) {
   return byStyle || byFamily;
 }
 
-async function restyleNode(textNode, family, problems, notes) {
+async function restyleNode(textNode, family, problems, notes, weightOverride) {
   if (!family) return;
   var segments;
   try {
@@ -326,7 +341,9 @@ async function restyleNode(textNode, family, problems, notes) {
       continue;
     }
 
-    var target = { family: family, style: style };
+    // A role may force a weight - button labels are set Medium regardless of the
+    // Regular the frozen scale gives them.
+    var target = { family: family, style: weightOverride || style };
     try {
       await figma.loadFontAsync(src);
       await figma.loadFontAsync(target);
@@ -396,6 +413,104 @@ async function injectStress(frame, problems, changed) {
   return picked;
 }
 
+/* -------------------------------------------------------------- fitting -- */
+
+/*
+ * How many lines a text node is currently rendering.
+ *
+ * Every frozen node pins lineHeight in PIXELS, and the trial pins the single
+ * AUTO one before swapping, so height/lineHeight is exact rather than inferred.
+ */
+function lineCountOf(node) {
+  try {
+    var lh = node.lineHeight;
+    if (!lh || lh.unit !== "PIXELS" || !lh.value) return 1;
+    return Math.max(1, Math.round(node.height / lh.value));
+  } catch (e) { return 1; }
+}
+
+async function setSize(node, size) {
+  try {
+    await figma.loadFontAsync(node.fontName);
+    node.fontSize = size;
+    return true;
+  } catch (e) { return false; }
+}
+
+/*
+ * Restore the frozen geometry after a swap, by the smallest typographic
+ * correction that works - never by widening anything.
+ *
+ * Fitting is measured against what Figma actually renders, not against a
+ * predicted advance width: kerning is applied by the rasteriser and not by any
+ * offline estimate, and the estimate runs several percent wide on strings with
+ * punctuation. The loop asks the node how tall or wide it became and reacts.
+ *
+ *   buttons  - the frozen button is hug-width, so a wider label grows it.
+ *              Shrink the label until the button is back inside its frozen
+ *              width. -1px first, further only if that button still needs it.
+ *   headings - a short heading that was one line must stay one line. Shrink by
+ *              1px at a time; if the minimum useful reduction still wraps, close
+ *              the remaining gap with a very small negative letterSpacing rather
+ *              than carving more off the size and losing the hierarchy.
+ */
+async function fitToFrozen(entries, baselines, changes) {
+  for (var i = 0; i < entries.length; i++) {
+    var e = entries[i], b = baselines[i];
+    if (!b) continue;
+
+    // --- buttons: hold the frozen button width --------------------------
+    if (e.role === "button/CTA" && b.buttonWidth != null && e.button) {
+      var grew = false;
+      try { grew = e.button.width > b.buttonWidth + 0.5; } catch (err) { grew = false; }
+      if (grew) {
+        var size = b.size, applied = size;
+        for (var step = 1; step <= 4; step++) {
+          if (!(await setSize(e.node, size - step))) break;
+          applied = size - step;
+          var w = b.buttonWidth;
+          try { w = e.button.width; } catch (err) {}
+          if (w <= b.buttonWidth + 0.5) break;
+        }
+        var finalW = null;
+        try { finalW = Math.round(e.button.width * 10) / 10; } catch (err) {}
+        changes.push({
+          kind: "button", frame: b.frame, text: b.text,
+          from: size, to: applied, frozenWidth: b.buttonWidth, nowWidth: finalW,
+          fits: finalW != null && finalW <= b.buttonWidth + 0.5,
+        });
+      }
+      continue;
+    }
+
+    // --- headings: a one-line heading stays one line ---------------------
+    var isHeading = e.role === "heading" || e.role === "collection track title" || e.role === "player track metadata";
+    if (isHeading && b.lines === 1) {
+      var now = lineCountOf(e.node);
+      if (now <= 1) continue;
+      var hSize = b.size, hApplied = hSize, ls = null;
+      for (var hs = 1; hs <= 3; hs++) {
+        if (!(await setSize(e.node, hSize - hs))) break;
+        hApplied = hSize - hs;
+        if (lineCountOf(e.node) <= 1) break;
+      }
+      if (lineCountOf(e.node) > 1) {
+        // Still wrapping: tighten very slightly rather than shrink further.
+        for (var t = 1; t <= 4; t++) {
+          ls = -0.1 * t;
+          try { e.node.letterSpacing = { unit: "PIXELS", value: ls }; } catch (err) { break; }
+          if (lineCountOf(e.node) <= 1) break;
+        }
+      }
+      changes.push({
+        kind: "heading", frame: b.frame, text: b.text,
+        from: hSize, to: hApplied, letterSpacing: ls,
+        lines: lineCountOf(e.node), fits: lineCountOf(e.node) <= 1,
+      });
+    }
+  }
+}
+
 /* ---------------------------------------------------------------- main -- */
 
 async function checkFonts() {
@@ -419,7 +534,7 @@ async function checkFonts() {
 
 async function run(msg) {
   var problems = [], notes = [], stressChanges = [], rows = [];
-  var roleTally = {}, ambiguous = [], seenAmbiguous = {};
+  var roleTally = {}, ambiguous = [], seenAmbiguous = {}, fitChanges = [];
 
   log("Loading pages…");
   if (typeof figma.loadAllPagesAsync === "function") await figma.loadAllPagesAsync();
@@ -472,15 +587,26 @@ async function run(msg) {
       if (c > 0) {
         var entries = collectText(clone, [], null);
         var hybrid = columns[c] === COLUMN_HYBRID;
+
+        // Frozen geometry, captured before anything is written to the clone.
+        var baselines = entries.map(function (e) {
+          var out = { frame: spec.name, size: 0, text: "", lines: 1, buttonWidth: null };
+          try { out.size = e.node.fontSize; out.text = String(e.node.characters).slice(0, 40); } catch (err) {}
+          out.lines = lineCountOf(e.node);
+          if (e.button) { try { out.buttonWidth = e.button.width; } catch (err) {} }
+          return out;
+        });
         for (var t = 0; t < entries.length; t++) {
           var e = entries[t];
           var chars = "", size = 0;
           try { chars = e.node.characters; size = e.node.fontSize; } catch (err) {}
 
-          var family;
+          var family, weightOverride = null;
           if (hybrid) {
             var verdict = classify({ name: e.name, path: e.path, text: chars, size: size, frame: spec.name });
             family = verdict.family;
+            weightOverride = verdict.weight;
+            e.role = verdict.role;
             roleTally[verdict.role] = roleTally[verdict.role] || { role: verdict.role, family: verdict.family, why: verdict.why, count: 0, samples: [] };
             roleTally[verdict.role].count++;
             if (roleTally[verdict.role].samples.length < 3) {
@@ -495,8 +621,12 @@ async function run(msg) {
             family = CANDIDATES[c - 1];
           }
 
-          await restyleNode(e.node, family, problems, c === 1 ? notes : []);
+          await restyleNode(e.node, family, problems, c === 1 ? notes : [], weightOverride);
         }
+
+        // Only the hybrid is corrected back onto the frozen geometry; the
+        // single-family columns stay untouched so the raw effect stays visible.
+        if (hybrid) await fitToFrozen(entries, baselines, fitChanges);
       }
 
       measured.push({ column: columns[c], w: Math.round(clone.width * 100) / 100, h: Math.round(clone.height * 100) / 100 });
@@ -535,6 +665,7 @@ async function run(msg) {
     stressChanges: stressChanges,
     roles: Object.keys(roleTally).map(function (k) { return roleTally[k]; }),
     ambiguous: ambiguous,
+    fits: fitChanges,
   });
 }
 

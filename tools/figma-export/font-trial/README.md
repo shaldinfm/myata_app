@@ -130,6 +130,31 @@ the *family* therefore wins whenever the style is the generic `Regular` —
 otherwise `Muller Black / Regular` would silently map to Regular and lose the
 weight. All ten combinations are unit-checked.
 
+## Fitting the hybrid back onto the frozen geometry
+
+Two refinements apply to the HYBRID column only. The single-family columns stay
+uncorrected, so the raw effect of each font remains visible for comparison.
+
+**Button labels are Montserrat Medium 500**, not the Regular the frozen scale
+gives them — action labels carry more presence at Medium. Where that makes a
+label outgrow its frozen button, the label's `fontSize` drops by the smallest
+step that puts the button back inside its frozen width. Nothing is widened.
+
+**A short heading that was one line stays one line.** If a swapped heading wraps,
+`fontSize` drops 1px at a time, up to 3. Only if that still wraps does a very
+small negative `letterSpacing` close the remaining gap — shrinking further would
+cost more hierarchy than tightening does.
+
+Fitting is measured against **what Figma actually renders**, not a predicted
+advance width. Kerning is applied by the rasteriser and not by any offline
+estimate, and that estimate runs several percent wide on strings with
+punctuation — measuring "Привет, Денис!" offline gives 174dp where the frozen
+node is 165dp and single-line. The loop therefore asks each node how wide or tall
+it became and reacts, rather than trusting a number computed in advance.
+
+Every correction is reported: node, frame, old size, new size, any letter-spacing
+change, and whether the frozen geometry was restored.
+
 ## Stress titles
 
 The two longest Russian examples are needed in History. The frozen

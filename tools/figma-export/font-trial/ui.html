@@ -100,6 +100,25 @@
       L.push("");
     }
 
+    if ((msg.fits || []).length) {
+      L.push("Corrections applied to HYBRID to hold the frozen geometry:");
+      msg.fits.forEach(function (f) {
+        if (f.kind === "button") {
+          L.push("  button   [" + esc(f.frame) + '] "' + esc(f.text) + '"');
+          L.push("      " + f.from + "px -> " + f.to + "px   button " + f.nowWidth +
+                 "dp vs frozen " + f.frozenWidth + "dp   " +
+                 (f.fits ? "fits" : '<span class="bad">STILL WIDER</span>'));
+        } else {
+          L.push("  heading  [" + esc(f.frame) + '] "' + esc(f.text) + '"');
+          L.push("      " + f.from + "px -> " + f.to + "px" +
+                 (f.letterSpacing ? "  letterSpacing " + f.letterSpacing + "px" : "") +
+                 "   now " + f.lines + " line" + (f.lines === 1 ? "" : "s") + "   " +
+                 (f.fits ? "one line restored" : '<span class="bad">STILL WRAPS</span>'));
+        }
+      });
+      L.push("");
+    }
+
     if ((msg.stressChanges || []).length) {
       L.push("History rows replaced with the stress titles:");
       msg.stressChanges.forEach(function (c) {

@@ -1,0 +1,4 @@
+# Raw exporter output is ~20 MB per page and is an input, not an artefact.
+# The committed output of an audit run is AUDIT-REPORT.md, one directory up.
+*.json
+!.gitignore

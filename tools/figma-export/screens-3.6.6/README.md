@@ -3,10 +3,15 @@
 Design proposals for the four flows that have no canonical design, plus the
 revised account/settings concepts from PR #23.
 
-**Status: ready to be created in Figma. Nothing here is implemented in Android.**
-Run the plugin below to place the frames on the two proposal pages, then refine
-logos, icons and spacing by hand in Figma — the frames are ordinary editable
-layers, and that manual pass is the intended next step.
+**Status: created in Figma and edited by the owner. The live proposal pages are
+now the source of truth.**
+
+`spec.json` and the create plugin are how the frames got there; they are no
+longer authoritative and **must not be re-run against the proposal pages** — a
+second Create would skip existing frames by name but any frame deleted and
+regenerated would lose its edits. The next step is the read-only audit below.
+
+Avatar artwork is intentionally still pending.
 
 ---
 
@@ -187,6 +192,64 @@ After a partial run made **before** those fixes, check whichever page was open a
 the time — including the canonical ones — for stray frames, and delete or undo
 them. Nothing was ever written *into* a canonical frame; the risk is only loose
 nodes dropped alongside them.
+
+---
+
+## Final design audit (read-only)
+
+`audit-live.mjs` audits the **live** proposal pages from an exporter snapshot. It
+reads files; it cannot reach Figma, and it proposes nothing that moves a pixel
+without saying so explicitly.
+
+```bash
+node tools/figma-export/screens-3.6.6/audit-live.mjs \
+  tools/figma-export/screens-3.6.6/snapshots/proposals-light.json \
+  tools/figma-export/screens-3.6.6/snapshots/proposals-dark.json
+```
+
+It writes `AUDIT-REPORT.md`. Raw snapshots stay local — `snapshots/.gitignore`
+keeps them out of the repo, since they are ~20 MB each and are an input.
+
+### Why raw, not normalized
+
+`normalize-snapshot.mjs` drops precisely the fields an audit needs:
+`textAutoResize`, `textTruncation`, `maxLines`, `layoutPositioning`, `locked`,
+`clipsContent`. The audit therefore reads raw exporter output. The last three of
+those were added to the exporter for this purpose; the addition is additive and
+read-only, and the normalizer does not emit them, so the committed canonical
+baselines are byte-identical.
+
+### What it checks
+
+| | |
+|---|---|
+| coverage | all 29 screens present on both pages, plus anything extra |
+| parity | light vs dark node counts, structure and frame size |
+| text | truncation `ENDING`, `maxLines`, boxes shorter than a line, hard breaks in a fixed box, overflow past the parent |
+| hidden / duplicate | invisible layers, identical siblings at identical geometry, locked layers |
+| auto layout | absolute children inside a flow, content overflowing a fixed axis, slack with nothing growing |
+| constraints | full-width children pinned Left only, right-aligned children pinned Left |
+| spacing | same-width stacks with uneven gaps, and evenly-spaced stacks that are positioned by hand |
+| sheets | corner radius, `clipsContent`, an opaque square-cornered child squaring off the corners, drag-handle centring |
+| history | rows that are not auto-layout or not Hug, title/artist not set to wrap, per-row anchor drift |
+| assets | which slots are still pending, per theme |
+
+### Severity, and the rule about pixels
+
+- **blocking** — content is lost, or the layout cannot be reproduced in Android.
+- **review** — needs an owner decision.
+- **info** — expected, or noted.
+
+Owner positioning is authoritative. Every proposal states whether it changes
+pixels. Most do not: setting a text box to Hug, turning a fixed axis to Hug, or
+correcting a constraint is metadata and leaves the rendering identical. The one
+family that *would* move things — converting a hand-positioned stack to auto
+layout with uneven gaps — is always marked as needing approval, and where the
+gaps are already even the report says so, because that conversion reproduces the
+same pixels exactly.
+
+Repeated findings are rolled up: the same habit across forty rows is one
+decision, reported once with a count and examples.
 
 ---
 

@@ -218,6 +218,10 @@ async function serialiseNode(node, depth) {
   }
   if (has(node, "layoutAlign")) out.layoutAlign = node.layoutAlign;
   if (has(node, "layoutGrow")) out.layoutGrow = node.layoutGrow;
+  // A child of an auto-layout frame can opt out of the flow entirely. That is
+  // invisible in geometry but decides whether the layout is reproducible in
+  // Android, so it has to be in the snapshot.
+  if (has(node, "layoutPositioning")) out.layoutPositioning = node.layoutPositioning;
   if (has(node, "layoutSizingHorizontal")) out.layoutSizingHorizontal = node.layoutSizingHorizontal;
   if (has(node, "layoutSizingVertical")) out.layoutSizingVertical = node.layoutSizingVertical;
   if (has(node, "constraints")) out.constraints = node.constraints;
@@ -271,6 +275,10 @@ async function serialiseNode(node, depth) {
       textAlignHorizontal: node.textAlignHorizontal,
       textAlignVertical: node.textAlignVertical,
       textAutoResize: node.textAutoResize,
+      // The ellipsis settings. Without these an audit cannot tell a wrapped
+      // title from one Figma is quietly truncating.
+      textTruncation: has(node, "textTruncation") ? node.textTruncation : undefined,
+      maxLines: has(node, "maxLines") ? node.maxLines : undefined,
       textCase: plain(node.textCase),
       textDecoration: plain(node.textDecoration),
       paragraphSpacing: node.paragraphSpacing,

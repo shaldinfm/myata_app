@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android TV colours, pinned.
+
+  3.6.6 is a mobile-only redesign. TV must keep exactly the appearance it has
+  today, so it stops sharing colours with the mobile theme: these are the literal
+  values that colors.xml held when TV was isolated, copied here so a later edit
+  to the mobile palette cannot reach the TV surface.
+
+  Do not retheme these to the 3.6.6 tokens. Changing TV is a regression, not an
+  improvement, until TV is deliberately taken into scope.
+
+  TV drawables (card_*_tv, btn_*_tv, logo_tv, bg_tv_*) already carry their colours
+  as inline hex and are unaffected either way.
+-->
+<resources>
+    <!-- was @color/main_fragment -->
+    <color name="tv_window">#000000</color>
+    <!-- was @color/white -->
+    <color name="tv_on_primary">#FFFFFFFF</color>
+    <!-- was @color/black -->
+    <color name="tv_on_secondary">#FF000000</color>
+    <!-- was @color/teal_200 -->
+    <color name="tv_secondary">#FF03DAC5</color>
+    <!-- was @color/teal_700 -->
+    <color name="tv_secondary_variant">#FF018786</color>
+</resources>

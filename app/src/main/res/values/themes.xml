@@ -1,4 +1,27 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <!--
+      Android TV theme. A verbatim copy of AppTheme as it stood before the 3.6.6
+      mobile migration, with the colours pointed at colors_tv.xml so a later edit
+      to the mobile palette cannot change TV.
+
+      The parent is written out rather than inherited from AppTheme on purpose: when
+      AppTheme is collapsed onto a DayNight base for 3.6.6, TV must not follow it.
+    -->
+    <style name="TvTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="colorPrimary">@color/tv_window</item>
+        <item name="colorPrimaryVariant">@color/tv_window</item>
+        <item name="colorOnPrimary">@color/tv_on_primary</item>
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="colorSecondary">@color/tv_secondary</item>
+        <item name="colorSecondaryVariant">@color/tv_secondary_variant</item>
+        <item name="colorOnSecondary">@color/tv_on_secondary</item>
+        <item name="android:statusBarColor">@color/tv_window</item>
+    </style>
+
     <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>

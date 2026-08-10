@@ -18,6 +18,7 @@
  */
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
+import { parseFvar, parseAvar, parseHvar, normalizeAxis, advanceDelta } from "./varfont.mjs";
 
 // Representative strings drawn from the frozen 3.6.6 design. Each records where
 // it comes from and the size it is set at, so a width delta converts straight
@@ -39,6 +40,13 @@ export const STRINGS = [
   { id: "player-title",    text: "WHAT YOU KNOW",        size: 24, weight: "Black",   where: "PLAYER now-playing title, 219dp frozen" },
   { id: "about-para",      text: "Это «инди-эклектичное» медиа, предлагающее ироничный взгляд на массовую культуру и оригинальный подход к современной музыке.",
                                                           size: 14, weight: "Regular", where: "ABOUT US paragraph, 358dp fixed width - wrapping decides frame height" },
+  // Long-title stress cases for History, where the owner ruled out ellipsis: the
+  // row is variable height and full multiline, so extra width becomes extra rows
+  // rather than a truncated string. The upper-case one also probes Ё.
+  { id: "hist-stress-up",  text: "КРАСНОЗНАМЁННАЯ ДИВИЗИЯ ИМЕНИ МОЕЙ БАБУШКИ",
+                                                          size: 14, weight: "Regular", where: "History long title, upper case" },
+  { id: "hist-stress-mx",  text: "Прогулка по воде под дождём в конце ноября",
+                                                          size: 14, weight: "Regular", where: "History long title, mixed case" },
 ];
 
 // Cyrillic the design actually uses, plus the Latin the track metadata needs.
@@ -118,9 +126,32 @@ export function readFont(file) {
     }
   }
 
+  // Variation tables. All three replacement candidates ship as a single variable
+  // file, so 400/500/700 have to be read out of the font rather than approximated
+  // from the default instance.
+  const fvar = t["fvar"] ? parseFvar(b, t["fvar"].off) : null;
+  const avar = t["avar"] ? parseAvar(b, t["avar"].off) : null;
+  const hvar = t["HVAR"] ? parseHvar(b, t["HVAR"].off) : null;
+  if (hvar) hvar.buf = b;
+
+  let namedInstances = [];
+  if (fvar && t["name"]) {
+    const n = t["name"].off, cnt = u16(b, n + 2), so = n + u16(b, n + 4);
+    const byId = {};
+    for (let i = 0; i < cnt; i++) {
+      const r = n + 6 + i * 12;
+      const pid = u16(b, r), nid = u16(b, r + 6), len = u16(b, r + 8), off = u16(b, r + 10);
+      if (byId[nid]) continue;
+      const raw = b.subarray(so + off, so + off + len);
+      byId[nid] = pid === 3 ? Buffer.from(raw).swap16().toString("utf16le") : raw.toString("latin1");
+    }
+    namedInstances = fvar.instances.map((i) => ({ name: byId[i.subfamilyNameID] || "?", coords: i.coords }));
+  }
+
   const v2 = os2 && u16(b, os2.off) >= 2;
   return {
-    file, names, unitsPerEm, map, adv,
+    file, names, unitsPerEm, map, adv, fvar, avar, hvar, namedInstances,
+    isVariable: !!fvar,
     weightClass: os2 ? u16(b, os2.off + 4) : null,
     fsType: os2 ? u16(b, os2.off + 8) : null,
     typoAscender: os2 ? i16(b, os2.off + 68) : null,
@@ -131,16 +162,34 @@ export function readFont(file) {
   };
 }
 
-// Advance width in em units scaled to 1000upem, so fonts compare directly.
-export function advance(font, text) {
+/*
+ * Advance width in em units scaled to 1000upem, so fonts compare directly.
+ *
+ * For a variable font, `wght` selects the instance and HVAR deltas for that axis
+ * coordinate are applied per glyph - the same widths the rasteriser uses. If the
+ * font has an axis but no HVAR, `varied` comes back false and the caller must
+ * report that rather than pass a default-instance width off as a measurement.
+ */
+export function advance(font, text, wght) {
   const k = 1000 / font.unitsPerEm;
+  let coords = null, varied = false;
+  if (wght != null && font.fvar) {
+    const ai = font.fvar.axes.findIndex((a) => a.tag === "wght");
+    if (ai >= 0) {
+      coords = font.fvar.axes.map(() => 0);
+      coords[ai] = normalizeAxis(font.fvar.axes[ai], font.avar ? font.avar[ai] : null, wght);
+      varied = !!font.hvar;
+    }
+  }
   let total = 0, missing = 0;
   for (const ch of text) {
     const g = font.map.get(ch.codePointAt(0));
     if (g === undefined) { missing++; continue; }
-    total += font.adv[g] * k;
+    let a = font.adv[g];
+    if (coords && font.hvar) a += advanceDelta(font.hvar, g, coords);
+    total += a * k;
   }
-  return { units: total, missing };
+  return { units: total, missing, varied };
 }
 
 export function coverage(font) {

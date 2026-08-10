@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Frozen 3.6.6 canonical BottomNav icon: home. Extracted from Figma, not redrawn. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="16dp"
+    android:height="18dp"
+    android:viewportWidth="16"
+    android:viewportHeight="18">
+    <path
+        android:pathData="M0 18V6L8 0L16 6V18H10V11H6V18H0Z"
+        android:fillColor="#FFFFFF"
+        />
+</vector>

@@ -2,11 +2,17 @@
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
-    
+
+    <!--
+      Shared mobile shell, migrated to the frozen 3.6.6 canonical design (B1).
+
+      Background is the `background` semantic role, so it resolves #F8F9FA in
+      Light and #0F253E in Dark rather than the hardcoded navy it carried before.
+    -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#1C3F5F">
+        android:background="@color/background">
 
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/navHostFragment"
@@ -20,98 +26,105 @@
             app:layout_constraintTop_toTopOf="parent"
             app:navGraph="@navigation/navgraph" />
 
-        <com.google.android.material.card.MaterialCardView
+        <!--
+          Bottom navigation.
+
+          Frozen canonical BottomNavBar: 390x76, top corners r=12, full width and
+          flush with the bottom of the screen - not the floating pill it used to
+          be. Four destinations, each icon plus label, with a #FFCCFF pill behind
+          the active one.
+
+          The frozen items are content-sized at fixed offsets, which totals about
+          349dp and does not fit a 320dp screen. They are equally weighted here so
+          the bar adapts from 320dp upward; at 390dp that places each item within
+          a few dp of the frozen position.
+        -->
+        <LinearLayout
             android:id="@+id/bottomNavView"
             android:layout_width="match_parent"
-            android:layout_height="54dp"
-            android:layout_marginStart="25dp"
-            android:layout_marginEnd="25dp"
-            android:layout_marginBottom="10dp"
-            app:cardBackgroundColor="#132740"
-            app:cardCornerRadius="27dp"
-            app:cardElevation="8dp"
-            app:strokeColor="#000000"
-            app:strokeWidth="1.5dp"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_bottom_nav"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/bottom_nav_padding_start"
+            android:paddingEnd="@dimen/bottom_nav_padding_end"
+            android:paddingTop="13dp"
+            android:paddingBottom="@dimen/bottom_nav_padding_bottom"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             tools:visibility="visible">
 
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent">
+            <LinearLayout
+                android:id="@+id/nav_item_home"
+                style="@style/BottomNavItem"
+                android:layout_weight="79">
 
                 <ImageView
-                    android:id="@+id/back"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="@drawable/nav_bg"
-                    android:visibility="gone" />
+                    android:id="@+id/home_btn"
+                    style="@style/BottomNavIcon"
+                    android:layout_width="16dp"
+                    android:layout_height="18dp"
+                    android:layout_marginTop="5dp"
+                    android:src="@drawable/ic_nav_home" />
 
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
+                <TextView
+                    android:id="@+id/home_label"
+                    style="@style/BottomNavLabel"
+                    android:text="@string/nav_home" />
+            </LinearLayout>
 
-                    <ImageView
-                        android:id="@+id/home_btn"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/home_new"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toStartOf="@+id/player_btn"
-                        app:layout_constraintHorizontal_bias="0.5"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent" />
+            <LinearLayout
+                android:id="@+id/nav_item_player"
+                style="@style/BottomNavItem"
+                android:layout_weight="68"
+                android:layout_marginStart="14.6dp">
 
-                    <ImageView
-                        android:id="@+id/player_btn"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/player_new"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toStartOf="@+id/donate_btn"
-                        app:layout_constraintHorizontal_bias="0.5"
-                        app:layout_constraintStart_toEndOf="@+id/home_btn"
-                        app:layout_constraintTop_toTopOf="parent" />
+                <ImageView
+                    android:id="@+id/player_btn"
+                    style="@style/BottomNavIcon"
+                    android:src="@drawable/ic_nav_player" />
 
-                    <ImageView
-                        android:id="@+id/donate_btn"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/donate_new"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toStartOf="@+id/info_btn"
-                        app:layout_constraintHorizontal_bias="0.5"
-                        app:layout_constraintStart_toEndOf="@+id/player_btn"
-                        app:layout_constraintTop_toTopOf="parent" />
+                <TextView
+                    android:id="@+id/player_label"
+                    style="@style/BottomNavLabel"
+                    android:text="@string/nav_player" />
+            </LinearLayout>
 
-                    <ImageView
-                        android:id="@+id/info_btn"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/info_new"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toStartOf="@+id/favorites_btn"
-                        app:layout_constraintHorizontal_bias="0.5"
-                        app:layout_constraintStart_toEndOf="@+id/donate_btn"
-                        app:layout_constraintTop_toTopOf="parent" />
+            <LinearLayout
+                android:id="@+id/nav_item_favorites"
+                style="@style/BottomNavItem"
+                android:layout_weight="94"
+                android:layout_marginStart="14.6dp">
 
-                    <ImageView
-                        android:id="@+id/favorites_btn"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_favorites_nav"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintHorizontal_bias="0.5"
-                        app:layout_constraintStart_toEndOf="@+id/info_btn"
-                        app:layout_constraintTop_toTopOf="parent" />
+                <ImageView
+                    android:id="@+id/favorites_btn"
+                    style="@style/BottomNavIcon"
+                    android:src="@drawable/ic_nav_collection" />
 
-                </androidx.constraintlayout.widget.ConstraintLayout>
+                <TextView
+                    android:id="@+id/favorites_label"
+                    style="@style/BottomNavLabel"
+                    android:text="@string/nav_collection" />
+            </LinearLayout>
 
-            </FrameLayout>
+            <LinearLayout
+                android:id="@+id/nav_item_info"
+                style="@style/BottomNavItem"
+                android:layout_weight="64"
+                android:layout_marginStart="14.6dp">
 
-        </com.google.android.material.card.MaterialCardView>
+                <ImageView
+                    android:id="@+id/info_btn"
+                    style="@style/BottomNavIcon"
+                    android:src="@drawable/ic_nav_about" />
+
+                <TextView
+                    android:id="@+id/info_label"
+                    style="@style/BottomNavLabel"
+                    android:text="@string/nav_about" />
+            </LinearLayout>
+
+        </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

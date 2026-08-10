@@ -1,0 +1,257 @@
+{
+  "run": "after",
+  "results": [
+    {
+      "width": 320,
+      "theme": "light",
+      "nav": [
+        {
+          "id": "nav_item_home",
+          "bounds": "[0,2172][210,2293]"
+        },
+        {
+          "id": "home_label",
+          "text": "Главная",
+          "bounds": "[43,2241][167,2282]"
+        },
+        {
+          "id": "nav_item_player",
+          "bounds": "[210,2172][420,2293]"
+        },
+        {
+          "id": "player_label",
+          "text": "Плеер",
+          "bounds": "[266,2241][363,2282]"
+        },
+        {
+          "id": "nav_item_favorites",
+          "bounds": "[420,2172][630,2293]"
+        },
+        {
+          "id": "favorites_label",
+          "text": "Коллекция",
+          "bounds": "[440,2241][609,2282]"
+        },
+        {
+          "id": "nav_item_info",
+          "bounds": "[630,2172][840,2293]"
+        },
+        {
+          "id": "info_label",
+          "text": "О нас",
+          "bounds": "[691,2241][778,2282]"
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "nav": [
+        {
+          "id": "nav_item_home",
+          "bounds": "[0,2172][210,2293]"
+        },
+        {
+          "id": "home_label",
+          "text": "Главная",
+          "bounds": "[43,2241][167,2282]"
+        },
+        {
+          "id": "nav_item_player",
+          "bounds": "[210,2172][420,2293]"
+        },
+        {
+          "id": "player_label",
+          "text": "Плеер",
+          "bounds": "[266,2241][363,2282]"
+        },
+        {
+          "id": "nav_item_favorites",
+          "bounds": "[420,2172][630,2293]"
+        },
+        {
+          "id": "favorites_label",
+          "text": "Коллекция",
+          "bounds": "[440,2241][609,2282]"
+        },
+        {
+          "id": "nav_item_info",
+          "bounds": "[630,2172][840,2293]"
+        },
+        {
+          "id": "info_label",
+          "text": "О нас",
+          "bounds": "[691,2241][778,2282]"
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "theme": "light",
+      "nav": [
+        {
+          "id": "nav_item_home",
+          "bounds": "[0,2172][236,2293]"
+        },
+        {
+          "id": "home_label",
+          "text": "Главная",
+          "bounds": "[56,2241][180,2282]"
+        },
+        {
+          "id": "nav_item_player",
+          "bounds": "[236,2172][472,2293]"
+        },
+        {
+          "id": "player_label",
+          "text": "Плеер",
+          "bounds": "[305,2241][402,2282]"
+        },
+        {
+          "id": "nav_item_favorites",
+          "bounds": "[472,2172][708,2293]"
+        },
+        {
+          "id": "favorites_label",
+          "text": "Коллекция",
+          "bounds": "[505,2241][674,2282]"
+        },
+        {
+          "id": "nav_item_info",
+          "bounds": "[708,2172][945,2293]"
+        },
+        {
+          "id": "info_label",
+          "text": "О нас",
+          "bounds": "[783,2241][870,2282]"
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "theme": "dark",
+      "nav": [
+        {
+          "id": "nav_item_home",
+          "bounds": "[0,2172][236,2293]"
+        },
+        {
+          "id": "home_label",
+          "text": "Главная",
+          "bounds": "[56,2241][180,2282]"
+        },
+        {
+          "id": "nav_item_player",
+          "bounds": "[236,2172][472,2293]"
+        },
+        {
+          "id": "player_label",
+          "text": "Плеер",
+          "bounds": "[305,2241][402,2282]"
+        },
+        {
+          "id": "nav_item_favorites",
+          "bounds": "[472,2172][708,2293]"
+        },
+        {
+          "id": "favorites_label",
+          "text": "Коллекция",
+          "bounds": "[505,2241][674,2282]"
+        },
+        {
+          "id": "nav_item_info",
+          "bounds": "[708,2172][945,2293]"
+        },
+        {
+          "id": "info_label",
+          "text": "О нас",
+          "bounds": "[783,2241][870,2282]"
+        }
+      ]
+    },
+    {
+      "width": 412,
+      "theme": "light",
+      "nav": [
+        {
+          "id": "nav_item_home",
+          "bounds": "[0,2172][270,2293]"
+        },
+        {
+          "id": "home_label",
+          "text": "Главная",
+          "bounds": "[73,2241][197,2282]"
+        },
+        {
+          "id": "nav_item_player",
+          "bounds": "[270,2172][540,2293]"
+        },
+        {
+          "id": "player_label",
+          "text": "Плеер",
+          "bounds": "[356,2241][453,2282]"
+        },
+        {
+          "id": "nav_item_favorites",
+          "bounds": "[540,2172][811,2293]"
+        },
+        {
+          "id": "favorites_label",
+          "text": "Коллекция",
+          "bounds": "[591,2241][760,2282]"
+        },
+        {
+          "id": "nav_item_info",
+          "bounds": "[811,2172][1082,2293]"
+        },
+        {
+          "id": "info_label",
+          "text": "О нас",
+          "bounds": "[903,2241][990,2282]"
+        }
+      ]
+    },
+    {
+      "width": 412,
+      "theme": "dark",
+      "nav": [
+        {
+          "id": "nav_item_home",
+          "bounds": "[0,2172][270,2293]"
+        },
+        {
+          "id": "home_label",
+          "text": "Главная",
+          "bounds": "[73,2241][197,2282]"
+        },
+        {
+          "id": "nav_item_player",
+          "bounds": "[270,2172][540,2293]"
+        },
+        {
+          "id": "player_label",
+          "text": "Плеер",
+          "bounds": "[356,2241][453,2282]"
+        },
+        {
+          "id": "nav_item_favorites",
+          "bounds": "[540,2172][811,2293]"
+        },
+        {
+          "id": "favorites_label",
+          "text": "Коллекция",
+          "bounds": "[591,2241][760,2282]"
+        },
+        {
+          "id": "nav_item_info",
+          "bounds": "[811,2172][1082,2293]"
+        },
+        {
+          "id": "info_label",
+          "text": "О нас",
+          "bounds": "[903,2241][990,2282]"
+        }
+      ]
+    }
+  ]
+}

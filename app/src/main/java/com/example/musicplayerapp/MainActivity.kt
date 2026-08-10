@@ -111,34 +111,47 @@ class MainActivity : AppCompatActivity() {
         // Handle window insets for accessibility (lift bottom menu above system navigation)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.bottomNavView) { v, insets ->
             val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            val params = v.layoutParams as android.view.ViewGroup.MarginLayoutParams
-            // 10dp default margin converted to pixels
-            val density = resources.displayMetrics.density
-            val defaultMargin = (10 * density).toInt()
-            
-            params.bottomMargin = defaultMargin + bars.bottom
-            v.layoutParams = params
+            // The bar used to float, so the system inset was added as a bottom
+            // margin. The frozen design has it flush with the bottom edge, so the
+            // inset becomes bottom padding instead: the surface still reaches the
+            // edge while its content clears the system navigation.
+            // setPaddingRelative, and the horizontal values re-applied from
+            // resources: setPadding() reads paddingLeft/paddingRight before RTL
+            // resolution has run and switches the view out of relative-padding
+            // mode, which silently dropped the bar's frozen 23.32/18dp side
+            // padding and let the items span the full screen width.
+            v.setPaddingRelative(
+                resources.getDimensionPixelSize(R.dimen.bottom_nav_padding_start),
+                v.paddingTop,
+                resources.getDimensionPixelSize(R.dimen.bottom_nav_padding_end),
+                resources.getDimensionPixelSize(R.dimen.bottom_nav_padding_bottom) + bars.bottom
+            )
             insets
         }
 
-        viewModel.currentFragmentLiveData.observe(this, Observer {
-            // Reset all buttons to inactive color
-            val inactiveColor = Color.parseColor("#67686D")
-            val activeColor = Color.parseColor("#FFFFFF")
-            
-            binding.infoBtn.setColorFilter(inactiveColor)
-            binding.donateBtn.setColorFilter(inactiveColor)
-            binding.homeBtn.setColorFilter(inactiveColor)
-            binding.playerBtn.setColorFilter(inactiveColor)
-            binding.favoritesBtn.setColorFilter(inactiveColor)
-            
-            // Set active button
-            when(it){
-                "main" -> binding.homeBtn.setColorFilter(activeColor)
-                "player" -> binding.playerBtn.setColorFilter(activeColor)
-                "donate" -> binding.donateBtn.setColorFilter(activeColor)
-                "info" -> binding.infoBtn.setColorFilter(activeColor)
-                "favorites" -> binding.favoritesBtn.setColorFilter(activeColor)
+        viewModel.currentFragmentLiveData.observe(this, Observer { current ->
+            // Frozen 3.6.6 BottomNavBar: the active destination gets a #FFCCFF pill
+            // with #00723D content; the rest use the text_secondary semantic role,
+            // which resolves per theme. Both colours are read from resources so
+            // Light and Dark follow the theme rather than a hardcoded value.
+            val inactiveColor = androidx.core.content.ContextCompat.getColor(this, R.color.text_secondary)
+            val activeColor = androidx.core.content.ContextCompat.getColor(this, R.color.brand_nav_active_content)
+
+            val items = listOf(
+                Triple("main", binding.navItemHome, binding.homeBtn to binding.homeLabel),
+                Triple("player", binding.navItemPlayer, binding.playerBtn to binding.playerLabel),
+                Triple("favorites", binding.navItemFavorites, binding.favoritesBtn to binding.favoritesLabel),
+                Triple("info", binding.navItemInfo, binding.infoBtn to binding.infoLabel)
+            )
+            for ((key, container, views) in items) {
+                // Donate is no longer a destination of its own - it is reached
+                // from inside "О нас" - so it keeps that item lit. Without this
+                // the bar would show no active item at all on the donate screen.
+                val active = key == current || (key == "info" && current == "donate")
+                val (icon, label) = views
+                container.setBackgroundResource(if (active) R.drawable.bg_nav_active_pill else 0)
+                icon.setColorFilter(if (active) activeColor else inactiveColor)
+                label.setTextColor(if (active) activeColor else inactiveColor)
             }
         })
 
@@ -165,30 +178,30 @@ class MainActivity : AppCompatActivity() {
             .setExitAnim(R.anim.fade_out)
             .build()
             
-        binding.homeBtn.setOnClickListener {
+        // The frozen 3.6.6 design has four destinations. Donate is not one of them:
+        // donation moves inside "О нас". Until that screen's content slice lands,
+        // "О нас" keeps routing to the existing InfoFragment, and DonateFragment
+        // stays in the graph so its logic is not lost - it simply has no entry
+        // point in the navigation bar any more.
+        binding.navItemHome.setOnClickListener {
             // When going home, pop everything else off the stack
             if (navController.currentDestination?.id != R.id.home) {
                 navController.popBackStack(R.id.home, false)
             }
         }
-        binding.infoBtn.setOnClickListener {
-            if (navController.currentDestination?.id != R.id.info) {
-                navController.navigate(R.id.info, null, navOptions)
-            }
-        }
-        binding.donateBtn.setOnClickListener {
-            if (navController.currentDestination?.id != R.id.donate) {
-                navController.navigate(R.id.donate, null, navOptions)
-            }
-        }
-        binding.playerBtn.setOnClickListener {
+        binding.navItemPlayer.setOnClickListener {
             if (navController.currentDestination?.id != R.id.player) {
                 navController.navigate(R.id.player, null, navOptions)
             }
         }
-        binding.favoritesBtn.setOnClickListener {
+        binding.navItemFavorites.setOnClickListener {
             if (navController.currentDestination?.id != R.id.favorites) {
                 navController.navigate(R.id.favorites, null, navOptions)
+            }
+        }
+        binding.navItemInfo.setOnClickListener {
+            if (navController.currentDestination?.id != R.id.info) {
+                navController.navigate(R.id.info, null, navOptions)
             }
         }
     }

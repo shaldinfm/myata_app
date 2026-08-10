@@ -121,9 +121,41 @@
                 android:lineSpacingExtra="5dp"
                 app:layout_constraintTop_toBottomOf="@id/grid"
                 app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!--
+              Donation entry point.
+
+              The frozen 3.6.6 information architecture drops the standalone
+              Donate destination and puts donation inside "О нас". This is that
+              entry point, and it is the only one: without it the existing
+              payment and Boosty flows are unreachable.
+
+              Frozen ABOUT US, Section 1 "Помочь проекту": Button 239x52 hug,
+              radius 12, padding 12/24, Muller Regular 22 on #003056 with a white
+              label. Only the button is migrated here - the rest of that section,
+              and the screen around it, is still the old About Us.
+            -->
+            <TextView
+                android:id="@+id/donate_cta"
+                android:layout_width="wrap_content"
+                android:layout_height="52dp"
+                android:layout_marginTop="28dp"
+                android:layout_marginBottom="80dp"
+                android:background="@drawable/bg_donate_cta"
+                android:clickable="true"
+                android:focusable="true"
+                android:fontFamily="@font/mullerregular"
+                android:gravity="center"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:text="@string/about_donate_cta"
+                android:textColor="@color/brand_donate_cta_content"
+                android:textSize="22sp"
+                app:layout_constraintTop_toBottomOf="@id/description"
+                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
-                android:layout_marginBottom="80dp"
                 app:layout_constraintVertical_bias="0" />
 
 

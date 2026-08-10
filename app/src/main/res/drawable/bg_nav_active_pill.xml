@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Active destination pill in the bottom navigation.
+
+  Frozen canonical: BottomNavBar > Background, 79x46 with corner radius 9999,
+  filled #FFCCFF on both the Light and Dark pages. The radius is expressed here
+  as half the 46dp height, which is what 9999 resolves to visually.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/brand_nav_active_container" />
+    <corners android:radius="23dp" />
+</shape>

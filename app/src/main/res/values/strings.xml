@@ -18,4 +18,12 @@
     <string name="channel_desc">channel_desc</string>
     <string name="donate_url">https://yoomoney.ru/to/410015757768507</string>>
     <drawable name="exo_notification_stop">@drawable/dismiss_cross</drawable>
+
+    <!-- Bottom navigation labels, frozen 3.6.6 canonical BottomNavBar -->
+    <string name="nav_home">Главная</string>
+    <string name="nav_player">Плеер</string>
+    <string name="nav_collection">Коллекция</string>
+    <string name="nav_about">О нас</string>
+    <!-- Donation CTA in "О нас". Copy is verbatim from the frozen ABOUT US page. -->
+    <string name="about_donate_cta">Поддержать эфир</string>
 </resources>

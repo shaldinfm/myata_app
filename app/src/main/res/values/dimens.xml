@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Bottom navigation, frozen 3.6.6 canonical BottomNavBar (390x76).
+
+      The side padding lives here rather than only in the layout because the
+      window-inset listener rewrites the bar's padding at runtime; it reads these
+      so the frozen horizontal values survive that rewrite.
+    -->
+    <dimen name="bottom_nav_padding_start">23.32dp</dimen>
+    <dimen name="bottom_nav_padding_end">18dp</dimen>
+    <dimen name="bottom_nav_padding_bottom">17dp</dimen>
+</resources>

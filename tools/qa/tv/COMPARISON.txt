@@ -54,7 +54,7 @@
   1 screenshot note(s) needing an eye:
     - static screen 04-selection-back-to-myata.png differs — inspect before accepting
 file                                    differing px      %      max Δ   mean Δ
-  00-splash-transient.png                  2040906   98.423%    237     23.2   REVIEW
+  00-splash-transient.png                  2073351   99.988%    237     26.4   REVIEW
   01-selection-myata-focused.png                 0    0.000%      0      0.0   identical
   02-selection-gold-focused.png                  0    0.000%      0      0.0   identical
   03-selection-xtra-focused.png                  0    0.000%      0      0.0   identical

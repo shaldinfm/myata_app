@@ -148,10 +148,10 @@ class DonateFragment : Fragment() {
             binding.webView.visibility = View.VISIBLE
             setWebViewClient()
 
-            (activity as MainActivity).binding.infoBtn.setColorFilter(Color.parseColor("#999999"))
-            (activity as MainActivity).binding.donateBtn.setColorFilter(Color.parseColor("#FFFFFF"))
-            (activity as MainActivity).binding.homeBtn.setColorFilter(Color.parseColor("#999999"))
-            (activity as MainActivity).binding.playerBtn.setColorFilter(Color.parseColor("#999999"))
+            // The four nav buttons used to be tinted by hand here. That is obsolete
+            // navigation code, not donation behaviour: the frozen 3.6.6 bar has no
+            // Donate destination, and active state is now driven centrally by
+            // currentFragmentLiveData in MainActivity. Payment below is untouched.
             makePay(finalSum, binding.commentText.text.toString(), "ac")
         }
 

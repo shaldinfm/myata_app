@@ -45,4 +45,24 @@
     <color name="outline">#E1E3E4</color>
     <color name="primary">#1C4771</color>
     <color name="on_primary">#FFFFFF</color>
+
+    <!--
+      FIXED BRAND COLOURS - not semantic roles.
+
+      These are identical on the canonical Light and Dark pages, deliberately, so
+      a light/dark pair cannot express them. They are declared here only, with NO
+      values-night counterpart: that absence is what makes "the same in both
+      themes" a structural property of the resource rather than a coincidence
+      someone can quietly break later.
+
+      Do not fold these into the eleven semantic roles, and do not add night
+      variants without a change to the frozen design.
+
+      Provenance: canonical HOME, BottomNavBar - light node 2393:1629,
+      dark node 2444:10351. Both pages carry the same values.
+    -->
+    <!-- active nav pill, BottomNavBar > Background (79x46, r=9999) -->
+    <color name="brand_nav_active_container">#FFCCFF</color>
+    <!-- active nav icon and label, that node's Icon and Margin > label -->
+    <color name="brand_nav_active_content">#00723D</color>
 </resources>

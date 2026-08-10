@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Bottom navigation bar surface.
+
+  Frozen canonical: BottomNavBar, 390x76, corner radius 12/12/0/0 - rounded at
+  the top only, square where it meets the bottom of the screen. The fill is the
+  navigation_container semantic role, which is #EDEEEF in Light and #142D47 in
+  Dark, so this drawable resolves per theme without needing a night variant.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/navigation_container" />
+    <corners
+        android:topLeftRadius="12dp"
+        android:topRightRadius="12dp"
+        android:bottomLeftRadius="0dp"
+        android:bottomRightRadius="0dp" />
+</shape>

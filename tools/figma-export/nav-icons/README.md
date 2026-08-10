@@ -21,17 +21,43 @@ out, and a plugin run inside the file — this one.
 
 It never writes to the document.
 
+## How it reads geometry
+
+Geometry comes from `exportAsync` (SVG), not from `vectorPaths`. SVG export is
+exact and, unlike `vectorPaths`, it still works when an icon is a boolean
+operation, a group or a frame — which is what an owner-edited page can easily
+contain. `vectorPaths` is still read when available, because its winding rule
+maps onto `android:fillType`, but nothing depends on it.
+
+Three failure modes are handled explicitly, because the first version of this
+plugin died on the first of them:
+
+- **Unloaded pages.** Under dynamic page loading, `getNodeByIdAsync` resolves a
+  node whose `id`, `type` and `name` are readable while every richer property
+  throws on access. Loading is now mandatory: `figma.loadAllPagesAsync()` when it
+  exists, otherwise `page.loadAsync()` per page, and the mechanism used is
+  reported in the output. Probing for those APIs is itself guarded, since on an
+  unloaded node even the probe can throw.
+- **Stale node ids.** Owner edits renumber nodes. If an id fails to resolve, or
+  resolves to something without geometry, the plugin walks the named page to its
+  `BottomNavBar` and takes the Nth item's first geometry-bearing descendant —
+  the same route the ids were originally derived from. The output records
+  `resolvedBy` as `id` or `structure` for every icon.
+- **Refused properties.** Every property read goes through a guard that records
+  the node id, name, type, the property and the exact error. A partial run
+  therefore says what to fix instead of producing a stack trace.
+
 ## What it reads
 
 Each icon is read in three places, so the output settles a question the metadata
 could not answer: whether the geometry changes between states, or only the fill.
 
-| icon | active | inactive | dark (active) |
+| icon | active | inactive | dark |
 |---|---|---|---|
-| `home` | `2393:1632` (HOME) | `2396:30917` (PLAYER) | `2444:10354` (HOME_dark) |
-| `player` | `2396:30922` (PLAYER) | `2393:1637` (HOME) | `2444:18363` (PLAYER_dark) |
-| `collection` | `2407:31515` (COLLECTION) | `2393:1642` (HOME) | `2444:18443` (COLLECTION_dark) |
-| `about` | `2417:95` (ABOUT US) | `2393:1647` (HOME) | `2444:18666` (ABOUT US_dark) |
+| `home` | `2393:1632` (HOME) | `2396:30917` (PLAYER) | `2444:10354` (HOME_dark, inactive) |
+| `player` | `2396:30922` (PLAYER) | `2393:1637` (HOME) | `2444:18363` (PLAYER_dark, active) |
+| `collection` | `2407:31515` (COLLECTION) | `2393:1642` (HOME) | `2444:18443` (COLLECTION_dark, active) |
+| `about` | `2417:95` (ABOUT US) | `2393:1647` (HOME) | `2444:18666` (ABOUT US_dark, active) |
 
 Active instances are the ones carrying the `#00723d` pill content colour;
 inactive carry `#42474e` in light and `#b3c4d1` in dark.

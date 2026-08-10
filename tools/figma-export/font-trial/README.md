@@ -61,12 +61,28 @@ family either way — but the role name is what gets reviewed.
 | heading | Montserrat | `Heading *` node or ancestor |
 | button / CTA | Montserrat | `Button*` node or ancestor |
 | player transport label | Onest | `PLAY`/`PAUSE`/`STOP` in the player |
-| inline link | Onest | `Link` node |
+| **inline action / CTA link** | **Montserrat** | standalone `Link` node, ≤ 24 chars |
+| body link | Onest | `Link` node long enough to read as body copy |
 | settings group caption | Onest | direct child of a utility frame, ≤ 14px |
 | body / helper | Onest | everything else |
 
 Run over the 123 real frozen text nodes in these seven frames, this yields
-**48 Montserrat / 75 Onest**.
+**49 Montserrat / 74 Onest**.
+
+### The four judgement calls, owner-resolved
+
+| node | resolution |
+|---|---|
+| History timestamps | **Onest** — supporting label; the row is deliberately mixed |
+| `PLAY` / `PAUSE` / `STOP` | **Onest** — a transport control is UI, not content |
+| Settings group captions | **Onest** — list grouping caption, not an expressive heading |
+| `все >` | **Montserrat** — a small actionable link is action typography |
+
+The last one needs a distinction the others do not: a terse affordance is action
+typography, while a link long enough to read as body copy belongs to the reading
+family. Length separates them, and only a standalone `Link` node is classified
+here at all — a hyperlink set *inside* a paragraph is a styled range within a body
+text node, so it inherits that node's Onest and never reaches this rule.
 
 | frame | why it is in the set |
 |---|---|

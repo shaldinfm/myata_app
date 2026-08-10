@@ -97,8 +97,9 @@ var RULES = [
     family: ONEST,
     // Deliberately split from the rest of the row: the time is a utility label,
     // not track metadata. Flagged, because it mixes families inside one row.
-    why: "utility label inside a history row, not track metadata",
-    ambiguous: "Sets the time in Onest while the title and artist beside it are Montserrat. Deliberate hierarchy, but it is a mixed row - confirm it reads as intentional.",
+    // Owner-resolved: Onest. The row is deliberately mixed - Montserrat carries
+    // the content, Onest the supporting label beside it.
+    why: "supporting label inside a history row, not track metadata - owner-resolved",
     test: function (ctx) { return /history\s*item/i.test(ctx.path) && /^\s*\d{1,2}:\d{2}\s*$/.test(ctx.text); },
   },
 {
@@ -139,22 +140,40 @@ var RULES = [
   {
     role: "player transport label",
     family: ONEST,
-    why: "playback control label, utility rather than track metadata",
-    ambiguous: "Sits inside the expressive full Player but is a control, not metadata. The rule puts it in Onest; the owner may prefer Montserrat for consistency with the track info above it.",
+    // Owner-resolved: Onest. A transport control is UI, not content, even though
+    // it sits inside the expressive Player.
+    why: "playback control - navigation/utility UI, not content - owner-resolved",
     test: function (ctx) { return /player\s*section/i.test(ctx.path) && /^(PAUSE|PLAY|STOP)$/i.test(String(ctx.text).trim()); },
   },
   {
-    role: "inline link",
+    role: "inline action / CTA link",
+    family: MONTSERRAT,
+    // Owner-resolved: Montserrat. The split the owner asked for is between a
+    // small actionable affordance - which is action typography, like a button -
+    // and a link that is really part of the reading experience.
+    //
+    // A hyperlink set INSIDE a paragraph never reaches this rule: it is a styled
+    // range within a body text node, so it inherits that node's Onest. Only a
+    // standalone Link node is classified here, and length is what separates a
+    // terse affordance ("все >") from link text that reads as body copy.
+    why: "small standalone actionable link - action typography - owner-resolved",
+    test: function (ctx) {
+      return (/(^|>\s*)link/i.test(ctx.path) || /^link$/i.test(ctx.name)) &&
+             String(ctx.text).trim().length <= 24;
+    },
+  },
+  {
+    role: "body link",
     family: ONEST,
-    why: "secondary navigation affordance",
-    ambiguous: 'Reads as a small CTA ("все >") but is named Link, not Button, so the rule treats it as utility.',
+    why: "link long enough to read as body copy - reading typography",
     test: function (ctx) { return /(^|>\s*)link/i.test(ctx.path) || /^link$/i.test(ctx.name); },
   },
   {
     role: "settings group caption",
     family: ONEST,
-    why: "list grouping chrome in a utility screen",
-    ambiguous: 'Arguably a "section heading", which the role system puts in Montserrat. Treated as utility because it is a small list caption and the owner found Settings better in Onest. Overrule here if the headings should be expressive.',
+    // Owner-resolved: Onest. A list grouping caption is supporting UI, not an
+    // expressive section heading, even though it reads like one.
+    why: "list grouping caption - supporting UI, not an expressive heading - owner-resolved",
     test: function (ctx) {
       // A direct child of the frame is a grouping caption; anything nested is a
       // row label. Depth 2 = "<frame> > <node>".

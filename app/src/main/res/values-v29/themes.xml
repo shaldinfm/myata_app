@@ -1,10 +1,36 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!--
-      Android TV theme, API 29+. Same as values/themes.xml plus forceDarkAllowed
-      false, which matters here: the TV emulator reports night mode on, so without
-      it the system could dark-force the TV surface once the mobile app gains a
-      DayNight theme.
+      Root of the mobile theme tree.
+
+      DayNight is what makes values-night/colors.xml resolve at all: with a
+      .Light. parent the night resources are never selected, so having the files
+      is not the same as having dark mode. Selection follows the system, which is
+      AppCompat's default (MODE_NIGHT_FOLLOW_SYSTEM) - no code change needed.
+
+      Android's force-dark transformation stays OFF. Dark mode here means the
+      semantic roles resolving their dark values, not the framework inverting
+      colours it does not understand.
+
+      Android TV does NOT descend from this. TvTheme spells out its own Light
+      parent precisely so this tree can become DayNight without reaching TV.
     -->
+    <style name="Theme.Myata.Base" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- The eleven approved v1 semantic roles from A2, wired to the Material
+             attributes Phase B will read. Nothing consumes these yet: AppTheme and
+             AppTheme0-9 still pin their own colours, and every screen still names
+             its colours directly. Phase B removes those overrides screen by screen,
+             at which point this mapping starts doing the work. -->
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:colorBackground">@color/background</item>
+        <item name="colorOnBackground">@color/text_primary</item>
+        <!-- API 29+: never let the platform invert colours it does not understand.
+             Dark mode comes from the semantic roles, not from force-dark. -->
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+
     <style name="TvTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
@@ -19,131 +45,5 @@
         <item name="colorOnSecondary">@color/tv_on_secondary</item>
         <item name="android:forceDarkAllowed">false</item>
         <item name="android:statusBarColor">@color/tv_window</item>
-    </style>
-
-    <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="windowActionBar">false</item>
-        <item name="windowNoTitle">true</item>
-        <item name="android:windowFullscreen">true</item>
-        <item name="colorPrimary">@color/main_fragment</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowDisablePreview">true</item>
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:forceDarkAllowed">false</item>
-        <item name="android:statusBarColor">@color/main_fragment</item>
-    </style>
-    <style name="AppTheme0" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen0</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:forceDarkAllowed">false</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-    <style name="AppTheme1" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen1</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:forceDarkAllowed">false</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-    <style name="AppTheme2" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen2</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:forceDarkAllowed">false</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-    <style name="AppTheme3" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen3</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:forceDarkAllowed">false</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-    <style name="AppTheme4" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen4</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:forceDarkAllowed">false</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-    <style name="AppTheme5" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen5</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:forceDarkAllowed">false</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-    <style name="AppTheme6" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen6</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:forceDarkAllowed">false</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-    <style name="AppTheme7" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen7</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:forceDarkAllowed">false</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-    <style name="AppTheme8" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen8</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:forceDarkAllowed">false</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-    <style name="AppTheme9" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen9</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:forceDarkAllowed">false</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
 </resources>

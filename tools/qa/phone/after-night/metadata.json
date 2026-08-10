@@ -1,0 +1,419 @@
+{
+  "run": "after",
+  "night": true,
+  "capturedAt": "2026-08-10T11:49:35.885Z",
+  "env": {
+    "ro.build.version.sdk": "36",
+    "ro.product.model": "sdk_gphone64_x86_64",
+    "ro.product.device": "emu64xa",
+    "size": "Physical size: 1080x2400",
+    "density": "Physical density: 420",
+    "nightMode": "1",
+    "appCommit": "03c2e1fc40a0751897b10f54f9d8d2280a2468e0",
+    "touchscreen": true,
+    "leanback": false
+  },
+  "steps": [
+    {
+      "step": 1,
+      "name": "home",
+      "nodes": [
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "action_bar_root",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "android:id/content",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "navHostFragment",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "navHostFragment",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "",
+          "cls": "ImageView",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "main_content_container",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "",
+          "cls": "TextView",
+          "bounds": "[58,294][1080,374]",
+          "hasText": true
+        },
+        {
+          "id": "streams",
+          "cls": "HorizontalScrollView",
+          "bounds": "[0,427][1080,1315]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,427][1080,1315]"
+        },
+        {
+          "id": "myata_stream_banner_container",
+          "cls": "FrameLayout",
+          "bounds": "[55,453][885,973]"
+        },
+        {
+          "id": "myata_stream_banner",
+          "cls": "ImageView",
+          "bounds": "[55,453][885,973]"
+        },
+        {
+          "id": "gold_stream_banner_container",
+          "cls": "FrameLayout",
+          "bounds": "[921,453][1080,973]"
+        },
+        {
+          "id": "gold_stream_banner",
+          "cls": "ImageView",
+          "bounds": "[921,453][1080,973]"
+        },
+        {
+          "id": "playlistString",
+          "cls": "TextView",
+          "bounds": "[58,1315][1080,1441]",
+          "hasText": true
+        },
+        {
+          "id": "playlists",
+          "cls": "RecyclerView",
+          "bounds": "[0,1494][1080,2256]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,1494][440,2010]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[24,1494][424,1894]"
+        },
+        {
+          "id": "iv",
+          "cls": "ImageView",
+          "bounds": "[24,1494][424,1894]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[440,1494][880,2010]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[464,1494][864,1894]"
+        },
+        {
+          "id": "iv",
+          "cls": "ImageView",
+          "bounds": "[464,1494][864,1894]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[880,1494][1080,2010]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[904,1494][1080,1894]"
+        },
+        {
+          "id": "iv",
+          "cls": "ImageView",
+          "bounds": "[904,1494][1080,1894]"
+        },
+        {
+          "id": "bottomNavView",
+          "cls": "CardView",
+          "bounds": "[66,2169][1014,2311]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[66,2169][1014,2311]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[66,2169][1014,2311]"
+        },
+        {
+          "id": "home_btn",
+          "cls": "ImageView",
+          "bounds": "[172,2209][235,2272]"
+        },
+        {
+          "id": "player_btn",
+          "cls": "ImageView",
+          "bounds": "[340,2209][403,2272]"
+        },
+        {
+          "id": "donate_btn",
+          "cls": "ImageView",
+          "bounds": "[509,2209][572,2272]"
+        },
+        {
+          "id": "info_btn",
+          "cls": "ImageView",
+          "bounds": "[677,2209][740,2272]"
+        },
+        {
+          "id": "favorites_btn",
+          "cls": "ImageView",
+          "bounds": "[846,2209][909,2272]"
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "name": "home-settled",
+      "nodes": [
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "action_bar_root",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "android:id/content",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "navHostFragment",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "navHostFragment",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "",
+          "cls": "ImageView",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "main_content_container",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1080,2400]"
+        },
+        {
+          "id": "",
+          "cls": "TextView",
+          "bounds": "[58,294][1080,374]",
+          "hasText": true
+        },
+        {
+          "id": "streams",
+          "cls": "HorizontalScrollView",
+          "bounds": "[0,427][1080,1315]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,427][1080,1315]"
+        },
+        {
+          "id": "myata_stream_banner_container",
+          "cls": "FrameLayout",
+          "bounds": "[55,453][885,973]"
+        },
+        {
+          "id": "myata_stream_banner",
+          "cls": "ImageView",
+          "bounds": "[55,453][885,973]"
+        },
+        {
+          "id": "gold_stream_banner_container",
+          "cls": "FrameLayout",
+          "bounds": "[921,453][1080,973]"
+        },
+        {
+          "id": "gold_stream_banner",
+          "cls": "ImageView",
+          "bounds": "[921,453][1080,973]"
+        },
+        {
+          "id": "playlistString",
+          "cls": "TextView",
+          "bounds": "[58,1315][1080,1441]",
+          "hasText": true
+        },
+        {
+          "id": "playlists",
+          "cls": "RecyclerView",
+          "bounds": "[0,1494][1080,2256]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,1494][440,2010]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[24,1494][424,1894]"
+        },
+        {
+          "id": "iv",
+          "cls": "ImageView",
+          "bounds": "[24,1494][424,1894]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[440,1494][880,2010]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[464,1494][864,1894]"
+        },
+        {
+          "id": "iv",
+          "cls": "ImageView",
+          "bounds": "[464,1494][864,1894]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[880,1494][1080,2010]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[904,1494][1080,1894]"
+        },
+        {
+          "id": "iv",
+          "cls": "ImageView",
+          "bounds": "[904,1494][1080,1894]"
+        },
+        {
+          "id": "bottomNavView",
+          "cls": "CardView",
+          "bounds": "[66,2169][1014,2311]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[66,2169][1014,2311]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[66,2169][1014,2311]"
+        },
+        {
+          "id": "home_btn",
+          "cls": "ImageView",
+          "bounds": "[172,2209][235,2272]"
+        },
+        {
+          "id": "player_btn",
+          "cls": "ImageView",
+          "bounds": "[340,2209][403,2272]"
+        },
+        {
+          "id": "donate_btn",
+          "cls": "ImageView",
+          "bounds": "[509,2209][572,2272]"
+        },
+        {
+          "id": "info_btn",
+          "cls": "ImageView",
+          "bounds": "[677,2209][740,2272]"
+        },
+        {
+          "id": "favorites_btn",
+          "cls": "ImageView",
+          "bounds": "[846,2209][909,2272]"
+        }
+      ]
+    }
+  ],
+  "randomLaunchHashes": [
+    "f90a783f870a",
+    "18dd7539a0fd",
+    "4203ed4cab5d",
+    "3aedaca6ca5a",
+    "f2f1fffae1e2",
+    "18eef6280f07",
+    "18eef6280f07",
+    "ad31445cf587",
+    "2d10d798201b",
+    "187f544506d2",
+    "9d0f1ea837e5",
+    "a2f87ec83d7c"
+  ],
+  "distinctLaunchScreens": 11
+}

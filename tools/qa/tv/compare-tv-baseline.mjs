@@ -27,8 +27,11 @@ const problems = [];
 const notes = [];
 
 console.log("=== environment ===");
+// tolerate an "INFO | " prefix that `emulator -version` sometimes emits, so two
+// runs of the same binary do not compare as different environments
+const clean = (v) => (typeof v === "string" ? v.replace(/^.*?(Android emulator version)/, "$1").trim() : v);
 for (const k of ["ro.product.model", "ro.product.device", "ro.build.characteristics", "ro.build.version.sdk", "size", "density", "emulator"]) {
-  const a = A.env[k], b = B.env[k];
+  const a = clean(A.env[k]), b = clean(B.env[k]);
   console.log(`  ${k.padEnd(28)} ${a}${a === b ? "" : `   AFTER: ${b}`}`);
   if (a !== b) problems.push(`environment differs on ${k}: "${a}" vs "${b}" — the runs are not comparable`);
 }

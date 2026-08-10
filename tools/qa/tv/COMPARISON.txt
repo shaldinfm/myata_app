@@ -7,7 +7,7 @@
   density                      Physical density: 320
   emulator                     Android emulator version 37.1.11.0 (build_id 15917651) (CL:N/A)
   app commit                   before bea34c97d8aaf2ebe346a3336f08cb676d5e8c9d
-                               after  bea34c97d8aaf2ebe346a3336f08cb676d5e8c9d
+                               after  6a142810c2328cc01430d1ab6356a315d9dfa94f
 
 === focus chain ===
   before: card_myata > card_gold > card_xtra > card_myata > btn_stream_myata > btn_stream_myata > btn_stream_myata > btn_stream_gold > btn_stream_gold > btn_stream_xtra > btn_stream_xtra > btn_play_pause > btn_play_pause > btn_stream_xtra > card_myata
@@ -21,12 +21,12 @@
   OK    5 player-myata-enter                 nodes 19/19
   OK    6 player-myata-playpause-focused     nodes 19/19
   OK    7 player-focus-down                  nodes 20/20
-  OK    8 player-focus-right                 nodes 19/19
+  OK    8 player-focus-right                 nodes 20/20
   OK    9 player-switch-gold                 nodes 19/19
   OK   10 player-focus-right-2               nodes 20/20
   OK   11 player-switch-xtra                 nodes 19/19
-  OK   12 player-focus-up-to-playpause       nodes 19/19
-  OK   13 player-pause                       nodes 19/19
+  OK   12 player-focus-up-to-playpause       nodes 20/20
+  OK   13 player-pause                       nodes 20/20
   OK   14 player-resume                      nodes 20/20
   OK   15 back-to-selection                  nodes 16/16
 
@@ -34,7 +34,7 @@
   != 00-splash-transient.png                  differs (live content — review by eye)
   == 01-selection-myata-focused.png           identical
   == 02-selection-gold-focused.png            identical
-  != 03-selection-xtra-focused.png            DIFFERS
+  == 03-selection-xtra-focused.png            identical
   != 04-selection-back-to-myata.png           DIFFERS
   != 05-player-myata-enter.png                differs (live content — review by eye)
   != 06-player-myata-playpause-focused.png    differs (live content — review by eye)
@@ -51,23 +51,22 @@
 === verdict ===
   structure identical: focus chain, node ids, classes and bounds all match
 
-  2 screenshot note(s) needing an eye:
-    - static screen 03-selection-xtra-focused.png differs — inspect before accepting
+  1 screenshot note(s) needing an eye:
     - static screen 04-selection-back-to-myata.png differs — inspect before accepting
 file                                    differing px      %      max Δ   mean Δ
-  00-splash-transient.png                     3406    0.164%    223    101.6   REVIEW
+  00-splash-transient.png                  2040906   98.423%    237     23.2   REVIEW
   01-selection-myata-focused.png                 0    0.000%      0      0.0   identical
   02-selection-gold-focused.png                  0    0.000%      0      0.0   identical
-  03-selection-xtra-focused.png                 10    0.000%      1      1.0   negligible
-  04-selection-back-to-myata.png                52    0.003%      1      1.0   negligible
-  05-player-myata-enter.png                   6586    0.318%    255    147.4   REVIEW
-  06-player-myata-playpause-focused.png    2069636   99.809%    254     42.1   REVIEW
-  07-player-focus-down.png                 2069529   99.804%    254     42.1   REVIEW
-  08-player-focus-right.png                2069561   99.805%    254     42.1   REVIEW
-  09-player-switch-gold.png                2069056   99.781%    251     25.8   REVIEW
-  10-player-focus-right-2.png              2068946   99.776%    251     25.8   REVIEW
-  11-player-switch-xtra.png                2069532   99.804%    253     40.6   REVIEW
-  12-player-focus-up-to-playpause.png      2069145   99.785%    253     40.6   REVIEW
-  13-player-pause.png                      2069071   99.782%    253     40.6   REVIEW
-  14-player-resume.png                     2071896   99.918%    253     40.5   REVIEW
+  03-selection-xtra-focused.png                  0    0.000%      0      0.0   identical
+  04-selection-back-to-myata.png                63    0.003%      1      1.0   negligible
+  05-player-myata-enter.png                   5635    0.272%    255    133.7   REVIEW
+  06-player-myata-playpause-focused.png    2069639   99.809%    255     53.4   REVIEW
+  07-player-focus-down.png                 2069532   99.804%    255     53.4   REVIEW
+  08-player-focus-right.png                2069564   99.805%    255     53.4   REVIEW
+  09-player-switch-gold.png                2069100   99.783%    255     37.5   REVIEW
+  10-player-focus-right-2.png              2068961   99.776%    255     37.5   REVIEW
+  11-player-switch-xtra.png                2069138   99.785%    247     28.7   REVIEW
+  12-player-focus-up-to-playpause.png      2068692   99.763%    247     28.7   REVIEW
+  13-player-pause.png                      2068898   99.773%    251     41.6   REVIEW
+  14-player-resume.png                     2072217   99.933%    251     41.8   REVIEW
   15-back-to-selection.png                       0    0.000%      0      0.0   identical

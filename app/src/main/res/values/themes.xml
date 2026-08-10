@@ -1,5 +1,34 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!--
+      Root of the mobile theme tree.
+
+      DayNight is what makes values-night/colors.xml resolve at all: with a
+      .Light. parent the night resources are never selected, so having the files
+      is not the same as having dark mode. Selection follows the system, which is
+      AppCompat's default (MODE_NIGHT_FOLLOW_SYSTEM) - no code change needed.
+
+      Android's force-dark transformation stays OFF. Dark mode here means the
+      semantic roles resolving their dark values, not the framework inverting
+      colours it does not understand.
+
+      Android TV does NOT descend from this. TvTheme spells out its own Light
+      parent precisely so this tree can become DayNight without reaching TV.
+    -->
+    <style name="Theme.Myata.Base" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- The eleven approved v1 semantic roles from A2, wired to the Material
+             attributes Phase B will read. Nothing consumes these yet: AppTheme and
+             AppTheme0-9 still pin their own colours, and every screen still names
+             its colours directly. Phase B removes those overrides screen by screen,
+             at which point this mapping starts doing the work. -->
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:colorBackground">@color/background</item>
+        <item name="colorOnBackground">@color/text_primary</item>
+    </style>
+
+    <!--
       Android TV theme. A verbatim copy of AppTheme as it stood before the 3.6.6
       mobile migration, with the colours pointed at colors_tv.xml so a later edit
       to the mobile palette cannot change TV.
@@ -22,7 +51,7 @@
         <item name="android:statusBarColor">@color/tv_window</item>
     </style>
 
-    <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="AppTheme" parent="Theme.Myata.Base">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:windowFullscreen">true</item>
@@ -36,7 +65,7 @@
         <item name="colorOnSecondary">@color/black</item>
         <item name="android:statusBarColor">@color/main_fragment</item>
     </style>
-    <style name="AppTheme0" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="AppTheme0" parent="Theme.Myata.Base">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -46,7 +75,7 @@
         <item name="colorOnSecondary">@color/black</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
-    <style name="AppTheme1" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="AppTheme1" parent="Theme.Myata.Base">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -56,7 +85,7 @@
         <item name="colorOnSecondary">@color/black</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
-    <style name="AppTheme2" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="AppTheme2" parent="Theme.Myata.Base">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -66,7 +95,7 @@
         <item name="colorOnSecondary">@color/black</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
-    <style name="AppTheme3" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="AppTheme3" parent="Theme.Myata.Base">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -76,7 +105,7 @@
         <item name="colorOnSecondary">@color/black</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
-    <style name="AppTheme4" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="AppTheme4" parent="Theme.Myata.Base">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -86,7 +115,7 @@
         <item name="colorOnSecondary">@color/black</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
-    <style name="AppTheme5" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="AppTheme5" parent="Theme.Myata.Base">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -96,7 +125,7 @@
         <item name="colorOnSecondary">@color/black</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
-    <style name="AppTheme6" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="AppTheme6" parent="Theme.Myata.Base">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -106,7 +135,7 @@
         <item name="colorOnSecondary">@color/black</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
-    <style name="AppTheme7" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="AppTheme7" parent="Theme.Myata.Base">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -116,7 +145,7 @@
         <item name="colorOnSecondary">@color/black</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
-    <style name="AppTheme8" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="AppTheme8" parent="Theme.Myata.Base">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -126,7 +155,7 @@
         <item name="colorOnSecondary">@color/black</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
-    <style name="AppTheme9" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="AppTheme9" parent="Theme.Myata.Base">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>

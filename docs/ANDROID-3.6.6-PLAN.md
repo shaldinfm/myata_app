@@ -65,9 +65,9 @@ or any 3.6.6 screen. Leave `android.software.leanback` and the
 
 Everything else blocks on this.
 
-- **Muller Medium** — `app/src/main/res/font/mullermedium.otf` is present but
-  untracked. Commit it here with the rest of the type work. Provenance verified:
-  Fontfabric, `usWeightClass` 500, 542 glyphs, Cyrillic complete.
+- **Muller Medium** — landed in A1. See [FONTS.md](FONTS.md) for the full
+  resource map, including the `muller_regular` / `mullerregular` duplicate that
+  is deliberately left alone because TV consumes one of them.
 - **Semantic colours** — `values/colors.xml` + new `values-night/colors.xml` from
   `tools/figma-export/canonical/semantic-tokens.json` (11 approved v1 roles) plus
   the v2 roles in `spec/tokens.mjs`. Raw hex disappears from layouts.
@@ -83,9 +83,50 @@ documented (`Экспортировать список` 1.62:1, `Ещё` 1.15:1 
 bugs the new tokens must not reproduce); **TV screenshots and focus paths identical
 to the pre-migration baseline.**
 
-PRs: **A0** TV resource audit + baseline screenshots + TV isolation (must land
-before A2/A3) · **A1** font + type scale · **A2** colours + `values-night` ·
-**A3** theme collapse (largest blast radius, keep it alone) · **A4** icons.
+PRs: **A0** TV isolation — *merged, `d18ac6d`* · **A1** Muller Medium asset ·
+**A2** colours + `values-night` · **A3** theme collapse · **A4** icons.
+
+### A2 boundary — colours only
+
+Introduces the eleven approved v1 semantic roles from
+`tools/figma-export/canonical/semantic-tokens.json` plus the v2 roles in
+`screens-3.6.6/spec/tokens.mjs`, as `values/colors.xml` additions and a new
+`values-night/colors.xml`.
+
+**No screen is redesigned and no theme is restructured.** New roles are added
+alongside the existing nine colours rather than replacing them, so nothing that
+currently reads `@color/main_fragment` changes meaning. Existing colours are
+retired later, once the screens that use them have migrated.
+
+TV is already insulated: it reads `colors_tv.xml`, which holds literals.
+
+### A3 boundary — mobile themes only
+
+Three constraints, and the first is the one most likely to be got wrong.
+
+**`AppTheme0`…`AppTheme9` are LIVE.** `MainActivity` does `(0..9).random()` and
+`setTheme(...)`; the ten differ only in `android:windowBackground` →
+`@drawable/screen0…screen9`, so the app shows one of ten random window
+backgrounds per launch. That is product behaviour. **Preserve it** unless the
+owner explicitly decides to retire it — deleting it as "duplicate styles" would
+be a silent feature removal.
+
+**`TvTheme` stays isolated and visually unchanged.** It spells out its own parent
+precisely so that collapsing `AppTheme` onto a DayNight base does not drag TV
+along.
+
+**`<application>` still declares `@style/AppTheme`**, so A3 reaches the
+application-level theme even though `TvMainActivity` overrides it. That is enough
+of a path to TV to require proof, not reasoning: **re-run the committed TV
+regression harness after A3** —
+
+```bash
+node tools/qa/tv/capture-tv-baseline.mjs after
+node tools/qa/tv/compare-tv-baseline.mjs
+```
+
+against `tools/qa/tv/before/`, on the same `Myata_TV_API36` AVD. **Any TV visual,
+focus or behavioural difference is a regression.**
 
 ## B · Migrate existing UI
 

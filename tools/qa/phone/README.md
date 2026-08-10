@@ -3,11 +3,17 @@
 Evidence that the A3 theme refactor did not change how the phone UI renders.
 
 ```bash
+node tools/qa/launch-emulator.mjs phone
 node tools/qa/phone/capture-phone-baseline.mjs before
 # ... apply the refactor, rebuild, reinstall ...
 node tools/qa/phone/capture-phone-baseline.mjs after
 node tools/qa/phone/capture-phone-baseline.mjs after --night
 ```
+
+Start the AVD through `launch-emulator.mjs` rather than by hand: it pins the
+port to the `emulator-5556` this harness expects, forces a cold boot, and stops
+the emulator allocating a ~3 GB `snapshots/default_boot/ram.img` per session.
+See the header of that script for why both of its flags are needed.
 
 Set `PHONE_SERIAL` if the phone emulator is not `emulator-5556`.
 

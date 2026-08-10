@@ -41,6 +41,156 @@ var STYLE_MAP = {
 };
 
 var CANDIDATES = ["Montserrat", "Onest"];
+var COLUMN_HYBRID = "HYBRID";
+
+/*
+ * Role-based typography for the hybrid trial.
+ *
+ * The owner's system is a role split, not a screen split:
+ *
+ *   MONTSERRAT = expressive / music / emphasis
+ *   ONEST      = utility / navigation / reading
+ *
+ * So the classifier keys off what a node IS in the frozen structure - its own
+ * name and its ancestry - never off which screen it happens to sit on. That is
+ * why a heading in Settings comes out Montserrat even though Settings as a whole
+ * reads better in Onest, and why the mini-player comes out Onest even on HOME
+ * where the headings around it are Montserrat.
+ *
+ * Every rule returns the role it matched, so the trial can report why each node
+ * was assigned rather than just what it got.
+ */
+
+var MONTSERRAT = "Montserrat";
+var ONEST = "Onest";
+
+// Ordered. First match wins, so container rules that must beat the generic
+// heading/button rules come first.
+var RULES = [
+  // --- utility containers, highest precedence -----------------------------
+  {
+    role: "navigation",
+    family: ONEST,
+    why: "BottomNav - owner: looks better in Onest",
+    test: function (ctx) { return /bottomnav/i.test(ctx.path); },
+  },
+  {
+    role: "mini-player",
+    family: ONEST,
+    why: "mini-player - owner: looks better in Onest",
+    test: function (ctx) { return /mini\s*player/i.test(ctx.path); },
+  },
+
+  // --- expressive roles ------------------------------------------------
+  // Container-specific rules come BEFORE the generic heading/button ones.
+  // The Player title and the Collection titles ARE Heading nodes, so a
+  // generic heading rule would match first and report them as headings.
+  // Same family either way, but the role name is what the owner reviews.
+{
+    role: "player track metadata",
+    family: MONTSERRAT,
+    why: "full Player now-playing - owner: looks better in Montserrat",
+    test: function (ctx) { return /track\s*info/i.test(ctx.path); },
+  },
+{
+    role: "history timestamp",
+    family: ONEST,
+    // Deliberately split from the rest of the row: the time is a utility label,
+    // not track metadata. Flagged, because it mixes families inside one row.
+    why: "utility label inside a history row, not track metadata",
+    ambiguous: "Sets the time in Onest while the title and artist beside it are Montserrat. Deliberate hierarchy, but it is a mixed row - confirm it reads as intentional.",
+    test: function (ctx) { return /history\s*item/i.test(ctx.path) && /^\s*\d{1,2}:\d{2}\s*$/.test(ctx.text); },
+  },
+{
+    role: "history track metadata",
+    family: MONTSERRAT,
+    why: "Broadcast History - owner: looks better in Montserrat",
+    test: function (ctx) { return /history\s*item/i.test(ctx.path); },
+  },
+{
+    role: "collection track title",
+    family: MONTSERRAT,
+    why: "Collection song title - owner: looks better in Montserrat",
+    // Titles are Heading 3 and already caught above; this covers a title that is
+    // not marked as a heading.
+    test: function (ctx) { return /track\s*item/i.test(ctx.path) && ctx.size >= 16; },
+  },
+{
+    role: "collection secondary",
+    family: ONEST,
+    why: "artist / helper line beside a Collection title - owner asked to test Onest here",
+    test: function (ctx) { return /track\s*item/i.test(ctx.path); },
+  },
+{
+    role: "heading",
+    family: MONTSERRAT,
+    why: "screen or section heading",
+    // Only real Heading nodes. A 14px list caption in Settings is chrome, not a
+    // section heading, and is handled by the utility default below.
+    test: function (ctx) { return /(^|>\s*)heading\s*\d*/i.test(ctx.path) || /^heading\s*\d*$/i.test(ctx.name); },
+  },
+{
+    role: "button/CTA",
+    family: MONTSERRAT,
+    why: "button or call to action",
+    test: function (ctx) { return /(^|>\s*)button/i.test(ctx.path) || /^button/i.test(ctx.name); },
+  },
+  // --- flagged judgement calls --------------------------------------------
+  {
+    role: "player transport label",
+    family: ONEST,
+    why: "playback control label, utility rather than track metadata",
+    ambiguous: "Sits inside the expressive full Player but is a control, not metadata. The rule puts it in Onest; the owner may prefer Montserrat for consistency with the track info above it.",
+    test: function (ctx) { return /player\s*section/i.test(ctx.path) && /^(PAUSE|PLAY|STOP)$/i.test(String(ctx.text).trim()); },
+  },
+  {
+    role: "inline link",
+    family: ONEST,
+    why: "secondary navigation affordance",
+    ambiguous: 'Reads as a small CTA ("все >") but is named Link, not Button, so the rule treats it as utility.',
+    test: function (ctx) { return /(^|>\s*)link/i.test(ctx.path) || /^link$/i.test(ctx.name); },
+  },
+  {
+    role: "settings group caption",
+    family: ONEST,
+    why: "list grouping chrome in a utility screen",
+    ambiguous: 'Arguably a "section heading", which the role system puts in Montserrat. Treated as utility because it is a small list caption and the owner found Settings better in Onest. Overrule here if the headings should be expressive.',
+    test: function (ctx) {
+      // A direct child of the frame is a grouping caption; anything nested is a
+      // row label. Depth 2 = "<frame> > <node>".
+      var depth = String(ctx.path).split(">").length;
+      return /^(settings|profile|auth|report|sleep-timer)/i.test(ctx.frame) &&
+             ctx.size <= 14 && depth === 2 &&
+             /^[А-ЯЁA-Z][а-яёa-z\s.]+$/.test(String(ctx.text).trim());
+    },
+  },
+];
+
+var DEFAULT_RULE = {
+  role: "body / helper",
+  family: ONEST,
+  why: "body, paragraph, form or secondary text - owner: Onest for reading",
+};
+
+/*
+ * ctx = { name, path, text, size, frame }
+ *   path  - " > "-joined ancestor names, frame first, node last
+ *   frame - the top-level frame name
+ */
+function classify(ctx) {
+  for (var i = 0; i < RULES.length; i++) {
+    var r = RULES[i];
+    try {
+      if (r.test(ctx)) return { role: r.role, family: r.family, why: r.why, ambiguous: r.ambiguous || null };
+    } catch (e) { /* a rule must never break the run */ }
+  }
+  return { role: DEFAULT_RULE.role, family: DEFAULT_RULE.family, why: DEFAULT_RULE.why, ambiguous: null };
+}
+
+// Test hook: the mock harness imports this file and calls the classifier
+// directly, so the rules can be unit-checked without a running Figma.
+if (typeof globalThis !== "undefined") globalThis.__fontTrialClassify = classify;
+
 
 // Muller hhea is (780 - -220 + 0) / 1000 = exactly 1.0 em, so Figma resolves an
 // AUTO line height on Muller to exactly the font size.
@@ -103,13 +253,16 @@ function search(node, name) {
   return null;
 }
 
-function collectText(node, out) {
-  var ty = "";
-  try { ty = node.type; } catch (e) { return out; }
-  if (ty === "TEXT") { out.push(node); return out; }
+// Carries the ancestor path with each node: the role classifier keys off what a
+// node is in the structure, which only the path can tell it.
+function collectText(node, out, path) {
+  var ty = "", nm = "";
+  try { ty = node.type; nm = node.name || ""; } catch (e) { return out; }
+  var here = path ? path.concat(nm) : [nm];
+  if (ty === "TEXT") { out.push({ node: node, path: here.join(" > "), name: nm }); return out; }
   var kids;
   try { kids = node.children; } catch (e) { return out; }
-  if (kids) for (var i = 0; i < kids.length; i++) collectText(kids[i], out);
+  if (kids) for (var i = 0; i < kids.length; i++) collectText(kids[i], out, here);
   return out;
 }
 
@@ -134,6 +287,7 @@ function resolveStyle(family, style) {
 }
 
 async function restyleNode(textNode, family, problems, notes) {
+  if (!family) return;
   var segments;
   try {
     segments = textNode.getStyledTextSegments(["fontName", "fontSize", "lineHeight", "letterSpacing"]);
@@ -185,9 +339,24 @@ async function restyleNode(textNode, family, problems, notes) {
 }
 
 async function injectStress(frame, problems, changed) {
-  var texts = collectText(frame, []);
+  var entries = collectText(frame, [], null);
+
+  // The frozen frame already carries one of the two examples, so only the
+  // missing one is injected. Overwriting frozen copy that is already correct
+  // would make the trial less faithful, not more.
+  var present = {};
+  for (var p = 0; p < entries.length; p++) {
+    var cur = "";
+    try { cur = entries[p].node.characters; } catch (e) {}
+    for (var s2 = 0; s2 < STRESS.length; s2++) if (cur.indexOf(STRESS[s2]) >= 0) present[s2] = true;
+  }
+  var wanted = [];
+  for (var s3 = 0; s3 < STRESS.length; s3++) if (!present[s3]) wanted.push(STRESS[s3]);
+  if (!wanted.length) return 0;
+
+  var texts = entries.map(function (e) { return e.node; });
   var picked = 0;
-  for (var i = 0; i < texts.length && picked < STRESS.length; i++) {
+  for (var i = 0; i < texts.length && picked < wanted.length; i++) {
     var t = texts[i];
     var size, fname;
     try { size = t.fontSize; fname = t.fontName; } catch (e) { continue; }
@@ -198,8 +367,8 @@ async function injectStress(frame, problems, changed) {
     if (!old || old.length < 6) continue;
     try {
       await figma.loadFontAsync(fname);
-      t.characters = STRESS[picked];
-      changed.push({ node: describe(t), from: old, to: STRESS[picked] });
+      t.characters = wanted[picked];
+      changed.push({ node: describe(t), from: old, to: wanted[picked] });
       picked++;
     } catch (error) {
       problems.push({ node: describe(t), property: "characters", error: String(error.message || error) });
@@ -231,6 +400,7 @@ async function checkFonts() {
 
 async function run(msg) {
   var problems = [], notes = [], stressChanges = [], rows = [];
+  var roleTally = {}, ambiguous = [], seenAmbiguous = {};
 
   log("Loading pages…");
   if (typeof figma.loadAllPagesAsync === "function") await figma.loadAllPagesAsync();
@@ -252,7 +422,7 @@ async function run(msg) {
   page.name = "FONT TRIAL " + stamp;
   log('Created page "' + page.name + '"');
 
-  var columns = ["Muller (baseline)"].concat(CANDIDATES);
+  var columns = ["Muller (baseline)"].concat(CANDIDATES).concat([COLUMN_HYBRID]);
   var y = 0;
 
   for (var f = 0; f < FRAMES.length; f++) {
@@ -281,9 +451,32 @@ async function run(msg) {
       }
 
       if (c > 0) {
-        var texts = collectText(clone, []);
-        for (var t = 0; t < texts.length; t++) {
-          await restyleNode(texts[t], CANDIDATES[c - 1], problems, c === 1 ? notes : []);
+        var entries = collectText(clone, [], null);
+        var hybrid = columns[c] === COLUMN_HYBRID;
+        for (var t = 0; t < entries.length; t++) {
+          var e = entries[t];
+          var chars = "", size = 0;
+          try { chars = e.node.characters; size = e.node.fontSize; } catch (err) {}
+
+          var family;
+          if (hybrid) {
+            var verdict = classify({ name: e.name, path: e.path, text: chars, size: size, frame: spec.name });
+            family = verdict.family;
+            roleTally[verdict.role] = roleTally[verdict.role] || { role: verdict.role, family: verdict.family, why: verdict.why, count: 0, samples: [] };
+            roleTally[verdict.role].count++;
+            if (roleTally[verdict.role].samples.length < 3) {
+              roleTally[verdict.role].samples.push(spec.name + ": \"" + String(chars).slice(0, 28) + "\"");
+            }
+            if (verdict.ambiguous && !seenAmbiguous[verdict.role]) {
+              seenAmbiguous[verdict.role] = true;
+              ambiguous.push({ role: verdict.role, family: verdict.family, frame: spec.name,
+                               sample: String(chars).slice(0, 40), note: verdict.ambiguous });
+            }
+          } else {
+            family = CANDIDATES[c - 1];
+          }
+
+          await restyleNode(e.node, family, problems, c === 1 ? notes : []);
         }
       }
 
@@ -321,6 +514,8 @@ async function run(msg) {
     notes: notes,
     problems: problems,
     stressChanges: stressChanges,
+    roles: Object.keys(roleTally).map(function (k) { return roleTally[k]; }),
+    ambiguous: ambiguous,
   });
 }
 

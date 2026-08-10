@@ -14,9 +14,9 @@
   .warn { color: #8a6d00; }
 </style>
 
-<h1>Font trial — Muller vs Montserrat vs Onest</h1>
+<h1>Font trial — Muller | Montserrat | Onest | HYBRID</h1>
 <p>
-  Clones seven representative frames onto a <b>new page</b> and restyles the copies.
+  Clones seven representative frames onto a <b>new page</b> in four columns &mdash; Muller, Montserrat, Onest and a role-based HYBRID &mdash; and restyles the copies.
   The frozen pages are never modified. Font size, letter spacing and every explicit
   line height are preserved; an AUTO line height is pinned to Muller's value first
   so the new font cannot redefine the design.
@@ -80,6 +80,25 @@
       });
     });
     L.push("");
+
+    if ((msg.roles || []).length) {
+      L.push("Hybrid role assignment:");
+      msg.roles.sort(function (a, b) { return b.count - a.count; }).forEach(function (r) {
+        L.push("  " + esc(r.family.padEnd ? r.family.padEnd(11) : r.family) + esc(r.role) + "  x" + r.count);
+        L.push("      " + esc(r.why));
+        r.samples.forEach(function (x) { L.push("      " + esc(x)); });
+      });
+      L.push("");
+    }
+
+    if ((msg.ambiguous || []).length) {
+      L.push('<span class="warn">Nodes where the rule is a judgement call (' + msg.ambiguous.length + "):</span>");
+      msg.ambiguous.forEach(function (a) {
+        L.push("  " + esc(a.role) + " -> " + esc(a.family) + '   [' + esc(a.frame) + '] "' + esc(a.sample) + '"');
+        L.push("      " + esc(a.note));
+      });
+      L.push("");
+    }
 
     if ((msg.stressChanges || []).length) {
       L.push("History rows replaced with the stress titles:");

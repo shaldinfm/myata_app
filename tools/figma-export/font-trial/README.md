@@ -1,7 +1,8 @@
-# Font trial — Muller vs Montserrat vs Onest
+# Font trial — Muller | Montserrat | Onest | HYBRID
 
-A bounded visual comparison in Figma. Montserrat is the primary candidate, Onest
-the reference; Manrope is dropped.
+A bounded visual comparison in Figma. The fourth column is the one that matters:
+a role-based hybrid using **Montserrat for expressive type** and **Onest for
+utility type**, per the owner's design-system rule. Manrope is dropped.
 
 **Nothing frozen is modified.** Every frame is cloned onto a brand-new page and
 only the clones are restyled. Re-running creates another page rather than
@@ -32,8 +33,40 @@ Seven frames × three columns, laid out left to right:
 | column | what it is |
 |---|---|
 | `… · Muller (baseline)` | untouched clone, for reference |
-| `… · Montserrat` | primary candidate |
-| `… · Onest` | fallback reference |
+| `… · Montserrat` | single-family reference |
+| `… · Onest` | single-family reference |
+| `… · HYBRID` | the proposal: role-based Montserrat + Onest |
+
+## The role system
+
+Assignment is by **role**, never by screen — which is why a heading in Settings
+comes out Montserrat even though Settings overall reads better in Onest, and why
+the mini-player comes out Onest on HOME where the headings around it are
+Montserrat.
+
+Rules are ordered, first match wins. Container-specific rules deliberately run
+*before* the generic heading rule: the Player title and the Collection titles are
+`Heading` nodes, so a generic rule would match first and mislabel them. Same
+family either way — but the role name is what gets reviewed.
+
+| role | family | matched by |
+|---|---|---|
+| navigation | Onest | `BottomNavBar` ancestor |
+| mini-player | Onest | `Now Playing Mini Player` ancestor |
+| player track metadata | Montserrat | `Track Info` ancestor |
+| history timestamp | Onest | `History Item` ancestor + `HH:MM` text |
+| history track metadata | Montserrat | `History Item` ancestor |
+| collection track title | Montserrat | `Track Item` ancestor, size ≥ 16 |
+| collection secondary | Onest | `Track Item` ancestor, smaller |
+| heading | Montserrat | `Heading *` node or ancestor |
+| button / CTA | Montserrat | `Button*` node or ancestor |
+| player transport label | Onest | `PLAY`/`PAUSE`/`STOP` in the player |
+| inline link | Onest | `Link` node |
+| settings group caption | Onest | direct child of a utility frame, ≤ 14px |
+| body / helper | Onest | everything else |
+
+Run over the 123 real frozen text nodes in these seven frames, this yields
+**48 Montserrat / 75 Onest**.
 
 | frame | why it is in the set |
 |---|---|
@@ -83,8 +116,11 @@ weight. All ten combinations are unit-checked.
 
 ## Stress titles
 
-The two longest Russian examples are injected into History rows on **all three**
-columns, so the comparison stays like-for-like:
+The two longest Russian examples are needed in History. The frozen
+`history-content` frame **already contains** `КРАСНОЗНАМЁННАЯ ДИВИЗИЯ ИМЕНИ МОЕЙ
+БАБУШКИ` as an artist line, so only the missing one is injected — overwriting
+frozen copy that is already correct would make the trial less faithful, not more.
+Injection happens on **all four** columns so they stay like-for-like:
 
 - `КРАСНОЗНАМЁННАЯ ДИВИЗИЯ ИМЕНИ МОЕЙ БАБУШКИ`
 - `Прогулка по воде под дождём в конце ноября`

@@ -3,6 +3,7 @@
 Evidence that the mobile 3.6.6 token migration did not change TV.
 
 ```bash
+node tools/qa/launch-emulator.mjs tv
 node tools/qa/tv/capture-tv-baseline.mjs before   # pre-isolation build
 # ... apply the A0 isolation, rebuild, reinstall ...
 node tools/qa/tv/capture-tv-baseline.mjs after
@@ -11,6 +12,11 @@ node tools/qa/tv/compare-tv-baseline.mjs
 
 Both runs must use the **same AVD** and the same 16-step walk, which is why the
 walk lives in the script rather than in a checklist someone follows by hand.
+
+Start `Myata_TV_API36` through `launch-emulator.mjs` rather than by hand: it
+forces a cold boot and stops the emulator allocating a ~2 GB
+`snapshots/default_boot/ram.img` per session. The capture calls `adb` without
+`-s`, so export `ANDROID_SERIAL=emulator-5554` when the phone AVD is up too.
 
 ## What is compared, and why
 

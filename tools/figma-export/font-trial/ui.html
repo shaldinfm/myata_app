@@ -100,6 +100,14 @@
       L.push("");
     }
 
+    if ((msg.sizes || []).length) {
+      L.push("Compact action buttons set to 21px:");
+      msg.sizes.forEach(function (z) {
+        L.push("  [" + esc(z.frame) + '] "' + esc(z.text) + '"   ' + z.from + "px -> " + z.to + "px");
+      });
+      L.push("");
+    }
+
     if ((msg.fits || []).length) {
       L.push("HYBRID fit decisions (growth preferred, shrinking last):");
       msg.fits.forEach(function (f) {

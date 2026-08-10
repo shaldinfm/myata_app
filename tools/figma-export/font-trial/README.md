@@ -138,6 +138,19 @@ uncorrected, so the raw effect of each font remains visible.
 **Button labels are Montserrat Medium 500**, not the Regular the frozen scale
 gives them — action labels carry more presence at Medium.
 
+**Compact action buttons take 21px**, where the larger content CTAs stay at 22px.
+A compact action is a dialog, bottom-sheet or utility-screen button — `Установить`,
+`Отмена`, `Отправить`, `Войти`, `Подключить` and their kind — sitting in a dense
+surface where 22px crowds the button. What separates them is the **surface**, not
+the label length, so the rule keys off a `Bottom Sheet`/`Dialog` ancestor or a
+utility frame rather than off the text. Only 22px labels are touched, so the 12px
+chips keep their size, and the content CTAs — `Поддержать эфир`,
+`Экспортировать список`, `Показать ещё`, `Подписаться`, `Читать подробнее` — are
+left exactly as approved.
+
+Across the frozen set that is 19 of 26 button labels; inside the seven trial
+frames it is only `Отмена` and `Установить` on `sleep-timer-custom`.
+
 **A short heading that was one line stays one line.**
 
 The important part is *how* those are restored. A frozen width is usually just

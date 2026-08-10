@@ -130,6 +130,32 @@ var RULES = [
     // section heading, and is handled by the utility default below.
     test: function (ctx) { return /(^|>\s*)heading\s*\d*/i.test(ctx.path) || /^heading\s*\d*$/i.test(ctx.name); },
   },
+  {
+    role: "compact action button",
+    family: MONTSERRAT,
+    weight: "Medium",
+    size: 21,
+    /*
+     * A compact action is a dialog, bottom-sheet or utility-screen button -
+     * Установить, Отмена, Отправить and their kind. They sit in dense surfaces
+     * where 22px crowds the button, so they take 21px.
+     *
+     * The larger content CTAs are deliberately excluded: Поддержать эфир,
+     * Экспортировать список, Показать ещё and the rest live on content screens
+     * and already read correctly at 22px. Surface is what separates them, not
+     * label length - which is why this keys off the sheet or the utility frame
+     * rather than off the text.
+     *
+     * Only 22px labels are touched, so the small 12px chips keep their size.
+     */
+    why: "compact dialog / bottom-sheet / utility action - Montserrat Medium 21px",
+    test: function (ctx) {
+      var inSheet = /bottom\s*sheet|dialog|modal/i.test(ctx.path);
+      var utilityFrame = /^(settings|profile|auth|report|sleep-timer|history-(empty|error)|find-track|collection-(track-sheet|overflow))/i.test(ctx.frame);
+      var isButton = /(^|>\s*)button/i.test(ctx.path) || /^button/i.test(ctx.name);
+      return isButton && (inSheet || utilityFrame) && ctx.size === 22;
+    },
+  },
 {
     role: "button/CTA",
     family: MONTSERRAT,
@@ -204,10 +230,10 @@ function classify(ctx) {
   for (var i = 0; i < RULES.length; i++) {
     var r = RULES[i];
     try {
-      if (r.test(ctx)) return { role: r.role, family: r.family, weight: r.weight || null, why: r.why, ambiguous: r.ambiguous || null };
+      if (r.test(ctx)) return { role: r.role, family: r.family, weight: r.weight || null, size: r.size || null, why: r.why, ambiguous: r.ambiguous || null };
     } catch (e) { /* a rule must never break the run */ }
   }
-  return { role: DEFAULT_RULE.role, family: DEFAULT_RULE.family, weight: null, why: DEFAULT_RULE.why, ambiguous: null };
+  return { role: DEFAULT_RULE.role, family: DEFAULT_RULE.family, weight: null, size: null, why: DEFAULT_RULE.why, ambiguous: null };
 }
 
 // Test hook: the mock harness imports this file and calls the classifier
@@ -505,14 +531,15 @@ async function fitHybrid(entries, baselines, changes) {
     if (!b) continue;
 
     /* ---- buttons: grow the button if its container has the room -------- */
-    if (e.role === "button/CTA" && b.buttonWidth != null && e.button) {
+    if ((e.role === "button/CTA" || e.role === "compact action button") && b.buttonWidth != null && e.button) {
       var now = widthOf(e.button);
       if (now == null || now <= b.buttonWidth + 0.5) continue;
 
       var holder = constrainingAncestor(e.button, 4);
       var avail = holder ? innerWidthOf(holder) : null;
+      var startSize = e.appliedSize != null ? e.appliedSize : b.size;
       var rec = {
-        kind: "button", frame: b.frame, text: b.text, size: b.size,
+        kind: "button", frame: b.frame, text: b.text, size: startSize,
         frozenWidth: Math.round(b.buttonWidth * 10) / 10,
         available: avail == null ? null : Math.round(avail * 10) / 10,
         holder: holder ? holder.name : null
@@ -530,16 +557,16 @@ async function fitHybrid(entries, baselines, changes) {
           rec.wrapperReleased = wrapper.name;
         }
         rec.solution = "grew";
-        rec.finalSize = b.size;
+        rec.finalSize = startSize;
         rec.nowWidth = Math.round(widthOf(e.button) * 10) / 10;
         rec.delta = Math.round((rec.nowWidth - rec.frozenWidth) * 10) / 10;
         rec.fits = true;
         rec.why = "container had the room, so the label keeps its frozen size and the button takes the extra width";
       } else {
-        var applied = b.size;
+        var applied = startSize;
         for (var step = 1; step <= 4; step++) {
-          if (!(await setSize(e.node, b.size - step))) break;
-          applied = b.size - step;
+          if (!(await setSize(e.node, startSize - step))) break;
+          applied = startSize - step;
           var w = widthOf(e.button);
           if (avail == null ? w <= b.buttonWidth + 0.5 : w <= avail + 0.5) break;
         }
@@ -636,7 +663,7 @@ async function checkFonts() {
 
 async function run(msg) {
   var problems = [], notes = [], stressChanges = [], rows = [];
-  var roleTally = {}, ambiguous = [], seenAmbiguous = {}, fitChanges = [];
+  var roleTally = {}, ambiguous = [], seenAmbiguous = {}, fitChanges = [], sizeChanges = [];
 
   log("Loading pages…");
   if (typeof figma.loadAllPagesAsync === "function") await figma.loadAllPagesAsync();
@@ -704,11 +731,13 @@ async function run(msg) {
           var chars = "", size = 0;
           try { chars = e.node.characters; size = e.node.fontSize; } catch (err) {}
 
-          var family, weightOverride = null;
+          var family, weightOverride = null, sizeOverride = null;
+          var chars0size = size;
           if (hybrid) {
             var verdict = classify({ name: e.name, path: e.path, text: chars, size: size, frame: spec.name });
             family = verdict.family;
             weightOverride = verdict.weight;
+            sizeOverride = verdict.size;
             e.role = verdict.role;
             roleTally[verdict.role] = roleTally[verdict.role] || { role: verdict.role, family: verdict.family, why: verdict.why, count: 0, samples: [] };
             roleTally[verdict.role].count++;
@@ -725,6 +754,14 @@ async function run(msg) {
           }
 
           await restyleNode(e.node, family, problems, c === 1 ? notes : [], weightOverride);
+
+          if (hybrid && sizeOverride && sizeOverride !== chars0size) {
+            if (await setSize(e.node, sizeOverride)) {
+              e.appliedSize = sizeOverride;
+              sizeChanges.push({ frame: spec.name, text: String(chars).slice(0, 40),
+                                 role: e.role, from: chars0size, to: sizeOverride });
+            }
+          }
         }
 
         // Only the hybrid is corrected back onto the frozen geometry; the
@@ -769,6 +806,7 @@ async function run(msg) {
     roles: Object.keys(roleTally).map(function (k) { return roleTally[k]; }),
     ambiguous: ambiguous,
     fits: fitChanges,
+    sizes: sizeChanges,
   });
 }
 

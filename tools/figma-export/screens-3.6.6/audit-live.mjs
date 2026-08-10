@@ -76,7 +76,8 @@ for (const theme of ["light", "dark"]) {
 
 /* ---------- 2. light/dark parity ---------- */
 
-const sig = (n) => `${n.type}:${n.name}`;
+// The root frame carries a _dark suffix by design, so compare on the base name.
+const sig = (n) => `${n.type}:${baseName(n.name)}`;
 const treeSig = (n) => { const out = []; walk(n, (x, p, d) => out.push("  ".repeat(d) + sig(x))); return out; };
 
 for (const id of expectedIds) {
@@ -131,6 +132,13 @@ for (const theme of ["light", "dark"]) {
     if (parent && !isAuto(parent) && typeof parent.width === "number" && n.x + n.width > parent.width + 1)
       add("review", "text", { ...where, message: `extends ${num(n.x + n.width - parent.width)}px past the right edge of "${parent.name}"`,
         proposal: "Narrow the text box or widen the parent; do not move the text." });
+
+    // Inside a vertical auto-layout the child's width is the cross axis, so a
+    // child wider than its parent silently hangs out of the column.
+    if (parent && isAuto(parent) && parent.layout.layoutMode === "VERTICAL" &&
+        typeof parent.width === "number" && n.width > parent.width + 1)
+      add("review", "text", { ...where, message: `is ${num(n.width)}px wide inside the ${num(parent.width)}px column "${parent.name}" - ${num(n.width - parent.width)}px hangs out`,
+        proposal: `Set the text to Fill container, or widen "${parent.name}" to ${num(n.width)}. Text wraps at its own width, so the wrap point today is ${num(n.width)}, not the column width.` });
   });
 }
 
@@ -243,7 +251,10 @@ for (const theme of ["light", "dark"]) {
 for (const theme of ["light", "dark"]) {
   for (const frame of DOC[theme].frames || []) {
     walk(frame, (n, parent, d, trail) => {
+      // The sheet's own parts are named "Bottom Sheet / drag handle" etc, so
+      // match the container only.
       if (!/^Bottom Sheet \//.test(n.name)) return;
+      if (/^Bottom Sheet \/ (drag handle|title|subtitle)$/.test(n.name)) return;
       const where = { theme, frame: frame.name, path: trail };
       const r = n.cornerRadius;
 
@@ -333,17 +344,47 @@ for (const theme of ["light", "dark"]) {
 
 const slots = {};
 for (const theme of ["light", "dark"]) {
-  eachNode(theme, (n) => {
+  eachNode(theme, (n, parent, d, trail, frame) => {
     const m = /^Asset slot \/ (.+?) \(/.exec(n.name);
     if (!m) return;
     const key = m[1];
-    slots[key] = slots[key] || { light: 0, dark: 0 };
-    slots[key][theme]++;
+    const s = (slots[key] = slots[key] || { visible: 0, hidden: 0, where: [] });
+    // A hidden slot next to real artwork is a leftover, not a pending asset.
+    if (n.visible === false) s.hidden++; else s.visible++;
+    if (s.where.length < 4) s.where.push(`${theme} · ${frame.name}`);
   });
 }
-for (const [key, c] of Object.entries(slots))
-  add("info", "assets", { frame: "-", message: `asset slot '${key}' still pending: ${c.light} light, ${c.dark} dark`,
-    proposal: key.startsWith("avatar/") ? "Expected - avatar artwork is being supplied separately." : "Owner to place the mark in Figma." });
+for (const [key, c] of Object.entries(slots)) {
+  if (c.visible)
+    add("review", "assets", { frame: "-", message: `asset '${key}' is still an empty slot in ${c.visible} place(s): ${c.where.join(", ")}`,
+      proposal: key.startsWith("avatar/") ? "Expected - avatar artwork is being supplied separately." : "Owner to place the mark in Figma." });
+  if (c.hidden)
+    add("review", "assets", { frame: "-", message: `${c.hidden} hidden '${key}' slot(s) remain beside real artwork: ${c.where.join(", ")}`,
+      proposal: "The mark has been supplied, so these are leftovers. Deleting them changes nothing visually." });
+}
+
+// Avatar cells that ended up with no artwork at all - the slot was removed
+// rather than filled, so nothing in the file records what belongs there.
+for (const theme of ["light", "dark"]) {
+  for (const frame of DOC[theme].frames || []) {
+    if (!/^profile-avatar/.test(baseName(frame.name))) continue;
+    let empty = 0, total = 0;
+    walk(frame, (n) => {
+      if (!/^Avatar cell/.test(n.name)) return;
+      total++;
+      let content = 0;
+      (function inner(x) {
+        if (["VECTOR", "INSTANCE", "RECTANGLE", "ELLIPSE", "BOOLEAN_OPERATION"].includes(x.type)) content++;
+        (x.children || []).forEach(inner);
+      })(n);
+      if (!content) empty++;
+    });
+    if (empty)
+      add("review", "assets", { theme, frame: frame.name,
+        message: `${empty} of ${total} avatar cells are empty rings - the pending slot was deleted rather than filled`,
+        proposal: "Expected while the Material 3 avatars are outstanding, but nothing in the file now records what goes in them. Consider restoring a named placeholder, or treat this note as the record." });
+  }
+}
 
 /* ---------- 11. per-flow state coverage ---------- */
 

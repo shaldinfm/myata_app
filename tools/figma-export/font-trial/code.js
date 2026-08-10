@@ -95,25 +95,31 @@ var RULES = [
 {
     role: "history timestamp",
     family: ONEST,
-    // Deliberately split from the rest of the row: the time is a utility label,
-    // not track metadata. Flagged, because it mixes families inside one row.
-    // Owner-resolved: Onest. The row is deliberately mixed - Montserrat carries
-    // the content, Onest the supporting label beside it.
-    why: "supporting label inside a history row, not track metadata - owner-resolved",
+    // Kept as its own role for reporting, though it now resolves to the same
+    // family as the rest of the row: once track-list content moved to Onest the
+    // history row stopped mixing families, so no reader sees a seam here.
+    why: "supporting label inside a history row - Onest, as is the rest of the row",
     test: function (ctx) { return /history\s*item/i.test(ctx.path) && /^\s*\d{1,2}:\d{2}\s*$/.test(ctx.text); },
   },
 {
     role: "history track metadata",
-    family: MONTSERRAT,
-    why: "Broadcast History - owner: looks better in Montserrat",
+    // Owner-revised: track-list content reads better in Onest. The whole
+    // Broadcast History row is now one family - title, artist and timestamp -
+    // so the row no longer mixes families at all.
+    family: ONEST,
+    why: "Broadcast History track list - owner: Onest for track-list content",
     test: function (ctx) { return /history\s*item/i.test(ctx.path); },
   },
 {
     role: "collection track title",
-    family: MONTSERRAT,
-    why: "Collection song title - owner: looks better in Montserrat",
-    // Titles are Heading 3 and already caught above; this covers a title that is
-    // not marked as a heading.
+    // Owner-revised: Onest, matching the artist line beneath it. Hierarchy is
+    // carried by size and weight, which are untouched, not by family.
+    family: ONEST,
+    why: "Collection song title - owner: Onest for track-list content",
+    // Collection titles are Heading 3 nodes, so this rule MUST stay ahead of the
+    // generic heading rule - otherwise they would follow the heading family.
+    // Equally it must stay scoped to Track Item, so the screen heading
+    // "Моя коллекция" is never caught here.
     test: function (ctx) { return /track\s*item/i.test(ctx.path) && ctx.size >= 16; },
   },
 {

@@ -55,8 +55,8 @@ family either way — but the role name is what gets reviewed.
 | mini-player | Onest | `Now Playing Mini Player` ancestor |
 | player track metadata | Montserrat | `Track Info` ancestor |
 | history timestamp | Onest | `History Item` ancestor + `HH:MM` text |
-| history track metadata | Montserrat | `History Item` ancestor |
-| collection track title | Montserrat | `Track Item` ancestor, size ≥ 16 |
+| history track metadata | **Onest** | `History Item` ancestor |
+| collection track title | **Onest** | `Track Item` ancestor, size ≥ 16 |
 | collection secondary | Onest | `Track Item` ancestor, smaller |
 | heading | Montserrat | `Heading *` node or ancestor |
 | button / CTA | Montserrat | `Button*` node or ancestor |
@@ -66,8 +66,37 @@ family either way — but the role name is what gets reviewed.
 | settings group caption | Onest | direct child of a utility frame, ≤ 14px |
 | body / helper | Onest | everything else |
 
+| compact action button | Montserrat | button in a sheet/dialog/utility frame, 22px |
+
 Run over the 123 real frozen text nodes in these seven frames, this yields
-**49 Montserrat / 74 Onest**.
+**24 Montserrat / 99 Onest**.
+
+Montserrat is now reserved for the expressive core: screen and section headings,
+buttons and CTAs, the small action link, and the full Player now-playing metadata.
+Everything else — including both track lists — is Onest.
+
+### Track lists are Onest
+
+Broadcast History and Collection rows are set entirely in Onest: title, artist and
+timestamp. Only the family changes; size, weight and line height are untouched, so
+the hierarchy between a 17px title and a 14px artist is exactly as frozen.
+
+Two things follow. The History row no longer mixes families, so the timestamp
+seam disappears. And the one layout regression Montserrat carried disappears with
+it — the 42-character stress artist goes to three lines in Montserrat but stays at
+two in Onest, matching Muller:
+
+| string | Muller | Montserrat | Onest |
+|---|---|---|---|
+| `КРАСНОЗНАМЁННАЯ ДИВИЗИЯ…` (14px, 233dp) | 2 lines | **3 lines** | 2 lines |
+| `Прогулка по воде…` (14px, 233dp) | 2 | 2 | 2 |
+| Collection artist (12px, 188dp) | 1 | 1 | 1 |
+| Collection title (16px, 188dp) | 1 | 1 | 1 |
+
+The screen heading `Моя коллекция` is unaffected: it is a `Heading 1`, not a
+`Track Item` child, so it stays Montserrat. That separation only holds because
+the track-title rule runs ahead of the generic heading rule and is scoped to
+`Track Item` — both are load-bearing now.
 
 ### The four judgement calls, owner-resolved
 

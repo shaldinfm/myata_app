@@ -83,7 +83,7 @@ Home vector and "filled when active" is a property of that one shape, not a
 second outline variant to swap in.
 
 **Whether any icon uses EVENODD winding.** `android:fillType` requires API 24 on
-a platform VectorDrawable and this project's `minSdk` is 21, so an even-odd icon
-has to be loaded through AppCompat (`app:srcCompat`) to render correctly on API
-21–23. The plugin flags this rather than emitting XML that quietly renders wrong
-on old devices.
+a platform VectorDrawable. This project's `minSdk` is **24** (verified in
+`app/build.gradle`; the figure of 21 in `CLAUDE.md` is stale), so even-odd is
+supported natively and needs no AppCompat workaround. The plugin still reports it,
+because it changes how a path must be read.

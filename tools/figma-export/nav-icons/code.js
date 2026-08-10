@@ -428,8 +428,8 @@ async function extract() {
 
     var evenOdd = base.svg.paths.some(function (p) { return p.fillRule === "evenodd"; });
     if (evenOdd) {
-      notes.push(icon + ": uses even-odd winding. android:fillType needs API 24 and minSdk here is 21 - " +
-                        "load it through AppCompat (app:srcCompat) or it renders wrong on API 21-23.");
+      notes.push(icon + ": uses even-odd winding. android:fillType needs API 24; this project's minSdk is " +
+                        "24, so it is supported natively - no AppCompat workaround required.");
     }
     if (base.svg.hasGroupTransform) {
       notes.push(icon + ": its SVG carries a group transform; check the drawable against the frame before trusting it.");

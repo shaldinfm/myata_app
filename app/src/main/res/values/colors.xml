@@ -10,4 +10,39 @@
     <color name="white">#FFFFFFFF</color>
     <!-- Brand accent already used throughout the Myata artwork -->
     <color name="myata_accent">#00B7CE</color>
+
+    <!--
+      3.6.6 semantic colours - LIGHT.
+
+      The eleven roles approved as v1 in
+      tools/figma-export/canonical/semantic-tokens.json, which states it is the
+      source of truth for this file. Each was derived by matching equivalent
+      nodes across the two canonical Figma pages, and each carries confidence
+      CONFIRMED there - except on_primary, which is EVIDENCED_NOT_BOUND: the
+      colour is visible on the play/pause glyph but was not bound in Figma
+      because the same hexes appear elsewhere for unrelated things.
+
+      ADDITIVE ONLY. Nothing references these yet. The legacy colours above keep
+      their names and values, and screens keep resolving them, until each screen
+      is migrated in Phase B. Retiring a legacy colour before its last user moves
+      would be a silent visual change.
+
+      The dark counterparts live in values-night/colors.xml. There is no
+      values-night entry for the legacy colours, so those resolve here in both
+      modes exactly as they did before.
+
+      Android TV does not use these. It reads values/colors_tv.xml, which holds
+      literals precisely so this file can move without touching TV.
+    -->
+    <color name="background">#F8F9FA</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_container">#F8F9FA</color>
+    <color name="navigation_container">#EDEEEF</color>
+    <color name="menu_surface">#F8F9FA</color>
+    <color name="text_primary">#191C1D</color>
+    <color name="text_heading">#003056</color>
+    <color name="text_secondary">#42474E</color>
+    <color name="outline">#E1E3E4</color>
+    <color name="primary">#1C4771</color>
+    <color name="on_primary">#FFFFFF</color>
 </resources>

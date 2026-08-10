@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  3.6.6 semantic colours - DARK.
+
+  The dark half of the eleven v1 roles from
+  tools/figma-export/canonical/semantic-tokens.json.
+
+  Only the semantic roles appear here. The legacy colours - purple_*, teal_*,
+  black, white, main_fragment, myata_accent - are deliberately NOT overridden,
+  so every screen that still reads them resolves the same value in both modes
+  and looks exactly as it does today.
+
+  Creating this folder does not switch anything to dark. The app themes are still
+  Theme.MaterialComponents.Light.*, and values-v29 sets forceDarkAllowed false.
+  Dark mode arrives when the themes move in A3 and the screens migrate in Phase B.
+
+  Note that navigation_container equals surface in dark (#142D47) but differs in
+  light (#EDEEEF vs #FFFFFF). They stay separate roles on purpose: collapsing
+  them would be correct in dark and wrong in light.
+-->
+<resources>
+    <color name="background">#0F253E</color>
+    <color name="surface">#142D47</color>
+    <color name="surface_container">#1C4771</color>
+    <color name="navigation_container">#142D47</color>
+    <color name="menu_surface">#142D47</color>
+    <color name="text_primary">#F5F7FA</color>
+    <color name="text_heading">#F5F7FA</color>
+    <color name="text_secondary">#B3C4D1</color>
+    <color name="outline">#466D8F</color>
+    <color name="primary">#5FD9B4</color>
+    <color name="on_primary">#0F253E</color>
+</resources>

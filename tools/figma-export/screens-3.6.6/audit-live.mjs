@@ -315,9 +315,15 @@ for (const theme of ["light", "dark"]) {
         if (n.layout.counterAxisSizingMode !== "AUTO")
           add("blocking", "history", { ...where, message: `row height is ${n.layout.counterAxisSizingMode}, not Hug - a wrapped title will be clipped`,
             proposal: "Set vertical sizing to Hug. Single-line rows stay at 74px, so nothing visible moves." });
-        if (n.layout.counterAxisAlignItems !== "MIN")
-          add("review", "history", { ...where, message: `cross-axis alignment is ${n.layout.counterAxisAlignItems}, so the time drifts to the middle of a tall row`,
-            proposal: "Set it to Top." });
+        // The owner decided that time, art and action are vertically centred in a
+        // tall row. CENTER is therefore the approved value; the earlier
+        // top-aligned requirement is superseded.
+        if (n.layout.counterAxisAlignItems === "CENTER")
+          add("info", "history", { ...where, message: "cross-axis alignment is CENTER - time, art and action centre on the row, as approved",
+            proposal: "No action." });
+        else
+          add("review", "history", { ...where, message: `cross-axis alignment is ${n.layout.counterAxisAlignItems}, not the approved CENTER`,
+            proposal: "The owner's decision is that time, art and action are vertically centred." });
       }
 
       for (const c of n.children || []) {
@@ -333,11 +339,16 @@ for (const theme of ["light", "dark"]) {
       }
     });
   }
-  for (const [name, xs] of Object.entries(anchors))
-    if (xs.size > 1)
-      add("review", "history", { theme, frame: "history-content", path: name,
-        message: `"${name}" is not at the same x in every row: ${[...xs].sort((a, b) => a - b).join(", ")}`,
-        proposal: "Rows should share one anchor. Fix by making the rows consistent auto-layouts rather than by dragging." });
+  for (const [name, xs] of Object.entries(anchors)) {
+    if (xs.size <= 1) continue;
+    const spread = Math.max(...xs) - Math.min(...xs);
+    // The 1px difference between rows 1-2 and the rest is owner-designed and was
+    // explicitly excluded from cleanup. Anything larger is worth a look.
+    add(spread <= 1.01 ? "info" : "review", "history", { theme, frame: "history-content", path: name,
+      message: `"${name}" sits at ${[...xs].sort((a, b) => a - b).join(", ")} across the rows (spread ${spread}px)` +
+               (spread <= 1.01 ? " - the owner-designed 1px difference, excluded from cleanup" : ""),
+      proposal: spread <= 1.01 ? "No action." : "Rows should share one anchor; fix via the auto-layout padding, not by dragging." });
+  }
 }
 
 /* ---------- 10. asset slots ---------- */

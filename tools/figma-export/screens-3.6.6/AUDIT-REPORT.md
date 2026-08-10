@@ -4,9 +4,9 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
 
 | | |
 |---|---|
-| light page | `3.6.6 PROPOSALS - LIGHT` — 29 top-level frames, exported 2026-08-10T07:44:22.219Z |
-| dark page | `3.6.6 PROPOSALS - DARK` — 29 top-level frames, exported 2026-08-10T07:45:07.213Z |
-| findings | **26 blocking**, 774 to review, 32 informational — grouped into 114 distinct items |
+| light page | `3.6.6 PROPOSALS - LIGHT` — 29 top-level frames, exported 2026-08-10T08:59:36.261Z |
+| dark page | `3.6.6 PROPOSALS - DARK` — 29 top-level frames, exported 2026-08-10T08:59:48.010Z |
+| findings | **0 blocking**, 758 to review, 72 informational — grouped into 101 distinct items |
 
 ## Flow coverage
 
@@ -25,64 +25,12 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
 - **review** — needs an owner decision. Nothing is changed without approval.
 - **info** — expected, or noted for the record.
 
-## Blocking — 26 affected nodes in 8 groups
+## To review — 758 affected nodes in 79 groups
 
-### text — 10 affected nodes in 6 groups
-
-- **light** · `sleep-timer-custom` — **×2**
-  - box is 28px against a 32px line height and an ancestor clips - the glyphs are cut
-  - e.g. `sleep-timer-custom > Bottom Sheet / Своё время > Stepper / Часы > value`, `sleep-timer-custom > Bottom Sheet / Своё время > Stepper / Минуты > value`
-  - *Proposed:* Set vertical resizing to Hug, or raise the height to 32px. Both keep the current x/y.
-- **light** · `sleep-timer-custom-invalid` — **×2**
-  - box is 28px against a 32px line height and an ancestor clips - the glyphs are cut
-  - e.g. `sleep-timer-custom-invalid > Bottom Sheet / Своё время > Stepper / Часы > value`, `sleep-timer-custom-invalid > Bottom Sheet / Своё время > Stepper / Минуты > value`
-  - *Proposed:* Set vertical resizing to Hug, or raise the height to 32px. Both keep the current x/y.
-- **light** · `profile-authenticated`
-  - box is 28px against a 32px line height and an ancestor clips - the glyphs are cut
-  - `profile-authenticated > Account card > Avatar > initial`
-  - *Proposed:* Set vertical resizing to Hug, or raise the height to 32px. Both keep the current x/y.
-- **dark** · `sleep-timer-custom_dark` — **×2**
-  - box is 28px against a 32px line height and an ancestor clips - the glyphs are cut
-  - e.g. `sleep-timer-custom_dark > Bottom Sheet / Своё время > Stepper / Часы > value`, `sleep-timer-custom_dark > Bottom Sheet / Своё время > Stepper / Минуты > value`
-  - *Proposed:* Set vertical resizing to Hug, or raise the height to 32px. Both keep the current x/y.
-- **dark** · `sleep-timer-custom-invalid_dark` — **×2**
-  - box is 28px against a 32px line height and an ancestor clips - the glyphs are cut
-  - e.g. `sleep-timer-custom-invalid_dark > Bottom Sheet / Своё время > Stepper / Часы > value`, `sleep-timer-custom-invalid_dark > Bottom Sheet / Своё время > Stepper / Минуты > value`
-  - *Proposed:* Set vertical resizing to Hug, or raise the height to 32px. Both keep the current x/y.
-- **dark** · `profile-authenticated_dark`
-  - box is 28px against a 32px line height and an ancestor clips - the glyphs are cut
-  - `profile-authenticated_dark > Account card > Avatar > initial`
-  - *Proposed:* Set vertical resizing to Hug, or raise the height to 32px. Both keep the current x/y.
-
-### history — 16 affected nodes in 2 groups
-
-- **light** · `history-content` — **×8**
-  - row is not an auto-layout frame, so it cannot grow with a long title
-  - e.g. `history-content > Screen > Broadcast History List > History Item / CRYOGEN`, `history-content > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки`, `history-content > Screen > Broadcast History List > History Item / CITY WALLS`, …
-  - *Proposed:* Restore Horizontal auto-layout, padding 13, gap 8, cross-axis align Top, vertical Hug. That reproduces the current single-line height of 74.
-- **dark** · `history-content_dark` — **×8**
-  - row is not an auto-layout frame, so it cannot grow with a long title
-  - e.g. `history-content_dark > Screen > Broadcast History List > History Item / CRYOGEN`, `history-content_dark > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки`, `history-content_dark > Screen > Broadcast History List > History Item / CITY WALLS`, …
-  - *Proposed:* Restore Horizontal auto-layout, padding 13, gap 8, cross-axis align Top, vertical Hug. That reproduces the current single-line height of 74.
-
-## To review — 774 affected nodes in 88 groups
-
-### parity — 5 affected nodes in 5 groups
+### parity — 1 affected node in 1 group
 
 - `sleep-timer-menu-active`
   - structure diverges: light "VECTOR:disc" vs dark "VECTOR:icon"
-  - *Proposed:* Check whether the divergence is intentional.
-- `settings`
-  - node count differs: light 59, dark 60
-  - *Proposed:* Compare the two frames; a deliberate per-theme difference is fine, an accidental extra or missing layer is not.
-- `settings`
-  - structure diverges: light "VECTOR:Vector" vs dark "FRAME:Asset slot / logo/lastfm (PENDING)"; light "TEXT:label" vs dark "VECTOR:Vector"; light "TEXT:value" vs dark "TEXT:label"; light "FRAME:chevron" vs dark "TEXT:value"
-  - *Proposed:* Check whether the divergence is intentional.
-- `settings-lastfm`
-  - node count differs: light 27, dark 25
-  - *Proposed:* Compare the two frames; a deliberate per-theme difference is fine, an accidental extra or missing layer is not.
-- `settings-lastfm`
-  - structure diverges: light "FRAME:Asset slot / logo/lastfm (PENDING)" vs dark "VECTOR:Vector"; light "VECTOR:Vector" vs dark "TEXT:h"; light "TEXT:h" vs dark "TEXT:b0"; light "TEXT:b0" vs dark "TEXT:b1"
   - *Proposed:* Check whether the divergence is intentional.
 
 ### text — 32 affected nodes in 2 groups
@@ -95,17 +43,6 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
   - is 181px wide inside the 179px column "Text" - 2px hangs out
   - e.g. `history-content_dark > Screen > Broadcast History List > History Item / CRYOGEN > Text > title`, `history-content_dark > Screen > Broadcast History List > History Item / CRYOGEN > Text > artist`, `history-content_dark > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки > Text > title`, …
   - *Proposed:* Set the text to Fill container, or widen "Text" to 181. Text wraps at its own width, so the wrap point today is 181, not the column width.
-
-### hidden — 3 affected nodes in 2 groups
-
-- **light** · `settings-lastfm` — **×2**
-  - hidden node <FRAME> 24x24
-  - e.g. `settings-lastfm > Not connected > Asset slot / logo/lastfm (PENDING)`, `settings-lastfm > Connected > Asset slot / logo/lastfm (PENDING)`
-  - *Proposed:* Delete it if it is a leftover; keep it only if it documents an alternate state.
-- **dark** · `settings_dark`
-  - hidden node <FRAME> 24x24
-  - `settings_dark > Row / Last.fm > Asset slot / logo/lastfm (PENDING)`
-  - *Proposed:* Delete it if it is a leftover; keep it only if it documents an alternate state.
 
 ### constraints — 709 affected nodes in 60 groups
 
@@ -227,7 +164,7 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
   - *Proposed:* Set horizontal constraint to Left and right. Pure metadata - no pixel moves.
 - **light** · `profile-avatar`
   - sits 0px from the right edge but is pinned Left
-  - `profile-avatar > Avatar cell 6 > Selected badge`
+  - `profile-avatar > Avatar cell 06 · avatar/m3-06 > Selected badge`
   - *Proposed:* Set horizontal constraint to Right so it survives a width change. No pixel moves.
 - **dark** · `sleep-timer-select_dark` — **×11**
   - spans the parent width (left 0, right 0) but is pinned Left only
@@ -330,22 +267,8 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
   - `collection-track-sheet_dark > Bottom Sheet / Действия с треком`
   - *Proposed:* Turn it on so children cannot paint over the rounded corners. No geometry change.
 
-### history — 8 affected nodes in 2 groups
+### assets — 2 affected nodes in 2 groups
 
-- **light** · `history-content` — **×4**
-  - "time" is not at the same x in every row: 14, 15
-  - e.g. `time`, `Album art`, `Text`, …
-  - *Proposed:* Rows should share one anchor. Fix by making the rows consistent auto-layouts rather than by dragging.
-- **dark** · `history-content` — **×4**
-  - "time" is not at the same x in every row: 14, 15
-  - e.g. `time`, `Album art`, `Text`, …
-  - *Proposed:* Rows should share one anchor. Fix by making the rows consistent auto-layouts rather than by dragging.
-
-### assets — 3 affected nodes in 3 groups
-
-- `-`
-  - 3 hidden 'logo/lastfm' slot(s) remain beside real artwork: light · settings-lastfm, light · settings-lastfm, dark · settings_dark
-  - *Proposed:* The mark has been supplied, so these are leftovers. Deleting them changes nothing visually.
 - **light** · `profile-avatar`
   - 15 of 16 avatar cells are empty rings - the pending slot was deleted rather than filled
   - *Proposed:* Expected while the Material 3 avatars are outstanding, but nothing in the file now records what goes in them. Consider restoring a named placeholder, or treat this note as the record.
@@ -353,17 +276,17 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
   - 15 of 16 avatar cells are empty rings - the pending slot was deleted rather than filled
   - *Proposed:* Expected while the Material 3 avatars are outstanding, but nothing in the file now records what goes in them. Consider restoring a named placeholder, or treat this note as the record.
 
-## Informational — 32 affected nodes in 18 groups
+## Informational — 72 affected nodes in 22 groups
 
-### autolayout — 16 affected nodes in 2 groups
+### autolayout — 32 affected nodes in 2 groups
 
-- **light** · `history-content` — **×8**
-  - 6.06px of slack on a fixed axis with nothing set to grow
-  - e.g. `history-content > Screen > Broadcast History List > History Item / CRYOGEN > Button / find track`, `history-content > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки > Button / find track`, `history-content > Screen > Broadcast History List > History Item / CITY WALLS > Button / find track`, …
+- **light** · `history-content` — **×16**
+  - 2px of slack on a fixed axis with nothing set to grow
+  - e.g. `history-content > Screen > Broadcast History List > History Item / CRYOGEN`, `history-content > Screen > Broadcast History List > History Item / CRYOGEN > Button / find track`, `history-content > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки`, …
   - *Proposed:* Harmless, but Hug or a growing child would make the intent explicit.
-- **dark** · `history-content_dark` — **×8**
-  - 6.06px of slack on a fixed axis with nothing set to grow
-  - e.g. `history-content_dark > Screen > Broadcast History List > History Item / CRYOGEN > Button / find track`, `history-content_dark > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки > Button / find track`, `history-content_dark > Screen > Broadcast History List > History Item / CITY WALLS > Button / find track`, …
+- **dark** · `history-content_dark` — **×16**
+  - 2px of slack on a fixed axis with nothing set to grow
+  - e.g. `history-content_dark > Screen > Broadcast History List > History Item / CRYOGEN`, `history-content_dark > Screen > Broadcast History List > History Item / CRYOGEN > Button / find track`, `history-content_dark > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки`, …
   - *Proposed:* Harmless, but Hug or a growing child would make the intent explicit.
 
 ### spacing — 2 affected nodes in 2 groups
@@ -435,4 +358,23 @@ Read-only. Nothing in Figma was changed, and no fix below has been applied.
   - uniform corner radius 28 (top and bottom)
   - `collection-track-sheet_dark > Bottom Sheet / Действия с треком`
   - *Proposed:* On Android a sheet anchored to the bottom shows only its top corners, so a uniform radius is harmless. Top-only (28/28/0/0) is closer to the real thing.
+
+### history — 24 affected nodes in 4 groups
+
+- **light** · `history-content` — **×8**
+  - cross-axis alignment is CENTER - time, art and action centre on the row, as approved
+  - e.g. `history-content > Screen > Broadcast History List > History Item / CRYOGEN`, `history-content > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки`, `history-content > Screen > Broadcast History List > History Item / CITY WALLS`, …
+  - *Proposed:* No action.
+- **light** · `history-content` — **×4**
+  - "time" sits at 14, 15 across the rows (spread 1px) - the owner-designed 1px difference, excluded from cleanup
+  - e.g. `time`, `Album art`, `Text`, …
+  - *Proposed:* No action.
+- **dark** · `history-content_dark` — **×8**
+  - cross-axis alignment is CENTER - time, art and action centre on the row, as approved
+  - e.g. `history-content_dark > Screen > Broadcast History List > History Item / CRYOGEN`, `history-content_dark > Screen > Broadcast History List > History Item / Краснознамённая дивизия имени моей бабушки`, `history-content_dark > Screen > Broadcast History List > History Item / CITY WALLS`, …
+  - *Proposed:* No action.
+- **dark** · `history-content` — **×4**
+  - "time" sits at 14, 15 across the rows (spread 1px) - the owner-designed 1px difference, excluded from cleanup
+  - e.g. `time`, `Album art`, `Text`, …
+  - *Proposed:* No action.
 

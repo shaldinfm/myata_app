@@ -1,0 +1,1638 @@
+{
+  "run": "after",
+  "capturedAt": "2026-08-11T17:33:21.429Z",
+  "env": {
+    "ro.build.version.sdk": "36",
+    "ro.build.version.release": "16",
+    "ro.product.model": "sdk_google_atv64_x86_64",
+    "ro.product.device": "emu64xa",
+    "ro.build.characteristics": "emulator",
+    "ro.sf.lcd_density": "",
+    "leanback": true,
+    "television": true,
+    "nightMode": "2 (yes)",
+    "size": "Physical size: 1920x1080",
+    "density": "Physical density: 320",
+    "emulator": "Android emulator version 37.1.11.0 (build_id 15917651) (CL:N/A)",
+    "appCommit": "74880eace4ddc180c7011469baa34eb0e16bab80",
+    "appVersion": "3.6.5"
+  },
+  "steps": [
+    {
+      "step": 1,
+      "name": "selection-myata-focused",
+      "focused": "card_myata",
+      "nodes": [
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "action_bar_root",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "android:id/content",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_fragment_container",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_title",
+          "cls": "TextView",
+          "bounds": "[713,320][1207,404]",
+          "hasText": true
+        },
+        {
+          "id": "flow_streams",
+          "cls": "View",
+          "bounds": "[0,524][1920,760]"
+        },
+        {
+          "id": "card_myata",
+          "cls": "FrameLayout",
+          "bounds": "[137,512][687,772]",
+          "focusable": true,
+          "focused": true
+        },
+        {
+          "id": "btn_myata",
+          "cls": "ImageView",
+          "bounds": "[137,512][687,772]"
+        },
+        {
+          "id": "card_gold",
+          "cls": "FrameLayout",
+          "bounds": "[710,524][1210,760]",
+          "focusable": true
+        },
+        {
+          "id": "btn_gold",
+          "cls": "ImageView",
+          "bounds": "[710,524][1210,760]"
+        },
+        {
+          "id": "card_xtra",
+          "cls": "FrameLayout",
+          "bounds": "[1258,524][1758,760]",
+          "focusable": true
+        },
+        {
+          "id": "btn_xtra",
+          "cls": "ImageView",
+          "bounds": "[1258,524][1758,760]"
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "name": "selection-gold-focused",
+      "focused": "card_gold",
+      "nodes": [
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "action_bar_root",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "android:id/content",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_fragment_container",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_title",
+          "cls": "TextView",
+          "bounds": "[713,320][1207,404]",
+          "hasText": true
+        },
+        {
+          "id": "flow_streams",
+          "cls": "View",
+          "bounds": "[0,524][1920,760]"
+        },
+        {
+          "id": "card_myata",
+          "cls": "FrameLayout",
+          "bounds": "[162,524][662,760]",
+          "focusable": true
+        },
+        {
+          "id": "btn_myata",
+          "cls": "ImageView",
+          "bounds": "[162,524][662,760]"
+        },
+        {
+          "id": "card_gold",
+          "cls": "FrameLayout",
+          "bounds": "[685,512][1235,772]",
+          "focusable": true,
+          "focused": true
+        },
+        {
+          "id": "btn_gold",
+          "cls": "ImageView",
+          "bounds": "[685,512][1235,772]"
+        },
+        {
+          "id": "card_xtra",
+          "cls": "FrameLayout",
+          "bounds": "[1258,524][1758,760]",
+          "focusable": true
+        },
+        {
+          "id": "btn_xtra",
+          "cls": "ImageView",
+          "bounds": "[1258,524][1758,760]"
+        }
+      ]
+    },
+    {
+      "step": 3,
+      "name": "selection-xtra-focused",
+      "focused": "card_xtra",
+      "nodes": [
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "action_bar_root",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "android:id/content",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_fragment_container",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_title",
+          "cls": "TextView",
+          "bounds": "[713,320][1207,404]",
+          "hasText": true
+        },
+        {
+          "id": "flow_streams",
+          "cls": "View",
+          "bounds": "[0,524][1920,760]"
+        },
+        {
+          "id": "card_myata",
+          "cls": "FrameLayout",
+          "bounds": "[162,524][662,760]",
+          "focusable": true
+        },
+        {
+          "id": "btn_myata",
+          "cls": "ImageView",
+          "bounds": "[162,524][662,760]"
+        },
+        {
+          "id": "card_gold",
+          "cls": "FrameLayout",
+          "bounds": "[710,524][1210,760]",
+          "focusable": true
+        },
+        {
+          "id": "btn_gold",
+          "cls": "ImageView",
+          "bounds": "[710,524][1210,760]"
+        },
+        {
+          "id": "card_xtra",
+          "cls": "FrameLayout",
+          "bounds": "[1233,512][1783,772]",
+          "focusable": true,
+          "focused": true
+        },
+        {
+          "id": "btn_xtra",
+          "cls": "ImageView",
+          "bounds": "[1233,512][1783,772]"
+        }
+      ]
+    },
+    {
+      "step": 4,
+      "name": "selection-back-to-myata",
+      "focused": "card_myata",
+      "nodes": [
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "action_bar_root",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "android:id/content",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_fragment_container",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_title",
+          "cls": "TextView",
+          "bounds": "[713,320][1207,404]",
+          "hasText": true
+        },
+        {
+          "id": "flow_streams",
+          "cls": "View",
+          "bounds": "[0,524][1920,760]"
+        },
+        {
+          "id": "card_myata",
+          "cls": "FrameLayout",
+          "bounds": "[137,512][687,772]",
+          "focusable": true,
+          "focused": true
+        },
+        {
+          "id": "btn_myata",
+          "cls": "ImageView",
+          "bounds": "[137,512][687,772]"
+        },
+        {
+          "id": "card_gold",
+          "cls": "FrameLayout",
+          "bounds": "[710,524][1210,760]",
+          "focusable": true
+        },
+        {
+          "id": "btn_gold",
+          "cls": "ImageView",
+          "bounds": "[710,524][1210,760]"
+        },
+        {
+          "id": "card_xtra",
+          "cls": "FrameLayout",
+          "bounds": "[1258,524][1758,760]",
+          "focusable": true
+        },
+        {
+          "id": "btn_xtra",
+          "cls": "ImageView",
+          "bounds": "[1258,524][1758,760]"
+        }
+      ]
+    },
+    {
+      "step": 5,
+      "name": "player-myata-enter",
+      "focused": "btn_stream_myata",
+      "nodes": [
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "action_bar_root",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "android:id/content",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_fragment_container",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "iv_background",
+          "cls": "ImageView",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_dim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_scrim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "iv_album_art",
+          "cls": "ImageView",
+          "bounds": "[680,32][1240,592]"
+        },
+        {
+          "id": "tv_track_info",
+          "cls": "TextView",
+          "bounds": "[200,664][1720,712]",
+          "selected": true,
+          "hasText": true
+        },
+        {
+          "id": "container_play_pause",
+          "cls": "FrameLayout",
+          "bounds": "[918,744][1002,828]"
+        },
+        {
+          "id": "btn_play_pause",
+          "cls": "ImageButton",
+          "bounds": "[918,744][1002,828]",
+          "focusable": true
+        },
+        {
+          "id": "layout_streams",
+          "cls": "LinearLayout",
+          "bounds": "[646,860][1274,960]"
+        },
+        {
+          "id": "btn_stream_myata",
+          "cls": "TextView",
+          "bounds": "[653,873][851,947]",
+          "focusable": true,
+          "focused": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_gold",
+          "cls": "TextView",
+          "bounds": "[870,876][1050,944]",
+          "focusable": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_xtra",
+          "cls": "TextView",
+          "bounds": "[1078,876][1258,944]",
+          "focusable": true,
+          "hasText": true
+        }
+      ]
+    },
+    {
+      "step": 6,
+      "name": "player-myata-playpause-focused",
+      "focused": "btn_stream_myata",
+      "nodes": [
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "action_bar_root",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "android:id/content",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_fragment_container",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "iv_background",
+          "cls": "ImageView",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_dim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_scrim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "iv_album_art",
+          "cls": "ImageView",
+          "bounds": "[680,32][1240,592]"
+        },
+        {
+          "id": "tv_track_info",
+          "cls": "TextView",
+          "bounds": "[200,664][1720,712]",
+          "selected": true,
+          "hasText": true
+        },
+        {
+          "id": "container_play_pause",
+          "cls": "FrameLayout",
+          "bounds": "[918,744][1002,828]"
+        },
+        {
+          "id": "btn_play_pause",
+          "cls": "ImageButton",
+          "bounds": "[918,744][1002,828]",
+          "focusable": true
+        },
+        {
+          "id": "layout_streams",
+          "cls": "LinearLayout",
+          "bounds": "[646,860][1274,960]"
+        },
+        {
+          "id": "btn_stream_myata",
+          "cls": "TextView",
+          "bounds": "[653,873][851,947]",
+          "focusable": true,
+          "focused": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_gold",
+          "cls": "TextView",
+          "bounds": "[870,876][1050,944]",
+          "focusable": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_xtra",
+          "cls": "TextView",
+          "bounds": "[1078,876][1258,944]",
+          "focusable": true,
+          "hasText": true
+        }
+      ]
+    },
+    {
+      "step": 7,
+      "name": "player-focus-down",
+      "focused": "btn_stream_myata",
+      "nodes": [
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "action_bar_root",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "android:id/content",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_fragment_container",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "iv_background",
+          "cls": "ImageView",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_dim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_scrim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "btn_back",
+          "cls": "ImageButton",
+          "bounds": "[28,30][66,68]",
+          "focusable": true
+        },
+        {
+          "id": "iv_album_art",
+          "cls": "ImageView",
+          "bounds": "[680,32][1240,592]"
+        },
+        {
+          "id": "tv_track_info",
+          "cls": "TextView",
+          "bounds": "[200,664][1720,712]",
+          "selected": true,
+          "hasText": true
+        },
+        {
+          "id": "container_play_pause",
+          "cls": "FrameLayout",
+          "bounds": "[918,744][1002,828]"
+        },
+        {
+          "id": "btn_play_pause",
+          "cls": "ImageButton",
+          "bounds": "[918,744][1002,828]",
+          "focusable": true
+        },
+        {
+          "id": "layout_streams",
+          "cls": "LinearLayout",
+          "bounds": "[646,860][1274,960]"
+        },
+        {
+          "id": "btn_stream_myata",
+          "cls": "TextView",
+          "bounds": "[653,873][851,947]",
+          "focusable": true,
+          "focused": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_gold",
+          "cls": "TextView",
+          "bounds": "[870,876][1050,944]",
+          "focusable": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_xtra",
+          "cls": "TextView",
+          "bounds": "[1078,876][1258,944]",
+          "focusable": true,
+          "hasText": true
+        }
+      ]
+    },
+    {
+      "step": 8,
+      "name": "player-focus-right",
+      "focused": "btn_stream_gold",
+      "nodes": [
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "action_bar_root",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "android:id/content",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_fragment_container",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "iv_background",
+          "cls": "ImageView",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_dim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_scrim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "btn_back",
+          "cls": "ImageButton",
+          "bounds": "[28,30][66,68]",
+          "focusable": true
+        },
+        {
+          "id": "iv_album_art",
+          "cls": "ImageView",
+          "bounds": "[680,32][1240,592]"
+        },
+        {
+          "id": "tv_track_info",
+          "cls": "TextView",
+          "bounds": "[200,664][1720,712]",
+          "selected": true,
+          "hasText": true
+        },
+        {
+          "id": "container_play_pause",
+          "cls": "FrameLayout",
+          "bounds": "[918,744][1002,828]"
+        },
+        {
+          "id": "btn_play_pause",
+          "cls": "ImageButton",
+          "bounds": "[918,744][1002,828]",
+          "focusable": true
+        },
+        {
+          "id": "layout_streams",
+          "cls": "LinearLayout",
+          "bounds": "[646,860][1274,960]"
+        },
+        {
+          "id": "btn_stream_myata",
+          "cls": "TextView",
+          "bounds": "[662,876][842,944]",
+          "focusable": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_gold",
+          "cls": "TextView",
+          "bounds": "[861,873][1059,947]",
+          "focusable": true,
+          "focused": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_xtra",
+          "cls": "TextView",
+          "bounds": "[1078,876][1258,944]",
+          "focusable": true,
+          "hasText": true
+        }
+      ]
+    },
+    {
+      "step": 9,
+      "name": "player-switch-gold",
+      "focused": "btn_stream_gold",
+      "nodes": [
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "action_bar_root",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "android:id/content",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_fragment_container",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "iv_background",
+          "cls": "ImageView",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_dim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_scrim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "iv_album_art",
+          "cls": "ImageView",
+          "bounds": "[680,32][1240,592]"
+        },
+        {
+          "id": "tv_track_info",
+          "cls": "TextView",
+          "bounds": "[200,664][1720,712]",
+          "selected": true,
+          "hasText": true
+        },
+        {
+          "id": "container_play_pause",
+          "cls": "FrameLayout",
+          "bounds": "[918,744][1002,828]"
+        },
+        {
+          "id": "btn_play_pause",
+          "cls": "ImageButton",
+          "bounds": "[918,744][1002,828]",
+          "focusable": true
+        },
+        {
+          "id": "layout_streams",
+          "cls": "LinearLayout",
+          "bounds": "[646,860][1274,960]"
+        },
+        {
+          "id": "btn_stream_myata",
+          "cls": "TextView",
+          "bounds": "[662,876][842,944]",
+          "focusable": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_gold",
+          "cls": "TextView",
+          "bounds": "[861,873][1059,947]",
+          "focusable": true,
+          "focused": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_xtra",
+          "cls": "TextView",
+          "bounds": "[1078,876][1258,944]",
+          "focusable": true,
+          "hasText": true
+        }
+      ]
+    },
+    {
+      "step": 10,
+      "name": "player-focus-right-2",
+      "focused": "btn_stream_xtra",
+      "nodes": [
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "action_bar_root",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "android:id/content",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_fragment_container",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "iv_background",
+          "cls": "ImageView",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_dim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_scrim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "btn_back",
+          "cls": "ImageButton",
+          "bounds": "[28,30][66,68]",
+          "focusable": true
+        },
+        {
+          "id": "iv_album_art",
+          "cls": "ImageView",
+          "bounds": "[680,32][1240,592]"
+        },
+        {
+          "id": "tv_track_info",
+          "cls": "TextView",
+          "bounds": "[200,664][1720,712]",
+          "selected": true,
+          "hasText": true
+        },
+        {
+          "id": "container_play_pause",
+          "cls": "FrameLayout",
+          "bounds": "[918,744][1002,828]"
+        },
+        {
+          "id": "btn_play_pause",
+          "cls": "ImageButton",
+          "bounds": "[918,744][1002,828]",
+          "focusable": true
+        },
+        {
+          "id": "layout_streams",
+          "cls": "LinearLayout",
+          "bounds": "[646,860][1274,960]"
+        },
+        {
+          "id": "btn_stream_myata",
+          "cls": "TextView",
+          "bounds": "[662,876][842,944]",
+          "focusable": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_gold",
+          "cls": "TextView",
+          "bounds": "[870,876][1050,944]",
+          "focusable": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_xtra",
+          "cls": "TextView",
+          "bounds": "[1069,873][1267,947]",
+          "focusable": true,
+          "focused": true,
+          "hasText": true
+        }
+      ]
+    },
+    {
+      "step": 11,
+      "name": "player-switch-xtra",
+      "focused": "btn_stream_xtra",
+      "nodes": [
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "action_bar_root",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "android:id/content",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_fragment_container",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "iv_background",
+          "cls": "ImageView",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_dim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_scrim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "iv_album_art",
+          "cls": "ImageView",
+          "bounds": "[680,32][1240,592]"
+        },
+        {
+          "id": "tv_track_info",
+          "cls": "TextView",
+          "bounds": "[200,664][1720,712]",
+          "selected": true,
+          "hasText": true
+        },
+        {
+          "id": "container_play_pause",
+          "cls": "FrameLayout",
+          "bounds": "[918,744][1002,828]"
+        },
+        {
+          "id": "btn_play_pause",
+          "cls": "ImageButton",
+          "bounds": "[918,744][1002,828]",
+          "focusable": true
+        },
+        {
+          "id": "layout_streams",
+          "cls": "LinearLayout",
+          "bounds": "[646,860][1274,960]"
+        },
+        {
+          "id": "btn_stream_myata",
+          "cls": "TextView",
+          "bounds": "[662,876][842,944]",
+          "focusable": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_gold",
+          "cls": "TextView",
+          "bounds": "[870,876][1050,944]",
+          "focusable": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_xtra",
+          "cls": "TextView",
+          "bounds": "[1069,873][1267,947]",
+          "focusable": true,
+          "focused": true,
+          "hasText": true
+        }
+      ]
+    },
+    {
+      "step": 12,
+      "name": "player-focus-up-to-playpause",
+      "focused": "btn_play_pause",
+      "nodes": [
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "action_bar_root",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "android:id/content",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_fragment_container",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "iv_background",
+          "cls": "ImageView",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_dim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_scrim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "btn_back",
+          "cls": "ImageButton",
+          "bounds": "[28,30][66,68]",
+          "focusable": true
+        },
+        {
+          "id": "iv_album_art",
+          "cls": "ImageView",
+          "bounds": "[680,32][1240,592]"
+        },
+        {
+          "id": "tv_track_info",
+          "cls": "TextView",
+          "bounds": "[200,664][1720,712]",
+          "selected": true,
+          "hasText": true
+        },
+        {
+          "id": "container_play_pause",
+          "cls": "FrameLayout",
+          "bounds": "[918,744][1002,828]"
+        },
+        {
+          "id": "btn_play_pause",
+          "cls": "ImageButton",
+          "bounds": "[918,744][1002,828]",
+          "focusable": true,
+          "focused": true
+        },
+        {
+          "id": "layout_streams",
+          "cls": "LinearLayout",
+          "bounds": "[646,860][1274,960]"
+        },
+        {
+          "id": "btn_stream_myata",
+          "cls": "TextView",
+          "bounds": "[662,876][842,944]",
+          "focusable": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_gold",
+          "cls": "TextView",
+          "bounds": "[870,876][1050,944]",
+          "focusable": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_xtra",
+          "cls": "TextView",
+          "bounds": "[1078,876][1258,944]",
+          "focusable": true,
+          "hasText": true
+        }
+      ]
+    },
+    {
+      "step": 13,
+      "name": "player-pause",
+      "focused": "btn_play_pause",
+      "nodes": [
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "action_bar_root",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "android:id/content",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_fragment_container",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "iv_background",
+          "cls": "ImageView",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_dim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_scrim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "btn_back",
+          "cls": "ImageButton",
+          "bounds": "[28,30][66,68]",
+          "focusable": true
+        },
+        {
+          "id": "iv_album_art",
+          "cls": "ImageView",
+          "bounds": "[680,32][1240,592]"
+        },
+        {
+          "id": "tv_track_info",
+          "cls": "TextView",
+          "bounds": "[200,664][1720,712]",
+          "selected": true,
+          "hasText": true
+        },
+        {
+          "id": "container_play_pause",
+          "cls": "FrameLayout",
+          "bounds": "[918,744][1002,828]"
+        },
+        {
+          "id": "btn_play_pause",
+          "cls": "ImageButton",
+          "bounds": "[918,744][1002,828]",
+          "focusable": true,
+          "focused": true
+        },
+        {
+          "id": "layout_streams",
+          "cls": "LinearLayout",
+          "bounds": "[646,860][1274,960]"
+        },
+        {
+          "id": "btn_stream_myata",
+          "cls": "TextView",
+          "bounds": "[662,876][842,944]",
+          "focusable": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_gold",
+          "cls": "TextView",
+          "bounds": "[870,876][1050,944]",
+          "focusable": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_xtra",
+          "cls": "TextView",
+          "bounds": "[1078,876][1258,944]",
+          "focusable": true,
+          "hasText": true
+        }
+      ]
+    },
+    {
+      "step": 14,
+      "name": "player-resume",
+      "focused": "btn_stream_xtra",
+      "nodes": [
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "action_bar_root",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "android:id/content",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_fragment_container",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "iv_background",
+          "cls": "ImageView",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_dim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "view_scrim",
+          "cls": "View",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "btn_back",
+          "cls": "ImageButton",
+          "bounds": "[28,30][66,68]",
+          "focusable": true
+        },
+        {
+          "id": "iv_album_art",
+          "cls": "ImageView",
+          "bounds": "[680,32][1240,592]"
+        },
+        {
+          "id": "tv_track_info",
+          "cls": "TextView",
+          "bounds": "[200,664][1720,712]",
+          "selected": true,
+          "hasText": true
+        },
+        {
+          "id": "container_play_pause",
+          "cls": "FrameLayout",
+          "bounds": "[918,744][1002,828]"
+        },
+        {
+          "id": "btn_play_pause",
+          "cls": "ImageButton",
+          "bounds": "[918,744][1002,828]",
+          "focusable": true
+        },
+        {
+          "id": "layout_streams",
+          "cls": "LinearLayout",
+          "bounds": "[646,860][1274,960]"
+        },
+        {
+          "id": "btn_stream_myata",
+          "cls": "TextView",
+          "bounds": "[662,876][842,944]",
+          "focusable": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_gold",
+          "cls": "TextView",
+          "bounds": "[870,876][1050,944]",
+          "focusable": true,
+          "hasText": true
+        },
+        {
+          "id": "btn_stream_xtra",
+          "cls": "TextView",
+          "bounds": "[1069,873][1267,947]",
+          "focusable": true,
+          "focused": true,
+          "hasText": true
+        }
+      ]
+    },
+    {
+      "step": 15,
+      "name": "back-to-selection",
+      "focused": "card_myata",
+      "nodes": [
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "action_bar_root",
+          "cls": "LinearLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "android:id/content",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_fragment_container",
+          "cls": "FrameLayout",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "",
+          "cls": "ViewGroup",
+          "bounds": "[0,0][1920,1080]"
+        },
+        {
+          "id": "tv_title",
+          "cls": "TextView",
+          "bounds": "[713,320][1207,404]",
+          "hasText": true
+        },
+        {
+          "id": "flow_streams",
+          "cls": "View",
+          "bounds": "[0,524][1920,760]"
+        },
+        {
+          "id": "card_myata",
+          "cls": "FrameLayout",
+          "bounds": "[137,512][687,772]",
+          "focusable": true,
+          "focused": true
+        },
+        {
+          "id": "btn_myata",
+          "cls": "ImageView",
+          "bounds": "[137,512][687,772]"
+        },
+        {
+          "id": "card_gold",
+          "cls": "FrameLayout",
+          "bounds": "[710,524][1210,760]",
+          "focusable": true
+        },
+        {
+          "id": "btn_gold",
+          "cls": "ImageView",
+          "bounds": "[710,524][1210,760]"
+        },
+        {
+          "id": "card_xtra",
+          "cls": "FrameLayout",
+          "bounds": "[1258,524][1758,760]",
+          "focusable": true
+        },
+        {
+          "id": "btn_xtra",
+          "cls": "ImageView",
+          "bounds": "[1258,524][1758,760]"
+        }
+      ]
+    }
+  ]
+}

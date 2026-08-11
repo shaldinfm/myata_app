@@ -775,7 +775,9 @@ class TypographyProbeTest {
         } finally {
             try {
                 scenario.close()
-            } catch (e: RuntimeException) {
+            } catch (e: Throwable) {
+                // Throwable, not RuntimeException: the timeout arrives as an
+                // AssertionError, which is an Error and would otherwise escape.
                 android.util.Log.w("TYPO", "activity close timed out; results already collected", e)
             }
         }

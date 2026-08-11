@@ -1,0 +1,12 @@
+{
+  "name": "Radio Myata · Repair content CTA size (22px)",
+  "id": "radio-myata-repair-cta-size",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "reasoning": "Reads two named pages and sets the font size of content CTA labels. It never contacts a server."
+  }
+}

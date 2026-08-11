@@ -1,0 +1,112 @@
+<style>
+  body { font: 12px -apple-system, "Segoe UI", sans-serif; margin: 0; padding: 14px; color: #191c1d; }
+  h1 { font-size: 13px; margin: 0 0 6px; }
+  p { margin: 0 0 10px; color: #42474e; line-height: 1.45; }
+  .scope { background: #f8f9fa; border: 1px solid #e1e3e4; border-radius: 6px; padding: 8px 10px; margin: 0 0 10px; }
+  .scope b { color: #191c1d; }
+  button { font: inherit; padding: 7px 14px; border-radius: 6px; border: 1px solid #1c4771;
+           background: #1c4771; color: #fff; cursor: pointer; margin-right: 6px; }
+  button.danger { background: #b3261e; border-color: #b3261e; }
+  button[disabled] { opacity: .5; cursor: default; }
+  #status { margin-top: 10px; white-space: pre-wrap; font-family: ui-monospace, Consolas, monospace;
+            font-size: 11px; background: #f8f9fa; border: 1px solid #e1e3e4; border-radius: 6px;
+            padding: 8px; max-height: 420px; overflow: auto; }
+  .bad { color: #b3261e; } .good { color: #00723d; } .warn { color: #8a6d00; }
+</style>
+
+<h1>Repair content CTA size → 22px</h1>
+<div class="scope">
+  <b>Scope:</b> the two canonical pages only. Proposal pages are never opened.<br>
+  <b>Eligible:</b> labels the classifier calls <code>button/CTA</code>, currently at
+  19 or 20px, in Montserrat Medium.<br>
+  <b>Never touched:</b> 21px compact actions, 22px labels already correct, family,
+  weight, text, line height, letter spacing, colours.
+</div>
+<p>Size only ever goes up. Running twice changes nothing the second time.</p>
+
+<button id="dry">Dry run</button>
+<button id="apply" class="danger">Apply</button>
+
+<div id="status">Ready. Dry run first.</div>
+
+<script>
+  var statusEl = document.getElementById("status");
+  var dryBtn = document.getElementById("dry");
+  var applyBtn = document.getElementById("apply");
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function go(mode) {
+    statusEl.textContent = "Working…";
+    dryBtn.disabled = applyBtn.disabled = true;
+    parent.postMessage({ pluginMessage: { type: "run", mode: mode } }, "*");
+  }
+  dryBtn.onclick = function () { go("dry"); };
+  applyBtn.onclick = function () {
+    if (confirm("Set these content CTA labels to 22px on the two canonical pages?")) go("apply");
+  };
+
+  onmessage = function (event) {
+    var msg = event.data.pluginMessage;
+    if (!msg) return;
+    if (msg.type === "status") { statusEl.textContent = msg.text; return; }
+    if (msg.type === "error") {
+      dryBtn.disabled = applyBtn.disabled = false;
+      statusEl.innerHTML = '<span class="bad">' + esc(msg.text) + "</span>";
+      return;
+    }
+    if (msg.type !== "result") return;
+    dryBtn.disabled = applyBtn.disabled = false;
+
+    var L = [];
+    L.push(msg.mode === "applied"
+      ? '<span class="good">APPLIED.</span>'
+      : '<span class="warn">DRY RUN — nothing was written.</span>');
+    L.push("");
+    L.push((msg.mode === "applied" ? "Changed" : "Would change") + ": " + msg.changes.length + " node(s)");
+    L.push("");
+
+    var byPage = {};
+    msg.changes.forEach(function (c) { (byPage[c.page] = byPage[c.page] || []).push(c); });
+    Object.keys(byPage).forEach(function (page) {
+      L.push(esc(page));
+      byPage[page].forEach(function (c) {
+        L.push('  [' + esc(c.frame) + '] "' + esc(c.text) + '"   ' + c.from + "px -> " + c.to + "px");
+        var geo = "      button " + (c.buttonBefore == null ? "?" : c.buttonBefore + "dp");
+        if (c.buttonAfter != null) {
+          geo += " -> " + c.buttonAfter + "dp";
+          if (c.buttonBefore != null) {
+            var d = Math.round((c.buttonAfter - c.buttonBefore) * 10) / 10;
+            geo += "  (" + (d >= 0 ? "+" : "") + d + "dp)";
+          }
+        }
+        if (c.available != null) geo += "   available " + c.available + "dp in \"" + esc(c.holder || "?") + "\"";
+        L.push(geo);
+        if (c.wrapperReleased) L.push('      wrapper "' + esc(c.wrapper || "?") + '" released to hug');
+        if (c.overflows) L.push('      <span class="bad">still wider than its container — review</span>');
+      });
+      L.push("");
+    });
+
+    if (msg.skipped.length) {
+      L.push("Skipped (" + msg.skipped.length + "):");
+      msg.skipped.slice(0, 20).forEach(function (s) {
+        L.push('  [' + esc(s.frame) + '] "' + esc(s.text) + '"  ' + s.size + "px  " + esc(s.why) +
+               (s.role ? "   (" + esc(s.role) + ")" : ""));
+      });
+      L.push("");
+    }
+
+    if (msg.problems.length) {
+      L.push('<span class="bad">Problems (' + msg.problems.length + "):</span>");
+      msg.problems.forEach(function (p) { L.push("  " + esc(p.node) + "  ." + esc(p.property) + " -> " + esc(p.error)); });
+      L.push("");
+    } else {
+      L.push('<span class="good">No problems.</span>');
+      L.push("");
+    }
+
+    L.push(msg.mode === "applied"
+      ? "Next: run the read-only preflight again and hand back its JSON."
+      : "Review the above, then press Apply.");
+    statusEl.innerHTML = L.join("\n");
+  };
+</script>

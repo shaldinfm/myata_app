@@ -147,13 +147,19 @@ class TypographyProbeTest {
         ),
     )
 
-    /** Every font the migration can produce, for identifying what a view really got. */
+    /**
+     * Every font the app ships, for identifying what a view really got.
+     *
+     * This is the whole set now that Muller is gone - which is also why a Muller
+     * face can no longer appear here even as a wrong answer. A view that somehow
+     * resolved to something outside this list reports UNKNOWN rather than being
+     * quietly accepted.
+     */
     private val fontCandidates = listOf(
         R.font.montserrat_regular, R.font.montserrat_medium,
         R.font.montserrat_bold, R.font.montserrat_black,
         R.font.onest_light, R.font.onest_regular, R.font.onest_medium,
         R.font.onest_bold, R.font.onest_black,
-        R.font.mullerregular, R.font.mullermedium, R.font.mullerblack,
     )
 
     /* -------------------------------------------------------------- report -- */
@@ -572,6 +578,85 @@ class TypographyProbeTest {
                 "super.onCreate? $wrong",
             wrong.isEmpty(),
         )
+    }
+
+    /**
+     * Every migrated surface, as the app really inflates it.
+     *
+     * The nav-label test above proves the factory is installed; this one proves
+     * the migration landed on each surface that took a token. Nothing is applied
+     * by the test - the layouts are inflated through the activity's inflater and
+     * asked what they came out as, so a token that was mistyped, a textSize left
+     * behind next to a textAppearance, or a layout that stopped going through the
+     * factory all show up here.
+     *
+     * Note which layout is actually measured: every device in the matrix is wider
+     * than 320dp, so layout-sw320dp wins over layout/ for the two screens that
+     * have both variants. That is the one users get, and so it is the one tested.
+     */
+    @Test
+    fun everyMigratedSurfaceCarriesItsToken() {
+        // The migration contract, as a table: layout, view, and the line height
+        // its token promises.
+        val migrated = listOf(
+            Triple(R.layout.fragment_info, R.id.description, R.dimen.line_height_onest_regular_15_24),
+            Triple(R.layout.fragment_info, R.id.donate_cta, R.dimen.line_height_montserrat_medium_22_28),
+            Triple(R.layout.fragment_favorites, R.id.title, R.dimen.line_height_montserrat_medium_24_32),
+            Triple(R.layout.fragment_favorites, R.id.btn_export_txt, R.dimen.line_height_montserrat_medium_12_16),
+            Triple(R.layout.fragment_favorites, R.id.btn_export_csv, R.dimen.line_height_montserrat_medium_12_16),
+            Triple(R.layout.fragment_main, R.id.playlistString, R.dimen.line_height_montserrat_bold_28_36),
+            Triple(R.layout.fragment_myata_stream, R.id.main_author, R.dimen.line_height_montserrat_black_24_24),
+            Triple(R.layout.fragment_myata_stream, R.id.main_song, R.dimen.line_height_montserrat_regular_18_18),
+            Triple(R.layout.item_history_track, R.id.tv_time, R.dimen.line_height_onest_regular_14_20),
+            Triple(R.layout.item_history_track, R.id.tv_artist, R.dimen.line_height_onest_regular_14_20),
+            Triple(R.layout.item_history_track, R.id.tv_title, R.dimen.line_height_onest_regular_17_28),
+            Triple(R.layout.item_favorite_track, R.id.tv_artist, R.dimen.line_height_onest_regular_12_20),
+            Triple(R.layout.item_favorite_track, R.id.tv_track, R.dimen.line_height_onest_regular_16_28),
+        )
+
+        val seen = mutableListOf<String>()
+        val wrong = mutableListOf<String>()
+        withRealInflater { inflater ->
+            val res = inflater.context.resources
+            migrated.forEach { (layout, viewId, dimen) ->
+                val root = inflater.inflate(layout, null) as ViewGroup
+                val tv = root.findViewById<TextView>(viewId)
+                val want = res.getDimensionPixelSize(dimen)
+                val name = "${res.getResourceEntryName(layout)}/${res.getResourceEntryName(viewId)}"
+                seen += "$name: ${tv.javaClass.simpleName} size=${tv.textSize} " +
+                    "lineHeight=${tv.lineHeight} (want $want) pad=${tv.includeFontPadding}"
+                if (tv.lineHeight != want) wrong += "$name lineHeight=${tv.lineHeight} want=$want"
+                if (tv.includeFontPadding) wrong += "$name includeFontPadding=true"
+            }
+        }
+        android.util.Log.i("TYPO", "==== MIGRATED SURFACES (API ${Build.VERSION.SDK_INT}) ====")
+        seen.forEach { android.util.Log.i("TYPO", "  $it") }
+
+        assertTrue(
+            "migrated surfaces did not come out of inflation carrying their token on API " +
+                "${Build.VERSION.SDK_INT}: $wrong",
+            wrong.isEmpty(),
+        )
+    }
+
+    /**
+     * No Muller resource survives.
+     *
+     * The reason the migration happened is licensing, so "it looks right" is not
+     * the acceptance condition - the binaries being gone is. Resources.getIdentifier
+     * asks the real resource table of the installed app.
+     */
+    @Test
+    fun noMullerFontResourceRemains() {
+        val ctx = androidx.test.core.app.ApplicationProvider
+            .getApplicationContext<android.content.Context>()
+        val names = listOf(
+            "muller_bold", "muller_light", "muller_regular", "mullerblack", "mullerheavy",
+            "mullerlight", "mullermedium", "mullerregular", "mullerthin",
+        )
+        val survivors = names.filter { ctx.resources.getIdentifier(it, "font", ctx.packageName) != 0 }
+        android.util.Log.i("TYPO", "Muller font resources still in the table: $survivors")
+        assertTrue("Muller font resources still present: $survivors", survivors.isEmpty())
     }
 
     /**

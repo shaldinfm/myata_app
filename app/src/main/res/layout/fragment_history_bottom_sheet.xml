@@ -34,10 +34,8 @@
                 android:gravity="center"
                 android:text="ИСТОРИЯ ТРЕКОВ"
                 android:textColor="#FFFFFF"
-                android:textSize="20sp"
                 android:letterSpacing="0.05"
-                android:textStyle="bold"
-                android:fontFamily="@font/mullerblack"
+                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Bold.24_32"
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="16dp"/>
 

@@ -24,10 +24,9 @@
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="70dp"
                 android:layout_marginBottom="24dp"
-                android:fontFamily="@font/mullerblack"
+                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.24_32"
                 android:text="ВАША КОЛЛЕКЦИЯ"
-                android:textColor="#FFFFFF"
-                android:textSize="26.5sp" />
+                android:textColor="#FFFFFF" />
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
@@ -62,8 +61,7 @@
                             android:layout_weight="1"
                             android:text="Скачать TXT"
                             android:textColor="#FFFFFF"
-                            android:textSize="12sp"
-                            android:fontFamily="@font/muller_regular"
+                            android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.12_16"
                             android:gravity="center"
                             android:background="@drawable/pill_button_bg"
                             android:layout_marginEnd="8dp"/>
@@ -75,8 +73,7 @@
                             android:layout_weight="1"
                             android:text="Скачать CSV"
                             android:textColor="#FFFFFF"
-                            android:textSize="12sp"
-                            android:fontFamily="@font/muller_regular"
+                            android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.12_16"
                             android:gravity="center"
                             android:background="@drawable/pill_button_bg"
                             android:layout_marginStart="8dp"/>
@@ -121,11 +118,10 @@
                             android:layout_height="wrap_content"
                             android:text="Твой идеальный плейлист начинается с первого лайка!"
                             android:textColor="#88FFFFFF"
-                            android:textSize="16sp"
                             android:textAlignment="center"
                             android:paddingStart="40dp"
                             android:paddingEnd="40dp"
-                            android:fontFamily="@font/muller_regular"
+                            android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_28"
                             android:layout_marginTop="16dp"/>
 
                     </LinearLayout>

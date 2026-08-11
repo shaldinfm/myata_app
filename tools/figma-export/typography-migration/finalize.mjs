@@ -4,12 +4,9 @@
  *   node tools/figma-export/typography-migration/finalize.mjs <dir-with-4-exports>
  *   node tools/figma-export/typography-migration/finalize.mjs --check   # verify the pipeline only
  *
- * Expects the four post-migration exports in one directory. Names are matched
- * loosely, so whatever the snapshot plugin called them is fine as long as each
- * contains its page name:
- *
- *   …CURRENT ANDROID UI - LIGHT…      …CURRENT ANDROID UI — DARK…
- *   …3.6.6 PROPOSALS - LIGHT…         …3.6.6 PROPOSALS - DARK…
+ * Expects the four post-migration exports in one directory. Filenames do not
+ * matter: each file is matched by the page id recorded inside it, so an export
+ * taken from a "(pre-typography)" clone can never be mistaken for the original.
  *
  * For each page it runs the parity validator against the committed
  * pre-migration snapshot, then regenerates the normalized baseline in place.
@@ -28,16 +25,16 @@ const rel = (p) => path.relative(repo, p).replace(/\\/g, "/");
 // before (committed) -> baseline it normalises to. Verified: each `before` file
 // reproduces its committed baseline byte-for-byte once line endings are ignored.
 const PAGES = [
-  { page: "CURRENT ANDROID UI - LIGHT", match: /current android ui.*light/i,
+  { page: "CURRENT ANDROID UI - LIGHT", pageId: "2388:366", match: /current android ui.*light/i,
     before: "tools/figma-export/canonical/figma-canonical-light-final.json",
     baseline: "tools/figma-export/canonical/figma-canonical-light-normalized.json" },
-  { page: "CURRENT ANDROID UI — DARK", match: /current android ui.*dark/i,
+  { page: "CURRENT ANDROID UI — DARK", pageId: "2436:531", match: /current android ui.*dark/i,
     before: "tools/figma-export/canonical/figma-canonical-dark-final.json",
     baseline: "tools/figma-export/canonical/figma-canonical-dark-normalized.json" },
-  { page: "3.6.6 PROPOSALS - LIGHT", match: /proposals.*light/i,
+  { page: "3.6.6 PROPOSALS - LIGHT", pageId: "2517:1936", match: /proposals.*light/i,
     before: "tools/figma-export/screens-3.6.6/snapshots/proposals-light.json",
     baseline: "tools/figma-export/screens-3.6.6/baselines/proposals-light-normalized.json" },
-  { page: "3.6.6 PROPOSALS - DARK", match: /proposals.*dark/i,
+  { page: "3.6.6 PROPOSALS - DARK", pageId: "2517:2903", match: /proposals.*dark/i,
     before: "tools/figma-export/screens-3.6.6/snapshots/proposals-dark.json",
     baseline: "tools/figma-export/screens-3.6.6/baselines/proposals-dark-normalized.json" },
 ];
@@ -72,13 +69,49 @@ if (!dir) {
 }
 if (!fs.existsSync(dir)) { console.error(`no such directory: ${dir}`); process.exit(1); }
 
+/*
+ * Export files are matched by the page id recorded inside them, not by filename.
+ *
+ * Filenames lie. The first round of exports was taken from the "(pre-typography)"
+ * clones, and their names looked exactly right - the clones only revealed
+ * themselves inside the JSON, by page name and by a wholesale change of node
+ * ids. Matching on the original page id makes picking a clone impossible, and a
+ * stale clone left in the directory is reported and skipped rather than silently
+ * preferred.
+ */
 const files = fs.readdirSync(dir).filter((f) => f.toLowerCase().endsWith(".json"));
+const meta = [];
+for (const f of files) {
+  try {
+    const j = JSON.parse(stripCr(fs.readFileSync(path.join(dir, f), "utf8")));
+    if (j && j.source && j.source.pageId) meta.push({ file: f, pageId: j.source.pageId, pageName: j.source.pageName || "?" });
+  } catch (e) { /* not a snapshot */ }
+}
+
+const rejected = meta.filter((m) => /\(pre-typography\)/i.test(m.pageName));
+if (rejected.length) {
+  console.log("Ignoring stale exports taken from clone pages:");
+  rejected.forEach((m) => console.log(`  ${m.file}   [${m.pageName}]`));
+  console.log("");
+}
+
 const resolved = [];
 for (const p of PAGES) {
-  const hit = files.find((f) => p.match.test(f) || p.match.test(stripCr(fs.readFileSync(path.join(dir, f), "utf8")).slice(0, 400)));
-  if (!hit) { console.error(`missing export for: ${p.page}`); process.exit(1); }
-  resolved.push({ ...p, after: path.join(dir, hit) });
+  const hit = meta.find((m) => m.pageId === p.pageId && !/\(pre-typography\)/i.test(m.pageName));
+  if (!hit) {
+    console.error(`missing export for: ${p.page}  (expected a snapshot with source.pageId ${p.pageId})`);
+    const near = meta.filter((m) => p.match.test(m.pageName));
+    if (near.length) {
+      console.error("  candidates found, but none matched that page id:");
+      near.forEach((m) => console.error(`    ${m.file}   pageId ${m.pageId}   [${m.pageName}]`));
+    }
+    process.exit(1);
+  }
+  resolved.push({ ...p, after: path.join(dir, hit.file), exportedPage: hit.pageName });
 }
+console.log("Exports resolved by page id:");
+resolved.forEach((r) => console.log(`  ${r.page.padEnd(28)} ${path.basename(r.after)}   [${r.exportedPage}]`));
+console.log("");
 
 /* --- 1. parity ----------------------------------------------------------- */
 console.log("=".repeat(72));

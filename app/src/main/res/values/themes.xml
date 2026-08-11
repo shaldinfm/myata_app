@@ -190,13 +190,30 @@
         <item name="android:layout_marginTop">4dp</item>
     </style>
 
+    <!--
+      The nav label is the first surface on the 3.6.6 typography, and the one the
+      mechanism is proven on: family, weight, size and line height now all come
+      from a single token instead of being spelled out here.
+
+      Medium 12 on a 16sp line is unchanged - it is what this style already said,
+      and what the frozen contract says. Only the family moves, from Muller Medium
+      to Onest Medium, which the replacement audit measured as the closest of the
+      candidates on exactly this string: `Коллекция` gains margin at 320dp rather
+      than losing it.
+
+      android:textAppearance, not the attributes directly, because that is what
+      MyataTypography.Factory looks for. It resolves through this style just as it
+      would from a view, and the factory then adds the two halves a text
+      appearance cannot carry - the line height, which the framework only reads
+      from an appearance at API 28, and includeFontPadding, which is not an
+      appearance attribute at all. lineSpacingExtra is gone with it: the token's
+      line height replaces it outright, and leaving both would compound them.
+    -->
     <style name="BottomNavLabel">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">2dp</item>
-        <item name="android:fontFamily">@font/mullermedium</item>
-        <item name="android:textSize">12sp</item>
-        <item name="android:lineSpacingExtra">0dp</item>
+        <item name="android:textAppearance">@style/TextAppearance.Myata.Onest.Medium.12_16</item>
         <item name="android:singleLine">true</item>
         <item name="android:textColor">@color/text_secondary</item>
     </style>

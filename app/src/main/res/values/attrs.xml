@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The line height of a typography token, in a namespace that exists on every
+      API level this app runs on.
+
+      android:lineHeight is API 28. That is not only a problem for whether the
+      framework *honours* it - it is a problem for reading it back at all: the
+      attribute's resource id is defined by the framework, so on API 24 a lookup
+      of android:lineHeight in a style finds nothing, and a compat layer trying to
+      recover the value gets -1 rather than the number written in the token. This
+      attribute is the app's own resource, so it resolves identically on 24 and on
+      36, and it is what MyataTypography reads.
+
+      The tokens declare both. They are generated from one value so they cannot
+      disagree, and android:lineHeight earns its place by still being there for
+      anything that applies a token without going through MyataTypography on a
+      device new enough to act on it.
+    -->
+    <attr name="myataLineHeight" format="dimension" />
+</resources>

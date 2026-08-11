@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.LayoutInflaterCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -18,6 +19,7 @@ import com.example.musicplayerapp.data.Streams
 import com.example.musicplayerapp.databinding.ActivityMainBinding
 import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.service.PlaybackLog
+import com.example.musicplayerapp.ui.MyataTypography
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 
@@ -66,6 +68,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Before super.onCreate, and it has to be: AppCompat installs its own
+        // inflater factory during onCreate and skips it if one is already set, so
+        // this is the only point at which ours can wrap it rather than lose to it.
+        // Everything mobile inflates through this inflater or a clone of it -
+        // fragments, adapters, the history bottom sheet - so this one line is what
+        // makes android:textAppearance carry a whole token. TvMainActivity is
+        // deliberately not given it; TV is not on the 3.6.6 typography.
+        LayoutInflaterCompat.setFactory2(layoutInflater, MyataTypography.Factory(delegate))
+
         super.onCreate(savedInstanceState)
 
         val theme = (0..9).random()

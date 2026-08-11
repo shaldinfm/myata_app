@@ -322,12 +322,23 @@ function containerFit(parent) {
   } catch (e) { return null; }
 }
 
+/*
+ * The nearest ancestor that genuinely constrains width.
+ *
+ * A button is often wrapped in its own single-child frame - "Button:align-flex-
+ * start" - which is an auto-layout frame sized to the OLD label. Treating that
+ * as the constraint is circular: it says the button has no room to grow because
+ * it is exactly as wide as the button used to be, and the label gets shrunk to
+ * fit a box that only exists to hold the label. Wrappers named after the button
+ * are skipped so the real container - the card, the column - is found instead.
+ */
 function constrainingAncestor(node, maxUp) {
   var cur = node, up = 0;
   try {
-    while (cur && up < (maxUp || 5)) {
+    while (cur && up < (maxUp || 6)) {
       cur = cur.parent; up++;
       if (!cur || !cur.width) continue;
+      if (/^button/i.test(cur.name || "")) continue;
       if (cur.layoutMode === "VERTICAL" || cur.layoutMode === "HORIZONTAL") return cur;
     }
   } catch (e) {}

@@ -21,25 +21,98 @@ if (!beforePath || !afterPath) {
 }
 
 // Typography and the approved geometry corrections may move. Nothing else may.
-const EXPECTED_TEXT = new Set(["fontFamily", "fontStyle", "fontSize", "lineHeight", "letterSpacing"]);
+// fontWeight is the numeric mirror of fontStyle - the exporter records both, so
+// allowing one without the other reports every approved weight change as a
+// violation.
+const EXPECTED_TEXT = new Set(["fontFamily", "fontStyle", "fontWeight", "fontSize", "lineHeight", "letterSpacing"]);
 const EXPECTED_GEOM = new Set(["width", "height", "x", "y", "layoutSizingHorizontal"]);
 
-function index(doc) {
+/*
+ * Two indexes: by node id, and by structural path.
+ *
+ * Ids are the right key when a page was edited in place. They are useless when
+ * the exported page is a CLONE of the migrated one - Figma mints fresh ids for a
+ * copy, so every node reads as both missing and added and the comparison says
+ * nothing. In that case the path index is the honest fallback: same tree, same
+ * names, same order. Duplicate paths are disambiguated by occurrence, so
+ * repeated rows still line up one to one.
+ */
+function index(doc, key) {
   const map = new Map();
+  const seen = new Map();
   const walk = (n, frame, path) => {
     const here = path.concat(n.name || "?");
-    map.set(n.id, { node: n, frame, path: here.join(" > ") });
+    const p = here.join(" > ");
+    let k;
+    if (key === "id") k = n.id;
+    else {
+      const c = (seen.get(p) || 0) + 1;
+      seen.set(p, c);
+      k = p + "#" + c;
+    }
+    map.set(k, { node: n, frame, path: p });
     (n.children || []).forEach((c) => walk(c, frame, here));
   };
   for (const fr of doc.frames || []) walk(fr, fr.name, []);
   return map;
 }
 
+/*
+ * Owner-approved exceptions. A migration-time correction the owner made by hand
+ * is legitimate, but it must be named here rather than waved through, so the
+ * validator keeps catching everything nobody approved.
+ */
+const APPROVED = [
+  {
+    frame: "sleep-timer-menu-active",
+    text: "Сообщить о проблеме",
+    props: ["width", "height", "x", "y", "layoutSizingHorizontal", "layoutGrow", "layoutAlign", "layout"],
+    reason: "owner-approved: layout corrected so the label stays on one line after the migration",
+  },
+];
+function isApproved(entry, prop) {
+  const chars = entry.node.text && entry.node.text.characters;
+  return APPROVED.some((a) =>
+    entry.frame === a.frame && chars === a.text && a.props.indexOf(prop) >= 0);
+}
+
+/*
+ * The approved heading-growth correction, recognised by its exact shape rather
+ * than by allowing the properties wholesale.
+ *
+ * Growing a heading means releasing its box to hug so the text stays on one
+ * line: the text node goes HEIGHT -> WIDTH_AND_HEIGHT and its frame goes
+ * counterAxisSizingMode FIXED -> AUTO. Any other change to either property, and
+ * any other difference inside `layout`, is still a violation.
+ */
+function isApprovedGrowth(prop, va, vb) {
+  if (prop === "text.textAutoResize") return va === '"HEIGHT"' && vb === '"WIDTH_AND_HEIGHT"';
+  if (prop !== "layout") return false;
+  try {
+    const a = JSON.parse(va), b = JSON.parse(vb);
+    if (!a || !b) return false;
+    if (a.counterAxisSizingMode !== "FIXED" || b.counterAxisSizingMode !== "AUTO") return false;
+    return JSON.stringify({ ...a, counterAxisSizingMode: 0 }) === JSON.stringify({ ...b, counterAxisSizingMode: 0 });
+  } catch (e) { return false; }
+}
+
 const before = JSON.parse(fs.readFileSync(beforePath, "utf8"));
 const after = JSON.parse(fs.readFileSync(afterPath, "utf8"));
-const A = index(before), B = index(after);
+let A = index(before, "id"), B = index(after, "id");
+let matchedBy = "id";
+let overlap = 0;
+for (const id of A.keys()) if (B.has(id)) overlap++;
+if (A.size && overlap / A.size < 0.5) {
+  matchedBy = "path";
+  A = index(before, "path");
+  B = index(after, "path");
+  console.log(`NOTE: only ${overlap}/${A.size} node ids match, so the exported page is a copy of the`);
+  console.log(`      migrated one rather than the migrated page itself. Falling back to structural`);
+  console.log(`      path matching - equally strict on content, but it cannot prove node identity.
+`);
+}
 
-const missing = [], added = [], unexpected = [], typography = [], geometry = [], contentEdits = [], colourEdits = [];
+const missing = [], added = [], unexpected = [], typography = [], geometry = [], contentEdits = [], colourEdits = [], growth = [];
 
 for (const [id, a] of A) {
   const b = B.get(id);
@@ -70,7 +143,10 @@ for (const [id, a] of A) {
     for (const key of Object.keys(na.text)) {
       if (EXPECTED_TEXT.has(key) || key === "characters") continue;
       const va = JSON.stringify(na.text[key] ?? null), vb = JSON.stringify(nb.text[key] ?? null);
-      if (va !== vb) unexpected.push({ id, path: a.path, prop: "text." + key, from: va.slice(0, 50), to: vb.slice(0, 50) });
+      if (va === vb) continue;
+      if (isApprovedGrowth("text." + key, va, vb)) { growth.push({ path: a.path, frame: a.frame, prop: key }); continue; }
+      if (!isApproved(a, "text." + key))
+        unexpected.push({ id, path: a.path, prop: "text." + key, from: va.slice(0, 50), to: vb.slice(0, 50) });
     }
   }
 
@@ -87,12 +163,16 @@ for (const [id, a] of A) {
   for (const key of Object.keys(na)) {
     if (skip.has(key)) continue;
     const va = JSON.stringify(na[key] ?? null), vb = JSON.stringify(nb[key] ?? null);
-    if (va !== vb) unexpected.push({ id, path: a.path, prop: key, from: va.slice(0, 50), to: vb.slice(0, 50) });
+    if (va === vb) continue;
+    if (isApprovedGrowth(key, va, vb)) { growth.push({ path: a.path, frame: a.frame, prop: key }); continue; }
+    if (!isApproved(a, key))
+      unexpected.push({ id, path: a.path, prop: key, from: va.slice(0, 50), to: vb.slice(0, 50) });
   }
 }
 for (const [id, b] of B) if (!A.has(id)) added.push(b);
 
 const line = (s) => console.log(s);
+line(`matched by : ${matchedBy}`);
 line(`before : ${beforePath}  (${A.size} nodes)`);
 line(`after  : ${afterPath}  (${B.size} nodes)\n`);
 
@@ -112,6 +192,9 @@ const byProp = {};
 for (const t of typography) byProp[t.prop] = (byProp[t.prop] || 0) + 1;
 Object.entries(byProp).forEach(([k, v]) => line(`   ${k.padEnd(14)} ${v}`));
 
+line(`approved growth corrections   : ${growth.length}`);
+[...new Set(growth.map((g) => g.frame))].forEach((f) =>
+  line(`   ${f.padEnd(24)} ${growth.filter((g) => g.frame === f).length}`));
 line(`geometry changes              : ${geometry.length}`);
 const byFrame = {};
 for (const g of geometry) byFrame[g.frame] = (byFrame[g.frame] || 0) + 1;

@@ -514,6 +514,10 @@ function constrainingAncestor(node, maxUp) {
       cur = cur.parent;
       up++;
       if (!cur || !cur.width) continue;
+      // Skip the button's own wrapper: it is sized to the OLD label, so using it
+      // as the constraint is circular and shrinks type to fit a box that exists
+      // only to hold that type.
+      if (/^button/i.test(cur.name || "")) continue;
       if (cur.layoutMode === "VERTICAL" || cur.layoutMode === "HORIZONTAL") return cur;
     }
   } catch (e) {}

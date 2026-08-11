@@ -1,0 +1,145 @@
+<style>
+  body { font: 12px -apple-system, "Segoe UI", sans-serif; margin: 0; padding: 14px; color: #191c1d; }
+  h1 { font-size: 13px; margin: 0 0 6px; }
+  p { margin: 0 0 10px; color: #42474e; line-height: 1.45; }
+  .ro { background: #e8f5e9; border: 1px solid #00723d; border-radius: 6px; padding: 8px 10px; margin: 0 0 10px; color: #00723d; }
+  button { font: inherit; padding: 7px 14px; border-radius: 6px; border: 1px solid #1c4771;
+           background: #1c4771; color: #fff; cursor: pointer; margin-right: 6px; }
+  button.secondary { background: #fff; color: #1c4771; }
+  button[disabled] { opacity: .5; cursor: default; }
+  #status { margin-top: 10px; white-space: pre-wrap; font-family: ui-monospace, Consolas, monospace;
+            font-size: 11px; background: #f8f9fa; border: 1px solid #e1e3e4; border-radius: 6px;
+            padding: 8px; max-height: 460px; overflow: auto; }
+  .bad { color: #b3261e; }
+  .good { color: #00723d; }
+  .warn { color: #8a6d00; }
+</style>
+
+<h1>Typography preflight — read-only</h1>
+<div class="ro"><b>This plugin writes nothing.</b> No pages are created, cloned or modified.</div>
+<p>
+  Audits the four <b>original unsuffixed</b> pages: identity, current typography,
+  component integrity, contract violations, and the manual one-line correction.
+  Any <code>(pre-typography)</code> clones are ignored and only listed.
+</p>
+
+<button id="run">Run preflight</button>
+<button id="save" class="secondary" disabled>Download report JSON</button>
+
+<div id="status">Ready.</div>
+
+<script>
+  var out = null;
+  var statusEl = document.getElementById("status");
+  var runBtn = document.getElementById("run");
+  var saveBtn = document.getElementById("save");
+
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  runBtn.onclick = function () {
+    statusEl.textContent = "Working…";
+    runBtn.disabled = true; saveBtn.disabled = true;
+    parent.postMessage({ pluginMessage: { type: "run" } }, "*");
+  };
+  saveBtn.onclick = function () {
+    if (!out) return;
+    var blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "typography-preflight.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  onmessage = function (event) {
+    var msg = event.data.pluginMessage;
+    if (!msg) return;
+    if (msg.type === "status") { statusEl.textContent = msg.text; return; }
+    if (msg.type === "error") {
+      runBtn.disabled = false;
+      statusEl.innerHTML = '<span class="bad">' + esc(msg.text) + "</span>";
+      return;
+    }
+    if (msg.type !== "result") return;
+    runBtn.disabled = false; saveBtn.disabled = false;
+    out = msg.report;
+
+    var L = [];
+    var anyMissing = false, anyMuller = false, anyDamage = false, totalViolations = 0;
+
+    msg.report.pages.forEach(function (p) {
+      L.push("=".repeat(64));
+      if (!p.found) {
+        anyMissing = true;
+        L.push('<span class="bad">NOT FOUND: ' + esc(p.expected.name) + "  (id " + esc(p.expected.id) + ")</span>");
+        L.push("");
+        return;
+      }
+      L.push(esc(p.actualName));
+      L.push("  id " + esc(p.actualId) + (p.actualId === p.expected.id
+        ? '  <span class="good">(original id intact)</span>'
+        : '  <span class="bad">(EXPECTED ' + esc(p.expected.id) + ")</span>"));
+      if (p.actualId !== p.expected.id) anyDamage = true;
+      L.push("  matched by " + esc(p.matchedBy) + "   frames " + p.frames + "   text nodes " + p.textNodes);
+
+      var f = p.families;
+      var stateCls = p.state === "migrated" ? "good" : p.state.indexOf("MIXED") === 0 ? "bad" : "warn";
+      L.push("  fonts: Muller " + f.Muller + "  Montserrat " + f.Montserrat + "  Onest " + f.Onest +
+             (f.other ? "  other " + f.other : ""));
+      L.push('  state: <span class="' + stateCls + '">' + esc(p.state) + "</span>");
+      if (f.Muller > 0) anyMuller = true;
+
+      var c = p.components;
+      L.push("  components: COMPONENT " + c.COMPONENT + "   INSTANCE " + c.INSTANCE);
+      if (c.uiKitComponents || c.uiKitInstances) {
+        var kitCls = c.uiKitComponents >= 40 ? "good" : "bad";
+        L.push('  UI KIT: <span class="' + kitCls + '">' + c.uiKitComponents + " masters</span>, " +
+               c.uiKitInstances + " instances" + (c.uiKitComponents < 40 ? "   << expected 40 masters" : ""));
+        if (c.uiKitComponents < 40) anyDamage = true;
+      }
+
+      if (p.manualFix) {
+        L.push('  manual fix: "' + esc(p.manualFix.text) + '"  ' + esc(p.manualFix.family) + " " +
+               esc(p.manualFix.style) + " " + p.manualFix.size + "px  " +
+               (p.manualFix.oneLine ? '<span class="good">ONE LINE</span>'
+                                    : '<span class="bad">' + p.manualFix.lines + " LINES</span>"));
+      }
+
+      totalViolations += p.violations.length;
+      if (!p.violations.length) {
+        L.push('  contract: <span class="good">PASS</span>');
+      } else {
+        L.push('  contract: <span class="bad">' + p.violations.length + " violation(s)</span>");
+        p.violations.slice(0, 25).forEach(function (v) {
+          L.push('     [' + esc(v.frame) + '] "' + esc(v.text.slice(0, 30)) + '"  ' +
+                 esc(v.prop) + ": got " + esc(v.got) + ", want " + esc(v.want) +
+                 (v.role ? "   (" + esc(v.role) + ")" : ""));
+        });
+        if (p.violations.length > 25) L.push("     … " + (p.violations.length - 25) + " more");
+      }
+      L.push("");
+    });
+
+    if (msg.report.strays.length) {
+      L.push("=".repeat(64));
+      L.push("Leftover pages (ignored by this audit):");
+      msg.report.strays.forEach(function (s) { L.push("  " + esc(s.name) + "   id " + esc(s.id)); });
+      L.push("");
+    }
+
+    L.push("=".repeat(64));
+    if (anyMissing || anyDamage) {
+      L.push('<span class="bad">CASE C - structural damage or a missing page. Stop and report before writing.</span>');
+    } else if (anyMuller) {
+      L.push('<span class="warn">CASE B - Muller is still present. Report before re-running.</span>');
+    } else if (totalViolations) {
+      L.push('<span class="warn">CASE A - migrated and structurally intact, with ' + totalViolations +
+             " contract violation(s). A targeted repair is appropriate.</span>");
+    } else {
+      L.push('<span class="good">Migrated, structurally intact, contract clean. Nothing to repair.</span>');
+    }
+    L.push("");
+    L.push("Download the JSON and hand it back to continue.");
+    statusEl.innerHTML = L.join("\n");
+  };
+</script>

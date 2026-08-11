@@ -1,5 +1,10 @@
 # Muller replacement — candidate comparison
 
+> **Status:** superseded as a decision record — the Montserrat + Onest system is
+> FINAL and the Figma migration is complete. See
+> [TYPOGRAPHY-3.6.6.md](TYPOGRAPHY-3.6.6.md). The Android inventory and the
+> measurements below remain current and unstarted.
+
 Local comparison only. **No font binary is committed**, nothing was added to
 `app/src/main/res/font`, no production code changed and Figma is untouched.
 

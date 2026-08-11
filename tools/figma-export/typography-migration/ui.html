@@ -1,0 +1,136 @@
+<style>
+  body { font: 12px -apple-system, "Segoe UI", sans-serif; margin: 0; padding: 14px; color: #191c1d; }
+  h1 { font-size: 13px; margin: 0 0 6px; }
+  p { margin: 0 0 10px; color: #42474e; line-height: 1.45; }
+  .warn-box { background: #fff8e1; border: 1px solid #e6c200; border-radius: 6px; padding: 8px 10px; margin: 0 0 10px; }
+  label { display: block; margin: 0 0 8px; color: #42474e; }
+  button { font: inherit; padding: 7px 14px; border-radius: 6px; border: 1px solid #1c4771;
+           background: #fff; color: #1c4771; cursor: pointer; margin-right: 6px; }
+  button.primary { background: #1c4771; color: #fff; }
+  button.danger { background: #b3261e; border-color: #b3261e; color: #fff; }
+  button[disabled] { opacity: .5; cursor: default; }
+  #status { margin-top: 10px; white-space: pre-wrap; font-family: ui-monospace, Consolas, monospace;
+            font-size: 11px; background: #f8f9fa; border: 1px solid #e1e3e4; border-radius: 6px;
+            padding: 8px; max-height: 400px; overflow: auto; }
+  .bad { color: #b3261e; }
+  .good { color: #00723d; }
+  .warn { color: #8a6d00; }
+</style>
+
+<h1>Typography migration — 3.6.6</h1>
+<p>
+  Applies the approved Montserrat + Onest role typography and the approved heading
+  and button geometry corrections to four pages:
+  <b>CURRENT ANDROID UI</b> light and dark, and <b>3.6.6 PROPOSALS</b> light and dark.
+</p>
+
+<div class="warn-box">
+  <b>Apply writes to the live design.</b> Colours, icons, content and unrelated
+  layout are untouched, but type changes in place. Start with a dry run.
+</div>
+
+<label><input type="checkbox" id="backup" checked> Duplicate each page as “(pre-typography)” before applying</label>
+
+<button id="dry" class="primary">Dry run</button>
+<button id="apply" class="danger">Apply</button>
+
+<div id="status">Ready. Dry run first.</div>
+
+<script>
+  var statusEl = document.getElementById("status");
+  var dryBtn = document.getElementById("dry");
+  var applyBtn = document.getElementById("apply");
+
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function go(mode) {
+    statusEl.textContent = "Working…";
+    dryBtn.disabled = applyBtn.disabled = true;
+    parent.postMessage({ pluginMessage: {
+      type: "run", mode: mode, backup: document.getElementById("backup").checked
+    } }, "*");
+  }
+  dryBtn.onclick = function () { go("dry"); };
+  applyBtn.onclick = function () {
+    if (confirm("Apply typography to the four live pages?\n\nThis writes to the real design. A backup page is created for each if the box is ticked.")) go("apply");
+  };
+
+  onmessage = function (event) {
+    var msg = event.data.pluginMessage;
+    if (!msg) return;
+    if (msg.type === "status") { statusEl.textContent = msg.text; return; }
+    if (msg.type === "error") {
+      dryBtn.disabled = applyBtn.disabled = false;
+      statusEl.innerHTML = '<span class="bad">' + esc(msg.text) + "</span>";
+      return;
+    }
+    if (msg.type !== "result") return;
+    dryBtn.disabled = applyBtn.disabled = false;
+
+    var L = [];
+    L.push(msg.mode === "applied"
+      ? '<span class="good">APPLIED to the live design.</span>'
+      : '<span class="warn">DRY RUN — nothing was written.</span>');
+    L.push("");
+
+    L.push("Pages:");
+    (msg.pages || []).forEach(function (p) {
+      var fam = Object.keys(p.byFamily).map(function (k) { return k + " " + p.byFamily[k]; }).join(" / ");
+      L.push("  " + esc(p.page) + "   [matched by " + p.matchedBy + "]");
+      L.push("      " + p.frames + " frames, " + p.nodes + " text nodes, " + p.changed + " changed   (" + fam + ")");
+    });
+    L.push("");
+
+    var f = msg.families || {};
+    L.push("Families overall : Montserrat " + (f.Montserrat || 0) + " / Onest " + (f.Onest || 0));
+    L.push("");
+
+    if ((msg.weights || []).length) {
+      L.push("Weight changes (" + msg.weights.length + "):");
+      msg.weights.slice(0, 40).forEach(function (w) {
+        L.push("  [" + esc(w.frame) + '] "' + esc(w.text) + '"  ' + esc(w.from) + " -> " + esc(w.to) + "   " + esc(w.role));
+      });
+      if (msg.weights.length > 40) L.push("  … " + (msg.weights.length - 40) + " more");
+      L.push("");
+    }
+
+    if ((msg.sizes || []).length) {
+      L.push("Size changes (" + msg.sizes.length + "):");
+      msg.sizes.forEach(function (z) {
+        L.push("  [" + esc(z.frame) + '] "' + esc(z.text) + '"  ' + z.from + "px -> " + z.to + "px   " + esc(z.role));
+      });
+      L.push("");
+    }
+
+    if ((msg.fits || []).length) {
+      L.push("Geometry corrections (" + msg.fits.length + "):");
+      msg.fits.forEach(function (x) {
+        var head = (x.solution === "grew" ? "GREW " : "SHRANK") + "  [" + esc(x.frame) + '] "' + esc(x.text) + '"';
+        L.push("  " + (x.solution === "grew" ? '<span class="good">' + head + "</span>" : '<span class="warn">' + head + "</span>"));
+        L.push("      " + x.kind + "  size " + x.size + " -> " + x.finalSize + "px" +
+               (x.frozenWidth != null ? "   width " + x.frozenWidth + " -> " + x.nowWidth + "dp" : "") +
+               (x.letterSpacing ? "   ls " + x.letterSpacing : ""));
+        if (!x.fits) L.push('      <span class="bad">still does not fit — review</span>');
+      });
+      L.push("");
+    }
+
+    if ((msg.problems || []).length) {
+      L.push('<span class="bad">Exceptions (' + msg.problems.length + "):</span>");
+      msg.problems.forEach(function (p) {
+        L.push("  " + esc(p.node));
+        L.push("    ." + esc(p.property) + " -> " + esc(p.error));
+      });
+      L.push("");
+    } else {
+      L.push('<span class="good">No exceptions.</span>');
+      L.push("");
+    }
+
+    L.push(msg.mode === "applied"
+      ? "Next: re-export the four pages with the canonical snapshot plugin and hand the JSON back for parity validation."
+      : "Review the above, then press Apply.");
+    statusEl.innerHTML = L.join("\n");
+  };
+</script>

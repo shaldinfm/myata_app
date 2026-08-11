@@ -1,0 +1,162 @@
+<style>
+  body { font: 12px -apple-system, "Segoe UI", sans-serif; margin: 0; padding: 14px; color: #191c1d; }
+  h1 { font-size: 13px; margin: 0 0 6px; }
+  p { margin: 0 0 10px; color: #42474e; line-height: 1.45; }
+  label { display: block; margin: 0 0 10px; color: #42474e; }
+  button { font: inherit; padding: 7px 14px; border-radius: 6px; border: 1px solid #1c4771;
+           background: #1c4771; color: #fff; cursor: pointer; }
+  button[disabled] { opacity: .5; cursor: default; }
+  #status { margin-top: 10px; white-space: pre-wrap; font-family: ui-monospace, Consolas, monospace;
+            font-size: 11px; background: #f8f9fa; border: 1px solid #e1e3e4; border-radius: 6px;
+            padding: 8px; max-height: 430px; overflow: auto; }
+  .bad { color: #b3261e; }
+  .good { color: #00723d; }
+  .warn { color: #8a6d00; }
+</style>
+
+<h1>Font trial — Muller | Montserrat | Onest | HYBRID</h1>
+<p>
+  Clones seven representative frames onto a <b>new page</b> in four columns &mdash; Muller, Montserrat, Onest and a role-based HYBRID &mdash; and restyles the copies.
+  The frozen pages are never modified. Font size, letter spacing and every explicit
+  line height are preserved; an AUTO line height is pinned to Muller's value first
+  so the new font cannot redefine the design.
+</p>
+
+<label><input type="checkbox" id="stress" checked> Inject the two long Russian titles into History rows</label>
+
+<button id="run">Build trial page</button>
+
+<div id="status">Ready.</div>
+
+<script>
+  var statusEl = document.getElementById("status");
+  var runBtn = document.getElementById("run");
+
+  runBtn.onclick = function () {
+    statusEl.textContent = "Working…";
+    runBtn.disabled = true;
+    parent.postMessage({ pluginMessage: { type: "run", stress: document.getElementById("stress").checked } }, "*");
+  };
+
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  onmessage = function (event) {
+    var msg = event.data.pluginMessage;
+    if (!msg) return;
+
+    if (msg.type === "status") {
+      statusEl.textContent = msg.text;
+      return;
+    }
+    if (msg.type === "error") {
+      runBtn.disabled = false;
+      statusEl.innerHTML = '<span class="bad">' + esc(msg.text) + "</span>";
+      return;
+    }
+    if (msg.type !== "result") return;
+
+    runBtn.disabled = false;
+    var L = [];
+    L.push('<span class="good">Built page "' + esc(msg.page) + '"</span>');
+    L.push("");
+
+    (msg.fontReport || []).forEach(function (r) {
+      L.push(r.missing.length
+        ? '<span class="warn">' + esc(r.family) + ": missing " + esc(r.missing.join(", ")) + "</span>"
+        : esc(r.family) + ": all five weights available");
+    });
+    L.push("");
+
+    L.push("Frame heights (dp) — baseline vs candidates:");
+    (msg.rows || []).forEach(function (row) {
+      L.push("  " + esc(row.frame) + "   [" + esc(row.page) + "]");
+      row.columns.forEach(function (c) {
+        var d = c.dh === 0 ? "same" : (c.dh > 0 ? "+" : "") + c.dh + "dp";
+        var cls = c.dh > 0 ? "warn" : "";
+        L.push("    " + esc(c.column.padEnd ? c.column.padEnd(20) : c.column) +
+               " h=" + c.h + "  " + (cls ? '<span class="' + cls + '">' + d + "</span>" : d));
+      });
+    });
+    L.push("");
+
+    if ((msg.roles || []).length) {
+      L.push("Hybrid role assignment:");
+      msg.roles.sort(function (a, b) { return b.count - a.count; }).forEach(function (r) {
+        L.push("  " + esc(r.family.padEnd ? r.family.padEnd(11) : r.family) + esc(r.role) + "  x" + r.count);
+        L.push("      " + esc(r.why));
+        r.samples.forEach(function (x) { L.push("      " + esc(x)); });
+      });
+      L.push("");
+    }
+
+    if ((msg.ambiguous || []).length) {
+      L.push('<span class="warn">Nodes where the rule is a judgement call (' + msg.ambiguous.length + "):</span>");
+      msg.ambiguous.forEach(function (a) {
+        L.push("  " + esc(a.role) + " -> " + esc(a.family) + '   [' + esc(a.frame) + '] "' + esc(a.sample) + '"');
+        L.push("      " + esc(a.note));
+      });
+      L.push("");
+    }
+
+    if ((msg.sizes || []).length) {
+      L.push("Compact action buttons set to 21px:");
+      msg.sizes.forEach(function (z) {
+        L.push("  [" + esc(z.frame) + '] "' + esc(z.text) + '"   ' + z.from + "px -> " + z.to + "px");
+      });
+      L.push("");
+    }
+
+    if ((msg.fits || []).length) {
+      L.push("HYBRID fit decisions (growth preferred, shrinking last):");
+      msg.fits.forEach(function (f) {
+        var head = (f.solution === "grew" ? "GREW " : "SHRANK") + "  [" + esc(f.frame) + '] "' + esc(f.text) + '"';
+        L.push("  " + (f.solution === "grew" ? '<span class="good">' + head + "</span>" : '<span class="warn">' + head + "</span>"));
+        if (f.kind === "button") {
+          L.push("      size " + f.size + "px -> " + f.finalSize + "px" +
+                 "   button " + f.frozenWidth + "dp -> " + f.nowWidth + "dp (" +
+                 (f.delta >= 0 ? "+" : "") + f.delta + "dp)");
+          L.push("      available " + f.available + "dp in \"" + esc(f.holder || "?") + "\"" +
+                 (f.wrapperReleased ? "   wrapper released to hug" : ""));
+        } else {
+          L.push("      size " + f.size + "px -> " + f.finalSize + "px" +
+                 (f.letterSpacing ? "   letterSpacing " + f.letterSpacing + "px" : "") +
+                 "   text " + f.frozenWidth + "dp -> " + (f.nowWidth == null ? "unchanged" : f.nowWidth + "dp"));
+          if (f.rowInner != null) L.push("      row uses " + f.rowUsed + "dp of " + f.rowInner + "dp");
+          L.push("      " + f.lines + " line" + (f.lines === 1 ? "" : "s"));
+        }
+        L.push("      " + esc(f.why));
+        if (!f.fits) L.push('      <span class="bad">still does not fit - review by eye</span>');
+      });
+      L.push("");
+    }
+
+    if ((msg.stressChanges || []).length) {
+      L.push("History rows replaced with the stress titles:");
+      msg.stressChanges.forEach(function (c) {
+        L.push("  " + esc(c.node));
+        L.push('    "' + esc(c.from) + '" -> "' + esc(c.to) + '"');
+      });
+      L.push("");
+    }
+
+    if ((msg.notes || []).length) {
+      L.push("Notes:");
+      msg.notes.forEach(function (n) { L.push("  - " + esc(n)); });
+      L.push("");
+    }
+
+    if ((msg.problems || []).length) {
+      L.push('<span class="bad">Problems (' + msg.problems.length + "):</span>");
+      msg.problems.forEach(function (p) {
+        L.push("  " + esc(p.node));
+        L.push("    ." + esc(p.property) + " -> " + esc(p.error));
+      });
+      L.push("");
+    }
+
+    L.push("Review the new page, then delete it when done — nothing else was touched.");
+    statusEl.innerHTML = L.join("\n");
+  };
+</script>

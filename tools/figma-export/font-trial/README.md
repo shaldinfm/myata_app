@@ -1,0 +1,289 @@
+# Font trial — Muller | Montserrat | Onest | HYBRID
+
+A bounded visual comparison in Figma. The fourth column is the one that matters:
+a role-based hybrid using **Montserrat for expressive type** and **Onest for
+utility type**, per the owner's design-system rule. Manrope is dropped.
+
+**Nothing frozen is modified.** Every frame is cloned onto a brand-new page and
+only the clones are restyled. Re-running creates another page rather than
+overwriting the last one, so trials never collide and nothing needs undoing
+beyond deleting the page.
+
+## Before running
+
+Both families must be enabled in the Figma file — they are on Google Fonts. The
+plugin checks first and refuses to build anything if either is missing, naming
+the exact weights it could not find.
+
+## Running it
+
+1. Open the 3.6.6 Figma file.
+2. Plugins → Development → Import plugin from manifest… → this `manifest.json`.
+3. Run **Radio Myata · Font trial**.
+4. Leave *Inject the two long Russian titles* checked.
+5. Press **Build trial page**.
+
+It creates a page named `FONT TRIAL <date time>` and switches to it. Delete that
+page when you are done.
+
+## What it builds
+
+Seven frames × four columns, laid out left to right:
+
+| column | what it is |
+|---|---|
+| `… · Muller (baseline)` | untouched clone, for reference |
+| `… · Montserrat` | single-family reference |
+| `… · Onest` | single-family reference |
+| `… · HYBRID` | the proposal: role-based Montserrat + Onest |
+
+## The role system
+
+Assignment is by **role**, never by screen — which is why a heading in Settings
+comes out Montserrat even though Settings overall reads better in Onest, and why
+the mini-player comes out Onest on HOME where the headings around it are
+Montserrat.
+
+Rules are ordered, first match wins. Container-specific rules deliberately run
+*before* the generic heading rule: the Player title and the Collection titles are
+`Heading` nodes, so a generic rule would match first and mislabel them. Same
+family either way — but the role name is what gets reviewed.
+
+| role | family | matched by |
+|---|---|---|
+| navigation | Onest | `BottomNavBar` ancestor |
+| mini-player | Onest | `Now Playing Mini Player` ancestor |
+| player track metadata | Montserrat | `Track Info` ancestor |
+| history timestamp | Onest | `History Item` ancestor + `HH:MM` text |
+| history track metadata | **Onest** | `History Item` ancestor |
+| collection track title | **Onest** | `Track Item` ancestor, size ≥ 16 |
+| collection secondary | Onest | `Track Item` ancestor, smaller |
+| card heading | Montserrat **Medium** | `Heading 3` at 24px — the two ABOUT US card headings |
+| heading | Montserrat | `Heading *` node or ancestor |
+| button / CTA | Montserrat | `Button*` node or ancestor |
+| player transport label | Onest | `PLAY`/`PAUSE`/`STOP` in the player |
+| **inline action / CTA link** | **Montserrat** | standalone `Link` node, ≤ 24 chars |
+| body link | Onest | `Link` node long enough to read as body copy |
+| settings group caption | Onest | direct child of a utility frame, ≤ 14px |
+| body / helper | Onest | everything else |
+
+| compact action button | Montserrat | button in a sheet/dialog/utility frame, 22px |
+
+Run over the 123 real frozen text nodes in these seven frames, this yields
+**24 Montserrat / 99 Onest**.
+
+The classifier is FINAL APPROVED and has been **applied to the live 3.6.6
+design** - see [docs/TYPOGRAPHY-3.6.6.md](../../../docs/TYPOGRAPHY-3.6.6.md). It is
+now the source every migration tool is generated from; change it only with a new
+owner approval.
+
+Montserrat is now reserved for the expressive core: screen and section headings,
+buttons and CTAs, the small action link, and the full Player now-playing metadata.
+Everything else — including both track lists — is Onest.
+
+### Track lists are Onest
+
+Broadcast History and Collection rows are set entirely in Onest: title, artist and
+timestamp. Only the family changes; size, weight and line height are untouched, so
+the hierarchy between a 17px title and a 14px artist is exactly as frozen.
+
+Two things follow. The History row no longer mixes families, so the timestamp
+seam disappears. And the one layout regression Montserrat carried disappears with
+it — the 42-character stress artist goes to three lines in Montserrat but stays at
+two in Onest, matching Muller:
+
+| string | Muller | Montserrat | Onest |
+|---|---|---|---|
+| `КРАСНОЗНАМЁННАЯ ДИВИЗИЯ…` (14px, 233dp) | 2 lines | **3 lines** | 2 lines |
+| `Прогулка по воде…` (14px, 233dp) | 2 | 2 | 2 |
+| Collection artist (12px, 188dp) | 1 | 1 | 1 |
+| Collection title (16px, 188dp) | 1 | 1 | 1 |
+
+The screen heading `Моя коллекция` is unaffected: it is a `Heading 1`, not a
+`Track Item` child, so it stays Montserrat. That separation only holds because
+the track-title rule runs ahead of the generic heading rule and is scoped to
+`Track Item` — both are load-bearing now.
+
+### The four judgement calls, owner-resolved
+
+| node | resolution |
+|---|---|
+| History timestamps | **Onest** — supporting label; the row is deliberately mixed |
+| `PLAY` / `PAUSE` / `STOP` | **Onest** — a transport control is UI, not content |
+| Settings group captions | **Onest** — list grouping caption, not an expressive heading |
+| `все >` | **Montserrat** — a small actionable link is action typography |
+
+The last one needs a distinction the others do not: a terse affordance is action
+typography, while a link long enough to read as body copy belongs to the reading
+family. Length separates them, and only a standalone `Link` node is classified
+here at all — a hyperlink set *inside* a paragraph is a styled range within a body
+text node, so it inherits that node's Onest and never reaches this rule.
+
+| frame | why it is in the set |
+|---|---|
+| `HOME` | BottomNav labels, headings, mini-player |
+| `PLAYER` | Black 24 now-playing title, history rows, the one AUTO line height |
+| `COLLECTION` | track rows and the widest button |
+| `ABOUT US` | long paragraph and the donation CTA |
+| `history-content` | Broadcast History — variable height, no ellipsis |
+| `sleep-timer-custom` | custom time entry |
+| `settings` | Profile/Settings rows, buttons and labels |
+
+## The rule it enforces
+
+The frozen type scale wins; the new font's natural metrics do not get to redefine
+the design.
+
+- `fontSize` is never written.
+- `letterSpacing` is never written.
+- An explicit `lineHeight` is carried over verbatim. 90 of the 91 frozen text
+  nodes already pin one in PIXELS, which is why a font with a 22–37% taller line
+  box does not move this design in Figma.
+- An `AUTO` line height would be redefined by the new font, so it is pinned
+  **before** the swap to the value Muller resolves it to. Muller's `hhea` is
+  exactly 1000/1000 units, so its AUTO line height is exactly `1.0 × fontSize` —
+  measured from the shipped binaries, not guessed.
+
+Exactly one frozen node is AUTO: `PLAYER` → "PAUSE", 26.77 Medium. Left alone it
+would grow to 32.6px under Montserrat or 34.1px under Onest.
+
+## Weight mapping
+
+| Muller | → | candidate |
+|---|---|---|
+| Light 300 | → | Light |
+| Regular 400 | → | Regular |
+| Medium 500 | → | Medium |
+| Bold 700 | → | Bold |
+| Black 900 | → | Black |
+| Heavy 900 | → | Black |
+
+Muller is inconsistent about where the weight lives: some cuts are family
+`Muller` with style `Black`, others are family `Muller Black` with style
+`Regular`, because that is how the TTF name tables are built. A weight named in
+the *family* therefore wins whenever the style is the generic `Regular` —
+otherwise `Muller Black / Regular` would silently map to Regular and lose the
+weight. All ten combinations are unit-checked.
+
+## Fitting the hybrid, growth first
+
+Two refinements apply to the HYBRID column only. The single-family columns stay
+uncorrected, so the raw effect of each font remains visible.
+
+**Button labels are Montserrat Medium 500**, not the Regular the frozen scale
+gives them — action labels carry more presence at Medium.
+
+**Compact action buttons take 21px**, where the larger content CTAs stay at 22px.
+A compact action is a dialog, bottom-sheet or utility-screen button — `Установить`,
+`Отмена`, `Отправить`, `Войти`, `Подключить` and their kind — sitting in a dense
+surface where 22px crowds the button. What separates them is the **surface**, not
+the label length, so the rule keys off a `Bottom Sheet`/`Dialog` ancestor or a
+utility frame rather than off the text. Only 22px labels are touched, so the 12px
+chips keep their size, and the content CTAs — `Поддержать эфир`,
+`Экспортировать список`, `Показать ещё`, `Подписаться`, `Читать подробнее` — are
+left exactly as approved.
+
+Across the frozen set that is 19 of 26 button labels; inside the seven trial
+frames it is only `Отмена` and `Установить` on `sleep-timer-custom`.
+
+**A short heading that was one line stays one line.**
+
+The important part is *how* those are restored. A frozen width is usually just
+the box Muller's text happened to occupy, not a constraint anyone designed.
+Shrinking a 24px heading to protect such a number trades real hierarchy for an
+accident, so the order is:
+
+1. keep the size and let the box grow, if the surrounding space allows it;
+2. a small layout adjustment — a fixed single-child wrapper is released to hug;
+3. reduce `fontSize`, minimally, 1px at a time;
+4. a very small negative `letterSpacing` as the final trim.
+
+Nothing is ever widened beyond the space that already existed. Growth is only
+accepted when the containing row still fits: for a `SPACE_BETWEEN` header that
+means the children's own widths plus padding, since such a row absorbs growth by
+giving up gap rather than by overflowing.
+
+Measured against the frozen file, every affected element has room, so **no size
+is reduced anywhere**:
+
+| element | frozen | Montserrat needs | available | outcome |
+|---|---|---|---|---|
+| `Привет, Денис!` | 165dp box | 183.5dp | 318dp to the avatar | grow, stay 24px |
+| `Моя коллекция` | 172dp box | 190.2dp | 326dp to the button | grow, stay 24px |
+| `Поддержать радио` | 214dp box | 232.0dp | 318dp to the avatar | grow, stay 24px |
+| `Экспортировать список` | 321dp button | 327.2dp | 358dp column | grow +6dp, stay 22px |
+| `Подписаться` | 184dp button | 200.0dp | 310dp card | grow +16dp, stay 22px |
+| `Поддержать эфир` | 239dp button | 260.2dp | 310dp card | grow +21dp, stay 22px |
+
+The shrink path is still implemented and still tested — it is simply not reached
+by this design.
+
+Fitting is measured against **what Figma actually renders**, not a predicted
+advance width: kerning is applied by the rasteriser and not by any offline
+estimate, and that estimate runs several percent wide on strings with
+punctuation. Measuring `Привет, Денис!` offline gives 174dp where the frozen node
+is 165dp and demonstrably one line — trusting the offline number would have
+shrunk headings that never needed shrinking.
+
+Every decision is reported: original geometry, available space, what was chosen,
+final size, geometry delta and why.
+
+## Stress titles
+
+The two longest Russian examples are needed in History. The frozen
+`history-content` frame **already contains** `КРАСНОЗНАМЁННАЯ ДИВИЗИЯ ИМЕНИ МОЕЙ
+БАБУШКИ` as an artist line, so only the missing one is injected — overwriting
+frozen copy that is already correct would make the trial less faithful, not more.
+Injection happens on **all four** columns so they stay like-for-like:
+
+- `КРАСНОЗНАМЁННАЯ ДИВИЗИЯ ИМЕНИ МОЕЙ БАБУШКИ`
+- `Прогулка по воде под дождём в конце ноября`
+
+The plugin reports which nodes it replaced and what they said before.
+
+## What to look for
+
+The panel prints each frame's height per column with the delta against the
+baseline, which catches Auto Layout growth without measuring by hand. By eye,
+check:
+
+- **BottomNav** — `Коллекция` is the tightest label in the app. Montserrat is
+  predicted +10.6%, leaving ~2.1dp inside the 320dp item; this frame is at 390dp
+  so it will look comfortable here. That risk is a 320dp Android question, not
+  one this frame can answer.
+- **History rows** — Montserrat is predicted to take the upper-case stress title
+  from 2 lines to 3.
+- **ABOUT US paragraph** — predicted to stay at 3 lines in both candidates.
+- **Buttons** — `Экспортировать список` is the widest; Montserrat is predicted
+  +10.2%.
+- **Visual weight** — both candidates have a larger x-height than Muller, so text
+  reads slightly bigger at the same size.
+
+## Final verification
+
+The classifier is frozen at this state. Verified statically against all 123 real
+frozen text nodes in the seven trial frames, before the Figma run:
+
+| check | result |
+|---|---|
+| roles outside the contract | **0** |
+| contract violations (role assigned the wrong family) | **0** |
+| families | 24 Montserrat / 99 Onest |
+| size overrides | 2 — `Отмена`, `Установить`, 22 → 21px |
+| weight overrides | 7 — button/CTA and the action link, to Medium |
+| bounded text nodes whose line count grows | **3**, all already covered |
+| new automatic corrections introduced | **0** |
+
+The three line-count increases are the approved headings — `Привет, Денис!`,
+`Моя коллекция`, `Поддержать радио` — each handled by the existing growth
+correction, which keeps them at 24px and one line by widening a text box into
+space that was already empty.
+
+That count is calibrated, not raw. Nodes whose frozen box *is* their text give a
+correction factor of **k = 0.9517**, i.e. an offline estimate runs ~4.8% wide
+because kerning is applied by the rasteriser and not by any offline calculation.
+Uncalibrated, the same check wrongly flags `Наши потоки` and `CHVRCHES`, whose
+boxes are columns rather than text.
+
+Every track-list node moved to Onest measures *narrower* than Muller
+(ratios 0.963–0.974), so no History or Collection row can grow.

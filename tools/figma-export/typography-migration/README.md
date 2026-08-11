@@ -74,9 +74,35 @@ node tools/figma-export/typography-migration/build.mjs          # regenerate
 node tools/figma-export/typography-migration/build.mjs --check  # fail if stale
 ```
 
-## Parity validation
+## Finalising, after the Apply
 
-After the migration and a fresh export:
+Re-export all four pages with the canonical snapshot plugin, drop the four JSON
+files in one directory, and run:
+
+```bash
+node tools/figma-export/typography-migration/finalize.mjs <dir>
+```
+
+That runs parity for each page against its committed pre-migration snapshot, then
+regenerates the normalized baseline. It **refuses to write any baseline unless
+every page passes parity**, so a failed migration cannot quietly become the new
+reference.
+
+The pre-migration snapshots it compares against, each verified to reproduce its
+committed baseline byte-for-byte:
+
+| page | before | baseline regenerated |
+|---|---|---|
+| CURRENT ANDROID UI - LIGHT | `canonical/figma-canonical-light-final.json` | `canonical/figma-canonical-light-normalized.json` |
+| CURRENT ANDROID UI — DARK | `canonical/figma-canonical-dark-final.json` | `canonical/figma-canonical-dark-normalized.json` |
+| 3.6.6 PROPOSALS - LIGHT | `screens-3.6.6/snapshots/proposals-light.json` | `screens-3.6.6/baselines/proposals-light-normalized.json` |
+| 3.6.6 PROPOSALS - DARK | `screens-3.6.6/snapshots/proposals-dark.json` | `screens-3.6.6/baselines/proposals-dark-normalized.json` |
+
+`finalize.mjs --check` proves the pipeline without needing any exports: it
+re-normalises each committed pre-migration snapshot and confirms it still
+reproduces its baseline exactly.
+
+## Parity validation on its own
 
 ```bash
 node tools/figma-export/typography-migration/verify-parity.mjs before.json after.json

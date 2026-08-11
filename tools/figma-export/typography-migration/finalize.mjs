@@ -44,6 +44,7 @@ const PAGES = [
 
 const NORMALIZER = path.join(repo, "tools/figma-export/canonical/normalize-snapshot.mjs");
 const PARITY = path.join(here, "verify-parity.mjs");
+const CONTRACT = path.join(here, "verify-contract.mjs");
 
 const stripCr = (s) => s.replace(/\r/g, "");
 
@@ -103,6 +104,28 @@ if (!allPass) {
   console.log("\n" + "=".repeat(72));
   console.log("PARITY FAILED - no baseline was regenerated.");
   console.log("Fix the migration (or revert to the (pre-typography) pages) and re-export.");
+  process.exit(1);
+}
+
+/* --- 1b. contract conformance ------------------------------------------- */
+// Parity proves nothing changed that should not have. This proves everything
+// that should have changed is correct - a button that came out at 19px instead
+// of 22px passes parity, because "size changed" is an allowed category, and only
+// this check knows what the size was supposed to be.
+console.log("\n" + "=".repeat(72));
+console.log("CONTRACT");
+console.log("=".repeat(72));
+let contractPass = true;
+try {
+  console.log(execFileSync(process.execPath, [CONTRACT, ...resolved.map((p) => p.after)], { encoding: "utf8" }).trim());
+} catch (e) {
+  console.log(((e.stdout || "") + (e.stderr || "")).trim());
+  contractPass = false;
+}
+if (!contractPass) {
+  console.log("\n" + "=".repeat(72));
+  console.log("CONTRACT FAILED - no baseline was regenerated.");
+  console.log("Re-run the migration on the affected pages and re-export.");
   process.exit(1);
 }
 

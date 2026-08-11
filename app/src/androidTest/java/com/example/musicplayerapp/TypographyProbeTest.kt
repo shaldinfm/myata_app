@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.appcompat.view.ContextThemeWrapper
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.widget.TextViewCompat
 import androidx.test.core.app.ActivityScenario
@@ -637,6 +638,63 @@ class TypographyProbeTest {
                 "${Build.VERSION.SDK_INT}: $wrong",
             wrong.isEmpty(),
         )
+    }
+
+    /**
+     * TV keeps its own sizes and gets no token - but it must still get its font.
+     *
+     * TvMainActivity deliberately has no MyataTypography factory, so the five TV
+     * surfaces are plain android:fontFamily="@font/onest_*" on views AppCompat
+     * inflates. That is the whole mechanism there, and below API 26 the framework
+     * does not understand a font resource at all - only AppCompat's back-port
+     * does. Onest Light is the case worth the trouble: 300 is the one weight the
+     * mobile design never uses, it exists nowhere else in the app, and a font that
+     * failed to resolve would fall back to the system sans and look like nothing
+     * more than a slightly different grey.
+     *
+     * Inflated under TvTheme rather than the app theme, because that is the theme
+     * TV runs, and it is a different Material parent.
+     */
+    @Test
+    fun tvSurfacesKeepTheirSizesAndGetOnest() {
+        val tv = ContextThemeWrapper(
+            androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>(),
+            R.style.TvTheme,
+        )
+        val expected = listOf(
+            Triple(R.layout.fragment_tv_stream_selection, R.id.tv_title, R.font.onest_light) to 32f,
+            Triple(R.layout.fragment_tv_player, R.id.tv_track_info, R.font.onest_regular) to 18f,
+            Triple(R.layout.fragment_tv_player, R.id.btn_stream_myata, R.font.onest_regular) to 13f,
+            Triple(R.layout.fragment_tv_player, R.id.btn_stream_gold, R.font.onest_regular) to 13f,
+            Triple(R.layout.fragment_tv_player, R.id.btn_stream_xtra, R.font.onest_regular) to 13f,
+        )
+        val wrong = mutableListOf<String>()
+        val seen = mutableListOf<String>()
+
+        onScenario { activity ->
+            // The activity's inflater cloned into the TV theme: AppCompat's
+            // factory survives cloneInContext, which is what TV relies on.
+            val inflater = activity.layoutInflater.cloneInContext(tv)
+            expected.forEach { (spec, sizeSp) ->
+                val (layout, viewId, font) = spec
+                val root = inflater.inflate(layout, null) as ViewGroup
+                val view = root.findViewById<TextView>(viewId)
+                val name = tv.resources.getResourceEntryName(viewId)
+                val wantPx = android.util.TypedValue.applyDimension(
+                    android.util.TypedValue.COMPLEX_UNIT_SP, sizeSp, tv.resources.displayMetrics,
+                )
+                val want = ResourcesCompat.getFont(tv, font)
+                val matches = view.typeface == want
+                seen += "$name: ${view.javaClass.simpleName} size=${view.textSize} (want $wantPx) " +
+                    "font=${tv.resources.getResourceEntryName(font)} matched=$matches"
+                if (abs(view.textSize - wantPx) > 1f) wrong += "$name size ${view.textSize} != $wantPx"
+                if (!matches) wrong += "$name did not resolve ${tv.resources.getResourceEntryName(font)}"
+            }
+        }
+        android.util.Log.i("TYPO", "==== TV SURFACES (API ${Build.VERSION.SDK_INT}) ====")
+        seen.forEach { android.util.Log.i("TYPO", "  $it") }
+
+        assertTrue("TV typography wrong on API ${Build.VERSION.SDK_INT}: $wrong", wrong.isEmpty())
     }
 
     /**

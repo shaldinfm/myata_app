@@ -252,3 +252,32 @@ check:
   +10.2%.
 - **Visual weight** — both candidates have a larger x-height than Muller, so text
   reads slightly bigger at the same size.
+
+## Final verification
+
+The classifier is frozen at this state. Verified statically against all 123 real
+frozen text nodes in the seven trial frames, before the Figma run:
+
+| check | result |
+|---|---|
+| roles outside the contract | **0** |
+| contract violations (role assigned the wrong family) | **0** |
+| families | 24 Montserrat / 99 Onest |
+| size overrides | 2 — `Отмена`, `Установить`, 22 → 21px |
+| weight overrides | 7 — button/CTA and the action link, to Medium |
+| bounded text nodes whose line count grows | **3**, all already covered |
+| new automatic corrections introduced | **0** |
+
+The three line-count increases are the approved headings — `Привет, Денис!`,
+`Моя коллекция`, `Поддержать радио` — each handled by the existing growth
+correction, which keeps them at 24px and one line by widening a text box into
+space that was already empty.
+
+That count is calibrated, not raw. Nodes whose frozen box *is* their text give a
+correction factor of **k = 0.9517**, i.e. an offline estimate runs ~4.8% wide
+because kerning is applied by the rasteriser and not by any offline calculation.
+Uncalibrated, the same check wrongly flags `Наши потоки` and `CHVRCHES`, whose
+boxes are columns rather than text.
+
+Every track-list node moved to Onest measures *narrower* than Muller
+(ratios 0.963–0.974), so no History or Collection row can grow.

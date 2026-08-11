@@ -1,0 +1,12 @@
+{
+  "name": "Radio Myata · Typography preflight (read-only)",
+  "id": "radio-myata-typography-preflight",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "reasoning": "Reads four named pages of the open document and reports on them. It writes nothing and never contacts a server."
+  }
+}

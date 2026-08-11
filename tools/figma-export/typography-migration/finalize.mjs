@@ -26,15 +26,19 @@ const rel = (p) => path.relative(repo, p).replace(/\\/g, "/");
 // reproduces its committed baseline byte-for-byte once line endings are ignored.
 const PAGES = [
   { page: "CURRENT ANDROID UI - LIGHT", pageId: "2388:366", match: /current android ui.*light/i,
+    expect: { Onest: 69, Montserrat: 22 },
     before: "tools/figma-export/canonical/figma-canonical-light-final.json",
     baseline: "tools/figma-export/canonical/figma-canonical-light-normalized.json" },
   { page: "CURRENT ANDROID UI — DARK", pageId: "2436:531", match: /current android ui.*dark/i,
+    expect: { Onest: 130, Montserrat: 29 },
     before: "tools/figma-export/canonical/figma-canonical-dark-final.json",
     baseline: "tools/figma-export/canonical/figma-canonical-dark-normalized.json" },
   { page: "3.6.6 PROPOSALS - LIGHT", pageId: "2517:1936", match: /proposals.*light/i,
+    expect: { Onest: 243, Montserrat: 37 },
     before: "tools/figma-export/screens-3.6.6/snapshots/proposals-light.json",
     baseline: "tools/figma-export/screens-3.6.6/baselines/proposals-light-normalized.json" },
   { page: "3.6.6 PROPOSALS - DARK", pageId: "2517:2903", match: /proposals.*dark/i,
+    expect: { Onest: 243, Montserrat: 37 },
     before: "tools/figma-export/screens-3.6.6/snapshots/proposals-dark.json",
     baseline: "tools/figma-export/screens-3.6.6/baselines/proposals-dark-normalized.json" },
 ];
@@ -45,20 +49,45 @@ const CONTRACT = path.join(here, "verify-contract.mjs");
 
 const stripCr = (s) => s.replace(/\r/g, "");
 
-/* --- --check: prove the pipeline still reproduces every committed baseline -- */
+/*
+ * --check: assert the committed baselines still describe the migrated design.
+ *
+ * This used to re-normalise the pre-migration snapshots and require them to
+ * reproduce the baselines. That premise died the moment the migration landed -
+ * the baselines are post-migration now, so the old check would report a broken
+ * pipeline forever and teach everyone to ignore it.
+ *
+ * What is still worth asserting is the invariant the migration established: the
+ * baselines carry no Muller, and each page holds exactly the family counts the
+ * approved contract produces.
+ */
 if (process.argv.includes("--check")) {
   let ok = true;
-  const tmp = path.join(here, ".finalize-check.json");
   for (const p of PAGES) {
-    const before = path.join(repo, p.before), baseline = path.join(repo, p.baseline);
-    if (!fs.existsSync(before) || !fs.existsSync(baseline)) { console.log(`  ${p.page}: source or baseline missing`); ok = false; continue; }
-    execFileSync(process.execPath, [NORMALIZER, before, tmp], { stdio: "ignore" });
-    const same = stripCr(fs.readFileSync(tmp, "utf8")) === stripCr(fs.readFileSync(baseline, "utf8"));
-    console.log(`  ${p.page.padEnd(28)} ${same ? "baseline reproduces exactly" : "BASELINE DOES NOT REPRODUCE"}`);
-    if (!same) ok = false;
+    const baseline = path.join(repo, p.baseline);
+    if (!fs.existsSync(baseline)) { console.log(`  ${p.page.padEnd(28)} baseline missing`); ok = false; continue; }
+    const doc = JSON.parse(stripCr(fs.readFileSync(baseline, "utf8")));
+    const fam = {};
+    for (const fr of doc.frames || []) {
+      (function walk(n) {
+        if (n.type === "TEXT" && n.text && n.text.font) {
+          const f = String(n.text.font).split("/")[0];
+          fam[f] = (fam[f] || 0) + 1;
+        }
+        (n.children || []).forEach(walk);
+      })(fr);
+    }
+    const muller = Object.keys(fam).filter((f) => /^muller/i.test(f)).reduce((n, f) => n + fam[f], 0);
+    const want = p.expect || {};
+    const mismatch = Object.keys(want).filter((f) => (fam[f] || 0) !== want[f]);
+    const good = muller === 0 && !mismatch.length;
+    if (!good) ok = false;
+    console.log(`  ${p.page.padEnd(28)} ${good ? "OK" : "MISMATCH"}  ` +
+      Object.entries(fam).map(([k, v]) => `${k} ${v}`).join(" / ") +
+      (muller ? `   << ${muller} Muller remaining` : "") +
+      (mismatch.length ? `   << expected ${mismatch.map((f) => f + " " + want[f]).join(", ")}` : ""));
   }
-  fs.existsSync(tmp) && fs.unlinkSync(tmp);
-  console.log(ok ? "\npipeline OK" : "\npipeline BROKEN");
+  console.log(ok ? "\nbaselines describe the migrated design" : "\nBASELINES DO NOT MATCH THE CONTRACT");
   process.exit(ok ? 0 : 1);
 }
 

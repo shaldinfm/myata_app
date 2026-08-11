@@ -72,9 +72,10 @@ family either way — but the role name is what gets reviewed.
 Run over the 123 real frozen text nodes in these seven frames, this yields
 **24 Montserrat / 99 Onest**.
 
-The classifier is FINAL APPROVED as of the card-heading rule; no further visual
-trial is planned. Applying it to the live design is the job of
-`../typography-migration`.
+The classifier is FINAL APPROVED and has been **applied to the live 3.6.6
+design** - see [docs/TYPOGRAPHY-3.6.6.md](../../../docs/TYPOGRAPHY-3.6.6.md). It is
+now the source every migration tool is generated from; change it only with a new
+owner approval.
 
 Montserrat is now reserved for the expressive core: screen and section headings,
 buttons and CTAs, the small action link, and the full Player now-playing metadata.

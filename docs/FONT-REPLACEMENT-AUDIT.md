@@ -1,5 +1,10 @@
 # Muller replacement audit
 
+> **Status:** superseded as a decision record — the Montserrat + Onest system is
+> FINAL and the Figma migration is complete. See
+> [TYPOGRAPHY-3.6.6.md](TYPOGRAPHY-3.6.6.md). The Android inventory and the
+> measurements below remain current and unstarted.
+
 Audit only. **No font has been added, removed, downloaded or replaced**, and no
 production code changed. The owner has no applicable Fontfabric licence for
 Muller and intends to remove it from the app and the design; this records what

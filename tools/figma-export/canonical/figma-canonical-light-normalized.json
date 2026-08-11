@@ -4,7 +4,7 @@
   "fileName": "Дизайн Приложения",
   "pageName": "CURRENT ANDROID UI - LIGHT",
   "pageId": "2388:366",
-  "exportedAt": "2026-08-09T10:20:14.218Z",
+  "exportedAt": "2026-08-11T07:55:45.047Z",
   "topLevelFrameCount": 10
  },
  "variables": [
@@ -164,7 +164,7 @@
            ],
            "text": {
             "chars": "Главная",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -250,7 +250,7 @@
            ],
            "text": {
             "chars": "Плеер",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -336,7 +336,7 @@
            ],
            "text": {
             "chars": "Коллекция",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -396,9 +396,9 @@
          "id": "2393:1648",
          "name": "Margin",
          "type": "FRAME",
-         "x": 15.5,
+         "x": 15,
          "y": 24,
-         "w": 33,
+         "w": 34,
          "h": 20,
          "radius": 0,
          "constraints": "MIN/MIN",
@@ -412,7 +412,7 @@
            "type": "TEXT",
            "x": 0,
            "y": 4,
-           "w": 33,
+           "w": 34,
            "h": 16,
            "constraints": "MIN/MIN",
            "sizeH": "HUG",
@@ -422,7 +422,7 @@
            ],
            "text": {
             "chars": "О нас",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -555,7 +555,7 @@
            ],
            "text": {
             "chars": "WHAT YOU KNOW",
-            "font": "Muller/Medium/15",
+            "font": "Onest/Medium/15",
             "lineHeight": 27.5,
             "align": "LEFT"
            }
@@ -592,7 +592,7 @@
            ],
            "text": {
             "chars": "TWO DOOR CINEMA CLUB",
-            "font": "Muller/Regular/14",
+            "font": "Onest/Regular/14",
             "lineHeight": 20,
             "align": "LEFT"
            }
@@ -710,12 +710,12 @@
        "type": "FRAME",
        "x": 16,
        "y": 16,
-       "w": 165,
+       "w": 185,
        "h": 32,
        "radius": 0,
        "constraints": "MIN/MIN",
        "layout": "VERTICAL 10 0,0,0,0 CENTER CENTER",
-       "sizeH": "FIXED",
+       "sizeH": "HUG",
        "sizeV": "HUG",
        "children": [
         {
@@ -724,17 +724,17 @@
          "type": "TEXT",
          "x": 0,
          "y": 0,
-         "w": 165,
+         "w": 185,
          "h": 32,
          "constraints": "MIN/MIN",
-         "sizeH": "FIXED",
+         "sizeH": "HUG",
          "sizeV": "HUG",
          "fills": [
           "#003056"
          ],
          "text": {
           "chars": "Привет, Денис!",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "letterSpacing": -0.6000000238418579,
           "align": "LEFT"
@@ -902,7 +902,7 @@
            ],
            "text": {
             "chars": "Наши потоки",
-            "font": "Muller/Bold/28",
+            "font": "Montserrat/Bold/28",
             "lineHeight": 36,
             "align": "LEFT"
            }
@@ -1049,7 +1049,7 @@
            "type": "FRAME",
            "x": 0,
            "y": 0,
-           "w": 261,
+           "w": 299,
            "h": 36,
            "radius": 0,
            "constraints": "MIN/MAX",
@@ -1063,7 +1063,7 @@
              "type": "TEXT",
              "x": 0,
              "y": 0,
-             "w": 261,
+             "w": 299,
              "h": 36,
              "constraints": "MIN/MIN",
              "sizeH": "HUG",
@@ -1073,7 +1073,7 @@
              ],
              "text": {
               "chars": "Мятные плейлисты",
-              "font": "Muller/Bold/28",
+              "font": "Montserrat/Bold/28",
               "lineHeight": 36,
               "align": "LEFT"
              }
@@ -1101,7 +1101,7 @@
              "type": "TEXT",
              "x": 0,
              "y": 0,
-             "w": 35,
+             "w": 39,
              "h": 16,
              "constraints": "MIN/MIN",
              "sizeH": "HUG",
@@ -1111,7 +1111,7 @@
              ],
              "text": {
               "chars": "все >",
-              "font": "Muller/Medium/12",
+              "font": "Montserrat/Medium/12",
               "lineHeight": 16,
               "letterSpacing": 0.6000000238418579,
               "align": "LEFT"
@@ -1442,9 +1442,9 @@
              "id": "2396:30736",
              "name": "Container",
              "type": "FRAME",
-             "x": 126,
+             "x": 126.5,
              "y": 15.5,
-             "w": 106,
+             "w": 105,
              "h": 16,
              "radius": 0,
              "constraints": "MIN/CENTER",
@@ -1458,7 +1458,7 @@
                "type": "TEXT",
                "x": 0,
                "y": 0,
-               "w": 106,
+               "w": 105,
                "h": 16,
                "constraints": "MIN/MIN",
                "sizeH": "HUG",
@@ -1468,7 +1468,7 @@
                ],
                "text": {
                 "chars": "Сейчас играет",
-                "font": "Muller/Regular/12",
+                "font": "Onest/Regular/12",
                 "lineHeight": 16,
                 "letterSpacing": 0.6000000238418579,
                 "align": "LEFT"
@@ -1688,9 +1688,9 @@
                "id": "2396:30745",
                "name": "WHAT YOU KNOW",
                "type": "TEXT",
-               "x": 69.5,
+               "x": 59.5,
                "y": 0,
-               "w": 219,
+               "w": 239,
                "h": 24,
                "constraints": "CENTER/MIN",
                "sizeH": "HUG",
@@ -1700,7 +1700,7 @@
                ],
                "text": {
                 "chars": "WHAT YOU KNOW",
-                "font": "Muller/Black/24",
+                "font": "Montserrat/Black/24",
                 "lineHeight": 24,
                 "align": "CENTER"
                }
@@ -1725,9 +1725,9 @@
                "id": "2396:30747",
                "name": "TWO DOOR CINEMA CLUB",
                "type": "TEXT",
-               "x": 63.5,
+               "x": 57,
                "y": 0,
-               "w": 231,
+               "w": 244,
                "h": 18,
                "constraints": "CENTER/MIN",
                "sizeH": "HUG",
@@ -1737,7 +1737,7 @@
                ],
                "text": {
                 "chars": "TWO DOOR CINEMA CLUB",
-                "font": "Muller/Regular/18",
+                "font": "Montserrat/Regular/18",
                 "lineHeight": 18,
                 "align": "CENTER"
                }
@@ -2277,8 +2277,8 @@
              ],
              "text": {
               "chars": "PAUSE",
-              "font": "Muller/Medium/26.770000457763672",
-              "lineHeight": "auto",
+              "font": "Onest/Medium/26.770000457763672",
+              "lineHeight": 26.770000457763672,
               "align": "LEFT"
              }
             }
@@ -2490,7 +2490,7 @@
              "type": "FRAME",
              "x": 0,
              "y": 0,
-             "w": 176,
+             "w": 200,
              "h": 32,
              "radius": 0,
              "constraints": "MIN/CENTER",
@@ -2504,7 +2504,7 @@
                "type": "TEXT",
                "x": 0,
                "y": 0,
-               "w": 176,
+               "w": 200,
                "h": 32,
                "constraints": "MIN/MIN",
                "sizeH": "HUG",
@@ -2514,7 +2514,7 @@
                ],
                "text": {
                 "chars": "История эфира",
-                "font": "Muller/Bold/24",
+                "font": "Montserrat/Bold/24",
                 "lineHeight": 32,
                 "align": "LEFT"
                }
@@ -2572,9 +2572,9 @@
                "id": "2396:30792",
                "name": "Ещё",
                "type": "TEXT",
-               "x": 26.5,
+               "x": 24.5,
                "y": 4,
-               "w": 25,
+               "w": 28,
                "h": 16,
                "constraints": "CENTER/CENTER",
                "sizeH": "HUG",
@@ -2584,7 +2584,7 @@
                ],
                "text": {
                 "chars": "Ещё",
-                "font": "Muller/Regular/12",
+                "font": "Montserrat/Medium/12",
                 "lineHeight": 16,
                 "letterSpacing": 0.10000000149011612,
                 "align": "CENTER"
@@ -2660,9 +2660,9 @@
                  "id": "2396:30797",
                  "name": "10:45",
                  "type": "TEXT",
-                 "x": 2,
+                 "x": 3,
                  "y": 0,
-                 "w": 37,
+                 "w": 36,
                  "h": 20,
                  "constraints": "MAX/MIN",
                  "sizeH": "HUG",
@@ -2672,7 +2672,7 @@
                  ],
                  "text": {
                   "chars": "10:45",
-                  "font": "Muller/Regular/14",
+                  "font": "Onest/Regular/14",
                   "lineHeight": 20,
                   "align": "RIGHT"
                  }
@@ -2749,7 +2749,7 @@
                    "type": "TEXT",
                    "x": 0,
                    "y": -0.5,
-                   "w": 83,
+                   "w": 82,
                    "h": 56,
                    "constraints": "MIN/MIN",
                    "sizeH": "FIXED",
@@ -2759,7 +2759,7 @@
                    ],
                    "text": {
                     "chars": "CRYOGEN\n",
-                    "font": "Muller/Regular/17",
+                    "font": "Onest/Regular/17",
                     "lineHeight": 28,
                     "align": "LEFT"
                    }
@@ -2786,7 +2786,7 @@
                    "type": "TEXT",
                    "x": 0,
                    "y": 0,
-                   "w": 41,
+                   "w": 40,
                    "h": 20,
                    "constraints": "MIN/MIN",
                    "sizeH": "HUG",
@@ -2796,7 +2796,7 @@
                    ],
                    "text": {
                     "chars": "MUSE",
-                    "font": "Muller/Regular/14",
+                    "font": "Onest/Regular/14",
                     "lineHeight": 20,
                     "align": "LEFT"
                    }
@@ -2974,9 +2974,9 @@
                "id": "2399:31075",
                "name": "10:41",
                "type": "TEXT",
-               "x": 4,
+               "x": 7,
                "y": 0,
-               "w": 35,
+               "w": 32,
                "h": 20,
                "constraints": "MAX/MIN",
                "sizeH": "HUG",
@@ -2986,7 +2986,7 @@
                ],
                "text": {
                 "chars": "10:41",
-                "font": "Muller/Regular/14",
+                "font": "Onest/Regular/14",
                 "lineHeight": 20,
                 "align": "RIGHT"
                }
@@ -3063,7 +3063,7 @@
                  "type": "TEXT",
                  "x": 0,
                  "y": -0.5,
-                 "w": 148,
+                 "w": 145,
                  "h": 56,
                  "constraints": "MIN/MIN",
                  "sizeH": "FIXED",
@@ -3073,7 +3073,7 @@
                  ],
                  "text": {
                   "chars": "MEET ME IN LOVE\n",
-                  "font": "Muller/Regular/17",
+                  "font": "Onest/Regular/17",
                   "lineHeight": 28,
                   "align": "LEFT"
                  }
@@ -3100,7 +3100,7 @@
                  "type": "TEXT",
                  "x": 0,
                  "y": 0,
-                 "w": 78,
+                 "w": 79,
                  "h": 20,
                  "constraints": "MIN/MIN",
                  "sizeH": "HUG",
@@ -3110,7 +3110,7 @@
                  ],
                  "text": {
                   "chars": "BLOSSOMS",
-                  "font": "Muller/Regular/14",
+                  "font": "Onest/Regular/14",
                   "lineHeight": 20,
                   "align": "LEFT"
                  }
@@ -3260,7 +3260,7 @@
            "type": "FRAME",
            "x": 13,
            "y": 13,
-           "w": 249,
+           "w": 246,
            "h": 48,
            "radius": 0,
            "constraints": "MIN/CENTER",
@@ -3286,9 +3286,9 @@
                "id": "2399:31094",
                "name": "10:36",
                "type": "TEXT",
-               "x": 2,
+               "x": 3,
                "y": 0,
-               "w": 37,
+               "w": 36,
                "h": 20,
                "constraints": "MAX/MIN",
                "sizeH": "HUG",
@@ -3298,7 +3298,7 @@
                ],
                "text": {
                 "chars": "10:36",
-                "font": "Muller/Regular/14",
+                "font": "Onest/Regular/14",
                 "lineHeight": 20,
                 "align": "RIGHT"
                }
@@ -3347,7 +3347,7 @@
              "type": "FRAME",
              "x": 103,
              "y": 0,
-             "w": 146,
+             "w": 143,
              "h": 48,
              "radius": 0,
              "constraints": "MIN/CENTER",
@@ -3361,7 +3361,7 @@
                "type": "FRAME",
                "x": 0,
                "y": 0,
-               "w": 146,
+               "w": 143,
                "h": 28,
                "radius": 0,
                "constraints": "STRETCH/MIN",
@@ -3385,7 +3385,7 @@
                  ],
                  "text": {
                   "chars": "CITY WALLS\n",
-                  "font": "Muller/Regular/17",
+                  "font": "Onest/Regular/17",
                   "lineHeight": 28,
                   "align": "LEFT"
                  }
@@ -3398,7 +3398,7 @@
                "type": "FRAME",
                "x": 0,
                "y": 28,
-               "w": 146,
+               "w": 143,
                "h": 20,
                "radius": 0,
                "constraints": "STRETCH/MIN",
@@ -3412,7 +3412,7 @@
                  "type": "TEXT",
                  "x": 0,
                  "y": 0,
-                 "w": 146,
+                 "w": 143,
                  "h": 20,
                  "constraints": "MIN/MIN",
                  "sizeH": "HUG",
@@ -3422,7 +3422,7 @@
                  ],
                  "text": {
                   "chars": "TWENTY ONE PILOTS",
-                  "font": "Muller/Regular/14",
+                  "font": "Onest/Regular/14",
                   "lineHeight": 20,
                   "align": "LEFT"
                  }
@@ -3437,7 +3437,7 @@
            "id": "2399:31102",
            "name": "Container",
            "type": "FRAME",
-           "x": 262,
+           "x": 260,
            "y": 20,
            "w": 51,
            "h": 34,
@@ -3587,9 +3587,9 @@
              "id": "2396:30868",
              "name": "Показать ещё",
              "type": "TEXT",
-             "x": 89.5,
+             "x": 81.5,
              "y": 13,
-             "w": 145,
+             "w": 161,
              "h": 28,
              "constraints": "CENTER/CENTER",
              "sizeH": "HUG",
@@ -3599,7 +3599,7 @@
              ],
              "text": {
               "chars": "Показать ещё",
-              "font": "Muller/Regular/22",
+              "font": "Montserrat/Medium/22",
               "lineHeight": 28,
               "align": "CENTER"
              }
@@ -3710,7 +3710,7 @@
            ],
            "text": {
             "chars": "Главная",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -3799,7 +3799,7 @@
            ],
            "text": {
             "chars": "Плеер",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -3885,7 +3885,7 @@
            ],
            "text": {
             "chars": "Коллекция",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -3945,9 +3945,9 @@
          "id": "2396:30933",
          "name": "Margin",
          "type": "FRAME",
-         "x": 15.5,
+         "x": 15,
          "y": 24,
-         "w": 33,
+         "w": 34,
          "h": 20,
          "radius": 0,
          "constraints": "MIN/MIN",
@@ -3961,7 +3961,7 @@
            "type": "TEXT",
            "x": 0,
            "y": 4,
-           "w": 33,
+           "w": 34,
            "h": 16,
            "constraints": "MIN/MIN",
            "sizeH": "HUG",
@@ -3971,7 +3971,7 @@
            ],
            "text": {
             "chars": "О нас",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -4181,7 +4181,7 @@
          "type": "FRAME",
          "x": 0,
          "y": 0,
-         "w": 275,
+         "w": 278,
          "h": 20,
          "radius": 0,
          "constraints": "MIN/MIN",
@@ -4195,7 +4195,7 @@
            "type": "FRAME",
            "x": 0,
            "y": 0,
-           "w": 275,
+           "w": 278,
            "h": 20,
            "radius": 0,
            "constraints": "STRETCH/MIN",
@@ -4209,7 +4209,7 @@
              "type": "TEXT",
              "x": 0,
              "y": 0,
-             "w": 275,
+             "w": 278,
              "h": 20,
              "constraints": "MIN/MIN",
              "sizeH": "HUG",
@@ -4219,7 +4219,7 @@
              ],
              "text": {
               "chars": "Здесь хранятся ваши сохранённые треки",
-              "font": "Muller/Regular/14",
+              "font": "Onest/Regular/14",
               "lineHeight": 20,
               "align": "LEFT"
              }
@@ -4286,9 +4286,9 @@
            "id": "2399:31140",
            "name": "Экспортировать список",
            "type": "TEXT",
-           "x": 48,
+           "x": 33,
            "y": 12,
-           "w": 249,
+           "w": 279,
            "h": 28,
            "constraints": "CENTER/CENTER",
            "sizeH": "HUG",
@@ -4298,7 +4298,7 @@
            ],
            "text": {
             "chars": "Экспортировать список",
-            "font": "Muller/Regular/22",
+            "font": "Montserrat/Medium/22",
             "lineHeight": 28,
             "align": "CENTER"
            }
@@ -4419,7 +4419,7 @@
                ],
                "text": {
                 "chars": "HOMEWRECKER",
-                "font": "Muller/Regular/16",
+                "font": "Onest/Regular/16",
                 "lineHeight": 28,
                 "align": "LEFT"
                }
@@ -4456,7 +4456,7 @@
                ],
                "text": {
                 "chars": "SOMBR",
-                "font": "Muller/Regular/12",
+                "font": "Onest/Regular/12",
                 "lineHeight": 20,
                 "align": "LEFT"
                }
@@ -4651,7 +4651,7 @@
                ],
                "text": {
                 "chars": "LEILA",
-                "font": "Muller/Regular/16",
+                "font": "Onest/Regular/16",
                 "lineHeight": 28,
                 "align": "LEFT"
                }
@@ -4688,7 +4688,7 @@
                ],
                "text": {
                 "chars": "MIAMI HORROR FT. POOLSIDE",
-                "font": "Muller/Regular/12",
+                "font": "Onest/Regular/12",
                 "lineHeight": 20,
                 "align": "LEFT"
                }
@@ -4883,7 +4883,7 @@
                ],
                "text": {
                 "chars": "FOREVER",
-                "font": "Muller/Regular/16",
+                "font": "Onest/Regular/16",
                 "lineHeight": 28,
                 "align": "LEFT"
                }
@@ -4920,7 +4920,7 @@
                ],
                "text": {
                 "chars": "CHVRCHES",
-                "font": "Muller/Regular/12",
+                "font": "Onest/Regular/12",
                 "lineHeight": 20,
                 "align": "LEFT"
                }
@@ -5044,31 +5044,31 @@
        "type": "FRAME",
        "x": 16,
        "y": 16,
-       "w": 172,
+       "w": 190,
        "h": 32,
        "radius": 0,
        "constraints": "MIN/MIN",
        "layout": "VERTICAL 10 0,0,0,0 CENTER CENTER",
-       "sizeH": "FIXED",
+       "sizeH": "HUG",
        "sizeV": "HUG",
        "children": [
         {
          "id": "2407:31460",
          "name": "Моя коллекция",
          "type": "TEXT",
-         "x": -1,
+         "x": 0,
          "y": 0,
-         "w": 174,
+         "w": 190,
          "h": 32,
          "constraints": "MIN/MIN",
-         "sizeH": "FIXED",
+         "sizeH": "HUG",
          "sizeV": "HUG",
          "fills": [
           "#003056"
          ],
          "text": {
           "chars": "Моя коллекция",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "letterSpacing": -0.6000000238418579,
           "align": "LEFT"
@@ -5240,7 +5240,7 @@
            ],
            "text": {
             "chars": "Главная",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -5326,7 +5326,7 @@
            ],
            "text": {
             "chars": "Плеер",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -5415,7 +5415,7 @@
            ],
            "text": {
             "chars": "Коллекция",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -5475,9 +5475,9 @@
          "id": "2407:31521",
          "name": "Margin",
          "type": "FRAME",
-         "x": 15.5,
+         "x": 15,
          "y": 24,
-         "w": 33,
+         "w": 34,
          "h": 20,
          "radius": 0,
          "constraints": "MIN/MIN",
@@ -5491,7 +5491,7 @@
            "type": "TEXT",
            "x": 0,
            "y": 4,
-           "w": 33,
+           "w": 34,
            "h": 16,
            "constraints": "MIN/MIN",
            "sizeH": "HUG",
@@ -5501,7 +5501,7 @@
            ],
            "text": {
             "chars": "О нас",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -5634,7 +5634,7 @@
            ],
            "text": {
             "chars": "WHAT YOU KNOW",
-            "font": "Muller/Medium/15",
+            "font": "Onest/Medium/15",
             "lineHeight": 27.5,
             "align": "LEFT"
            }
@@ -5671,7 +5671,7 @@
            ],
            "text": {
             "chars": "TWO DOOR CINEMA CLUB",
-            "font": "Muller/Regular/14",
+            "font": "Onest/Regular/14",
             "lineHeight": 20,
             "align": "LEFT"
            }
@@ -5904,7 +5904,7 @@
            ],
            "text": {
             "chars": "WHAT YOU KNOW",
-            "font": "Muller/Medium/15",
+            "font": "Onest/Medium/15",
             "lineHeight": 27.5,
             "align": "LEFT"
            }
@@ -5941,7 +5941,7 @@
            ],
            "text": {
             "chars": "TWO DOOR CINEMA CLUB",
-            "font": "Muller/Regular/14",
+            "font": "Onest/Regular/14",
             "lineHeight": 20,
             "align": "LEFT"
            }
@@ -6107,7 +6107,7 @@
          "type": "FRAME",
          "x": 0,
          "y": 0,
-         "w": 275,
+         "w": 278,
          "h": 20,
          "radius": 0,
          "constraints": "MIN/MIN",
@@ -6121,7 +6121,7 @@
            "type": "FRAME",
            "x": 0,
            "y": 0,
-           "w": 275,
+           "w": 278,
            "h": 20,
            "radius": 0,
            "constraints": "STRETCH/MIN",
@@ -6135,7 +6135,7 @@
              "type": "TEXT",
              "x": 0,
              "y": 0,
-             "w": 275,
+             "w": 278,
              "h": 20,
              "constraints": "MIN/MIN",
              "sizeH": "HUG",
@@ -6145,7 +6145,7 @@
              ],
              "text": {
               "chars": "Здесь хранятся ваши сохранённые треки",
-              "font": "Muller/Regular/14",
+              "font": "Onest/Regular/14",
               "lineHeight": 20,
               "align": "LEFT"
              }
@@ -6212,9 +6212,9 @@
            "id": "2429:194",
            "name": "Экспортировать список",
            "type": "TEXT",
-           "x": 48,
+           "x": 33,
            "y": 12,
-           "w": 249,
+           "w": 279,
            "h": 28,
            "constraints": "CENTER/CENTER",
            "sizeH": "HUG",
@@ -6224,7 +6224,7 @@
            ],
            "text": {
             "chars": "Экспортировать список",
-            "font": "Muller/Regular/22",
+            "font": "Montserrat/Medium/22",
             "lineHeight": 28,
             "align": "CENTER"
            }
@@ -6312,7 +6312,7 @@
                ],
                "text": {
                 "chars": "Здесь пока пусто",
-                "font": "Muller/Medium/16",
+                "font": "Onest/Medium/16",
                 "lineHeight": 28,
                 "align": "LEFT"
                }
@@ -6327,7 +6327,7 @@
            "type": "FRAME",
            "x": 83,
            "y": 264,
-           "w": 191,
+           "w": 193,
            "h": 40,
            "radius": 0,
            "constraints": "MIN/MIN",
@@ -6341,7 +6341,7 @@
              "type": "TEXT",
              "x": 0,
              "y": 0,
-             "w": 191,
+             "w": 193,
              "h": 40,
              "constraints": "MIN/MIN",
              "sizeH": "HUG",
@@ -6351,7 +6351,7 @@
              ],
              "text": {
               "chars": "Сохраняйте понравившеся треки\nв плеере, и они появятся здесь.",
-              "font": "Muller/Regular/12",
+              "font": "Onest/Regular/12",
               "lineHeight": 20,
               "align": "CENTER"
              }
@@ -6644,31 +6644,31 @@
        "type": "FRAME",
        "x": 16,
        "y": 16,
-       "w": 172,
+       "w": 190,
        "h": 32,
        "radius": 0,
        "constraints": "MIN/MIN",
        "layout": "VERTICAL 10 0,0,0,0 CENTER CENTER",
-       "sizeH": "FIXED",
+       "sizeH": "HUG",
        "sizeV": "HUG",
        "children": [
         {
          "id": "2429:234",
          "name": "Моя коллекция",
          "type": "TEXT",
-         "x": -1,
+         "x": 0,
          "y": 0,
-         "w": 174,
+         "w": 190,
          "h": 32,
          "constraints": "MIN/MIN",
-         "sizeH": "FIXED",
+         "sizeH": "HUG",
          "sizeV": "HUG",
          "fills": [
           "#003056"
          ],
          "text": {
           "chars": "Моя коллекция",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "letterSpacing": -0.6000000238418579,
           "align": "LEFT"
@@ -6892,7 +6892,7 @@
            ],
            "text": {
             "chars": "Главная",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -6978,7 +6978,7 @@
            ],
            "text": {
             "chars": "Плеер",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -7067,7 +7067,7 @@
            ],
            "text": {
             "chars": "Коллекция",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -7127,9 +7127,9 @@
          "id": "2429:258",
          "name": "Margin",
          "type": "FRAME",
-         "x": 15.5,
+         "x": 15,
          "y": 24,
-         "w": 33,
+         "w": 34,
          "h": 20,
          "radius": 0,
          "constraints": "MIN/MIN",
@@ -7143,7 +7143,7 @@
            "type": "TEXT",
            "x": 0,
            "y": 4,
-           "w": 33,
+           "w": 34,
            "h": 16,
            "constraints": "MIN/MIN",
            "sizeH": "HUG",
@@ -7153,7 +7153,7 @@
            ],
            "text": {
             "chars": "О нас",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -7286,7 +7286,7 @@
            ],
            "text": {
             "chars": "WHAT YOU KNOW",
-            "font": "Muller/Medium/15",
+            "font": "Onest/Medium/15",
             "lineHeight": 27.5,
             "align": "LEFT"
            }
@@ -7323,7 +7323,7 @@
            ],
            "text": {
             "chars": "TWO DOOR CINEMA CLUB",
-            "font": "Muller/Regular/14",
+            "font": "Onest/Regular/14",
             "lineHeight": 20,
             "align": "LEFT"
            }
@@ -7556,7 +7556,7 @@
            ],
            "text": {
             "chars": "WHAT YOU KNOW",
-            "font": "Muller/Medium/15",
+            "font": "Onest/Medium/15",
             "lineHeight": 27.5,
             "align": "LEFT"
            }
@@ -7593,7 +7593,7 @@
            ],
            "text": {
             "chars": "TWO DOOR CINEMA CLUB",
-            "font": "Muller/Regular/14",
+            "font": "Onest/Regular/14",
             "lineHeight": 20,
             "align": "LEFT"
            }
@@ -7748,12 +7748,12 @@
        "type": "FRAME",
        "x": 16,
        "y": 16,
-       "w": 214,
+       "w": 234,
        "h": 32,
        "radius": 0,
        "constraints": "MIN/MIN",
        "layout": "VERTICAL 10 0,0,0,0 CENTER CENTER",
-       "sizeH": "FIXED",
+       "sizeH": "HUG",
        "sizeV": "HUG",
        "children": [
         {
@@ -7762,17 +7762,17 @@
          "type": "TEXT",
          "x": 0,
          "y": 0,
-         "w": 214,
+         "w": 234,
          "h": 32,
          "constraints": "MIN/MIN",
-         "sizeH": "FIXED",
+         "sizeH": "HUG",
          "sizeV": "HUG",
          "fills": [
           "#003056"
          ],
          "text": {
           "chars": "Поддержать радио",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "letterSpacing": -0.6000000238418579,
           "align": "LEFT"
@@ -7941,7 +7941,7 @@
            ],
            "text": {
             "chars": "Помочь проекту",
-            "font": "Muller/Regular/28",
+            "font": "Montserrat/Regular/28",
             "lineHeight": 36,
             "align": "LEFT"
            }
@@ -8031,7 +8031,7 @@
                "type": "FRAME",
                "x": 0,
                "y": 0,
-               "w": 98,
+               "w": 99,
                "h": 26,
                "radius": 9999,
                "constraints": "MIN/MIN",
@@ -8052,7 +8052,7 @@
                  "type": "TEXT",
                  "x": 13,
                  "y": 5,
-                 "w": 72,
+                 "w": 73,
                  "h": 16,
                  "constraints": "MIN/MIN",
                  "sizeH": "HUG",
@@ -8062,7 +8062,7 @@
                  ],
                  "text": {
                   "chars": "Ежемесячно",
-                  "font": "Muller/Regular/12",
+                  "font": "Onest/Regular/12",
                   "lineHeight": 16,
                   "letterSpacing": 0.10000000149011612,
                   "align": "LEFT"
@@ -8100,7 +8100,7 @@
                  ],
                  "text": {
                   "chars": "Подпишитесь на Boosty",
-                  "font": "Muller/Regular/24",
+                  "font": "Montserrat/Medium/24",
                   "lineHeight": 32,
                   "align": "LEFT"
                  }
@@ -8127,7 +8127,7 @@
                  "type": "TEXT",
                  "x": 0,
                  "y": 0,
-                 "w": 310,
+                 "w": 313,
                  "h": 80,
                  "constraints": "MIN/MIN",
                  "sizeH": "HUG",
@@ -8137,7 +8137,7 @@
                  ],
                  "text": {
                   "chars": "Полный архив эфиров и подкастов,\nэксклюзивные плейлисты и ранний доступ\nк новому контенту. Плюс – ваше имя появится\nв титрах наших видеороликов на YouTube. ",
-                  "font": "Muller/Regular/14",
+                  "font": "Onest/Regular/14",
                   "lineHeight": 20,
                   "align": "LEFT"
                  }
@@ -8152,12 +8152,12 @@
              "type": "FRAME",
              "x": 24,
              "y": 210,
-             "w": 184,
+             "w": 200,
              "h": 52,
              "radius": 0,
              "constraints": "STRETCH/MIN",
              "layout": "VERTICAL 0 0,0,0,0 MIN MIN",
-             "sizeH": "FIXED",
+             "sizeH": "HUG",
              "sizeV": "HUG",
              "children": [
               {
@@ -8166,7 +8166,7 @@
                "type": "FRAME",
                "x": 0,
                "y": 0,
-               "w": 184,
+               "w": 200,
                "h": 52,
                "radius": 12,
                "constraints": "MIN/MIN",
@@ -8183,7 +8183,7 @@
                  "type": "TEXT",
                  "x": 24,
                  "y": 12,
-                 "w": 136,
+                 "w": 152,
                  "h": 28,
                  "constraints": "CENTER/CENTER",
                  "sizeH": "HUG",
@@ -8193,7 +8193,7 @@
                  ],
                  "text": {
                   "chars": "Подписаться",
-                  "font": "Muller/Regular/22",
+                  "font": "Montserrat/Medium/22",
                   "lineHeight": 28,
                   "align": "CENTER"
                  }
@@ -8296,7 +8296,7 @@
                  ],
                  "text": {
                   "chars": "Разово",
-                  "font": "Muller/Regular/12",
+                  "font": "Onest/Regular/12",
                   "lineHeight": 16,
                   "letterSpacing": 0.10000000149011612,
                   "align": "LEFT"
@@ -8334,7 +8334,7 @@
                  ],
                  "text": {
                   "chars": "Помочь эфиру звучать",
-                  "font": "Muller/Regular/24",
+                  "font": "Montserrat/Medium/24",
                   "lineHeight": 32,
                   "align": "LEFT"
                  }
@@ -8361,7 +8361,7 @@
                  "type": "TEXT",
                  "x": 0,
                  "y": 0,
-                 "w": 317,
+                 "w": 320,
                  "h": 60,
                  "constraints": "MIN/MIN",
                  "sizeH": "HUG",
@@ -8371,7 +8371,7 @@
                  ],
                  "text": {
                   "chars": "Разовый вклад помогает оплачивать серверы,\nприложение и развитие Радио Мята.\nЛюбая сумма поддерживает станцию на плаву.",
-                  "font": "Muller/Regular/14",
+                  "font": "Onest/Regular/14",
                   "lineHeight": 20,
                   "align": "LEFT"
                  }
@@ -8386,12 +8386,12 @@
              "type": "FRAME",
              "x": 24,
              "y": 190,
-             "w": 239,
+             "w": 260,
              "h": 52,
              "radius": 0,
              "constraints": "STRETCH/MIN",
              "layout": "VERTICAL 0 0,0,0,0 MIN MIN",
-             "sizeH": "FIXED",
+             "sizeH": "HUG",
              "sizeV": "HUG",
              "children": [
               {
@@ -8400,7 +8400,7 @@
                "type": "FRAME",
                "x": 0,
                "y": 0,
-               "w": 239,
+               "w": 260,
                "h": 52,
                "radius": 12,
                "constraints": "MIN/MIN",
@@ -8417,7 +8417,7 @@
                  "type": "TEXT",
                  "x": 24,
                  "y": 12,
-                 "w": 191,
+                 "w": 212,
                  "h": 28,
                  "constraints": "CENTER/CENTER",
                  "sizeH": "HUG",
@@ -8427,7 +8427,7 @@
                  ],
                  "text": {
                   "chars": "Поддержать эфир",
-                  "font": "Muller/Regular/22",
+                  "font": "Montserrat/Medium/22",
                   "lineHeight": 28,
                   "align": "CENTER"
                  }
@@ -8514,7 +8514,7 @@
            ],
            "text": {
             "chars": "О нас",
-            "font": "Muller/Bold/28",
+            "font": "Montserrat/Bold/28",
             "lineHeight": 36,
             "align": "LEFT"
            }
@@ -8565,7 +8565,7 @@
              ],
              "text": {
               "chars": "Радио Мята — интернет-радиостанция, ориентированная на инди-музыку и альтернативный рок.",
-              "font": "Muller/Regular/15",
+              "font": "Onest/Regular/15",
               "lineHeight": 24,
               "align": "LEFT"
              }
@@ -8603,7 +8603,7 @@
              ],
              "text": {
               "chars": "Это «инди-эклектичное» медиа, предлагающее ироничный взгляд на массовую культуру и оригинальный подход к современной музыке. Станция начала вещание в ночь с 27 на 28 сентября 2017 года.",
-              "font": "Muller/Regular/15",
+              "font": "Onest/Regular/15",
               "lineHeight": 24,
               "align": "LEFT"
              }
@@ -8641,7 +8641,7 @@
              ],
              "text": {
               "chars": "Дополнительно доступны тематические потоки: GOLD — «золотые» танцевальные хиты; XTRA — новая локальная инди-музыка;",
-              "font": "Muller/Regular/15",
+              "font": "Onest/Regular/15",
               "lineHeight": 24,
               "align": "LEFT"
              }
@@ -8689,9 +8689,9 @@
              "id": "2424:759",
              "name": "Читать подробнее",
              "type": "TEXT",
-             "x": 49,
+             "x": 38.5,
              "y": 13,
-             "w": 194,
+             "w": 215,
              "h": 28,
              "constraints": "CENTER/CENTER",
              "sizeH": "HUG",
@@ -8701,7 +8701,7 @@
              ],
              "text": {
               "chars": "Читать подробнее",
-              "font": "Muller/Regular/22",
+              "font": "Montserrat/Medium/22",
               "lineHeight": 28,
               "align": "CENTER"
              }
@@ -8756,7 +8756,7 @@
            ],
            "text": {
             "chars": "Ещё Радио Мята",
-            "font": "Muller/Medium/24",
+            "font": "Montserrat/Medium/24",
             "lineHeight": 32,
             "align": "LEFT"
            }
@@ -9453,7 +9453,7 @@
            ],
            "text": {
             "chars": "Главная",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -9539,7 +9539,7 @@
            ],
            "text": {
             "chars": "Плеер",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -9625,7 +9625,7 @@
            ],
            "text": {
             "chars": "Коллекция",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -9688,9 +9688,9 @@
          "id": "2417:96",
          "name": "Margin",
          "type": "FRAME",
-         "x": 15.5,
+         "x": 15,
          "y": 24,
-         "w": 33,
+         "w": 34,
          "h": 20,
          "radius": 0,
          "constraints": "MIN/MIN",
@@ -9704,7 +9704,7 @@
            "type": "TEXT",
            "x": 0,
            "y": 4,
-           "w": 33,
+           "w": 34,
            "h": 16,
            "constraints": "MIN/MIN",
            "sizeH": "HUG",
@@ -9714,7 +9714,7 @@
            ],
            "text": {
             "chars": "О нас",
-            "font": "Muller/Medium/12",
+            "font": "Onest/Medium/12",
             "lineHeight": 16,
             "letterSpacing": 0.10000000149011612,
             "align": "LEFT"
@@ -9847,7 +9847,7 @@
            ],
            "text": {
             "chars": "WHAT YOU KNOW",
-            "font": "Muller/Medium/15",
+            "font": "Onest/Medium/15",
             "lineHeight": 27.5,
             "align": "LEFT"
            }
@@ -9884,7 +9884,7 @@
            ],
            "text": {
             "chars": "TWO DOOR CINEMA CLUB",
-            "font": "Muller/Regular/14",
+            "font": "Onest/Regular/14",
             "lineHeight": 20,
             "align": "LEFT"
            }
@@ -10115,7 +10115,7 @@
        ],
        "text": {
         "chars": "Действие",
-        "font": "Muller/Medium/15",
+        "font": "Onest/Medium/15",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -10202,7 +10202,7 @@
        ],
        "text": {
         "chars": "Действие",
-        "font": "Muller/Medium/15",
+        "font": "Onest/Medium/15",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -10289,7 +10289,7 @@
        ],
        "text": {
         "chars": "Действие",
-        "font": "Muller/Medium/15",
+        "font": "Onest/Medium/15",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -10376,7 +10376,7 @@
        ],
        "text": {
         "chars": "Действие",
-        "font": "Muller/Medium/15",
+        "font": "Onest/Medium/15",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -10439,7 +10439,7 @@
      ],
      "text": {
       "chars": "Найти трек на стриминге",
-      "font": "Muller/Medium/24",
+      "font": "Onest/Medium/24",
       "lineHeight": 32,
       "align": "LEFT"
      }
@@ -10540,7 +10540,7 @@
        ],
        "text": {
         "chars": "Spotify",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -10643,7 +10643,7 @@
        ],
        "text": {
         "chars": "Apple Music",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -10746,7 +10746,7 @@
        ],
        "text": {
         "chars": "YouTube",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -10849,7 +10849,7 @@
        ],
        "text": {
         "chars": "Яндекс.Музыка",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }

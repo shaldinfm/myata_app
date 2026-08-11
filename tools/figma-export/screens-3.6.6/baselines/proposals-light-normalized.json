@@ -4,7 +4,7 @@
   "fileName": "Дизайн Приложения",
   "pageName": "3.6.6 PROPOSALS - LIGHT",
   "pageId": "2517:1936",
-  "exportedAt": "2026-08-10T09:11:36.654Z",
+  "exportedAt": "2026-08-11T07:58:32.256Z",
   "topLevelFrameCount": 29
  },
  "variables": [],
@@ -77,7 +77,7 @@
        ],
        "text": {
         "chars": "Таймер сна",
-        "font": "Muller/Medium/24",
+        "font": "Onest/Medium/24",
         "lineHeight": 32,
         "align": "LEFT"
        }
@@ -98,7 +98,7 @@
        ],
        "text": {
         "chars": "Остановить воспроизведение через",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -182,7 +182,7 @@
          ],
          "text": {
           "chars": "15 минут",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -268,7 +268,7 @@
          ],
          "text": {
           "chars": "30 минут",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -354,7 +354,7 @@
          ],
          "text": {
           "chars": "45 минут",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -440,7 +440,7 @@
          ],
          "text": {
           "chars": "60 минут",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -526,7 +526,7 @@
          ],
          "text": {
           "chars": "Своё время",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -638,7 +638,7 @@
        ],
        "text": {
         "chars": "Своё время",
-        "font": "Muller/Medium/24",
+        "font": "Onest/Medium/24",
         "lineHeight": 32,
         "align": "LEFT"
        }
@@ -659,7 +659,7 @@
        ],
        "text": {
         "chars": "Через сколько остановить эфир",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -701,7 +701,7 @@
          ],
          "text": {
           "chars": "Часы",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -759,7 +759,7 @@
          ],
          "text": {
           "chars": "1",
-          "font": "Muller/Medium/24",
+          "font": "Onest/Medium/24",
           "lineHeight": 32,
           "align": "CENTER"
          }
@@ -840,7 +840,7 @@
          ],
          "text": {
           "chars": "Минуты",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -898,7 +898,7 @@
          ],
          "text": {
           "chars": "30",
-          "font": "Muller/Medium/24",
+          "font": "Onest/Medium/24",
           "lineHeight": 32,
           "align": "CENTER"
          }
@@ -958,7 +958,7 @@
        ],
        "text": {
         "chars": "Эфир остановится в 01:12",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -1000,7 +1000,7 @@
          ],
          "text": {
           "chars": "Отмена",
-          "font": "Muller/Regular/22",
+          "font": "Montserrat/Medium/21",
           "lineHeight": 28,
           "align": "CENTER"
          }
@@ -1040,7 +1040,7 @@
          ],
          "text": {
           "chars": "Установить",
-          "font": "Muller/Regular/22",
+          "font": "Montserrat/Medium/21",
           "lineHeight": 28,
           "align": "CENTER"
          }
@@ -1119,7 +1119,7 @@
        ],
        "text": {
         "chars": "Своё время",
-        "font": "Muller/Medium/24",
+        "font": "Onest/Medium/24",
         "lineHeight": 32,
         "align": "LEFT"
        }
@@ -1140,7 +1140,7 @@
        ],
        "text": {
         "chars": "Через сколько остановить эфир",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -1182,7 +1182,7 @@
          ],
          "text": {
           "chars": "Часы",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -1240,7 +1240,7 @@
          ],
          "text": {
           "chars": "0",
-          "font": "Muller/Medium/24",
+          "font": "Onest/Medium/24",
           "lineHeight": 32,
           "align": "CENTER"
          }
@@ -1321,7 +1321,7 @@
          ],
          "text": {
           "chars": "Минуты",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -1379,7 +1379,7 @@
          ],
          "text": {
           "chars": "0",
-          "font": "Muller/Medium/24",
+          "font": "Onest/Medium/24",
           "lineHeight": 32,
           "align": "CENTER"
          }
@@ -1439,7 +1439,7 @@
        ],
        "text": {
         "chars": "Укажите хотя бы 1 минуту",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -1481,7 +1481,7 @@
          ],
          "text": {
           "chars": "Отмена",
-          "font": "Muller/Regular/22",
+          "font": "Montserrat/Medium/21",
           "lineHeight": 28,
           "align": "CENTER"
          }
@@ -1521,7 +1521,7 @@
          ],
          "text": {
           "chars": "Установить",
-          "font": "Muller/Regular/22",
+          "font": "Montserrat/Medium/21",
           "lineHeight": 28,
           "align": "CENTER"
          }
@@ -1600,7 +1600,7 @@
        ],
        "text": {
         "chars": "Таймер сна",
-        "font": "Muller/Medium/24",
+        "font": "Onest/Medium/24",
         "lineHeight": 32,
         "align": "LEFT"
        }
@@ -1621,7 +1621,7 @@
        ],
        "text": {
         "chars": "Воспроизведение остановится в 23:47",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -1705,7 +1705,7 @@
          ],
          "text": {
           "chars": "15 минут",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -1791,7 +1791,7 @@
          ],
          "text": {
           "chars": "30 минут",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -1812,7 +1812,7 @@
          ],
          "text": {
           "chars": "осталось 24 мин",
-          "font": "Muller/Regular/14",
+          "font": "Onest/Regular/14",
           "lineHeight": 20,
           "align": "RIGHT"
          }
@@ -1898,7 +1898,7 @@
          ],
          "text": {
           "chars": "45 минут",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -1984,7 +1984,7 @@
          ],
          "text": {
           "chars": "60 минут",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -2070,7 +2070,7 @@
          ],
          "text": {
           "chars": "Своё время",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -2206,7 +2206,7 @@
          ],
          "text": {
           "chars": "Отключить таймер",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -2285,7 +2285,7 @@
        ],
        "text": {
         "chars": "Таймер сна",
-        "font": "Muller/Medium/24",
+        "font": "Onest/Medium/24",
         "lineHeight": 32,
         "align": "LEFT"
        }
@@ -2306,7 +2306,7 @@
        ],
        "text": {
         "chars": "Воспроизведение остановится в 01:12",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -2390,7 +2390,7 @@
          ],
          "text": {
           "chars": "15 минут",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -2476,7 +2476,7 @@
          ],
          "text": {
           "chars": "30 минут",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -2562,7 +2562,7 @@
          ],
          "text": {
           "chars": "45 минут",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -2648,7 +2648,7 @@
          ],
          "text": {
           "chars": "60 минут",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -2734,7 +2734,7 @@
          ],
          "text": {
           "chars": "Своё время",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -2755,7 +2755,7 @@
          ],
          "text": {
           "chars": "осталось 1 ч 24 мин",
-          "font": "Muller/Regular/14",
+          "font": "Onest/Regular/14",
           "lineHeight": 20,
           "align": "RIGHT"
          }
@@ -2858,7 +2858,7 @@
          ],
          "text": {
           "chars": "Отключить таймер",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -2982,7 +2982,7 @@
          ],
          "text": {
           "chars": "Найти трек",
-          "font": "Muller/Medium/15",
+          "font": "Onest/Medium/15",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -3068,7 +3068,7 @@
          ],
          "text": {
           "chars": "Таймер сна",
-          "font": "Muller/Medium/15",
+          "font": "Onest/Medium/15",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -3089,7 +3089,7 @@
          ],
          "text": {
           "chars": "24 мин",
-          "font": "Muller/Regular/14",
+          "font": "Onest/Regular/14",
           "lineHeight": 20,
           "align": "RIGHT"
          }
@@ -3165,7 +3165,7 @@
          "type": "TEXT",
          "x": 70,
          "y": 13,
-         "w": 160,
+         "w": 168,
          "h": 22,
          "constraints": "MIN/MIN",
          "sizeH": "FIXED",
@@ -3175,7 +3175,7 @@
          ],
          "text": {
           "chars": "Сообщить о проблеме",
-          "font": "Muller/Medium/15",
+          "font": "Onest/Medium/15",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -3261,7 +3261,7 @@
          ],
          "text": {
           "chars": "История эфира",
-          "font": "Muller/Medium/15",
+          "font": "Onest/Medium/15",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -3356,7 +3356,7 @@
        ],
        "text": {
         "chars": "Таймер сна отключён",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -3377,7 +3377,7 @@
        ],
        "text": {
         "chars": "Вернуть",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "RIGHT"
        }
@@ -3470,7 +3470,7 @@
        ],
        "text": {
         "chars": "Таймер сна завершён",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -3491,7 +3491,7 @@
        ],
        "text": {
         "chars": "Продолжить",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "RIGHT"
        }
@@ -3613,7 +3613,7 @@
          ],
          "text": {
           "chars": "Сообщить о проблеме",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "align": "LEFT"
          }
@@ -3638,7 +3638,7 @@
      ],
      "text": {
       "chars": "Что случилось?",
-      "font": "Muller/Medium/16",
+      "font": "Onest/Medium/16",
       "lineHeight": 22,
       "align": "LEFT"
      }
@@ -3713,7 +3713,7 @@
        ],
        "text": {
         "chars": "Музыка не запускается",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -3790,7 +3790,7 @@
        ],
        "text": {
         "chars": "Музыка остановилась сама",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -3867,7 +3867,7 @@
        ],
        "text": {
         "chars": "Проблема с наушниками",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -3944,7 +3944,7 @@
        ],
        "text": {
         "chars": "Проблема с интерфейсом",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -4021,7 +4021,7 @@
        ],
        "text": {
         "chars": "Другое",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -4044,7 +4044,7 @@
      ],
      "text": {
       "chars": "Описание (необязательно)",
-      "font": "Muller/Medium/16",
+      "font": "Onest/Medium/16",
       "lineHeight": 22,
       "align": "LEFT"
      }
@@ -4086,7 +4086,7 @@
        ],
        "text": {
         "chars": "Опишите, что произошло",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -4130,7 +4130,7 @@
        ],
        "text": {
         "chars": "Что будет отправлено",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -4151,7 +4151,7 @@
        ],
        "text": {
         "chars": "Версия приложения — 3.6.6 (202611)",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -4172,7 +4172,7 @@
        ],
        "text": {
         "chars": "Устройство — Xiaomi Redmi Note 12",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -4193,7 +4193,7 @@
        ],
        "text": {
         "chars": "Android — 14 (API 34)",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -4214,7 +4214,7 @@
        ],
        "text": {
         "chars": "Сеть в момент сбоя — Wi-Fi",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -4235,7 +4235,7 @@
        ],
        "text": {
         "chars": "Последняя ошибка — HTTP 403, 2 мин назад",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -4256,7 +4256,7 @@
        ],
        "text": {
         "chars": "Поток — Мята FM, 128 kbps",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -4294,7 +4294,7 @@
        ],
        "text": {
         "chars": "Личные данные не отправляются.",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -4334,7 +4334,7 @@
        ],
        "text": {
         "chars": "Отправить",
-        "font": "Muller/Regular/22",
+        "font": "Montserrat/Medium/21",
         "lineHeight": 28,
         "align": "CENTER"
        }
@@ -4456,7 +4456,7 @@
          ],
          "text": {
           "chars": "Сообщить о проблеме",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "align": "LEFT"
          }
@@ -4481,7 +4481,7 @@
      ],
      "text": {
       "chars": "Что случилось?",
-      "font": "Muller/Medium/16",
+      "font": "Onest/Medium/16",
       "lineHeight": 22,
       "align": "LEFT"
      }
@@ -4556,7 +4556,7 @@
        ],
        "text": {
         "chars": "Музыка не запускается",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -4633,7 +4633,7 @@
        ],
        "text": {
         "chars": "Музыка остановилась сама",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -4743,7 +4743,7 @@
        ],
        "text": {
         "chars": "Проблема с наушниками",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -4820,7 +4820,7 @@
        ],
        "text": {
         "chars": "Проблема с интерфейсом",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -4897,7 +4897,7 @@
        ],
        "text": {
         "chars": "Другое",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -4920,7 +4920,7 @@
      ],
      "text": {
       "chars": "Описание (необязательно)",
-      "font": "Muller/Medium/16",
+      "font": "Onest/Medium/16",
       "lineHeight": 22,
       "align": "LEFT"
      }
@@ -4962,7 +4962,7 @@
        ],
        "text": {
         "chars": "Играло минут двадцать, потом звук пропал,",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -4983,7 +4983,7 @@
        ],
        "text": {
         "chars": "кнопка стала «play» сама.",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -5027,7 +5027,7 @@
        ],
        "text": {
         "chars": "Что будет отправлено",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -5048,7 +5048,7 @@
        ],
        "text": {
         "chars": "Версия приложения — 3.6.6 (202611)",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -5069,7 +5069,7 @@
        ],
        "text": {
         "chars": "Устройство — Xiaomi Redmi Note 12",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -5090,7 +5090,7 @@
        ],
        "text": {
         "chars": "Android — 14 (API 34)",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -5111,7 +5111,7 @@
        ],
        "text": {
         "chars": "Сеть в момент сбоя — Wi-Fi",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -5132,7 +5132,7 @@
        ],
        "text": {
         "chars": "Последняя ошибка — HTTP 403, 2 мин назад",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -5153,7 +5153,7 @@
        ],
        "text": {
         "chars": "Поток — Мята FM, 128 kbps",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -5191,7 +5191,7 @@
        ],
        "text": {
         "chars": "Личные данные не отправляются.",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -5231,7 +5231,7 @@
        ],
        "text": {
         "chars": "Отправить",
-        "font": "Muller/Regular/22",
+        "font": "Montserrat/Medium/21",
         "lineHeight": 28,
         "align": "CENTER"
        }
@@ -5353,7 +5353,7 @@
          ],
          "text": {
           "chars": "Сообщить о проблеме",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "align": "LEFT"
          }
@@ -5378,7 +5378,7 @@
      ],
      "text": {
       "chars": "Что случилось?",
-      "font": "Muller/Medium/16",
+      "font": "Onest/Medium/16",
       "lineHeight": 22,
       "align": "LEFT"
      }
@@ -5453,7 +5453,7 @@
        ],
        "text": {
         "chars": "Музыка не запускается",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -5530,7 +5530,7 @@
        ],
        "text": {
         "chars": "Музыка остановилась сама",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -5640,7 +5640,7 @@
        ],
        "text": {
         "chars": "Проблема с наушниками",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -5717,7 +5717,7 @@
        ],
        "text": {
         "chars": "Проблема с интерфейсом",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -5794,7 +5794,7 @@
        ],
        "text": {
         "chars": "Другое",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -5817,7 +5817,7 @@
      ],
      "text": {
       "chars": "Описание (необязательно)",
-      "font": "Muller/Medium/16",
+      "font": "Onest/Medium/16",
       "lineHeight": 22,
       "align": "LEFT"
      }
@@ -5859,7 +5859,7 @@
        ],
        "text": {
         "chars": "Играло минут двадцать, потом звук пропал,",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -5880,7 +5880,7 @@
        ],
        "text": {
         "chars": "кнопка стала «play» сама.",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -5924,7 +5924,7 @@
        ],
        "text": {
         "chars": "Что будет отправлено",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -5945,7 +5945,7 @@
        ],
        "text": {
         "chars": "Версия приложения — 3.6.6 (202611)",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -5966,7 +5966,7 @@
        ],
        "text": {
         "chars": "Устройство — Xiaomi Redmi Note 12",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -5987,7 +5987,7 @@
        ],
        "text": {
         "chars": "Android — 14 (API 34)",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -6008,7 +6008,7 @@
        ],
        "text": {
         "chars": "Сеть в момент сбоя — Wi-Fi",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -6029,7 +6029,7 @@
        ],
        "text": {
         "chars": "Последняя ошибка — HTTP 403, 2 мин назад",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -6050,7 +6050,7 @@
        ],
        "text": {
         "chars": "Поток — Мята FM, 128 kbps",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -6088,7 +6088,7 @@
        ],
        "text": {
         "chars": "Личные данные не отправляются.",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -6128,7 +6128,7 @@
        ],
        "text": {
         "chars": "Отправляем…",
-        "font": "Muller/Regular/22",
+        "font": "Montserrat/Medium/21",
         "lineHeight": 28,
         "align": "CENTER"
        }
@@ -6250,7 +6250,7 @@
          ],
          "text": {
           "chars": "Сообщить о проблеме",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "align": "LEFT"
          }
@@ -6275,7 +6275,7 @@
      ],
      "text": {
       "chars": "Что случилось?",
-      "font": "Muller/Medium/16",
+      "font": "Onest/Medium/16",
       "lineHeight": 22,
       "align": "LEFT"
      }
@@ -6350,7 +6350,7 @@
        ],
        "text": {
         "chars": "Музыка не запускается",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -6427,7 +6427,7 @@
        ],
        "text": {
         "chars": "Музыка остановилась сама",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -6537,7 +6537,7 @@
        ],
        "text": {
         "chars": "Проблема с наушниками",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -6614,7 +6614,7 @@
        ],
        "text": {
         "chars": "Проблема с интерфейсом",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -6691,7 +6691,7 @@
        ],
        "text": {
         "chars": "Другое",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -6714,7 +6714,7 @@
      ],
      "text": {
       "chars": "Описание (необязательно)",
-      "font": "Muller/Medium/16",
+      "font": "Onest/Medium/16",
       "lineHeight": 22,
       "align": "LEFT"
      }
@@ -6756,7 +6756,7 @@
        ],
        "text": {
         "chars": "Играло минут двадцать, потом звук пропал,",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -6777,7 +6777,7 @@
        ],
        "text": {
         "chars": "кнопка стала «play» сама.",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -6821,7 +6821,7 @@
        ],
        "text": {
         "chars": "Что будет отправлено",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -6842,7 +6842,7 @@
        ],
        "text": {
         "chars": "Версия приложения — 3.6.6 (202611)",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -6863,7 +6863,7 @@
        ],
        "text": {
         "chars": "Устройство — Xiaomi Redmi Note 12",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -6884,7 +6884,7 @@
        ],
        "text": {
         "chars": "Android — 14 (API 34)",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -6905,7 +6905,7 @@
        ],
        "text": {
         "chars": "Сеть в момент сбоя — Wi-Fi",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -6926,7 +6926,7 @@
        ],
        "text": {
         "chars": "Последняя ошибка — HTTP 403, 2 мин назад",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -6947,7 +6947,7 @@
        ],
        "text": {
         "chars": "Поток — Мята FM, 128 kbps",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -6985,7 +6985,7 @@
        ],
        "text": {
         "chars": "Личные данные не отправляются.",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -7062,7 +7062,7 @@
        ],
        "text": {
         "chars": "Не удалось отправить сообщение.",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -7102,7 +7102,7 @@
        ],
        "text": {
         "chars": "Отправить ещё раз",
-        "font": "Muller/Regular/22",
+        "font": "Montserrat/Medium/21",
         "lineHeight": 28,
         "align": "CENTER"
        }
@@ -7224,7 +7224,7 @@
          ],
          "text": {
           "chars": "Сообщить о проблеме",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "align": "LEFT"
          }
@@ -7322,7 +7322,7 @@
        ],
        "text": {
         "chars": "Спасибо!",
-        "font": "Muller/Medium/24",
+        "font": "Onest/Medium/24",
         "lineHeight": 32,
         "align": "CENTER"
        }
@@ -7343,7 +7343,7 @@
        ],
        "text": {
         "chars": "Сообщение отправлено. Если понадобится,",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "CENTER"
        }
@@ -7364,7 +7364,7 @@
        ],
        "text": {
         "chars": "мы ответим в Telegram.",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "CENTER"
        }
@@ -7404,7 +7404,7 @@
        ],
        "text": {
         "chars": "Готово",
-        "font": "Muller/Regular/22",
+        "font": "Montserrat/Medium/21",
         "lineHeight": 28,
         "align": "CENTER"
        }
@@ -7540,7 +7540,7 @@
            ],
            "text": {
             "chars": "История эфира",
-            "font": "Muller/Medium/24",
+            "font": "Montserrat/Medium/24",
             "lineHeight": 32,
             "align": "LEFT"
            }
@@ -9082,7 +9082,7 @@
          ],
          "text": {
           "chars": "История эфира",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "align": "LEFT"
          }
@@ -9159,7 +9159,7 @@
      ],
      "text": {
       "chars": "Пока нет истории",
-      "font": "Muller/Medium/24",
+      "font": "Onest/Medium/24",
       "lineHeight": 32,
       "align": "CENTER"
      }
@@ -9180,7 +9180,7 @@
      ],
      "text": {
       "chars": "Треки появятся здесь, как только",
-      "font": "Muller/Regular/15",
+      "font": "Onest/Regular/15",
       "lineHeight": 22,
       "align": "CENTER"
      }
@@ -9201,7 +9201,7 @@
      ],
      "text": {
       "chars": "начнётся эфир.",
-      "font": "Muller/Regular/15",
+      "font": "Onest/Regular/15",
       "lineHeight": 22,
       "align": "CENTER"
      }
@@ -9243,7 +9243,7 @@
        ],
        "text": {
         "chars": "Обновить",
-        "font": "Muller/Regular/22",
+        "font": "Montserrat/Medium/21",
         "lineHeight": 28,
         "align": "CENTER"
        }
@@ -9320,7 +9320,7 @@
        ],
        "text": {
         "chars": "CRYOGEN",
-        "font": "Muller/Medium/24",
+        "font": "Onest/Medium/24",
         "lineHeight": 32,
         "align": "LEFT"
        }
@@ -9341,7 +9341,7 @@
        ],
        "text": {
         "chars": "MUSE",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -9408,7 +9408,7 @@
          ],
          "text": {
           "chars": "Spotify",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -9477,7 +9477,7 @@
          ],
          "text": {
           "chars": "Apple Music",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -9562,7 +9562,7 @@
          ],
          "text": {
           "chars": "YouTube Music",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -9631,7 +9631,7 @@
          ],
          "text": {
           "chars": "Яндекс Музыка",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -9755,7 +9755,7 @@
          ],
          "text": {
           "chars": "История эфира",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "align": "LEFT"
          }
@@ -9832,7 +9832,7 @@
      ],
      "text": {
       "chars": "Не удалось загрузить",
-      "font": "Muller/Medium/24",
+      "font": "Onest/Medium/24",
       "lineHeight": 32,
       "align": "CENTER"
      }
@@ -9853,7 +9853,7 @@
      ],
      "text": {
       "chars": "Проверьте подключение",
-      "font": "Muller/Regular/15",
+      "font": "Onest/Regular/15",
       "lineHeight": 22,
       "align": "CENTER"
      }
@@ -9874,7 +9874,7 @@
      ],
      "text": {
       "chars": "и попробуйте ещё раз.",
-      "font": "Muller/Regular/15",
+      "font": "Onest/Regular/15",
       "lineHeight": 22,
       "align": "CENTER"
      }
@@ -9912,7 +9912,7 @@
        ],
        "text": {
         "chars": "Повторить",
-        "font": "Muller/Regular/22",
+        "font": "Montserrat/Medium/21",
         "lineHeight": 28,
         "align": "CENTER"
        }
@@ -9989,7 +9989,7 @@
        ],
        "text": {
         "chars": "CRYOGEN",
-        "font": "Muller/Medium/24",
+        "font": "Onest/Medium/24",
         "lineHeight": 32,
         "align": "LEFT"
        }
@@ -10010,7 +10010,7 @@
        ],
        "text": {
         "chars": "MUSE",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -10077,7 +10077,7 @@
          ],
          "text": {
           "chars": "Spotify",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -10146,7 +10146,7 @@
          ],
          "text": {
           "chars": "Apple Music",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -10231,7 +10231,7 @@
          ],
          "text": {
           "chars": "YouTube Music",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -10300,7 +10300,7 @@
          ],
          "text": {
           "chars": "Яндекс Музыка",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -10403,7 +10403,7 @@
          ],
          "text": {
           "chars": "Удалить из коллекции",
-          "font": "Muller/Medium/16",
+          "font": "Onest/Medium/16",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -10528,7 +10528,7 @@
          ],
          "text": {
           "chars": "Экспорт в TXT",
-          "font": "Muller/Medium/15",
+          "font": "Onest/Medium/15",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -10614,7 +10614,7 @@
          ],
          "text": {
           "chars": "Экспорт в CSV",
-          "font": "Muller/Medium/15",
+          "font": "Onest/Medium/15",
           "lineHeight": 22,
           "align": "LEFT"
          }
@@ -10738,7 +10738,7 @@
          ],
          "text": {
           "chars": "Вход",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "align": "LEFT"
          }
@@ -10763,7 +10763,7 @@
      ],
      "text": {
       "chars": "Войдите, чтобы коллекция синхронизировалась",
-      "font": "Muller/Regular/15",
+      "font": "Onest/Regular/15",
       "lineHeight": 22,
       "align": "LEFT"
      }
@@ -10784,7 +10784,7 @@
      ],
      "text": {
       "chars": "между устройствами.",
-      "font": "Muller/Regular/15",
+      "font": "Onest/Regular/15",
       "lineHeight": 22,
       "align": "LEFT"
      }
@@ -10805,7 +10805,7 @@
      ],
      "text": {
       "chars": "Email",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -10847,7 +10847,7 @@
        ],
        "text": {
         "chars": "denis@example.com",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -10870,7 +10870,7 @@
      ],
      "text": {
       "chars": "Пароль",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -10912,7 +10912,7 @@
        ],
        "text": {
         "chars": "••••••••••",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -10935,7 +10935,7 @@
      ],
      "text": {
       "chars": "Забыли пароль?",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "RIGHT"
      }
@@ -10973,7 +10973,7 @@
        ],
        "text": {
         "chars": "Войти",
-        "font": "Muller/Regular/22",
+        "font": "Montserrat/Medium/21",
         "lineHeight": 28,
         "align": "CENTER"
        }
@@ -11017,7 +11017,7 @@
        ],
        "text": {
         "chars": "Создать аккаунт",
-        "font": "Muller/Regular/22",
+        "font": "Montserrat/Medium/21",
         "lineHeight": 28,
         "align": "CENTER"
        }
@@ -11040,7 +11040,7 @@
      ],
      "text": {
       "chars": "Продолжить без аккаунта",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "CENTER"
      }
@@ -11160,7 +11160,7 @@
          ],
          "text": {
           "chars": "Создать аккаунт",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "align": "LEFT"
          }
@@ -11185,7 +11185,7 @@
      ],
      "text": {
       "chars": "Имя",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -11227,7 +11227,7 @@
        ],
        "text": {
         "chars": "Денис",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -11250,7 +11250,7 @@
      ],
      "text": {
       "chars": "Email",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -11292,7 +11292,7 @@
        ],
        "text": {
         "chars": "denis@example.com",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -11315,7 +11315,7 @@
      ],
      "text": {
       "chars": "Пароль",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -11357,7 +11357,7 @@
        ],
        "text": {
         "chars": "Придумайте пароль",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -11380,7 +11380,7 @@
      ],
      "text": {
       "chars": "Минимум 8 символов",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -11418,7 +11418,7 @@
        ],
        "text": {
         "chars": "Создать аккаунт",
-        "font": "Muller/Regular/22",
+        "font": "Montserrat/Medium/21",
         "lineHeight": 28,
         "align": "CENTER"
        }
@@ -11441,7 +11441,7 @@
      ],
      "text": {
       "chars": "Уже есть аккаунт? Войти",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "CENTER"
      }
@@ -11561,7 +11561,7 @@
          ],
          "text": {
           "chars": "Профиль",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "align": "LEFT"
          }
@@ -11662,7 +11662,7 @@
        ],
        "text": {
         "chars": "Вы не вошли",
-        "font": "Muller/Medium/24",
+        "font": "Onest/Medium/24",
         "lineHeight": 32,
         "align": "CENTER"
        }
@@ -11683,7 +11683,7 @@
        ],
        "text": {
         "chars": "Радио, плеер, история эфира, таймер сна",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "CENTER"
        }
@@ -11704,7 +11704,7 @@
        ],
        "text": {
         "chars": "и коллекция работают без аккаунта.",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "CENTER"
        }
@@ -11744,7 +11744,7 @@
        ],
        "text": {
         "chars": "Войти",
-        "font": "Muller/Regular/22",
+        "font": "Montserrat/Medium/21",
         "lineHeight": 28,
         "align": "CENTER"
        }
@@ -11788,7 +11788,7 @@
        ],
        "text": {
         "chars": "Создать аккаунт",
-        "font": "Muller/Regular/22",
+        "font": "Montserrat/Medium/21",
         "lineHeight": 28,
         "align": "CENTER"
        }
@@ -11811,7 +11811,7 @@
      ],
      "text": {
       "chars": "Аккаунт добавляет",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -11886,7 +11886,7 @@
        ],
        "text": {
         "chars": "Синхронизация коллекции",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -11962,7 +11962,7 @@
        ],
        "text": {
         "chars": "Восстановление коллекции",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -12084,7 +12084,7 @@
          ],
          "text": {
           "chars": "Профиль",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "align": "LEFT"
          }
@@ -12147,7 +12147,7 @@
          ],
          "text": {
           "chars": "Д",
-          "font": "Muller/Medium/24",
+          "font": "Onest/Medium/24",
           "lineHeight": 32,
           "align": "CENTER"
          }
@@ -12170,7 +12170,7 @@
        ],
        "text": {
         "chars": "Денис",
-        "font": "Muller/Regular/17",
+        "font": "Onest/Regular/17",
         "lineHeight": 28,
         "align": "LEFT"
        }
@@ -12191,7 +12191,7 @@
        ],
        "text": {
         "chars": "denis@example.com",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -12214,7 +12214,7 @@
      ],
      "text": {
       "chars": "Синхронизация",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -12289,7 +12289,7 @@
        ],
        "text": {
         "chars": "Облачная синхронизация",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -12310,7 +12310,7 @@
        ],
        "text": {
         "chars": "Включена",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -12387,7 +12387,7 @@
        ],
        "text": {
         "chars": "Последняя синхронизация",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -12408,7 +12408,7 @@
        ],
        "text": {
         "chars": "2 мин назад",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -12431,7 +12431,7 @@
      ],
      "text": {
       "chars": "Аккаунт",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -12506,7 +12506,7 @@
        ],
        "text": {
         "chars": "Аватар",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -12616,7 +12616,7 @@
        ],
        "text": {
         "chars": "Сменить пароль",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -12726,7 +12726,7 @@
        ],
        "text": {
         "chars": "Выйти",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -12848,7 +12848,7 @@
          ],
          "text": {
           "chars": "Настройки",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "align": "LEFT"
          }
@@ -12873,7 +12873,7 @@
      ],
      "text": {
       "chars": "Аккаунт",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -12948,7 +12948,7 @@
        ],
        "text": {
         "chars": "Профиль",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -12969,7 +12969,7 @@
        ],
        "text": {
         "chars": "Не вошли",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "RIGHT"
        }
@@ -13025,7 +13025,7 @@
      ],
      "text": {
       "chars": "Внешний вид",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -13099,7 +13099,7 @@
        ],
        "text": {
         "chars": "Тема",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -13120,7 +13120,7 @@
        ],
        "text": {
         "chars": "Системная",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "RIGHT"
        }
@@ -13176,7 +13176,7 @@
      ],
      "text": {
       "chars": "Воспроизведение",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -13251,7 +13251,7 @@
        ],
        "text": {
         "chars": "Качество потока",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -13272,7 +13272,7 @@
        ],
        "text": {
         "chars": "Авто",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "RIGHT"
        }
@@ -13382,7 +13382,7 @@
        ],
        "text": {
         "chars": "Таймер сна",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -13403,7 +13403,7 @@
        ],
        "text": {
         "chars": "Выключен",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "RIGHT"
        }
@@ -13459,7 +13459,7 @@
      ],
      "text": {
       "chars": "Интеграции",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -13517,7 +13517,7 @@
        ],
        "text": {
         "chars": "Last.fm",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -13538,7 +13538,7 @@
        ],
        "text": {
         "chars": "Не подключён",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "RIGHT"
        }
@@ -13594,7 +13594,7 @@
      ],
      "text": {
       "chars": "Прочее",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -13669,7 +13669,7 @@
        ],
        "text": {
         "chars": "Сообщить о проблеме",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -13779,7 +13779,7 @@
        ],
        "text": {
         "chars": "О приложении",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -13800,7 +13800,7 @@
        ],
        "text": {
         "chars": "3.6.6",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "RIGHT"
        }
@@ -13955,7 +13955,7 @@
          ],
          "text": {
           "chars": "Тема",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "align": "LEFT"
          }
@@ -14033,7 +14033,7 @@
        ],
        "text": {
         "chars": "Системная",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -14054,7 +14054,7 @@
        ],
        "text": {
         "chars": "Как в настройках устройства",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -14163,7 +14163,7 @@
        ],
        "text": {
         "chars": "Светлая",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -14239,7 +14239,7 @@
        ],
        "text": {
         "chars": "Тёмная",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -14262,7 +14262,7 @@
      ],
      "text": {
       "chars": "Тема применяется сразу, без перезапуска.",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -14382,7 +14382,7 @@
          ],
          "text": {
           "chars": "Синхронизация",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "align": "LEFT"
          }
@@ -14480,7 +14480,7 @@
        ],
        "text": {
         "chars": "Синхронизировано",
-        "font": "Muller/Regular/17",
+        "font": "Onest/Regular/17",
         "lineHeight": 28,
         "align": "LEFT"
        }
@@ -14501,7 +14501,7 @@
        ],
        "text": {
         "chars": "2 мин назад · 48 треков",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -14524,7 +14524,7 @@
      ],
      "text": {
       "chars": "Остальные состояния этой карточки",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -14599,7 +14599,7 @@
        ],
        "text": {
         "chars": "Синхронизация…",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -14620,7 +14620,7 @@
        ],
        "text": {
         "chars": "24 из 48 треков",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -14697,7 +14697,7 @@
        ],
        "text": {
         "chars": "Не удалось синхронизировать",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -14718,7 +14718,7 @@
        ],
        "text": {
         "chars": "Нажмите, чтобы повторить",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -14795,7 +14795,7 @@
        ],
        "text": {
         "chars": "Синхронизация выключена",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -14816,7 +14816,7 @@
        ],
        "text": {
         "chars": "Включите её в профиле",
-        "font": "Muller/Regular/14",
+        "font": "Onest/Regular/14",
         "lineHeight": 20,
         "align": "LEFT"
        }
@@ -14839,7 +14839,7 @@
      ],
      "text": {
       "chars": "Управление",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -14914,7 +14914,7 @@
        ],
        "text": {
         "chars": "Синхронизировать сейчас",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -14991,7 +14991,7 @@
        ],
        "text": {
         "chars": "Удалить копию в облаке",
-        "font": "Muller/Medium/16",
+        "font": "Onest/Medium/16",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -15113,7 +15113,7 @@
          ],
          "text": {
           "chars": "Last.fm",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "align": "LEFT"
          }
@@ -15175,7 +15175,7 @@
        ],
        "text": {
         "chars": "Не подключён",
-        "font": "Muller/Regular/17",
+        "font": "Onest/Regular/17",
         "lineHeight": 28,
         "align": "LEFT"
        }
@@ -15196,7 +15196,7 @@
        ],
        "text": {
         "chars": "Подключите Last.fm, чтобы отмечать",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -15217,7 +15217,7 @@
        ],
        "text": {
         "chars": "прослушанные треки.",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -15255,7 +15255,7 @@
          ],
          "text": {
           "chars": "Подключить",
-          "font": "Muller/Regular/22",
+          "font": "Montserrat/Medium/21",
           "lineHeight": 28,
           "align": "CENTER"
          }
@@ -15317,7 +15317,7 @@
        ],
        "text": {
         "chars": "Подключён",
-        "font": "Muller/Regular/17",
+        "font": "Onest/Regular/17",
         "lineHeight": 28,
         "align": "LEFT"
        }
@@ -15371,7 +15371,7 @@
        ],
        "text": {
         "chars": "f0ul482 · 22 258 скробблов",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -15392,7 +15392,7 @@
        ],
        "text": {
         "chars": "Последний: MUSE — CRYOGEN",
-        "font": "Muller/Regular/15",
+        "font": "Onest/Regular/15",
         "lineHeight": 22,
         "align": "LEFT"
        }
@@ -15434,7 +15434,7 @@
          ],
          "text": {
           "chars": "Отключить",
-          "font": "Muller/Regular/22",
+          "font": "Montserrat/Medium/21",
           "lineHeight": 28,
           "align": "CENTER"
          }
@@ -15459,7 +15459,7 @@
      ],
      "text": {
       "chars": "Пароль Last.fm не хранится в приложении:",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -15480,7 +15480,7 @@
      ],
      "text": {
       "chars": "используется веб-авторизация.",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "LEFT"
      }
@@ -15614,7 +15614,7 @@
            ],
            "text": {
             "chars": "История эфира",
-            "font": "Muller/Medium/24",
+            "font": "Montserrat/Medium/24",
             "lineHeight": 32,
             "align": "LEFT"
            }
@@ -15671,7 +15671,7 @@
            ],
            "text": {
             "chars": "10:45",
-            "font": "Muller/Regular/14",
+            "font": "Onest/Regular/14",
             "lineHeight": 20,
             "align": "LEFT"
            }
@@ -15723,7 +15723,7 @@
              ],
              "text": {
               "chars": "CRYOGEN",
-              "font": "Muller/Regular/17",
+              "font": "Onest/Regular/17",
               "lineHeight": 28,
               "align": "LEFT"
              }
@@ -15744,7 +15744,7 @@
              ],
              "text": {
               "chars": "MUSE",
-              "font": "Muller/Regular/14",
+              "font": "Onest/Regular/14",
               "lineHeight": 20,
               "align": "LEFT"
              }
@@ -15857,7 +15857,7 @@
            ],
            "text": {
             "chars": "10:41",
-            "font": "Muller/Regular/14",
+            "font": "Onest/Regular/14",
             "lineHeight": 20,
             "align": "LEFT"
            }
@@ -15909,7 +15909,7 @@
              ],
              "text": {
               "chars": "ФАК Ю",
-              "font": "Muller/Regular/17",
+              "font": "Onest/Regular/17",
               "lineHeight": 28,
               "align": "LEFT"
              }
@@ -15930,7 +15930,7 @@
              ],
              "text": {
               "chars": "КРАСНОЗНАМЁННАЯ ДИВИЗИЯ ИМЕНИ МОЕЙ БАБУШКИ",
-              "font": "Muller/Regular/14",
+              "font": "Onest/Regular/14",
               "lineHeight": 20,
               "align": "LEFT"
              }
@@ -16043,7 +16043,7 @@
            ],
            "text": {
             "chars": "10:36",
-            "font": "Muller/Regular/14",
+            "font": "Onest/Regular/14",
             "lineHeight": 20,
             "align": "LEFT"
            }
@@ -16095,7 +16095,7 @@
              ],
              "text": {
               "chars": "CITY WALLS",
-              "font": "Muller/Regular/17",
+              "font": "Onest/Regular/17",
               "lineHeight": 28,
               "align": "LEFT"
              }
@@ -16116,7 +16116,7 @@
              ],
              "text": {
               "chars": "TWENTY ONE PILOTS",
-              "font": "Muller/Regular/14",
+              "font": "Onest/Regular/14",
               "lineHeight": 20,
               "align": "LEFT"
              }
@@ -16229,7 +16229,7 @@
            ],
            "text": {
             "chars": "10:31",
-            "font": "Muller/Regular/14",
+            "font": "Onest/Regular/14",
             "lineHeight": 20,
             "align": "LEFT"
            }
@@ -16281,7 +16281,7 @@
              ],
              "text": {
               "chars": "WHAT YOU KNOW",
-              "font": "Muller/Regular/17",
+              "font": "Onest/Regular/17",
               "lineHeight": 28,
               "align": "LEFT"
              }
@@ -16302,7 +16302,7 @@
              ],
              "text": {
               "chars": "TWO DOOR CINEMA CLUB",
-              "font": "Muller/Regular/14",
+              "font": "Onest/Regular/14",
               "lineHeight": 20,
               "align": "LEFT"
              }
@@ -16415,7 +16415,7 @@
            ],
            "text": {
             "chars": "10:27",
-            "font": "Muller/Regular/14",
+            "font": "Onest/Regular/14",
             "lineHeight": 20,
             "align": "LEFT"
            }
@@ -16467,7 +16467,7 @@
              ],
              "text": {
               "chars": "A LITTLE SOMETHING FOR THE WEEKEND",
-              "font": "Muller/Regular/17",
+              "font": "Onest/Regular/17",
               "lineHeight": 28,
               "align": "LEFT"
              }
@@ -16488,7 +16488,7 @@
              ],
              "text": {
               "chars": "FRANC MOODY",
-              "font": "Muller/Regular/14",
+              "font": "Onest/Regular/14",
               "lineHeight": 20,
               "align": "LEFT"
              }
@@ -16601,7 +16601,7 @@
            ],
            "text": {
             "chars": "10:22",
-            "font": "Muller/Regular/14",
+            "font": "Onest/Regular/14",
             "lineHeight": 20,
             "align": "LEFT"
            }
@@ -16653,7 +16653,7 @@
              ],
              "text": {
               "chars": "what went down",
-              "font": "Muller/Regular/17",
+              "font": "Onest/Regular/17",
               "lineHeight": 28,
               "align": "LEFT"
              }
@@ -16674,7 +16674,7 @@
              ],
              "text": {
               "chars": "FOALS",
-              "font": "Muller/Regular/14",
+              "font": "Onest/Regular/14",
               "lineHeight": 20,
               "align": "LEFT"
              }
@@ -16787,7 +16787,7 @@
            ],
            "text": {
             "chars": "10:18",
-            "font": "Muller/Regular/14",
+            "font": "Onest/Regular/14",
             "lineHeight": 20,
             "align": "LEFT"
            }
@@ -16839,7 +16839,7 @@
              ],
              "text": {
               "chars": "breezeblocks",
-              "font": "Muller/Regular/17",
+              "font": "Onest/Regular/17",
               "lineHeight": 28,
               "align": "LEFT"
              }
@@ -16860,7 +16860,7 @@
              ],
              "text": {
               "chars": "ALT-J",
-              "font": "Muller/Regular/14",
+              "font": "Onest/Regular/14",
               "lineHeight": 20,
               "align": "LEFT"
              }
@@ -16973,7 +16973,7 @@
            ],
            "text": {
             "chars": "10:13",
-            "font": "Muller/Regular/14",
+            "font": "Onest/Regular/14",
             "lineHeight": 20,
             "align": "LEFT"
            }
@@ -17025,7 +17025,7 @@
              ],
              "text": {
               "chars": "SLOW BURN",
-              "font": "Muller/Regular/17",
+              "font": "Onest/Regular/17",
               "lineHeight": 28,
               "align": "LEFT"
              }
@@ -17046,7 +17046,7 @@
              ],
              "text": {
               "chars": "KAYTRANADA",
-              "font": "Muller/Regular/14",
+              "font": "Onest/Regular/14",
               "lineHeight": 20,
               "align": "LEFT"
              }
@@ -17157,7 +17157,7 @@
          ],
          "text": {
           "chars": "Показаны последние 30 треков",
-          "font": "Muller/Regular/14",
+          "font": "Onest/Regular/14",
           "lineHeight": 20,
           "align": "CENTER"
          }
@@ -17281,7 +17281,7 @@
          ],
          "text": {
           "chars": "Выбор аватара",
-          "font": "Muller/Medium/24",
+          "font": "Montserrat/Medium/24",
           "lineHeight": 32,
           "align": "LEFT"
          }
@@ -17327,7 +17327,7 @@
      ],
      "text": {
       "chars": "Текущий аватар",
-      "font": "Muller/Regular/14",
+      "font": "Onest/Regular/14",
       "lineHeight": 20,
       "align": "CENTER"
      }
@@ -17761,7 +17761,7 @@
        ],
        "text": {
         "chars": "Сохранить",
-        "font": "Muller/Regular/22",
+        "font": "Montserrat/Medium/21",
         "lineHeight": 28,
         "align": "CENTER"
        }

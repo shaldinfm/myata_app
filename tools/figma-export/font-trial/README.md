@@ -58,6 +58,7 @@ family either way — but the role name is what gets reviewed.
 | history track metadata | **Onest** | `History Item` ancestor |
 | collection track title | **Onest** | `Track Item` ancestor, size ≥ 16 |
 | collection secondary | Onest | `Track Item` ancestor, smaller |
+| card heading | Montserrat **Medium** | `Heading 3` at 24px — the two ABOUT US card headings |
 | heading | Montserrat | `Heading *` node or ancestor |
 | button / CTA | Montserrat | `Button*` node or ancestor |
 | player transport label | Onest | `PLAY`/`PAUSE`/`STOP` in the player |
@@ -70,6 +71,10 @@ family either way — but the role name is what gets reviewed.
 
 Run over the 123 real frozen text nodes in these seven frames, this yields
 **24 Montserrat / 99 Onest**.
+
+The classifier is FINAL APPROVED as of the card-heading rule; no further visual
+trial is planned. Applying it to the live design is the job of
+`../typography-migration`.
 
 Montserrat is now reserved for the expressive core: screen and section headings,
 buttons and CTAs, the small action link, and the full Player now-playing metadata.

@@ -1,0 +1,12 @@
+{
+  "name": "Radio Myata · Typography migration (3.6.6)",
+  "id": "radio-myata-typography-migration",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "reasoning": "Reads and restyles text on four named pages of the open document. It never contacts a server."
+  }
+}

@@ -128,6 +128,17 @@ var RULES = [
     why: "artist / helper line beside a Collection title - owner asked to test Onest here",
     test: function (ctx) { return /track\s*item/i.test(ctx.path); },
   },
+  {
+    role: "card heading",
+    family: MONTSERRAT,
+    // Owner: these read better at Medium than at Regular. Structural, not
+    // text-matched - Heading 3 at 24px is exactly the two card headings in
+    // ABOUT US. The other Heading 3 nodes are 16px (Collection titles and the
+    // empty-state line) and are untouched.
+    weight: "Medium",
+    why: "card heading - owner: Medium 500 rather than Regular",
+    test: function (ctx) { return /(^|>\s*)heading\s*3/i.test(ctx.path) && ctx.size === 24; },
+  },
 {
     role: "heading",
     family: MONTSERRAT,

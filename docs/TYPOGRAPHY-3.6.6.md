@@ -111,10 +111,69 @@ Every plugin's `code.js` is **generated** — `build.mjs` splices the classifier
 verbatim out of `font-trial/code.js`, so no tool can apply rules other than the
 approved ones. `build.mjs --check` fails if any has drifted.
 
-## Still open — Android
+## Android — done
 
-Android has not been touched. It still ships nine Muller files, 824 KB, all of
-which must go. Known constraints for that migration:
+Android is migrated. No Muller resource, no XML or Kotlin reference, and nothing
+matching Muller or Fontfabric anywhere in the APK. The nine binaries are gone;
+Montserrat and Onest cost 675,807 bytes compressed against Muller's 363,812, a
+net +311,995.
+
+Tokens live in `res/values/typography.xml`, one per family+weight+size+lineHeight
+the contract uses. `MyataTypography` applies them, because a TextAppearance
+carries family, weight and size but not the other two: `android:lineHeight` is
+API 28 and unreadable below it, and `android:includeFontPadding` is not a text
+appearance attribute on any API. `TypographyProbeTest` and
+`TypographyWidthSweepTest` prove the result on API 24 and API 36.
+
+### Accepted deviations
+
+Four, all reviewed and approved. None is to be "fixed" without a decision to
+reopen it.
+
+1. **TV stream cards sit 4px lower.** `fragment_tv_stream_selection`'s title
+   keeps its 32sp, but Onest Light's line box is taller than Muller Light's, so
+   the cards below it shift down uniformly — `[…,520][…,756]` to
+   `[…,524][…,760]`. Node set, ids, classes, focusability, focus chain,
+   navigation and playback are all unchanged; the TV harness confirms it. This is
+   the approved licensing-driven typography delta and is **not** to be
+   compensated for by hand.
+2. **"Мятные плейлисты" wraps at 320dp.** Montserrat Bold 28 keeps it on one line
+   at 360, 390 and 412dp. The design is drawn at 390dp and this heading is not
+   among the approved one-line corrections, so the wrap below the design width is
+   accepted.
+3. **Track rows keep their badges, timestamps and service actions.** The canonical
+   rows do not have them; the Android rows do, and they carry real function.
+   Typography was aligned around them and they stay.
+4. **Collection rows still truncate.** They ellipsize at one line for the title and
+   two for the artist, as they always have, where the canonical row specifies no
+   truncation. Changing that is behaviour, not typography, and is out of scope.
+
+History rows are the exception to (4) and always were: variable height, no
+ellipsis, by owner decision. A long Russian title adds a line instead of cutting.
+
+### Constraints that shaped it
+
+1. **Line height.** Muller's line box is exactly 1000 units; Montserrat is +21.9%
+   and Onest +27.5%. Android layouts rely on font metrics, so type would grow
+   vertically unless explicit line heights were set — which is what the tokens and
+   `MyataTypography` do, and what deviation (1) is the residue of.
+2. **Static instances required.** `minSdk` is 24; `fontVariationSettings` needs
+   API 26, so the shipped faces are statics built from pinned upstream by
+   `tools/fonts/build-android-fonts.mjs`. Montserrat ships statics; Onest's 2.001
+   release does too, so nothing had to be instanced.
+3. **`muller_light` was TV-only** — a 300 weight the mobile design never defines.
+   It maps to Onest Light, which is why TV needed a 300 at all.
+4. **`mullerlight` and `mullerthin` had zero references** and went with the rest.
+
+## Superseded — the Android constraints as they stood before the migration
+
+Kept for the record. Android **has** since been touched; the list below is what
+was still open at the time this document was first written.
+
+1. **Line height.** Muller's line box is exactly 1000 units; Montserrat is +21.9%
+   and Onest +27.5%. Android layouts rely on font metrics, so type will grow
+   vertically unless explicit line heights are set. This is the largest risk and
+   it does not appear in Figma.
 
 1. **Line height.** Muller's line box is exactly 1000 units; Montserrat is +21.9%
    and Onest +27.5%. Android layouts rely on font metrics, so type will grow

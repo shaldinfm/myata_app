@@ -1,0 +1,249 @@
+{
+  "run": "api24",
+  "density": 420,
+  "themeSwitch": "unavailable",
+  "widths": [
+    {
+      "width": 320,
+      "theme": "light",
+      "header": {
+        "x": 16,
+        "y": 40,
+        "w": 288,
+        "h": 47
+      },
+      "headerLabel": "Сейчас играет",
+      "dots": "present",
+      "artwork": {
+        "x": 41,
+        "y": 119,
+        "w": 239,
+        "h": 239
+      },
+      "title": "WEAPON OF CHOICE",
+      "artist": "FATBOY SLIM",
+      "play": {
+        "x": 120,
+        "y": 466,
+        "w": 80,
+        "h": 80
+      },
+      "playDesc": "Воспроизвести",
+      "favourite": {
+        "x": 48,
+        "y": 479,
+        "w": 49,
+        "h": 54
+      },
+      "history": {
+        "x": 223,
+        "y": 479,
+        "w": 49,
+        "h": 54
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 360,
+      "theme": "light",
+      "header": {
+        "x": 16,
+        "y": 40,
+        "w": 328,
+        "h": 47
+      },
+      "headerLabel": "Сейчас играет",
+      "dots": "present",
+      "artwork": {
+        "x": 61,
+        "y": 119,
+        "w": 239,
+        "h": 239
+      },
+      "title": "WEAPON OF CHOICE",
+      "artist": "FATBOY SLIM",
+      "play": {
+        "x": 140,
+        "y": 466,
+        "w": 80,
+        "h": 80
+      },
+      "playDesc": "Воспроизвести",
+      "favourite": {
+        "x": 48,
+        "y": 479,
+        "w": 49,
+        "h": 54
+      },
+      "history": {
+        "x": 263,
+        "y": 479,
+        "w": 49,
+        "h": 54
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "header": {
+        "x": 16,
+        "y": 40,
+        "w": 358,
+        "h": 47
+      },
+      "headerLabel": "Сейчас играет",
+      "dots": "present",
+      "artwork": {
+        "x": 76,
+        "y": 119,
+        "w": 239,
+        "h": 239
+      },
+      "title": "WEAPON OF CHOICE",
+      "artist": "FATBOY SLIM",
+      "play": {
+        "x": 155,
+        "y": 466,
+        "w": 80,
+        "h": 80
+      },
+      "playDesc": "Воспроизвести",
+      "favourite": {
+        "x": 48,
+        "y": 479,
+        "w": 49,
+        "h": 54
+      },
+      "history": {
+        "x": 293,
+        "y": 479,
+        "w": 49,
+        "h": 54
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 412,
+      "theme": "light",
+      "header": {
+        "x": 16,
+        "y": 40,
+        "w": 380,
+        "h": 47
+      },
+      "headerLabel": "Сейчас играет",
+      "dots": "present",
+      "artwork": {
+        "x": 87,
+        "y": 119,
+        "w": 239,
+        "h": 239
+      },
+      "title": "WEAPON OF CHOICE",
+      "artist": "FATBOY SLIM",
+      "play": {
+        "x": 166,
+        "y": 466,
+        "w": 80,
+        "h": 80
+      },
+      "playDesc": "Воспроизвести",
+      "favourite": {
+        "x": 48,
+        "y": 479,
+        "w": 49,
+        "h": 54
+      },
+      "history": {
+        "x": 315,
+        "y": 479,
+        "w": 49,
+        "h": 54
+      },
+      "miniPlayer": null
+    }
+  ],
+  "flow": [
+    {
+      "theme": "light",
+      "step": "01-player-idle",
+      "play": "Воспроизвести",
+      "favourite": "Добавить в коллекцию",
+      "title": "WEAPON OF CHOICE",
+      "artist": "FATBOY SLIM",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "light",
+      "step": "02-playing",
+      "play": null,
+      "favourite": "Добавить в коллекцию",
+      "title": "SPACE BETWEEN US",
+      "artist": "FRANC MOODY",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "light",
+      "step": "03-favourited",
+      "play": "Воспроизвести",
+      "favourite": "Убрать из коллекции",
+      "title": "SPACE BETWEEN US",
+      "artist": "FRANC MOODY",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "light",
+      "step": "04-gold",
+      "play": null,
+      "favourite": "Добавить в коллекцию",
+      "title": "DO IT 2 NITE",
+      "artist": "ROCKEFELLER",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "light",
+      "step": "05-xtra",
+      "play": null,
+      "favourite": "Добавить в коллекцию",
+      "title": "НАМ ОСТАЕТСЯ ЛИШЬ ЖДАТЬ",
+      "artist": "УВУЛА",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "light",
+      "step": "06-history-sheet",
+      "play": null,
+      "favourite": null,
+      "title": null,
+      "artist": null,
+      "miniPlayer": "none",
+      "sheetOpen": true
+    },
+    {
+      "theme": "light",
+      "step": "07-paused",
+      "play": "Воспроизвести",
+      "favourite": "Добавить в коллекцию",
+      "title": "НАМ ОСТАЕТСЯ ЛИШЬ ЖДАТЬ",
+      "artist": "УВУЛА",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "light",
+      "step": "08-after-background",
+      "play": "Воспроизвести",
+      "favourite": "Добавить в коллекцию",
+      "title": "НАМ ОСТАЕТСЯ ЛИШЬ ЖДАТЬ",
+      "artist": "УВУЛА",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    }
+  ]
+}

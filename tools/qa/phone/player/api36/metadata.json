@@ -1,0 +1,489 @@
+{
+  "run": "api36",
+  "density": 420,
+  "themeSwitch": "cmd uimode",
+  "widths": [
+    {
+      "width": 320,
+      "theme": "light",
+      "header": {
+        "x": 16,
+        "y": 52,
+        "w": 288,
+        "h": 47
+      },
+      "headerLabel": "Сейчас играет",
+      "dots": "present",
+      "artwork": {
+        "x": 41,
+        "y": 131,
+        "w": 239,
+        "h": 239
+      },
+      "title": "BITTERSWEET",
+      "artist": "MATILDA MANN",
+      "play": {
+        "x": 120,
+        "y": 478,
+        "w": 80,
+        "h": 80
+      },
+      "playDesc": "Воспроизвести",
+      "favourite": {
+        "x": 48,
+        "y": 491,
+        "w": 49,
+        "h": 54
+      },
+      "history": {
+        "x": 223,
+        "y": 491,
+        "w": 49,
+        "h": 54
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "header": {
+        "x": 16,
+        "y": 52,
+        "w": 288,
+        "h": 47
+      },
+      "headerLabel": "Сейчас играет",
+      "dots": "present",
+      "artwork": {
+        "x": 41,
+        "y": 131,
+        "w": 239,
+        "h": 239
+      },
+      "title": "BITTERSWEET",
+      "artist": "MATILDA MANN",
+      "play": {
+        "x": 120,
+        "y": 478,
+        "w": 80,
+        "h": 80
+      },
+      "playDesc": "Воспроизвести",
+      "favourite": {
+        "x": 48,
+        "y": 491,
+        "w": 49,
+        "h": 54
+      },
+      "history": {
+        "x": 223,
+        "y": 491,
+        "w": 49,
+        "h": 54
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 360,
+      "theme": "light",
+      "header": {
+        "x": 16,
+        "y": 57,
+        "w": 328,
+        "h": 47
+      },
+      "headerLabel": "Сейчас играет",
+      "dots": "present",
+      "artwork": {
+        "x": 61,
+        "y": 136,
+        "w": 239,
+        "h": 239
+      },
+      "title": "BITTERSWEET",
+      "artist": "MATILDA MANN",
+      "play": {
+        "x": 140,
+        "y": 483,
+        "w": 80,
+        "h": 80
+      },
+      "playDesc": "Воспроизвести",
+      "favourite": {
+        "x": 48,
+        "y": 496,
+        "w": 49,
+        "h": 54
+      },
+      "history": {
+        "x": 263,
+        "y": 496,
+        "w": 49,
+        "h": 54
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 360,
+      "theme": "dark",
+      "header": {
+        "x": 16,
+        "y": 57,
+        "w": 328,
+        "h": 47
+      },
+      "headerLabel": "Сейчас играет",
+      "dots": "present",
+      "artwork": {
+        "x": 61,
+        "y": 136,
+        "w": 239,
+        "h": 239
+      },
+      "title": "BITTERSWEET",
+      "artist": "MATILDA MANN",
+      "play": {
+        "x": 140,
+        "y": 483,
+        "w": 80,
+        "h": 80
+      },
+      "playDesc": "Воспроизвести",
+      "favourite": {
+        "x": 48,
+        "y": 496,
+        "w": 49,
+        "h": 54
+      },
+      "history": {
+        "x": 263,
+        "y": 496,
+        "w": 49,
+        "h": 54
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "header": {
+        "x": 16,
+        "y": 60,
+        "w": 358,
+        "h": 47
+      },
+      "headerLabel": "Сейчас играет",
+      "dots": "present",
+      "artwork": {
+        "x": 76,
+        "y": 139,
+        "w": 239,
+        "h": 239
+      },
+      "title": "BITTERSWEET",
+      "artist": "MATILDA MANN",
+      "play": {
+        "x": 155,
+        "y": 486,
+        "w": 80,
+        "h": 80
+      },
+      "playDesc": "Воспроизвести",
+      "favourite": {
+        "x": 48,
+        "y": 499,
+        "w": 49,
+        "h": 54
+      },
+      "history": {
+        "x": 293,
+        "y": 499,
+        "w": 49,
+        "h": 54
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "header": {
+        "x": 16,
+        "y": 60,
+        "w": 358,
+        "h": 47
+      },
+      "headerLabel": "Сейчас играет",
+      "dots": "present",
+      "artwork": {
+        "x": 76,
+        "y": 139,
+        "w": 239,
+        "h": 239
+      },
+      "title": "RADIO MYATA",
+      "artist": "YOUR MUSIC! YOUR STATION!",
+      "play": {
+        "x": 155,
+        "y": 486,
+        "w": 80,
+        "h": 80
+      },
+      "playDesc": "Воспроизвести",
+      "favourite": {
+        "x": 48,
+        "y": 499,
+        "w": 49,
+        "h": 54
+      },
+      "history": {
+        "x": 293,
+        "y": 499,
+        "w": 49,
+        "h": 54
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 412,
+      "theme": "light",
+      "header": {
+        "x": 16,
+        "y": 63,
+        "w": 380,
+        "h": 47
+      },
+      "headerLabel": "Сейчас играет",
+      "dots": "present",
+      "artwork": {
+        "x": 87,
+        "y": 142,
+        "w": 239,
+        "h": 239
+      },
+      "title": "REFLEKTOR",
+      "artist": "ARCADE FIRE",
+      "play": {
+        "x": 166,
+        "y": 489,
+        "w": 80,
+        "h": 80
+      },
+      "playDesc": "Воспроизвести",
+      "favourite": {
+        "x": 48,
+        "y": 502,
+        "w": 49,
+        "h": 54
+      },
+      "history": {
+        "x": 315,
+        "y": 502,
+        "w": 49,
+        "h": 54
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 412,
+      "theme": "dark",
+      "header": {
+        "x": 16,
+        "y": 63,
+        "w": 380,
+        "h": 47
+      },
+      "headerLabel": "Сейчас играет",
+      "dots": "present",
+      "artwork": {
+        "x": 87,
+        "y": 142,
+        "w": 239,
+        "h": 239
+      },
+      "title": "REFLEKTOR",
+      "artist": "ARCADE FIRE",
+      "play": {
+        "x": 166,
+        "y": 489,
+        "w": 80,
+        "h": 80
+      },
+      "playDesc": "Воспроизвести",
+      "favourite": {
+        "x": 48,
+        "y": 502,
+        "w": 49,
+        "h": 54
+      },
+      "history": {
+        "x": 315,
+        "y": 502,
+        "w": 49,
+        "h": 54
+      },
+      "miniPlayer": null
+    }
+  ],
+  "flow": [
+    {
+      "theme": "light",
+      "step": "01-player-idle",
+      "play": "Воспроизвести",
+      "favourite": "Добавить в коллекцию",
+      "title": "REFLEKTOR",
+      "artist": "ARCADE FIRE",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "light",
+      "step": "02-playing",
+      "play": "Пауза",
+      "favourite": "Добавить в коллекцию",
+      "title": "REFLEKTOR",
+      "artist": "ARCADE FIRE",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "light",
+      "step": "03-favourited",
+      "play": "Пауза",
+      "favourite": "Убрать из коллекции",
+      "title": "REFLEKTOR",
+      "artist": "ARCADE FIRE",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "light",
+      "step": "04-gold",
+      "play": "Пауза",
+      "favourite": "Добавить в коллекцию",
+      "title": "MISSING",
+      "artist": "EVERYTHING BUT THE GIRL",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "light",
+      "step": "05-xtra",
+      "play": "Пауза",
+      "favourite": "Добавить в коллекцию",
+      "title": "ИГРЫ",
+      "artist": "ГОСТИ ИЗ БУДУЩЕГО",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "light",
+      "step": "06-history-sheet",
+      "play": null,
+      "favourite": null,
+      "title": null,
+      "artist": null,
+      "miniPlayer": "none",
+      "sheetOpen": true
+    },
+    {
+      "theme": "light",
+      "step": "07-paused",
+      "play": "Воспроизвести",
+      "favourite": "Добавить в коллекцию",
+      "title": "ИГРЫ",
+      "artist": "ГОСТИ ИЗ БУДУЩЕГО",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "light",
+      "step": "08-after-background",
+      "play": "Воспроизвести",
+      "favourite": "Добавить в коллекцию",
+      "title": "ИГРЫ",
+      "artist": "ГОСТИ ИЗ БУДУЩЕГО",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "dark",
+      "step": "01-player-idle",
+      "play": "Воспроизвести",
+      "favourite": "Добавить в коллекцию",
+      "title": "REFLEKTOR",
+      "artist": "ARCADE FIRE",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "dark",
+      "step": "02-playing",
+      "play": "Пауза",
+      "favourite": "Добавить в коллекцию",
+      "title": "REFLEKTOR",
+      "artist": "ARCADE FIRE",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "dark",
+      "step": "03-favourited",
+      "play": "Пауза",
+      "favourite": "Убрать из коллекции",
+      "title": "REFLEKTOR",
+      "artist": "ARCADE FIRE",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "dark",
+      "step": "04-gold",
+      "play": "Пауза",
+      "favourite": "Добавить в коллекцию",
+      "title": "MISSING",
+      "artist": "EVERYTHING BUT THE GIRL",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "dark",
+      "step": "05-xtra",
+      "play": "Пауза",
+      "favourite": "Добавить в коллекцию",
+      "title": "ИГРЫ",
+      "artist": "ГОСТИ ИЗ БУДУЩЕГО",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "dark",
+      "step": "06-history-sheet",
+      "play": null,
+      "favourite": null,
+      "title": null,
+      "artist": null,
+      "miniPlayer": "none",
+      "sheetOpen": true
+    },
+    {
+      "theme": "dark",
+      "step": "07-paused",
+      "play": "Воспроизвести",
+      "favourite": "Добавить в коллекцию",
+      "title": "ИГРЫ",
+      "artist": "ГОСТИ ИЗ БУДУЩЕГО",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "dark",
+      "step": "08-after-background",
+      "play": "Воспроизвести",
+      "favourite": "Добавить в коллекцию",
+      "title": "ИГРЫ",
+      "artist": "ГОСТИ ИЗ БУДУЩЕГО",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PLAYER play glyph.
+
+  Same derivation as the Mini Player's, and deliberately the same glyph: the
+  canonical exporter records no vector geometry, but the box identifies the icon.
+  `Controls > play/pause > Container > Icon` is 23x23 - a full icon canvas rather
+  than the Mini Player's glyph-tight box - so this keeps Material's 24 canvas and
+  is rendered at 23.
+
+    Material Symbols `play_arrow` at 24dp, "M8 5v14l11-7z"
+
+  Untinted: the colour is `on_primary`, applied from the layout.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="@dimen/player_play_icon"
+    android:height="@dimen/player_play_icon"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M8,5 L8,19 L19,12 Z" />
+</vector>

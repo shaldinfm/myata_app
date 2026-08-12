@@ -1,7 +1,6 @@
 package com.example.musicplayerapp.fragments
 
 import android.content.Intent
-import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -23,7 +22,6 @@ import com.example.musicplayerapp.databinding.FragmentMyataStreamBinding
 import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.utils.ServiceUtils
 import com.squareup.picasso.Picasso
-import jp.wasabeef.picasso.transformations.CropCircleTransformation
 import android.content.ClipboardManager
 import android.content.ClipData
 import android.content.Context
@@ -41,7 +39,6 @@ class MyataStreamFragment() : Fragment() {
     lateinit var binding: FragmentMyataStreamBinding
     var stream: String = "myata"
     private var currentImageUrl: String? = null  // Track currently displayed image
-    private var currentBackgroundUrl: String? = null // Track currently displayed background
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -65,45 +62,21 @@ class MyataStreamFragment() : Fragment() {
         // Initialize FavoritesViewModel (No longer needed here for toggle, but maybe for history?)
         //favoritesViewModel = ViewModelProvider(this)[FavoritesViewModel::class.java]
 
-        // Handle window insets for safe area
-        if (vm.cachedTopInset != null) {
-            binding.streamContentContainer.setPadding(
-                binding.streamContentContainer.paddingLeft,
-                vm.cachedTopInset!!,
-                binding.streamContentContainer.paddingRight,
-                binding.streamContentContainer.paddingBottom
-            )
-        }
-
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.streamContentContainer) { v, insets ->
-            val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            vm.cachedTopInset = bars.top
-            v.setPadding(v.paddingLeft, bars.top, v.paddingRight, v.paddingBottom)
-            insets
-        }
+        // The status bar inset is applied once, by PlayerFragment, on the shell that
+        // holds the header and the swipe dots. The page starts below both, so
+        // applying it again here would inset it twice.
 
         binding.mainAuthor.text = ""
 
         binding.mainAuthor.setOnClickListener { copyTrackInfoToClipboard() }
         binding.mainSong.setOnClickListener { copyTrackInfoToClipboard() }
 
-        vm.isPlaying.observe(viewLifecycleOwner, Observer {
-            // Only change button image, let isBuffering control visibility
-            if(it){
-                when(stream){
-                    "myata"-> binding.btnPlay.setImageResource(R.drawable.pause_btn)
-                    "gold"-> binding.btnPlay.setImageResource(R.drawable.pause_btn_yellow)
-                    "myata_hits"-> binding.btnPlay.setImageResource(R.drawable.pause_btn_pink)
-                }
-            }
-            else{
-                when(stream){
-                    "myata"-> binding.btnPlay.setImageResource(R.drawable.btn_play)
-                    "gold"-> binding.btnPlay.setImageResource(R.drawable.btn_play_yellow)
-                    "myata_hits"-> binding.btnPlay.setImageResource(R.drawable.btn_play_pink)
-                }
-            }
-        })
+        // One control for all three streams. The frozen design tints play/pause by
+        // role - `primary` on the surface, `on_primary` on the glyph - not by
+        // station, so the six per-stream drawables this replaces have no canonical
+        // counterpart. Only the image changes here; isBuffering still owns
+        // visibility.
+        vm.isPlaying.observe(viewLifecycleOwner, Observer { updatePlayPauseIcon(it == true) })
         
         vm.isBuffering.observe(viewLifecycleOwner, Observer {
             if(it == true){
@@ -120,10 +93,11 @@ class MyataStreamFragment() : Fragment() {
         
         // Sync state logic removed - handled by improved observer
 
+        // The frozen PLAYER has no full-bleed stream artwork and no per-stream
+        // accent: the screen is a flat `background` fill and every control takes a
+        // semantic colour. So this only picks which stream's metadata to follow.
         when(stream){
             "myata"->{
-                binding.backgroundImage.setImageResource(R.drawable.myata_bg_new)
-                binding.loadingSpinner.indeterminateTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#00E5FF"))
                 vm.currentMyataState.observe(viewLifecycleOwner, Observer {
                     if (it != null) {
                         updateUI(it)
@@ -131,8 +105,6 @@ class MyataStreamFragment() : Fragment() {
                 })
             }
             "gold"-> {
-                binding.backgroundImage.setImageResource(R.drawable.gold_bg_new)
-                binding.loadingSpinner.indeterminateTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#FFFF00"))
                 vm.currentGoldState.observe(viewLifecycleOwner, Observer {
                     if (it != null) {
                         updateUI(it)
@@ -140,8 +112,6 @@ class MyataStreamFragment() : Fragment() {
                 })
             }
             "myata_hits"->{
-                binding.backgroundImage.setImageResource(R.drawable.xtra_bg_new)
-                binding.loadingSpinner.indeterminateTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#FFCCFF"))
                 vm.currentXtraState.observe(viewLifecycleOwner, Observer {
                     if (it != null) {
                         updateUI(it)
@@ -171,41 +141,9 @@ class MyataStreamFragment() : Fragment() {
             }
             vm.lastObservedStream = it
 
-            when(it){
-                "myata"->{
-                    if(vm.isPlaying.value == false)
-                        binding.btnPlay.setImageResource(R.drawable.btn_play)
-                    else
-                        binding.btnPlay.setImageResource(R.drawable.pause_btn)
-                    
-                    val color = Color.parseColor("#00E5FF")
-                    binding.mainAuthor.setTextColor(color)
-                    binding.btnFavorite.setColorFilter(color)
-                    binding.btnHistory.setColorFilter(color)
-                }
-                "gold"->{
-                    if(vm.isPlaying.value == false)
-                        binding.btnPlay.setImageResource(R.drawable.btn_play_yellow)
-                    else
-                        binding.btnPlay.setImageResource(R.drawable.pause_btn_yellow)
-                    
-                    val color = Color.parseColor("#FFFF00")
-                    binding.mainAuthor.setTextColor(color)
-                    binding.btnFavorite.setColorFilter(color)
-                    binding.btnHistory.setColorFilter(color)
-                }
-                "myata_hits"->{
-                    if(vm.isPlaying.value == false)
-                        binding.btnPlay.setImageResource(R.drawable.btn_play_pink)
-                    else
-                        binding.btnPlay.setImageResource(R.drawable.pause_btn_pink)
-                    
-                    val color = Color.parseColor("#FFCCFF")
-                    binding.mainAuthor.setTextColor(color)
-                    binding.btnFavorite.setColorFilter(color)
-                    binding.btnHistory.setColorFilter(color)
-                }
-            }
+            // Nothing to re-skin per stream any more - the controls are semantic -
+            // but the icon still has to follow the player across a switch.
+            updatePlayPauseIcon(vm.isPlaying.value == true)
         })
 
 
@@ -233,11 +171,22 @@ class MyataStreamFragment() : Fragment() {
     
     
     private fun updateHeartIcon(isFavorite: Boolean) {
-        if (isFavorite) {
-            binding.btnFavorite.setImageResource(R.drawable.ic_heart_filled)
-        } else {
-            binding.btnFavorite.setImageResource(R.drawable.ic_heart_outline)
-        }
+        binding.btnFavorite.setImageResource(
+            if (isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
+        )
+        binding.btnFavorite.contentDescription = getString(
+            if (isFavorite) R.string.player_favorite_remove else R.string.player_favorite_add
+        )
+    }
+
+    /** The frozen play/pause: one control, one glyph, the state carried by the icon. */
+    private fun updatePlayPauseIcon(isPlaying: Boolean) {
+        binding.btnPlay.setImageResource(
+            if (isPlaying) R.drawable.ic_player_pause else R.drawable.ic_player_play
+        )
+        binding.btnPlay.contentDescription = getString(
+            if (isPlaying) R.string.player_pause else R.string.player_play
+        )
     }
 
     override fun onResume() {
@@ -295,12 +244,6 @@ class MyataStreamFragment() : Fragment() {
 
     fun updateUI(it: PlayerState){
         if (it != null) {
-            // Background Image Logic - Static Only
-            if (currentBackgroundUrl != "STATIC") {
-                currentBackgroundUrl = "STATIC"
-                binding.backgroundImage.setImageResource(getStaticBackgroundRes())
-            }
-
             if(it.artist!=null) {
                 if(!it.artist!!.isBlank()) {
                     if (it.img != null && !it.img!!.isBlank() && it.img != "NO_IMAGE") {
@@ -404,11 +347,4 @@ class MyataStreamFragment() : Fragment() {
         }
     }
 
-    private fun getStaticBackgroundRes(): Int {
-        return when(stream) {
-            "gold" -> R.drawable.gold_bg_new
-            "myata_hits" -> R.drawable.xtra_bg_new
-            else -> R.drawable.myata_bg_new
-        }
-    }
 }

@@ -10,4 +10,38 @@
     <dimen name="bottom_nav_padding_start">23.32dp</dimen>
     <dimen name="bottom_nav_padding_end">18dp</dimen>
     <dimen name="bottom_nav_padding_bottom">17dp</dimen>
+
+    <!--
+      Mini Player, frozen 3.6.6 canonical (B2).
+
+      Every number is measured off `Now Playing Mini Player (Floating above Bottom
+      Nav)`, which on the 390px reference frame is 358 wide at x=16, 74 tall, and
+      sits 4px above the BottomNavBar on HOME, COLLECTION and COLLECTION pusto.
+      ABOUT US is the one outlier at 6px; three screens against one, so 4.
+
+      The pill is a horizontal auto-layout with 12px padding and a 1px INSIDE
+      stroke, and Figma offsets its children by both: the artwork starts at x=13,
+      y=13. On Android an inside stroke is painted within the view rather than
+      added to it, so the 13 is expressed as padding and the stroke is drawn by
+      bg_mini_player. That lands every canonical anchor exactly - artwork 13,
+      text 73, button 318, trailing edge 345 - and makes the pill 13+48+13 = 74.
+
+      Height is deliberately NOT fixed. Figma's own frame hugs its content
+      vertically, and the tallest child is the 48px artwork; the text column comes
+      to 27.5+20 = 47.5 and so never governs. That is what allows the title to
+      carry its real 27.5 line height instead of the broken 18px box on the
+      canonical page, at no cost to the outer 74.
+    -->
+    <dimen name="mini_player_margin_horizontal">16dp</dimen>
+    <dimen name="mini_player_margin_bottom">4dp</dimen>
+    <!-- 1px stroke + 12px auto-layout padding -->
+    <dimen name="mini_player_padding">13dp</dimen>
+    <dimen name="mini_player_gap">12dp</dimen>
+    <dimen name="mini_player_corner">16dp</dimen>
+    <dimen name="mini_player_stroke">1dp</dimen>
+    <dimen name="mini_player_artwork_size">48dp</dimen>
+    <dimen name="mini_player_artwork_corner">8dp</dimen>
+    <!-- Button slot: 27 wide in the frozen row. Full row height for the target. -->
+    <dimen name="mini_player_button_width">27dp</dimen>
+    <dimen name="mini_player_button_height">48dp</dimen>
 </resources>

@@ -26,4 +26,14 @@
     <string name="nav_about">О нас</string>
     <!-- Donation CTA in "О нас". Copy is verbatim from the frozen ABOUT US page. -->
     <string name="about_donate_cta">Поддержать эфир</string>
+
+    <!--
+      Mini Player (B2). The frozen design carries no labels here - the pill shows
+      live metadata - so these exist only for TalkBack.
+    -->
+    <string name="mini_player_play">Воспроизвести</string>
+    <string name="mini_player_pause">Пауза</string>
+    <string name="mini_player_artwork">Обложка трека</string>
+    <!-- The pill's own click, relabelled for TalkBack: "double tap to open the player". -->
+    <string name="mini_player_open">открыть плеер</string>
 </resources>

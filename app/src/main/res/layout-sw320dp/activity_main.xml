@@ -27,6 +27,26 @@
             app:navGraph="@navigation/navgraph" />
 
         <!--
+          Mini Player (B2). Identical to the default shell: the pill is defined by
+          its two 16dp side margins rather than by a width, so it adapts from
+          320dp upward without any per-width variant. See layout/activity_main.xml
+          for why it lives in the shell at all.
+        -->
+        <include
+            android:id="@+id/mini_player"
+            layout="@layout/view_mini_player"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/mini_player_margin_horizontal"
+            android:layout_marginEnd="@dimen/mini_player_margin_horizontal"
+            android:layout_marginBottom="@dimen/mini_player_margin_bottom"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@id/bottomNavView"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            tools:visibility="visible" />
+
+        <!--
           Bottom navigation.
 
           Frozen canonical BottomNavBar: 390x76, top corners r=12, full width and

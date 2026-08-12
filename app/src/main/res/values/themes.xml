@@ -218,6 +218,17 @@
         <item name="android:textColor">@color/text_secondary</item>
     </style>
 
+    <!--
+      Mini Player artwork corner, frozen 3.6.6 canonical: the 48x48 `Container`
+      inside the pill has cornerRadius 8 and clips its image fill. The same 48x48
+      r8 thumbnail is what the Broadcast History row reuses, so this shape
+      appearance is deliberately not named after the mini player alone.
+    -->
+    <style name="ShapeAppearance.Myata.Artwork48" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/mini_player_artwork_corner</item>
+    </style>
+
     <style name="RoundedCornerImage">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">24dp</item>

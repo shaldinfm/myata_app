@@ -1,0 +1,283 @@
+{
+  "run": "api36",
+  "density": 420,
+  "themeSwitch": "cmd uimode",
+  "widths": [
+    {
+      "width": 320,
+      "theme": "light",
+      "pill": {
+        "x": 16,
+        "width": 288,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "SUPERSTAR",
+        "artist": "GOOD NEIGHBOURS"
+      }
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "pill": {
+        "x": 16,
+        "width": 288,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "DON'T STOP (COLOR ON THE WALLS)",
+        "artist": "FOSTER THE PEOPLE"
+      }
+    },
+    {
+      "width": 360,
+      "theme": "light",
+      "pill": {
+        "x": 16,
+        "width": 328,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "DON'T STOP (COLOR ON THE WALLS)",
+        "artist": "FOSTER THE PEOPLE"
+      }
+    },
+    {
+      "width": 360,
+      "theme": "dark",
+      "pill": {
+        "x": 16,
+        "width": 328,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "DON'T STOP (COLOR ON THE WALLS)",
+        "artist": "FOSTER THE PEOPLE"
+      }
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "DON'T STOP (COLOR ON THE WALLS)",
+        "artist": "FOSTER THE PEOPLE"
+      }
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "DON'T STOP (COLOR ON THE WALLS)",
+        "artist": "FOSTER THE PEOPLE"
+      }
+    },
+    {
+      "width": 412,
+      "theme": "light",
+      "pill": {
+        "x": 16,
+        "width": 380,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "DON'T STOP (COLOR ON THE WALLS)",
+        "artist": "FOSTER THE PEOPLE"
+      }
+    },
+    {
+      "width": 412,
+      "theme": "dark",
+      "pill": {
+        "x": 16,
+        "width": 380,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "DON'T STOP (COLOR ON THE WALLS)",
+        "artist": "FOSTER THE PEOPLE"
+      }
+    }
+  ],
+  "flow": [
+    {
+      "theme": "light",
+      "step": "01-home-idle",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "DON'T STOP (COLOR ON THE WALLS)",
+        "artist": "FOSTER THE PEOPLE"
+      }
+    },
+    {
+      "theme": "light",
+      "step": "02-home-playing",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Пауза",
+        "title": "DON'T STOP (COLOR ON THE WALLS)",
+        "artist": "FOSTER THE PEOPLE"
+      }
+    },
+    {
+      "theme": "light",
+      "step": "03-home-paused",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "DON'T STOP (COLOR ON THE WALLS)",
+        "artist": "FOSTER THE PEOPLE"
+      }
+    },
+    {
+      "theme": "light",
+      "step": "04-collection",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Пауза",
+        "title": "HOUSE OF CARDS",
+        "artist": "BISHOP BRIGGS"
+      }
+    },
+    {
+      "theme": "light",
+      "step": "05-about",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Пауза",
+        "title": "HOUSE OF CARDS",
+        "artist": "BISHOP BRIGGS"
+      }
+    },
+    {
+      "theme": "light",
+      "step": "06-player",
+      "pill": null
+    },
+    {
+      "theme": "light",
+      "step": "07-back-home",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Пауза",
+        "title": "HOUSE OF CARDS",
+        "artist": "BISHOP BRIGGS"
+      }
+    },
+    {
+      "theme": "light",
+      "step": "08-after-background",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Пауза",
+        "title": "HOUSE OF CARDS",
+        "artist": "BISHOP BRIGGS"
+      }
+    },
+    {
+      "theme": "dark",
+      "step": "01-home-idle",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "HOUSE OF CARDS",
+        "artist": "BISHOP BRIGGS"
+      }
+    },
+    {
+      "theme": "dark",
+      "step": "02-home-playing",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Пауза",
+        "title": "HOUSE OF CARDS",
+        "artist": "BISHOP BRIGGS"
+      }
+    },
+    {
+      "theme": "dark",
+      "step": "03-home-paused",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "HOUSE OF CARDS",
+        "artist": "BISHOP BRIGGS"
+      }
+    },
+    {
+      "theme": "dark",
+      "step": "04-collection",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Пауза",
+        "title": "HOUSE OF CARDS",
+        "artist": "BISHOP BRIGGS"
+      }
+    },
+    {
+      "theme": "dark",
+      "step": "05-about",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Пауза",
+        "title": "HOUSE OF CARDS",
+        "artist": "BISHOP BRIGGS"
+      }
+    },
+    {
+      "theme": "dark",
+      "step": "06-player",
+      "pill": null
+    },
+    {
+      "theme": "dark",
+      "step": "07-back-home",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Пауза",
+        "title": "HOUSE OF CARDS",
+        "artist": "BISHOP BRIGGS"
+      }
+    },
+    {
+      "theme": "dark",
+      "step": "08-after-background",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Пауза",
+        "title": "HOUSE OF CARDS",
+        "artist": "BISHOP BRIGGS"
+      }
+    }
+  ]
+}

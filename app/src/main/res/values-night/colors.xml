@@ -30,4 +30,11 @@
     <color name="outline">#466D8F</color>
     <color name="primary">#5FD9B4</color>
     <color name="on_primary">#0F253E</color>
+
+    <!--
+      Mini Player (B2). The only one of its five colours that differs between the
+      canonical Light and Dark pages - see the block in values/colors.xml for why
+      the other four deliberately have no entry here.
+    -->
+    <color name="mini_player_artist">#B3C4D1</color>
 </resources>

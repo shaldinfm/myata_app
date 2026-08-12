@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Mini Player pause glyph. Same derivation as ic_mini_player_play:
+
+    Figma  `Button > Container > pause > icon`, 12x14, at (6,5) of the 24x24
+           icon frame
+    Material Symbols `pause` at 24dp, "M6 19h4V5H6v14zm8-14v14h4V5h-4z"
+                     -> bars at x 6..10 and 14..18, y 5..19
+                     -> 12 wide, 14 tall, origin (6,5)
+
+  Translated by (-6,-5) into a glyph-tight 12x14 viewport, so centring it in the
+  27dp button slot reproduces the canonical x=7.5.
+
+  Two disjoint rectangles wound the same way, so the default non-zero fill is
+  correct and no android:fillType is needed.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="12dp"
+    android:height="14dp"
+    android:viewportWidth="12"
+    android:viewportHeight="14">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M0,14 L4,14 L4,0 L0,0 Z M8,0 L8,14 L12,14 L12,0 Z" />
+</vector>

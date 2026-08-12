@@ -19,6 +19,7 @@ import com.example.musicplayerapp.data.Streams
 import com.example.musicplayerapp.databinding.ActivityMainBinding
 import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.service.PlaybackLog
+import com.example.musicplayerapp.ui.MiniPlayer
 import com.example.musicplayerapp.ui.MyataTypography
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 
@@ -200,11 +201,21 @@ class MainActivity : AppCompatActivity() {
                 navController.popBackStack(R.id.home, false)
             }
         }
-        binding.navItemPlayer.setOnClickListener {
+        // One way to reach PLAYER, used by the bottom navigation and by the Mini
+        // Player body. Sharing the call rather than repeating it is what keeps the
+        // pill inside the existing navigation architecture instead of opening a
+        // second route to the same destination.
+        val openPlayer = {
             if (navController.currentDestination?.id != R.id.player) {
                 navController.navigate(R.id.player, null, navOptions)
             }
         }
+        binding.navItemPlayer.setOnClickListener { openPlayer() }
+
+        // The Mini Player is bound once, here, for the reason given in
+        // activity_main.xml: one pill on the shell, reading the one playback
+        // state, outliving every fragment transaction.
+        MiniPlayer(binding.miniPlayer, viewModel, openPlayer).bind(this)
         binding.navItemFavorites.setOnClickListener {
             if (navController.currentDestination?.id != R.id.favorites) {
                 navController.navigate(R.id.favorites, null, navOptions)

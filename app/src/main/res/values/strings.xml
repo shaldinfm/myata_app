@@ -52,4 +52,17 @@
     <string name="home_stream_myata">Поток MYATA</string>
     <string name="home_stream_gold">Поток GOLD</string>
     <string name="home_stream_xtra">Поток XTRA</string>
+
+    <!--
+      PLAYER, frozen 3.6.6 canonical. The header label is verbatim from
+      `Mobile Header (Subtle)`; the rest exist only for TalkBack, since the frozen
+      controls carry icons and no labels.
+    -->
+    <string name="player_now_playing">Сейчас играет</string>
+    <string name="player_play">Воспроизвести</string>
+    <string name="player_pause">Пауза</string>
+    <string name="player_favorite_add">Добавить в коллекцию</string>
+    <string name="player_favorite_remove">Убрать из коллекции</string>
+    <string name="player_history">История эфира</string>
+    <string name="player_artwork">Обложка трека</string>
 </resources>

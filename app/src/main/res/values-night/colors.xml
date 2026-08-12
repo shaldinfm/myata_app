@@ -37,4 +37,10 @@
       the other four deliberately have no entry here.
     -->
     <color name="mini_player_artist">#B3C4D1</color>
+
+    <!--
+      PLAYER header label. Exactly text_primary in dark, while its light value is
+      exactly text_secondary - see values/colors.xml for why that forces a pair.
+    -->
+    <color name="player_header_label">#F5F7FA</color>
 </resources>

@@ -92,4 +92,74 @@
       MainActivity adds the same inset to the navigation bar's own padding.
     -->
     <dimen name="home_content_bottom_clearance">154dp</dimen>
+
+    <!--
+      PLAYER upper section, frozen 3.6.6 canonical.
+
+      Measured off `PLAYER` / `PLAYER_dark`, whose `Main` is padded 16 and whose
+      `Player Section` children are hand-positioned rather than auto-laid-out. All
+      offsets below are from the top of the frame:
+
+        16   header row top          63   header row bottom, swipe top
+        73   swipe bottom            79   album art region top
+        95   album art top          334   album art bottom
+       371   track title top        421   artist bottom
+       442   controls top           522   controls bottom
+
+      The header row and the swipe dots are chrome and stay put while the pager
+      moves, so they live in fragment_player.xml and the page starts at 79. Inside
+      the page the offsets are therefore 16 / 292 / 363.
+
+      Phase B does not draw the Broadcast History card that the frozen frame puts
+      below all of this - Phase C owns it, and History stays in its bottom sheet
+      until then. The space it will occupy is simply left empty.
+    -->
+    <dimen name="player_margin">16dp</dimen>
+    <dimen name="player_header_height">47dp</dimen>
+    <!-- Reserved trailing slot: the frozen overflow control's box, drawn empty
+         because every action behind it belongs to a later phase. -->
+    <dimen name="player_header_action_width">32dp</dimen>
+    <dimen name="player_header_action_height">39dp</dimen>
+    <!-- The swipe dots abut the header row: it ends at 63 and they start at 63.
+         They end at 73 and the page starts at 79, so 6 between. -->
+    <dimen name="player_swipe_size">10dp</dimen>
+    <dimen name="player_page_gap">6dp</dimen>
+
+    <!-- `Album Art (Organic Shape)`, 239x239 r20, image FILL, 1px stroke. -->
+    <dimen name="player_artwork_size">239dp</dimen>
+    <dimen name="player_artwork_corner">20dp</dimen>
+    <dimen name="player_artwork_stroke">1dp</dimen>
+    <dimen name="player_artwork_margin_top">16dp</dimen>
+
+    <!--
+      `Track Info` and `Controls`, anchored absolutely rather than stacked.
+
+      The frozen boxes are 24 and 18 tall against line heights of 24 and 18 - a box
+      exactly as tall as its own font size. Figma can draw that because it has no
+      font padding and honours the declared line height literally; Android cannot,
+      because Montserrat Black at 24sp needs about 29dp of ascent-to-descent and
+      Regular at 18sp about 22dp. Forcing the frozen heights would clip the glyphs,
+      which is the defect class this migration does not reproduce.
+
+      So each block keeps a safe, natural height and is positioned by its own
+      offset from the page top. The blocks grow inwards into the frozen 8 gap
+      instead of pushing everything below them down, which is what keeps the
+      controls - and the section as a whole - exactly where the frozen frame puts
+      them. Measured, the visible gap between the two lines of text comes out at
+      about 7 against the frozen 8.
+    -->
+    <dimen name="player_track_title_top">292dp</dimen>
+    <dimen name="player_track_artist_top">324dp</dimen>
+
+    <!-- `Controls`: 358x80, padding 0/32, play 80x80 r20, like/dislike 49x54. -->
+    <dimen name="player_controls_top">363dp</dimen>
+    <dimen name="player_controls_height">80dp</dimen>
+    <dimen name="player_controls_inset">32dp</dimen>
+    <dimen name="player_play_size">80dp</dimen>
+    <dimen name="player_play_corner">20dp</dimen>
+    <dimen name="player_play_icon">23dp</dimen>
+    <dimen name="player_action_width">49dp</dimen>
+    <dimen name="player_action_height">54dp</dimen>
+    <dimen name="player_action_icon_width">25dp</dimen>
+    <dimen name="player_action_icon_height">23dp</dimen>
 </resources>

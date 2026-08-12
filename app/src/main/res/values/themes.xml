@@ -269,6 +269,41 @@
         <item name="strokeWidth">0dp</item>
     </style>
 
+    <!--
+      PLAYER album art, frozen 3.6.6 canonical: `Album Art (Organic Shape) >
+      Current Track Artwork`, 239x239 at radius 20 with a 1px stroke and an image
+      fill set to FILL. The stroke is the `outline` role: #466D8F in dark is
+      exactly that role's dark value, and light's #FFFFFF is a near neighbour of
+      its #E1E3E4 - one role, so one token rather than a new pair.
+    -->
+    <style name="PlayerArtworkCard">
+        <item name="android:layout_width">@dimen/player_artwork_size</item>
+        <item name="android:layout_height">@dimen/player_artwork_size</item>
+        <item name="cardCornerRadius">@dimen/player_artwork_corner</item>
+        <item name="cardElevation">0dp</item>
+        <item name="cardBackgroundColor">@color/brand_player_artwork_backdrop</item>
+        <item name="strokeColor">@color/outline</item>
+        <item name="strokeWidth">@dimen/player_artwork_stroke</item>
+    </style>
+
+    <!--
+      PLAYER secondary control, frozen canonical `like` / `dislike`: a 49x54
+      borderless slot holding a 25x23 icon.
+
+      Phase B ships the existing favourite and History access in these two slots.
+      No dislike control is added: the frozen `dislike` has no counterpart in the
+      app today, and History has nowhere else to go until Phase C brings the
+      Broadcast History card onto this screen.
+    -->
+    <style name="PlayerActionSlot">
+        <item name="android:layout_width">@dimen/player_action_width</item>
+        <item name="android:layout_height">@dimen/player_action_height</item>
+        <item name="android:background">?attr/selectableItemBackgroundBorderless</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:padding">12dp</item>
+        <item name="tint">@color/text_primary</item>
+    </style>
+
     <style name="RoundedCornerImage">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">24dp</item>

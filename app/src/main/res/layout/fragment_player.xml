@@ -1,50 +1,116 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
 
+    <!--
+      PLAYER shell, migrated to the frozen 3.6.6 canonical design (Phase B).
+
+      Source: the canonical `PLAYER` / `PLAYER_dark` frames. The screen is a flat
+      `background` fill - the frozen design has no full-bleed stream artwork behind
+      the player, only the album art and its backdrop.
+
+      This file owns the chrome that does not swipe. `Mobile Header (Subtle)` says
+      "Сейчас играет" on every stream and the swipe dots describe the pager itself,
+      so both stay still while the pages move underneath; the per-stream content
+      lives in fragment_myata_stream.xml and starts at the frozen 79.
+
+        16   header row top      63   header row bottom / swipe top
+        73   swipe bottom        79   page top
+    -->
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/player_root"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:background="@color/background">
 
+        <!--
+          Header row, 358x47 at 16. The label is centred because both ends reserve
+          a slot: the frozen leading Button is hidden, and the trailing overflow is
+          reserved but not drawn - see player_header_action.
+        -->
+        <FrameLayout
+            android:id="@+id/player_header"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/player_header_height"
+            android:layout_marginStart="@dimen/player_margin"
+            android:layout_marginTop="@dimen/player_margin"
+            android:layout_marginEnd="@dimen/player_margin"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/player_header_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/player_now_playing"
+                android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.12_16"
+                android:textColor="@color/player_header_label" />
+
+            <!--
+              The frozen overflow control's box, reserved and empty.
+
+              Every action behind it belongs to a later phase - the canonical menu
+              is four rows all reading "Действие", and the real entries are the
+              Sleep Timer (D) and Report a problem (E). Reserving the space keeps
+              the label centred where the frozen design centres it; drawing a
+              control here would be a button that does nothing.
+            -->
+            <Space
+                android:id="@+id/player_header_action"
+                android:layout_width="@dimen/player_header_action_width"
+                android:layout_height="@dimen/player_header_action_height"
+                android:layout_gravity="end|center_vertical" />
+        </FrameLayout>
+
+        <!--
+          `swipe`: which of MYATA / GOLD / XTRA is showing. Unchanged behaviour,
+          moved to the frozen offset.
+        -->
         <LinearLayout
             android:id="@+id/dots_indicator"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="50dp"
-            android:elevation="10dp"
-            android:visibility="visible"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent">
+            app:layout_constraintTop_toBottomOf="@id/player_header">
 
             <ImageView
                 android:id="@+id/dot_1"
-                android:layout_width="10dp"
-                android:layout_height="10dp"
-                android:layout_marginEnd="8dp"
+                android:layout_width="@dimen/player_swipe_size"
+                android:layout_height="@dimen/player_swipe_size"
+                android:contentDescription="@null"
                 android:src="@drawable/dot_active" />
 
             <ImageView
                 android:id="@+id/dot_2"
-                android:layout_width="10dp"
-                android:layout_height="10dp"
-                android:layout_marginEnd="8dp"
+                android:layout_width="@dimen/player_swipe_size"
+                android:layout_height="@dimen/player_swipe_size"
+                android:contentDescription="@null"
                 android:src="@drawable/dot_inactive" />
 
             <ImageView
                 android:id="@+id/dot_3"
-                android:layout_width="10dp"
-                android:layout_height="10dp"
+                android:layout_width="@dimen/player_swipe_size"
+                android:layout_height="@dimen/player_swipe_size"
+                android:contentDescription="@null"
                 android:src="@drawable/dot_inactive" />
         </LinearLayout>
 
         <androidx.viewpager2.widget.ViewPager2
             android:id="@+id/viewPager"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"/>
-
+            android:layout_height="0dp"
+            android:layout_marginTop="@dimen/player_page_gap"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/dots_indicator"
+            tools:layout_height="600dp" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

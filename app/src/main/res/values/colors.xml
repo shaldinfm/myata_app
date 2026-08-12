@@ -120,6 +120,20 @@
     <color name="mini_player_artist">#DCEBFE</color>
 
     <!--
+      PLAYER header label - "Сейчас играет" and the reserved trailing slot.
+
+      Provenance: canonical PLAYER, `Player Section > Mobile Header (Subtle)`.
+      #42474E light, #F5F7FA dark.
+
+      It gets its own pair because it lands on a different role in each theme:
+      #F5F7FA is exactly text_primary in dark, #42474E is exactly text_secondary in
+      light. Binding it to either role would be right in one theme and wrong in the
+      other. Compare the track artist just below, which is text_secondary in dark
+      and only a near neighbour of it in light - one role, so one token.
+    -->
+    <color name="player_header_label">#42474E</color>
+
+    <!--
       HOME playlist card, behind the cover art.
 
       Provenance: canonical HOME, `Mint Playlists Section > Horizontal Scroll
@@ -131,4 +145,19 @@
       covers the card completely once it arrives.
     -->
     <color name="brand_playlist_card_placeholder">#EDEEEF</color>
+
+    <!--
+      PLAYER album art backdrop.
+
+      Provenance: canonical PLAYER, `Player Section > Album Art (Organic Shape) >
+      Background+Blur`, 229x229 r20. #1C4771 on both pages, so it is fixed and gets
+      no night variant.
+
+      In Figma it is a 229 square sitting behind an opaque 239 artwork, so all but
+      one pixel of it is covered and it never really shows. Here it is the artwork
+      card's own background, which is the one state where it earns its place: the
+      colour the frozen design put behind the art is what fills the card while the
+      art loads, instead of a hole.
+    -->
+    <color name="brand_player_artwork_backdrop">#1C4771</color>
 </resources>

@@ -36,17 +36,20 @@ class PlayerFragment : Fragment() {
             R.layout.fragment_player, container, false
         )
 
-        // Handle window insets for safe area
+        // The status bar inset goes on the shell, once, so the header, the swipe
+        // dots and every page move down together and the frozen offsets between
+        // them stay intact. It used to pad the dots alone, which was enough when
+        // they were the topmost thing on the screen and is not now.
         if (vm.cachedTopInset != null) {
-            binding.dotsIndicator.setPadding(
-                binding.dotsIndicator.paddingLeft,
+            binding.playerRoot.setPadding(
+                binding.playerRoot.paddingLeft,
                 vm.cachedTopInset!!,
-                binding.dotsIndicator.paddingRight,
-                binding.dotsIndicator.paddingBottom
+                binding.playerRoot.paddingRight,
+                binding.playerRoot.paddingBottom
             )
         }
 
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.dotsIndicator) { v, insets ->
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.playerRoot) { v, insets ->
             val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             vm.cachedTopInset = bars.top
             v.setPadding(v.paddingLeft, bars.top, v.paddingRight, v.paddingBottom)

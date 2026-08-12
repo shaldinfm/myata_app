@@ -29,18 +29,33 @@ than 346. Reproducing the card heights alone would pull everything below the
 streams row up by 17. The two row heights are therefore carried as dimensions in
 their own right.
 
-### It scrolls now
+### It scrolls now — an approved responsive adaptation
 
-The frozen frame is a fixed 757. The old layout matched that by weighting its
-rows, so the stream and playlist cards stretched or squashed with the screen and
-no device ever saw the frozen 316×198 or 160×160. Here the cards are the frozen
-sizes and the screen scrolls when it cannot fit them, which is how a fixed design
-is presented on a viewport that varies.
+**HOME is vertically scrollable. This is an approved responsive adaptation, not a
+new product mechanic.**
+
+It is required, not chosen. The frozen frame is a fixed 757 and the old layout
+matched that by weighting its rows, so the stream and playlist cards stretched or
+squashed with the screen and **no device ever rendered the frozen 316×198 or
+160×160**. Vertical scrolling is what lets the cards keep their frozen sizes on a
+viewport whose height the design does not fix, and it is what makes the 154 of
+bottom clearance reachable rather than a dead band — without it the content below
+the fold would simply be unreachable behind the Mini Player and the BottomNavBar.
+
+So it serves exactly two ends, both of them fidelity:
+
+- **preserve the frozen geometry across every supported width**, 320 through
+  412dp, instead of distorting it to fit;
+- **keep content clear of the Mini Player and the BottomNavBar**, which float over
+  the bottom of the screen.
 
 Nothing interactive changed: the same three stream targets with the same
 `switchStream` + navigate behaviour, the same playlist list and its browser
 intent, the same horizontal scrolling inside each row, the same split-mode
-handling.
+handling. No new gesture, affordance or destination is introduced.
+
+**This behaviour is settled and is not revisited further in this PR.** A later
+change to how HOME scrolls is a separate, owner-approved decision.
 
 ## Bottom clearance
 

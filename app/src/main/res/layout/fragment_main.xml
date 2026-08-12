@@ -24,8 +24,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Наши потоки"
-                android:textSize="25sp"
-                android:fontFamily="@font/muller_regular"
+                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Bold.28_36"
                 android:layout_marginStart="22dp"
                 android:layout_marginTop="60dp"
                 android:textColor="#F5F7FA" />
@@ -107,9 +106,8 @@
                 android:layout_height="0dp"
                 android:text="Мятные плейлисты"
                 android:id="@+id/playlistString"
-                android:textSize="25sp"
                 android:gravity=""
-                android:fontFamily="@font/muller_regular"
+                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Bold.28_36"
                 android:layout_marginStart="22dp"
                 android:textColor="#F5F7FA"
                 android:layout_weight="1" />

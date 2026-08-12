@@ -18,8 +18,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="#99FFFFFF"
-            android:textSize="11sp"
-            android:fontFamily="@font/muller_regular"
+            android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@id/info_container"
             app:layout_constraintBottom_toBottomOf="@id/info_container"
@@ -37,24 +36,37 @@
             app:layout_constraintEnd_toStartOf="@id/music_services"
             app:layout_constraintTop_toTopOf="parent">
 
-            <TextView
-                android:id="@+id/tv_artist"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="#FFFFFF"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:fontFamily="@font/mullerblack"
-                android:text="ARTIST NAME"/>
+            <!--
+              Title above artist, which is the FINAL canonical order: a history
+              item in the frozen design reads time, then the track, then who it
+              is by. Android had these the other way round.
 
+              The two colours travelled with the order rather than staying put.
+              They are the same two values the row already used; leaving them
+              where they were would have put the brighter one on the secondary
+              line and left the title, now the primary, dimmer than the artist
+              underneath it. Neither value is new and the palette is untouched -
+              the semantic colour roles are Phase B's, not this change's.
+
+              Both stay wrap_content with no maxLines: history rows are variable
+              height with no ellipsis by owner decision, so a long Russian title
+              adds a line rather than truncating.
+            -->
             <TextView
                 android:id="@+id/tv_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="#B3FFFFFF"
-                android:textSize="10sp"
-                android:fontFamily="@font/muller_regular"
+                android:textColor="#FFFFFF"
+                android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.17_28"
                 android:text="Track Title"/>
+
+            <TextView
+                android:id="@+id/tv_artist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#B3FFFFFF"
+                android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                android:text="ARTIST NAME"/>
         </LinearLayout>
 
         <!-- Music Service Icons -->

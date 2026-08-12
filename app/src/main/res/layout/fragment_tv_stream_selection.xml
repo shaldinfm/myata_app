@@ -10,7 +10,7 @@
         android:id="@+id/tv_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/muller_light"
+        android:fontFamily="@font/onest_light"
         android:text="Выберите поток"
         android:textColor="#FFFFFF"
         android:textSize="32sp"

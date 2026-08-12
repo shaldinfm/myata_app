@@ -98,9 +98,13 @@ class InfoFragment : Fragment() {
         // Highlight GOLD and XTRA in description
         val descriptionText = binding.description.text.toString()
         val spannable = SpannableStringBuilder(descriptionText)
-        val mullerBlack = ResourcesCompat.getFont(requireContext(), R.font.mullerblack)
-        
-        mullerBlack?.let { typeface ->
+        // The paragraph around this span is Onest Regular, from
+        // TextAppearance.Myata.Onest.Regular.15_24. GOLD and XTRA are emphasised
+        // within it, so the span stays in the same family and keeps the weight it
+        // had: Muller Black 900 -> Onest Black, per the contract's weight mapping.
+        val emphasis = ResourcesCompat.getFont(requireContext(), R.font.onest_black)
+
+        emphasis?.let { typeface ->
             // Highlight GOLD
             val goldIndex = descriptionText.indexOf("GOLD")
             if (goldIndex != -1) {

@@ -1,6 +1,6 @@
 {
   "run": "after",
-  "capturedAt": "2026-08-10T11:52:23.144Z",
+  "capturedAt": "2026-08-11T17:33:21.429Z",
   "env": {
     "ro.build.version.sdk": "36",
     "ro.build.version.release": "16",
@@ -14,7 +14,7 @@
     "size": "Physical size: 1920x1080",
     "density": "Physical density: 320",
     "emulator": "Android emulator version 37.1.11.0 (build_id 15917651) (CL:N/A)",
-    "appCommit": "03c2e1fc40a0751897b10f54f9d8d2280a2468e0",
+    "appCommit": "74880eace4ddc180c7011469baa34eb0e16bab80",
     "appVersion": "3.6.5"
   },
   "steps": [
@@ -66,47 +66,47 @@
         {
           "id": "tv_title",
           "cls": "TextView",
-          "bounds": "[713,324][1207,400]",
+          "bounds": "[713,320][1207,404]",
           "hasText": true
         },
         {
           "id": "flow_streams",
           "cls": "View",
-          "bounds": "[0,520][1920,756]"
+          "bounds": "[0,524][1920,760]"
         },
         {
           "id": "card_myata",
           "cls": "FrameLayout",
-          "bounds": "[137,508][687,768]",
+          "bounds": "[137,512][687,772]",
           "focusable": true,
           "focused": true
         },
         {
           "id": "btn_myata",
           "cls": "ImageView",
-          "bounds": "[137,508][687,768]"
+          "bounds": "[137,512][687,772]"
         },
         {
           "id": "card_gold",
           "cls": "FrameLayout",
-          "bounds": "[710,520][1210,756]",
+          "bounds": "[710,524][1210,760]",
           "focusable": true
         },
         {
           "id": "btn_gold",
           "cls": "ImageView",
-          "bounds": "[710,520][1210,756]"
+          "bounds": "[710,524][1210,760]"
         },
         {
           "id": "card_xtra",
           "cls": "FrameLayout",
-          "bounds": "[1258,520][1758,756]",
+          "bounds": "[1258,524][1758,760]",
           "focusable": true
         },
         {
           "id": "btn_xtra",
           "cls": "ImageView",
-          "bounds": "[1258,520][1758,756]"
+          "bounds": "[1258,524][1758,760]"
         }
       ]
     },
@@ -158,47 +158,47 @@
         {
           "id": "tv_title",
           "cls": "TextView",
-          "bounds": "[713,324][1207,400]",
+          "bounds": "[713,320][1207,404]",
           "hasText": true
         },
         {
           "id": "flow_streams",
           "cls": "View",
-          "bounds": "[0,520][1920,756]"
+          "bounds": "[0,524][1920,760]"
         },
         {
           "id": "card_myata",
           "cls": "FrameLayout",
-          "bounds": "[162,520][662,756]",
+          "bounds": "[162,524][662,760]",
           "focusable": true
         },
         {
           "id": "btn_myata",
           "cls": "ImageView",
-          "bounds": "[162,520][662,756]"
+          "bounds": "[162,524][662,760]"
         },
         {
           "id": "card_gold",
           "cls": "FrameLayout",
-          "bounds": "[685,508][1235,768]",
+          "bounds": "[685,512][1235,772]",
           "focusable": true,
           "focused": true
         },
         {
           "id": "btn_gold",
           "cls": "ImageView",
-          "bounds": "[685,508][1235,768]"
+          "bounds": "[685,512][1235,772]"
         },
         {
           "id": "card_xtra",
           "cls": "FrameLayout",
-          "bounds": "[1258,520][1758,756]",
+          "bounds": "[1258,524][1758,760]",
           "focusable": true
         },
         {
           "id": "btn_xtra",
           "cls": "ImageView",
-          "bounds": "[1258,520][1758,756]"
+          "bounds": "[1258,524][1758,760]"
         }
       ]
     },
@@ -250,47 +250,47 @@
         {
           "id": "tv_title",
           "cls": "TextView",
-          "bounds": "[713,324][1207,400]",
+          "bounds": "[713,320][1207,404]",
           "hasText": true
         },
         {
           "id": "flow_streams",
           "cls": "View",
-          "bounds": "[0,520][1920,756]"
+          "bounds": "[0,524][1920,760]"
         },
         {
           "id": "card_myata",
           "cls": "FrameLayout",
-          "bounds": "[162,520][662,756]",
+          "bounds": "[162,524][662,760]",
           "focusable": true
         },
         {
           "id": "btn_myata",
           "cls": "ImageView",
-          "bounds": "[162,520][662,756]"
+          "bounds": "[162,524][662,760]"
         },
         {
           "id": "card_gold",
           "cls": "FrameLayout",
-          "bounds": "[710,520][1210,756]",
+          "bounds": "[710,524][1210,760]",
           "focusable": true
         },
         {
           "id": "btn_gold",
           "cls": "ImageView",
-          "bounds": "[710,520][1210,756]"
+          "bounds": "[710,524][1210,760]"
         },
         {
           "id": "card_xtra",
           "cls": "FrameLayout",
-          "bounds": "[1233,508][1783,768]",
+          "bounds": "[1233,512][1783,772]",
           "focusable": true,
           "focused": true
         },
         {
           "id": "btn_xtra",
           "cls": "ImageView",
-          "bounds": "[1233,508][1783,768]"
+          "bounds": "[1233,512][1783,772]"
         }
       ]
     },
@@ -342,47 +342,47 @@
         {
           "id": "tv_title",
           "cls": "TextView",
-          "bounds": "[713,324][1207,400]",
+          "bounds": "[713,320][1207,404]",
           "hasText": true
         },
         {
           "id": "flow_streams",
           "cls": "View",
-          "bounds": "[0,520][1920,756]"
+          "bounds": "[0,524][1920,760]"
         },
         {
           "id": "card_myata",
           "cls": "FrameLayout",
-          "bounds": "[137,508][687,768]",
+          "bounds": "[137,512][687,772]",
           "focusable": true,
           "focused": true
         },
         {
           "id": "btn_myata",
           "cls": "ImageView",
-          "bounds": "[137,508][687,768]"
+          "bounds": "[137,512][687,772]"
         },
         {
           "id": "card_gold",
           "cls": "FrameLayout",
-          "bounds": "[710,520][1210,756]",
+          "bounds": "[710,524][1210,760]",
           "focusable": true
         },
         {
           "id": "btn_gold",
           "cls": "ImageView",
-          "bounds": "[710,520][1210,756]"
+          "bounds": "[710,524][1210,760]"
         },
         {
           "id": "card_xtra",
           "cls": "FrameLayout",
-          "bounds": "[1258,520][1758,756]",
+          "bounds": "[1258,524][1758,760]",
           "focusable": true
         },
         {
           "id": "btn_xtra",
           "cls": "ImageView",
-          "bounds": "[1258,520][1758,756]"
+          "bounds": "[1258,524][1758,760]"
         }
       ]
     },
@@ -449,12 +449,12 @@
         {
           "id": "iv_album_art",
           "cls": "ImageView",
-          "bounds": "[680,35][1240,595]"
+          "bounds": "[680,32][1240,592]"
         },
         {
           "id": "tv_track_info",
           "cls": "TextView",
-          "bounds": "[200,668][1720,712]",
+          "bounds": "[200,664][1720,712]",
           "selected": true,
           "hasText": true
         },
@@ -561,12 +561,12 @@
         {
           "id": "iv_album_art",
           "cls": "ImageView",
-          "bounds": "[680,35][1240,595]"
+          "bounds": "[680,32][1240,592]"
         },
         {
           "id": "tv_track_info",
           "cls": "TextView",
-          "bounds": "[200,668][1720,712]",
+          "bounds": "[200,664][1720,712]",
           "selected": true,
           "hasText": true
         },
@@ -679,12 +679,12 @@
         {
           "id": "iv_album_art",
           "cls": "ImageView",
-          "bounds": "[680,35][1240,595]"
+          "bounds": "[680,32][1240,592]"
         },
         {
           "id": "tv_track_info",
           "cls": "TextView",
-          "bounds": "[200,668][1720,712]",
+          "bounds": "[200,664][1720,712]",
           "selected": true,
           "hasText": true
         },
@@ -797,12 +797,12 @@
         {
           "id": "iv_album_art",
           "cls": "ImageView",
-          "bounds": "[680,35][1240,595]"
+          "bounds": "[680,32][1240,592]"
         },
         {
           "id": "tv_track_info",
           "cls": "TextView",
-          "bounds": "[200,668][1720,712]",
+          "bounds": "[200,664][1720,712]",
           "selected": true,
           "hasText": true
         },
@@ -909,12 +909,12 @@
         {
           "id": "iv_album_art",
           "cls": "ImageView",
-          "bounds": "[680,35][1240,595]"
+          "bounds": "[680,32][1240,592]"
         },
         {
           "id": "tv_track_info",
           "cls": "TextView",
-          "bounds": "[200,668][1720,712]",
+          "bounds": "[200,664][1720,712]",
           "selected": true,
           "hasText": true
         },
@@ -1027,12 +1027,12 @@
         {
           "id": "iv_album_art",
           "cls": "ImageView",
-          "bounds": "[680,35][1240,595]"
+          "bounds": "[680,32][1240,592]"
         },
         {
           "id": "tv_track_info",
           "cls": "TextView",
-          "bounds": "[200,668][1720,712]",
+          "bounds": "[200,664][1720,712]",
           "selected": true,
           "hasText": true
         },
@@ -1139,12 +1139,12 @@
         {
           "id": "iv_album_art",
           "cls": "ImageView",
-          "bounds": "[680,35][1240,595]"
+          "bounds": "[680,32][1240,592]"
         },
         {
           "id": "tv_track_info",
           "cls": "TextView",
-          "bounds": "[200,668][1720,712]",
+          "bounds": "[200,664][1720,712]",
           "selected": true,
           "hasText": true
         },
@@ -1257,12 +1257,12 @@
         {
           "id": "iv_album_art",
           "cls": "ImageView",
-          "bounds": "[680,35][1240,595]"
+          "bounds": "[680,32][1240,592]"
         },
         {
           "id": "tv_track_info",
           "cls": "TextView",
-          "bounds": "[200,668][1720,712]",
+          "bounds": "[200,664][1720,712]",
           "selected": true,
           "hasText": true
         },
@@ -1375,12 +1375,12 @@
         {
           "id": "iv_album_art",
           "cls": "ImageView",
-          "bounds": "[680,35][1240,595]"
+          "bounds": "[680,32][1240,592]"
         },
         {
           "id": "tv_track_info",
           "cls": "TextView",
-          "bounds": "[200,668][1720,712]",
+          "bounds": "[200,664][1720,712]",
           "selected": true,
           "hasText": true
         },
@@ -1493,12 +1493,12 @@
         {
           "id": "iv_album_art",
           "cls": "ImageView",
-          "bounds": "[680,35][1240,595]"
+          "bounds": "[680,32][1240,592]"
         },
         {
           "id": "tv_track_info",
           "cls": "TextView",
-          "bounds": "[200,668][1720,712]",
+          "bounds": "[200,664][1720,712]",
           "selected": true,
           "hasText": true
         },
@@ -1590,47 +1590,47 @@
         {
           "id": "tv_title",
           "cls": "TextView",
-          "bounds": "[713,324][1207,400]",
+          "bounds": "[713,320][1207,404]",
           "hasText": true
         },
         {
           "id": "flow_streams",
           "cls": "View",
-          "bounds": "[0,520][1920,756]"
+          "bounds": "[0,524][1920,760]"
         },
         {
           "id": "card_myata",
           "cls": "FrameLayout",
-          "bounds": "[137,508][687,768]",
+          "bounds": "[137,512][687,772]",
           "focusable": true,
           "focused": true
         },
         {
           "id": "btn_myata",
           "cls": "ImageView",
-          "bounds": "[137,508][687,768]"
+          "bounds": "[137,512][687,772]"
         },
         {
           "id": "card_gold",
           "cls": "FrameLayout",
-          "bounds": "[710,520][1210,756]",
+          "bounds": "[710,524][1210,760]",
           "focusable": true
         },
         {
           "id": "btn_gold",
           "cls": "ImageView",
-          "bounds": "[710,520][1210,756]"
+          "bounds": "[710,524][1210,760]"
         },
         {
           "id": "card_xtra",
           "cls": "FrameLayout",
-          "bounds": "[1258,520][1758,756]",
+          "bounds": "[1258,524][1758,760]",
           "focusable": true
         },
         {
           "id": "btn_xtra",
           "cls": "ImageView",
-          "bounds": "[1258,520][1758,756]"
+          "bounds": "[1258,524][1758,760]"
         }
       ]
     }

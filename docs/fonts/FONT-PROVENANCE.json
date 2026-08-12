@@ -1,0 +1,208 @@
+{
+  "generatedAt": "2026-08-11T11:32:56.973Z",
+  "note": "Reproduce with: node tools/fonts/build-android-fonts.mjs <out-dir>",
+  "sources": {
+    "Onest": {
+      "repo": "https://github.com/simpals/onest",
+      "pinnedTo": "release 2.001",
+      "licence": "SIL Open Font License 1.1"
+    },
+    "Montserrat": {
+      "repo": "https://github.com/JulietaUla/Montserrat",
+      "pinnedTo": "commit 555facfb2a18c72c3c0380f0d9c0f060453a9058",
+      "licence": "SIL Open Font License 1.1"
+    }
+  },
+  "subset": {
+    "tool": "fontTools 4.63.0 fontTools.subset",
+    "unicodeRanges": [
+      {
+        "range": "U+0000-007F",
+        "block": "Basic Latin"
+      },
+      {
+        "range": "U+0080-00FF",
+        "block": "Latin-1 Supplement"
+      },
+      {
+        "range": "U+0100-017F",
+        "block": "Latin Extended-A"
+      },
+      {
+        "range": "U+0180-024F",
+        "block": "Latin Extended-B"
+      },
+      {
+        "range": "U+0250-02AF",
+        "block": "IPA Extensions"
+      },
+      {
+        "range": "U+02B0-02FF",
+        "block": "Spacing Modifier Letters"
+      },
+      {
+        "range": "U+0300-036F",
+        "block": "Combining Diacritical Marks"
+      },
+      {
+        "range": "U+0400-04FF",
+        "block": "Cyrillic"
+      },
+      {
+        "range": "U+0500-052F",
+        "block": "Cyrillic Supplement"
+      },
+      {
+        "range": "U+1E00-1EFF",
+        "block": "Latin Extended Additional"
+      },
+      {
+        "range": "U+2000-206F",
+        "block": "General Punctuation"
+      },
+      {
+        "range": "U+2070-209F",
+        "block": "Super/subscripts"
+      },
+      {
+        "range": "U+20A0-20BF",
+        "block": "Currency Symbols"
+      },
+      {
+        "range": "U+2100-214F",
+        "block": "Letterlike Symbols"
+      },
+      {
+        "range": "U+2150-218F",
+        "block": "Number Forms"
+      },
+      {
+        "range": "U+2190-21FF",
+        "block": "Arrows"
+      },
+      {
+        "range": "U+2200-22FF",
+        "block": "Mathematical Operators"
+      },
+      {
+        "range": "U+2600-26FF",
+        "block": "Miscellaneous Symbols"
+      },
+      {
+        "range": "U+2C60-2C7F",
+        "block": "Latin Extended-C"
+      },
+      {
+        "range": "U+2DE0-2DFF",
+        "block": "Cyrillic Extended-A"
+      },
+      {
+        "range": "U+A640-A69F",
+        "block": "Cyrillic Extended-B"
+      },
+      {
+        "range": "U+A720-A7FF",
+        "block": "Latin Extended-D"
+      },
+      {
+        "range": "U+FB00-FB4F",
+        "block": "Alphabetic Presentation Forms"
+      },
+      {
+        "range": "U+FE20-FE2F",
+        "block": "Combining Half Marks"
+      }
+    ],
+    "layoutFeatures": [
+      "kern",
+      "liga",
+      "clig",
+      "calt",
+      "ccmp",
+      "locl",
+      "mark",
+      "mkmk",
+      "rlig"
+    ],
+    "command": "python -m fontTools.subset <src> --unicodes=<ranges> --layout-features=kern,liga,clig,calt,ccmp,locl,mark,mkmk,rlig --name-IDs=* --name-legacy --notdef-outline --recommended-glyphs --drop-tables+=DSIG --output-file=<dest>"
+  },
+  "fonts": [
+    {
+      "file": "onest_light.ttf",
+      "family": "Onest",
+      "weight": 300,
+      "bytesUpstream": 143904,
+      "bytesSubset": 122296
+    },
+    {
+      "file": "onest_regular.ttf",
+      "family": "Onest",
+      "weight": 400,
+      "bytesUpstream": 143736,
+      "bytesSubset": 122380
+    },
+    {
+      "file": "onest_medium.ttf",
+      "family": "Onest",
+      "weight": 500,
+      "bytesUpstream": 146136,
+      "bytesSubset": 124744
+    },
+    {
+      "file": "onest_bold.ttf",
+      "family": "Onest",
+      "weight": 700,
+      "bytesUpstream": 150072,
+      "bytesSubset": 128516
+    },
+    {
+      "file": "onest_black.ttf",
+      "family": "Onest",
+      "weight": 900,
+      "bytesUpstream": 149416,
+      "bytesSubset": 127624
+    },
+    {
+      "file": "montserrat_regular.ttf",
+      "family": "Montserrat",
+      "weight": 400,
+      "bytesUpstream": 445928,
+      "bytesSubset": 196640
+    },
+    {
+      "file": "montserrat_medium.ttf",
+      "family": "Montserrat",
+      "weight": 500,
+      "bytesUpstream": 447320,
+      "bytesSubset": 197704
+    },
+    {
+      "file": "montserrat_bold.ttf",
+      "family": "Montserrat",
+      "weight": 700,
+      "bytesUpstream": 454864,
+      "bytesSubset": 202528
+    },
+    {
+      "file": "montserrat_black.ttf",
+      "family": "Montserrat",
+      "weight": 900,
+      "bytesUpstream": 462844,
+      "bytesSubset": 211852
+    }
+  ],
+  "upstreamCoverageGaps": {
+    "Onest": [
+      "0x2032",
+      "0x2033",
+      "0x2020",
+      "0x2021"
+    ]
+  },
+  "totals": {
+    "upstreamBytes": 2544220,
+    "subsetBytes": 1434284,
+    "mullerRemovedBytes": 824180,
+    "netBytes": 610104
+  }
+}

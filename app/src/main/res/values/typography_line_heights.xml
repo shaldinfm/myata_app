@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Line height per typography token, from the FINAL Figma export. -->
+    <dimen name="line_height_montserrat_medium_12_16">16sp</dimen>
+    <dimen name="line_height_montserrat_regular_18_18">18sp</dimen>
+    <dimen name="line_height_montserrat_medium_21_28">28sp</dimen>
+    <dimen name="line_height_montserrat_medium_22_24">24sp</dimen>
+    <dimen name="line_height_montserrat_medium_22_28">28sp</dimen>
+    <dimen name="line_height_montserrat_black_24_24">24sp</dimen>
+    <dimen name="line_height_montserrat_medium_24_32">32sp</dimen>
+    <dimen name="line_height_montserrat_bold_24_32">32sp</dimen>
+    <dimen name="line_height_montserrat_bold_28_36">36sp</dimen>
+    <dimen name="line_height_montserrat_regular_28_36">36sp</dimen>
+    <dimen name="line_height_onest_medium_11_14">14sp</dimen>
+    <dimen name="line_height_onest_medium_12_16">16sp</dimen>
+    <dimen name="line_height_onest_regular_12_16">16sp</dimen>
+    <dimen name="line_height_onest_bold_12_16">16sp</dimen>
+    <dimen name="line_height_onest_regular_12_20">20sp</dimen>
+    <dimen name="line_height_onest_medium_13_18">18sp</dimen>
+    <dimen name="line_height_onest_medium_14_18">18sp</dimen>
+    <dimen name="line_height_onest_regular_14_20">20sp</dimen>
+    <dimen name="line_height_onest_medium_14_20">20sp</dimen>
+    <dimen name="line_height_onest_bold_14_20">20sp</dimen>
+    <dimen name="line_height_onest_medium_15_20">20sp</dimen>
+    <dimen name="line_height_onest_medium_15_22">22sp</dimen>
+    <dimen name="line_height_onest_regular_15_22">22sp</dimen>
+    <dimen name="line_height_onest_regular_15_24">24sp</dimen>
+    <dimen name="line_height_onest_medium_15_27_5">27.5sp</dimen>
+    <dimen name="line_height_onest_medium_16_20">20sp</dimen>
+    <dimen name="line_height_onest_medium_16_22">22sp</dimen>
+    <dimen name="line_height_onest_regular_16_28">28sp</dimen>
+    <dimen name="line_height_onest_medium_16_28">28sp</dimen>
+    <dimen name="line_height_onest_regular_17_28">28sp</dimen>
+    <dimen name="line_height_onest_medium_24_30">30sp</dimen>
+    <dimen name="line_height_onest_medium_24_32">32sp</dimen>
+    <dimen name="line_height_onest_medium_26_77_26_77">26.77sp</dimen>
+    <dimen name="line_height_onest_black_28_36">36sp</dimen>
+</resources>

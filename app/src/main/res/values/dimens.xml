@@ -44,4 +44,52 @@
     <!-- Button slot: 27 wide in the frozen row. Full row height for the target. -->
     <dimen name="mini_player_button_width">27dp</dimen>
     <dimen name="mini_player_button_height">48dp</dimen>
+
+    <!--
+      HOME, frozen 3.6.6 canonical.
+
+      Every number is measured off the canonical HOME frame, which is 390x757 with
+      `Header - TopAppBar` 0..64 and `Main` 64..628 at 16 padding and 16 gaps.
+      Reproducing the two section containers at their authored heights - 215 for
+      the streams row and 197 for the playlists row, both taller than the cards
+      they hold - is what lands every canonical anchor exactly:
+
+        heading    80    streams  132    heading  363    playlists  415
+    -->
+    <dimen name="home_header_height">64dp</dimen>
+    <dimen name="home_margin">16dp</dimen>
+    <dimen name="home_section_gap">16dp</dimen>
+
+    <!-- `плашка потока MYATA/GOLD`, 316x198 r14, next card 15 away. -->
+    <dimen name="home_stream_row_height">215dp</dimen>
+    <dimen name="home_stream_card_width">316dp</dimen>
+    <dimen name="home_stream_card_height">198dp</dimen>
+    <dimen name="home_stream_card_corner">14dp</dimen>
+    <dimen name="home_stream_card_gap">15dp</dimen>
+
+    <!-- `Playlist N > Background`, 160x160 r20, pitch 176 so the gap is 16. -->
+    <dimen name="home_playlist_row_height">197dp</dimen>
+    <dimen name="home_playlist_card_size">160dp</dimen>
+    <dimen name="home_playlist_card_corner">20dp</dimen>
+    <dimen name="home_playlist_card_gap">16dp</dimen>
+
+    <!--
+      Bottom clearance: the height of the chrome that floats over the content.
+
+        BottomNavBar          76   (canonical, 680.5..756.5 of a 757 frame)
+        gap                    4   (mini_player_margin_bottom)
+        Mini Player           74   (13 + 48 + 13)
+        total                154
+
+      Derived from the three canonical boxes rather than picked. Note this is not
+      the HOME frame's own `paddingBottom: 128`: that number is the leftover of a
+      fixed 757-tall frame that never scrolls, and it stops 26 short of the pill.
+      It works in Figma only because the last 26 is the playlist row's own empty
+      slack. On a screen that scrolls, the last real content would end up under
+      the pill, which is the failure this reserves against.
+
+      The system bar inset is added on top of this at runtime, because
+      MainActivity adds the same inset to the navigation bar's own padding.
+    -->
+    <dimen name="home_content_bottom_clearance">154dp</dimen>
 </resources>

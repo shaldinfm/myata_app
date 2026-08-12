@@ -8,7 +8,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.data.MyataPlaylist
 import com.squareup.picasso.Picasso
-import jp.wasabeef.picasso.transformations.RoundedCornersTransformation
 
 
 class PlaylistAdapter(private val playlists: List<MyataPlaylist>, private val onItemClick: (position: Int) -> Unit):
@@ -31,7 +30,16 @@ class PlaylistAdapter(private val playlists: List<MyataPlaylist>, private val on
     }
 
     override fun onBindViewHolder(holder: PlaylistViewHolder, position: Int) {
-        Picasso.get().load(playlists[position].img).transform(RoundedCornersTransformation(15,0)).resize(400,400).centerCrop().into(holder.iv)
+        // The card clips to the frozen radius 20 itself, so the bitmap is loaded
+        // plain. It used to be rounded again here at radius 15 in source pixels,
+        // which on a 160dp card is neither 20dp nor the same on two densities.
+        // fit() rather than a fixed 400: the card is a known 160dp, so the view
+        // measures to the exact pixels the device needs.
+        Picasso.get()
+            .load(playlists[position].img)
+            .fit()
+            .centerCrop()
+            .into(holder.iv)
         holder.iv.setTag(playlists[position].uri)
     }
 

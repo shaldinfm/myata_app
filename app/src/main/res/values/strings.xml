@@ -36,4 +36,20 @@
     <string name="mini_player_artwork">Обложка трека</string>
     <!-- The pill's own click, relabelled for TalkBack: "double tap to open the player". -->
     <string name="mini_player_open">открыть плеер</string>
+
+    <!--
+      HOME, frozen 3.6.6 canonical.
+
+      The section headings are verbatim from the canonical frame. The greeting is
+      not: the frozen `Heading 1` reads "Привет, Денис!" and personalisation needs
+      the account system, which is Phase G. Until there is a name to greet, the
+      band carries the greeting without one - decided by the owner rather than
+      inferred, since the frozen design has no signed-out HOME header.
+    -->
+    <string name="home_greeting">Привет!</string>
+    <string name="home_streams_heading">Наши потоки</string>
+    <string name="home_playlists_heading">Мятные плейлисты</string>
+    <string name="home_stream_myata">Поток MYATA</string>
+    <string name="home_stream_gold">Поток GOLD</string>
+    <string name="home_stream_xtra">Поток XTRA</string>
 </resources>

@@ -55,6 +55,18 @@ class MainFragment : Fragment() {
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.mainContentContainer) { v, insets ->
             val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             v.setPadding(v.paddingLeft, bars.top, v.paddingRight, v.paddingBottom)
+
+            // The frozen clearance covers the chrome the design draws - navigation
+            // bar, gap, mini player - but the navigation bar also takes the system
+            // inset as padding (see MainActivity), so the content has to clear that
+            // too or the last card ends up under the pill on a gesture-nav device.
+            val scroll = binding.homeScroll
+            scroll.setPadding(
+                scroll.paddingLeft,
+                scroll.paddingTop,
+                scroll.paddingRight,
+                resources.getDimensionPixelSize(R.dimen.home_content_bottom_clearance) + bars.bottom,
+            )
             insets
         }
         binding.playlists.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)

@@ -1,26 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  HOME playlist card, frozen 3.6.6 canonical.
+
+  `Mint Playlists Section > Horizontal Scroll Container > Playlist N`: a 160x160
+  `Background` at radius 20 holding a cropped image fill, with the next card 176
+  away - so the gap is 16, carried here as the trailing margin.
+
+  The frozen `Playlist` frame is 181 tall against a 160 card; the extra 21 holds
+  nothing, and the row's own 197 height keeps the section anchored where the
+  frozen frame puts it, so it is not reproduced as item padding.
+-->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:clipToPadding="false"
-    android:paddingBottom="20dp"
-    android:paddingStart="9dp"
-    android:paddingEnd="6dp"
-    android:orientation="vertical">
+    android:layout_marginEnd="@dimen/home_playlist_card_gap">
 
-    <androidx.cardview.widget.CardView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
-        app:cardCornerRadius="20dp"
-        app:cardElevation="4dp"
-        app:cardBackgroundColor="@android:color/transparent">
+    <com.google.android.material.card.MaterialCardView
+        style="@style/HomePlaylistCard"
+        android:clickable="true"
+        android:focusable="true">
+
         <ImageView
-            android:layout_height="wrap_content"
-            android:layout_width="wrap_content"
             android:id="@+id/iv"
-            android:adjustViewBounds="true"
-            />
-    </androidx.cardview.widget.CardView>
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="@null"
+            android:scaleType="centerCrop" />
+    </com.google.android.material.card.MaterialCardView>
 </FrameLayout>

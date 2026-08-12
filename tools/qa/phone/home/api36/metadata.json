@@ -1,0 +1,339 @@
+{
+  "run": "api36",
+  "density": 420,
+  "themeSwitch": "cmd uimode",
+  "widths": [
+    {
+      "width": 320,
+      "theme": "light",
+      "greeting": {
+        "x": 0,
+        "y": 36,
+        "w": 320,
+        "h": 64
+      },
+      "streams": {
+        "x": 0,
+        "y": 168,
+        "w": 320,
+        "h": 215
+      },
+      "playlistsHeading": {
+        "x": 0,
+        "y": 399,
+        "w": 320,
+        "h": 71
+      },
+      "playlists": {
+        "x": 0,
+        "y": 486,
+        "w": 320,
+        "h": 154
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "greeting": {
+        "x": 0,
+        "y": 36,
+        "w": 320,
+        "h": 64
+      },
+      "streams": {
+        "x": 0,
+        "y": 168,
+        "w": 320,
+        "h": 215
+      },
+      "playlistsHeading": {
+        "x": 0,
+        "y": 399,
+        "w": 320,
+        "h": 71
+      },
+      "playlists": {
+        "x": 0,
+        "y": 486,
+        "w": 320,
+        "h": 154
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 360,
+      "theme": "light",
+      "greeting": {
+        "x": 0,
+        "y": 41,
+        "w": 360,
+        "h": 64
+      },
+      "streams": {
+        "x": 0,
+        "y": 173,
+        "w": 360,
+        "h": 215
+      },
+      "playlistsHeading": {
+        "x": 0,
+        "y": 404,
+        "w": 360,
+        "h": 36
+      },
+      "playlists": {
+        "x": 0,
+        "y": 456,
+        "w": 360,
+        "h": 197
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 360,
+      "theme": "dark",
+      "greeting": {
+        "x": 0,
+        "y": 41,
+        "w": 360,
+        "h": 64
+      },
+      "streams": {
+        "x": 0,
+        "y": 173,
+        "w": 360,
+        "h": 215
+      },
+      "playlistsHeading": {
+        "x": 0,
+        "y": 404,
+        "w": 360,
+        "h": 36
+      },
+      "playlists": {
+        "x": 0,
+        "y": 456,
+        "w": 360,
+        "h": 197
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "greeting": {
+        "x": 0,
+        "y": 44,
+        "w": 390,
+        "h": 64
+      },
+      "streams": {
+        "x": 0,
+        "y": 176,
+        "w": 390,
+        "h": 215
+      },
+      "playlistsHeading": {
+        "x": 0,
+        "y": 407,
+        "w": 390,
+        "h": 36
+      },
+      "playlists": {
+        "x": 0,
+        "y": 459,
+        "w": 390,
+        "h": 197
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "greeting": {
+        "x": 0,
+        "y": 44,
+        "w": 390,
+        "h": 64
+      },
+      "streams": {
+        "x": 0,
+        "y": 176,
+        "w": 390,
+        "h": 215
+      },
+      "playlistsHeading": {
+        "x": 0,
+        "y": 407,
+        "w": 390,
+        "h": 36
+      },
+      "playlists": {
+        "x": 0,
+        "y": 459,
+        "w": 390,
+        "h": 197
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 412,
+      "theme": "light",
+      "greeting": {
+        "x": 0,
+        "y": 47,
+        "w": 412,
+        "h": 64
+      },
+      "streams": {
+        "x": 0,
+        "y": 179,
+        "w": 412,
+        "h": 215
+      },
+      "playlistsHeading": {
+        "x": 0,
+        "y": 410,
+        "w": 412,
+        "h": 36
+      },
+      "playlists": {
+        "x": 0,
+        "y": 462,
+        "w": 412,
+        "h": 197
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 412,
+      "theme": "dark",
+      "greeting": {
+        "x": 0,
+        "y": 47,
+        "w": 412,
+        "h": 64
+      },
+      "streams": {
+        "x": 0,
+        "y": 179,
+        "w": 412,
+        "h": 215
+      },
+      "playlistsHeading": {
+        "x": 0,
+        "y": 410,
+        "w": 412,
+        "h": 36
+      },
+      "playlists": {
+        "x": 0,
+        "y": 462,
+        "w": 412,
+        "h": 197
+      },
+      "miniPlayer": null
+    }
+  ],
+  "flow": [
+    {
+      "theme": "light",
+      "step": "01-clean-launch",
+      "miniPlayer": null,
+      "playlists": {
+        "x": 0,
+        "y": 459,
+        "w": 390,
+        "h": 197
+      }
+    },
+    {
+      "theme": "light",
+      "step": "02-player-after-banner-tap",
+      "miniPlayer": null,
+      "playlists": null
+    },
+    {
+      "theme": "light",
+      "step": "03-home-with-pill",
+      "miniPlayer": {
+        "x": 16,
+        "y": 602,
+        "w": 358,
+        "h": 74
+      },
+      "playlists": {
+        "x": 0,
+        "y": 459,
+        "w": 390,
+        "h": 197
+      }
+    },
+    {
+      "theme": "light",
+      "step": "04-home-scrolled-to-end",
+      "miniPlayer": {
+        "x": 16,
+        "y": 602,
+        "w": 358,
+        "h": 74
+      },
+      "playlists": {
+        "x": 0,
+        "y": 405,
+        "w": 390,
+        "h": 197
+      }
+    },
+    {
+      "theme": "dark",
+      "step": "01-clean-launch",
+      "miniPlayer": null,
+      "playlists": {
+        "x": 0,
+        "y": 459,
+        "w": 390,
+        "h": 197
+      }
+    },
+    {
+      "theme": "dark",
+      "step": "02-player-after-banner-tap",
+      "miniPlayer": null,
+      "playlists": null
+    },
+    {
+      "theme": "dark",
+      "step": "03-home-with-pill",
+      "miniPlayer": {
+        "x": 16,
+        "y": 602,
+        "w": 358,
+        "h": 74
+      },
+      "playlists": {
+        "x": 0,
+        "y": 459,
+        "w": 390,
+        "h": 197
+      }
+    },
+    {
+      "theme": "dark",
+      "step": "04-home-scrolled-to-end",
+      "miniPlayer": {
+        "x": 16,
+        "y": 602,
+        "w": 358,
+        "h": 74
+      },
+      "playlists": {
+        "x": 0,
+        "y": 405,
+        "w": 390,
+        "h": 197
+      }
+    }
+  ]
+}

@@ -127,17 +127,76 @@ the Material path translated into an 11×14 / 12×14 viewport — so centring in
 | buffering variant | exists in the dark UI KIT (`2436:771`) but on no canonical screen |
 | two-layer drop shadow | Android has one shadow model; `elevation 8dp` stands in for the `y4/blur6/spread-4` + `y10/blur15/spread-3` pair |
 
-## Open question — tapping the pill body
+## Interaction contract
 
-**Whether tapping the pill outside the button opens PLAYER is not defined
-anywhere.** The canonical export records no prototype reactions, the app has no
-mini player today to inherit a behaviour from, and
-[ANDROID-3.6.6-PLAN.md](ANDROID-3.6.6-PLAN.md) does not mention it. It is
-therefore **not implemented** rather than guessed at. Only the play/pause button
-is interactive.
+The canonical export records no prototype reactions, so none of this comes from
+Figma. It is the owner's decision, taken after the geometry was accepted.
 
-Everything else about the pill's behaviour is defined: which screens show it, what
-the button does, and what the icon means.
+| target | does |
+|---|---|
+| the pill body, artwork and metadata included | opens PLAYER |
+| the play/pause button | playback only, **never** navigation |
+
+The button is a child of the body with its own click listener, so it consumes its
+own taps and one never reaches the other. `MiniPlayerContractTest` dispatches a
+real touch at the button's centre *through the pill* — rather than calling
+`performClick()` on the button, which would prove nothing about routing — and
+asserts the destination is unchanged. The artwork, title and artist have no
+listeners of their own, which is what puts them inside the body's target rather
+than beside it.
+
+PLAYER is reached through the shell's own `openPlayer`, the same call the bottom
+navigation makes, so this adds no second route to the destination.
+
+**Accessibility keeps the two apart.** The button remains its own focusable node
+with its own `Воспроизвести` / `Пауза` description. The body's click is relabelled
+with `ViewCompat.replaceAccessibilityAction` so TalkBack offers "открыть плеер"
+instead of a generic "activate" — a label change only; the null command leaves the
+behaviour exactly as the listener defines it.
+
+The body is a control now, so it carries the platform's press affordance:
+`bg_mini_player` became a `<ripple>` over the unchanged surface shape, masked to
+the same 16dp rounded rectangle so it cannot paint over the corners. Geometry,
+fill and stroke are untouched — they still come from `bg_mini_player_surface`,
+which is the drawable this used to be.
+
+## Visibility contract
+
+The design draws the pill on HOME, COLLECTION, COLLECTION pusto and ABOUT US and
+omits it from PLAYER — but every frame it appears on already has a track in it,
+so the frames say nothing about an app that has never played anything. The owner's
+contract fills that gap:
+
+| | |
+|---|---|
+| cold launch, nothing started | **hidden** |
+| user starts MYATA / GOLD / XTRA | appears, showing that stream |
+| user pauses | **stays up**, showing the paused state |
+| HOME ↔ COLLECTION ↔ ABOUT US | preserved, stream and all |
+| PLAYER | hidden |
+| UI recreated over a live service | appears immediately, from the service |
+| true cold start, no session survived | hidden until the user starts a stream |
+
+**Visibility is not `isPlaying`.** A paused stream is still the user's chosen
+stream. The gate is `StreamsViewModel.hasPlaybackSession`, read from the player's
+own timeline — a session is "the service has a media item loaded". That is what
+separates *nothing selected yet* from *selected and paused*, in both directions:
+
+- on a genuinely cold start the player is empty, so it stays false however many
+  times the app is opened;
+- when the UI is rebuilt over a service that is still alive, the new controller
+  reconnects to the existing timeline and it comes back true on its own.
+
+**Nothing is persisted to make the pill reappear.** There is no stored flag, so
+there is none to go stale, and a service that really did die leaves the pill
+hidden — which is the intended outcome, not a gap.
+
+`MiniPlayerVisibility` holds the rule with no Android types, so the whole contract
+is a unit test. `MiniPlayerContractTest` then walks all eight situations against
+the real service, starting a stream through `switchStream` and letting the
+timeline change reach the pill — never writing `hasPlaybackSession` itself. A
+media item is set before the stream is reached over the network, so the walk holds
+on an image that cannot reach the stream host as well as on one that can.
 
 ## Content clearance is a Phase B question
 
@@ -151,14 +210,26 @@ migration.
 
 ## Validation
 
-`MiniPlayerLayoutTest` (instrumented) measures the frozen geometry at 320/360/390/412dp
-in both themes, with the worst-case long Russian metadata, and asserts the icon
-follows `isPlaying` and the pill appears only on the screens the design draws it
-on. Run on **API 24 and API 36**, byte-identical results.
+| | |
+|---|---|
+| `MiniPlayerUiStateTest` | unit, in CI — the projection: title/artist split, per-stream lookup, the `xtra` alias, the brand-pair fallback, the `NO_IMAGE` marker |
+| `MiniPlayerVisibilityTest` | unit, in CI — the eight visibility situations, one case per rule |
+| `MiniPlayerLayoutTest` | instrumented — geometry at 320/360/390/412dp in both themes with worst-case long Russian metadata, the glyph sizes, and the icon following `isPlaying` |
+| `MiniPlayerContractTest` | instrumented — the eight situations against the real service, plus body-tap-opens-PLAYER and play/pause-does-not-navigate |
 
-`MiniPlayerUiStateTest` (unit, in CI) covers the projection: the title/artist
-split, the per-stream lookup, the `xtra` alias, the brand-pair fallback and the
-`NO_IMAGE` marker.
+Both instrumented classes pass on **API 24 and API 36**, with byte-identical
+geometry.
+
+> **The full instrumented suite cannot complete on API 24, for a pre-existing
+> reason.** `screen0..9` are 1080×1921 PNGs in a density-less `drawable/`, so each
+> `MainActivity` launch decodes a window background upscaled to 57,187,632 bytes
+> on a 420dpi device, and the heap runs out after a few launches. This reproduces
+> with the Mini Player classes excluded — the run then dies in
+> `RandomWindowBackgroundTest` on the identical allocation — so it is not caused
+> by this work and is not fixed here. The Mini Player classes pass on API 24 when
+> run as their own instrumentation run, and the full suite passes on API 36 apart
+> from `ExampleInstrumentedTest.useAppContext`, which is AGP template residue
+> asserting the namespace against a different applicationId.
 
 Live-app evidence, including playback continuity across navigation and
 backgrounding, is in

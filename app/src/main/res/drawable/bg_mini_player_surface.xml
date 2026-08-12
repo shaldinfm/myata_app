@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Mini Player pill surface.
+
+  Frozen canonical: `Now Playing Mini Player (Floating above Bottom Nav)`,
+  358x74, corner radius 16, fill #1C4771, plus a 1px INSIDE stroke of #FFFFFF at
+  10%. Both values are the same on the Light and the Dark canonical page, so
+  they are fixed brand colours with no night variant - see values/colors.xml.
+
+  The frame also carries a BACKGROUND_BLUR of radius 12. It is not reproduced:
+  the fill above it is fully opaque, so the blur has nothing to show through in
+  Figma either, and Android's equivalent is API 31+ regardless.
+
+  Split out of bg_mini_player so the pill can carry a press ripple without the
+  fill and the stroke being written twice.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/brand_mini_player_container" />
+    <stroke
+        android:width="@dimen/mini_player_stroke"
+        android:color="@color/brand_mini_player_hairline" />
+    <corners android:radius="@dimen/mini_player_corner" />
+</shape>

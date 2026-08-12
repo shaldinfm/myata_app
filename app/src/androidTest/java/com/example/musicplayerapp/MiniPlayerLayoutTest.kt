@@ -197,42 +197,12 @@ class MiniPlayerLayoutTest {
         assertTrue(findings.joinToString("\n"), findings.isEmpty())
     }
 
-    /**
-     * Only the screens the frozen design draws it on.
-     *
-     * PLAYER is the one that matters: it is the single canonical screen with no
-     * mini player, because it already shows all of this full size.
+    /*
+     * Visibility is not asserted here. It now depends on whether the service holds
+     * a session, which is not something this class should fake: the rule itself is
+     * covered case by case in MiniPlayerVisibilityTest, and against the real
+     * service in MiniPlayerContractTest.
      */
-    @Test
-    fun thePillAppearsOnlyOnTheScreensTheDesignDrawsItOn() {
-        onMainActivity { activity ->
-            val pill = activity.findViewById<View>(R.id.mini_player)
-            for ((screen, visible) in listOf(
-                "main" to true,
-                "player" to false,
-                "favorites" to true,
-                "info" to true,
-                "donate" to false,
-            )) {
-                activity.viewModel.isInSplitMode.value = false
-                activity.viewModel.currentFragmentLiveData.value = screen
-                val shown = pill.visibility == View.VISIBLE
-                if (shown != visible) {
-                    findings += "on \"$screen\" the pill is ${if (shown) "shown" else "hidden"}, " +
-                        "the frozen design says ${if (visible) "shown" else "hidden"}"
-                }
-            }
-
-            // Split screen hides the bottom nav today, and the pill floats on it.
-            activity.viewModel.currentFragmentLiveData.value = "main"
-            activity.viewModel.isInSplitMode.value = true
-            if (pill.visibility == View.VISIBLE) {
-                findings += "the pill stays up in split screen, where the bar it floats on is gone"
-            }
-            activity.viewModel.isInSplitMode.value = false
-        }
-        assertTrue(findings.joinToString("\n"), findings.isEmpty())
-    }
 
     /* ---------------------------------------------------------------- infra -- */
 
@@ -242,11 +212,24 @@ class MiniPlayerLayoutTest {
         }
     }
 
+    /**
+     * Launches, runs [block], and closes again.
+     *
+     * Per test rather than once for the class, and that is not an oversight:
+     * `screen0..9` live in a density-less `drawable/`, so each launch decodes a
+     * 1080x1921 window background upscaled to 57 MB on a 420dpi device. Holding
+     * one Activity open across the class keeps that alive for the whole class and
+     * measurably makes the API 24 heap worse, not better. Closing between tests
+     * lets it go.
+     */
     private fun onMainActivity(block: (MainActivity) -> Unit) {
         ActivityScenario.launch(MainActivity::class.java).let { scenario ->
             try {
                 scenario.onActivity(block)
             } finally {
+                // See TypographyWidthSweepTest: close() reports a teardown timeout
+                // by throwing an Error on the software-rendered API 24 image, long
+                // after the checks are done.
                 try { scenario.close() } catch (e: Throwable) {
                     android.util.Log.w("MINIQA", "activity close timed out; checks already complete", e)
                 }

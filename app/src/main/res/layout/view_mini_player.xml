@@ -25,11 +25,19 @@
       Here the title is wrap_content and carries its real 27.5 line height. The
       outer geometry is unaffected: 47.5 was already under the artwork's 48.
     -->
+    <!--
+      clickable/focusable on the root, because the body opens PLAYER: artwork and
+      metadata are inside that target by design. The play/pause button is a child
+      with its own listener, so it consumes its own taps and controls playback
+      without ever navigating.
+    -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/bg_mini_player"
+        android:clickable="true"
         android:elevation="8dp"
+        android:focusable="true"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:padding="@dimen/mini_player_padding"

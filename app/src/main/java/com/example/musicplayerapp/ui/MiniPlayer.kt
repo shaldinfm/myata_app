@@ -2,6 +2,8 @@ package com.example.musicplayerapp.ui
 
 import android.view.View
 import androidx.core.net.toUri
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat
 import androidx.lifecycle.LifecycleOwner
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.StreamsViewModel
@@ -20,11 +22,13 @@ import com.squareup.picasso.Picasso
  *
  * Nothing here decides *what* plays. The button forwards to
  * [StreamsViewModel.togglePlayPause], which is the existing path, queueing
- * included.
+ * included. [onOpenPlayer] is the shell's own navigation to PLAYER - the same
+ * call the bottom navigation makes, not a second route to the same screen.
  */
 class MiniPlayer(
     private val views: ViewMiniPlayerBinding,
     private val vm: StreamsViewModel,
+    private val onOpenPlayer: () -> Unit,
 ) {
 
     /** Last URL handed to Picasso, so a metadata tick does not reload the same art. */
@@ -32,6 +36,23 @@ class MiniPlayer(
 
     fun bind(owner: LifecycleOwner) {
         views.miniPlayerPlayPause.setOnClickListener { vm.togglePlayPause() }
+
+        // The body - artwork and metadata included - opens PLAYER. The button is a
+        // child with its own listener, so it consumes its own taps and a
+        // play/pause never reaches this one; that is the whole mechanism, and
+        // MiniPlayerContractTest holds it in place.
+        views.root.setOnClickListener { onOpenPlayer() }
+
+        // TalkBack announces the pill's own click as "open the player" instead of
+        // the generic "activate", while the button keeps its separate node and its
+        // own play/pause description. Relabelling only: the null command leaves
+        // the behaviour exactly as the listener above defines it.
+        ViewCompat.replaceAccessibilityAction(
+            views.root,
+            AccessibilityActionCompat.ACTION_CLICK,
+            views.root.context.getString(R.string.mini_player_open),
+            null,
+        )
 
         // Every input that can change what the pill shows. They are separate
         // LiveDatas, so each one recomputes the whole projection rather than
@@ -44,6 +65,7 @@ class MiniPlayer(
 
         vm.currentFragmentLiveData.observe(owner) { updateVisibility() }
         vm.isInSplitMode.observe(owner) { updateVisibility() }
+        vm.hasPlaybackSession.observe(owner) { updateVisibility() }
 
         render()
         updateVisibility()
@@ -95,26 +117,18 @@ class MiniPlayer(
     }
 
     /**
-     * The frozen design draws the pill on HOME, COLLECTION and ABOUT US, and on
-     * COLLECTION's empty state too. It is absent from PLAYER, which is the one
-     * screen that already shows all of this full size.
-     *
-     * Split-screen follows the BottomNavBar rather than the design: the bar hides
-     * itself there today, and a pill floating above a bar that is not on screen
-     * would be a state the design never draws.
+     * The contract lives in [MiniPlayerVisibility]; this only feeds it the three
+     * live inputs. Split-screen is the one condition that comes from the app
+     * rather than the design: the BottomNavBar hides itself there today, and a
+     * pill floating above a bar that is not on screen would be a state nothing
+     * draws.
      */
     private fun updateVisibility() {
-        val onCanonicalScreen = vm.currentFragmentLiveData.value in SCREENS
-        val split = vm.isInSplitMode.value == true
-        views.root.visibility = if (onCanonicalScreen && !split) View.VISIBLE else View.GONE
-    }
-
-    private companion object {
-        /**
-         * `currentFragmentLiveData` keys for the screens the frozen design gives a
-         * mini player. "donate" is deliberately absent: it is reached from inside
-         * "О нас" and has no canonical frame, so there is nothing to reproduce.
-         */
-        val SCREENS = setOf("main", "favorites", "info")
+        val show = MiniPlayerVisibility.shouldShow(
+            screen = vm.currentFragmentLiveData.value,
+            inSplitMode = vm.isInSplitMode.value == true,
+            hasPlaybackSession = vm.hasPlaybackSession.value == true,
+        )
+        views.root.visibility = if (show) View.VISIBLE else View.GONE
     }
 }

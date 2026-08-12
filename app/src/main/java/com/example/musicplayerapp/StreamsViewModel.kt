@@ -66,6 +66,24 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     var currentXtraState = MutableLiveData<PlayerState?>()
     var isPlaying = MutableLiveData<Boolean>()
     var isBuffering = MutableLiveData<Boolean>()
+
+    /**
+     * Whether the playback service actually holds a stream session.
+     *
+     * Read from the player's own timeline - a session is "the service has a media
+     * item loaded" - so it is the service's truth and not a flag the UI keeps.
+     * That matters in both directions:
+     *
+     *  - on a genuinely cold start nothing has been selected yet, the player is
+     *    empty, and this stays false however many times the app is opened;
+     *  - when the UI is recreated while the service is still alive, the new
+     *    controller reconnects to the existing timeline and this comes back true
+     *    immediately, with no persisted state to restore and none to go stale.
+     *
+     * It is deliberately not `isPlaying`: a paused stream is still a session.
+     */
+    private val _hasPlaybackSession = MutableLiveData(false)
+    val hasPlaybackSession: LiveData<Boolean> = _hasPlaybackSession
     var isInSplitMode = MutableLiveData<Boolean>()
     var playlistList = MutableLiveData<MutableList<MyataPlaylist>>()
     private val _playlistsState = MutableLiveData(PlaylistsState.LOADING)
@@ -159,6 +177,9 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
                 // Initial sync
                 isPlaying.postValue(mediaController?.isPlaying == true)
                 isBuffering.postValue(mediaController?.playbackState == Player.STATE_BUFFERING)
+                // Whatever the service was already doing before this controller
+                // existed - this is the only place a recreated UI learns it.
+                refreshPlaybackSession()
                 // A Play pressed before the controller existed is honoured now.
                 flushPendingPlayRequest()
             } catch (e: Exception) {
@@ -208,6 +229,15 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         togglePlayPause()
     }
 
+    /**
+     * Re-reads whether the service holds a session. Cheap, and called from every
+     * player callback that can change the answer rather than from a guess about
+     * which one will.
+     */
+    private fun refreshPlaybackSession() {
+        _hasPlaybackSession.postValue((mediaController?.mediaItemCount ?: 0) > 0)
+    }
+
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             this@StreamsViewModel.isPlaying.postValue(isPlaying)
@@ -215,6 +245,23 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
 
         override fun onPlaybackStateChanged(state: Int) {
             isBuffering.postValue(state == Player.STATE_BUFFERING)
+            refreshPlaybackSession()
+        }
+
+        /**
+         * The service loads its media item itself, in response to a start intent,
+         * so the timeline is where the UI finds out a session now exists - not the
+         * command that asked for it, which can be issued and then fail.
+         */
+        override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
+            refreshPlaybackSession()
+        }
+
+        override fun onMediaItemTransition(
+            mediaItem: androidx.media3.common.MediaItem?,
+            reason: Int,
+        ) {
+            refreshPlaybackSession()
         }
 
         override fun onMediaMetadataChanged(metadata: MediaMetadata) {

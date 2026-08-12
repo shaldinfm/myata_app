@@ -1,0 +1,174 @@
+{
+  "run": "api24",
+  "density": 420,
+  "themeSwitch": "unavailable",
+  "widths": [
+    {
+      "width": 320,
+      "theme": "light",
+      "greeting": {
+        "x": 0,
+        "y": 24,
+        "w": 320,
+        "h": 64
+      },
+      "streams": {
+        "x": 0,
+        "y": 156,
+        "w": 320,
+        "h": 215
+      },
+      "playlistsHeading": {
+        "x": 0,
+        "y": 387,
+        "w": 320,
+        "h": 71
+      },
+      "playlists": {
+        "x": 0,
+        "y": 474,
+        "w": 320,
+        "h": 118
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 360,
+      "theme": "light",
+      "greeting": {
+        "x": 0,
+        "y": 24,
+        "w": 360,
+        "h": 64
+      },
+      "streams": {
+        "x": 0,
+        "y": 156,
+        "w": 360,
+        "h": 215
+      },
+      "playlistsHeading": {
+        "x": 0,
+        "y": 387,
+        "w": 360,
+        "h": 36
+      },
+      "playlists": {
+        "x": 0,
+        "y": 439,
+        "w": 360,
+        "h": 197
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "greeting": {
+        "x": 0,
+        "y": 24,
+        "w": 390,
+        "h": 64
+      },
+      "streams": {
+        "x": 0,
+        "y": 156,
+        "w": 390,
+        "h": 215
+      },
+      "playlistsHeading": {
+        "x": 0,
+        "y": 387,
+        "w": 390,
+        "h": 36
+      },
+      "playlists": {
+        "x": 0,
+        "y": 439,
+        "w": 390,
+        "h": 197
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 412,
+      "theme": "light",
+      "greeting": {
+        "x": 0,
+        "y": 24,
+        "w": 412,
+        "h": 64
+      },
+      "streams": {
+        "x": 0,
+        "y": 156,
+        "w": 412,
+        "h": 215
+      },
+      "playlistsHeading": {
+        "x": 0,
+        "y": 387,
+        "w": 412,
+        "h": 36
+      },
+      "playlists": {
+        "x": 0,
+        "y": 439,
+        "w": 412,
+        "h": 197
+      },
+      "miniPlayer": null
+    }
+  ],
+  "flow": [
+    {
+      "theme": "light",
+      "step": "01-clean-launch",
+      "miniPlayer": null,
+      "playlists": {
+        "x": 0,
+        "y": 439,
+        "w": 390,
+        "h": 197
+      }
+    },
+    {
+      "theme": "light",
+      "step": "02-player-after-banner-tap",
+      "miniPlayer": null,
+      "playlists": null
+    },
+    {
+      "theme": "light",
+      "step": "03-home-with-pill",
+      "miniPlayer": {
+        "x": 16,
+        "y": 578,
+        "w": 358,
+        "h": 74
+      },
+      "playlists": {
+        "x": 0,
+        "y": 439,
+        "w": 390,
+        "h": 197
+      }
+    },
+    {
+      "theme": "light",
+      "step": "04-home-scrolled-to-end",
+      "miniPlayer": {
+        "x": 16,
+        "y": 578,
+        "w": 358,
+        "h": 74
+      },
+      "playlists": {
+        "x": 0,
+        "y": 381,
+        "w": 390,
+        "h": 197
+      }
+    }
+  ]
+}

@@ -229,6 +229,46 @@
         <item name="cornerSize">@dimen/mini_player_artwork_corner</item>
     </style>
 
+    <!--
+      HOME stream card, frozen 3.6.6 canonical: `плашка потока MYATA` and
+      `... GOLD`, 316x198 with corner radius 14.
+
+      The frozen card carries two stacked shadows - the row's own r6 at y2, and
+      each card's r10 at y11 - which Android expresses as one elevation. 8dp is
+      the closest single value to the dominant one.
+    -->
+    <style name="HomeStreamCard">
+        <item name="android:layout_width">@dimen/home_stream_card_width</item>
+        <item name="android:layout_height">@dimen/home_stream_card_height</item>
+        <item name="cardCornerRadius">@dimen/home_stream_card_corner</item>
+        <item name="cardElevation">8dp</item>
+        <item name="cardBackgroundColor">@android:color/transparent</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <style name="HomeStreamCardImage">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:scaleType">fitXY</item>
+    </style>
+
+    <!--
+      HOME playlist card, frozen 3.6.6 canonical: `Playlist N > Background`,
+      160x160 with corner radius 20 and a cropped image fill. The card clips the
+      artwork, so the adapter loads a plain bitmap - rounding it a second time in
+      Picasso, at a different radius, is what used to fight this.
+    -->
+    <style name="HomePlaylistCard">
+        <item name="android:layout_width">@dimen/home_playlist_card_size</item>
+        <item name="android:layout_height">@dimen/home_playlist_card_size</item>
+        <item name="cardCornerRadius">@dimen/home_playlist_card_corner</item>
+        <item name="cardElevation">4dp</item>
+        <item name="cardBackgroundColor">@color/brand_playlist_card_placeholder</item>
+        <item name="strokeWidth">0dp</item>
+    </style>
+
     <style name="RoundedCornerImage">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">24dp</item>

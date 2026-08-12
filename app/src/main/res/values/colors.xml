@@ -118,4 +118,17 @@
       pair rather than a reference to the role.
     -->
     <color name="mini_player_artist">#DCEBFE</color>
+
+    <!--
+      HOME playlist card, behind the cover art.
+
+      Provenance: canonical HOME, `Mint Playlists Section > Horizontal Scroll
+      Container > Playlist N > Background` - light node 2393:1650's section, dark
+      2444:10372's. Both pages carry #EDEEEF, so it belongs with the fixed brand
+      colours above and gets no night variant.
+
+      It is only ever visible while the artwork loads: the image fill is CROP and
+      covers the card completely once it arrives.
+    -->
+    <color name="brand_playlist_card_placeholder">#EDEEEF</color>
 </resources>

@@ -1,17 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
 
+    <!--
+      HOME, migrated to the frozen 3.6.6 canonical design (Phase B).
+
+      Source: the canonical `HOME` / `HOME_dark` frames. 390x757, background is the
+      `background` semantic role, `Header - TopAppBar` 0..64, `Main` 64..628 with
+      16 padding and 16 gaps. Anchors reproduced exactly:
+
+        Наши потоки        y=80     streams row     y=132   cards 316x198 r14
+        Мятные плейлисты   y=363    playlists row   y=415   cards 160x160 r20
+
+      Two structural notes.
+
+      **It scrolls now.** The frozen frame is a fixed 757 and the old layout
+      matched it by weighting its rows, so the cards stretched or squashed with the
+      screen and no device saw the frozen sizes. Here the cards are the frozen
+      sizes and the screen scrolls when it cannot fit them, which is how a fixed
+      design is presented on a viewport that varies. Every interactive behaviour is
+      unchanged: the same three stream targets, the same playlist list, the same
+      horizontal scrolling inside each row.
+
+      **The rows are taller than their cards, deliberately.** The canonical
+      containers are 215 and 197 against cards of 198 and 181, and that slack is
+      what puts the next section at its canonical y. Reproducing the card heights
+      alone would pull Мятные плейлисты 17 up.
+    -->
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="centerCrop"
-            android:src="#1C3F5F"/>
+        android:layout_height="match_parent"
+        android:background="@color/background">
 
         <LinearLayout
             android:id="@+id/main_content_container"
@@ -20,112 +40,154 @@
             android:orientation="vertical"
             tools:context=".fragments.MainFragment">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Наши потоки"
-                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Bold.28_36"
-                android:layout_marginStart="22dp"
-                android:layout_marginTop="60dp"
-                android:textColor="#F5F7FA" />
+            <!--
+              Header - TopAppBar, 390x64, the greeting vertically centred and 16
+              from the leading edge.
 
-            <HorizontalScrollView
-                android:layout_height="0dp"
+              The frozen band also carries a 40x40 circular avatar on the trailing
+              edge. It is not here: it opens the profile, which is Phase G, and its
+              icon geometry is not in the canonical export either. The band, its
+              height and its typography are reproduced so nothing below it moves
+              when the avatar lands.
+            -->
+            <TextView
+                android:id="@+id/home_greeting"
                 android:layout_width="match_parent"
-                android:layout_marginTop="20dp"
-                android:orientation="horizontal"
-                android:layout_weight="7"
-                android:id="@+id/streams"
+                android:layout_height="@dimen/home_header_height"
+                android:ellipsize="end"
+                android:gravity="center_vertical"
+                android:maxLines="1"
+                android:paddingStart="@dimen/home_margin"
+                android:paddingEnd="@dimen/home_margin"
+                android:text="@string/home_greeting"
+                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.24_32"
+                android:textColor="@color/text_heading" />
+
+            <!--
+              Main. clipToPadding=false so the reserved bottom clearance is scroll
+              room rather than a dead band, and so the cards' shadows are not cut
+              at the edges of the rows.
+            -->
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/home_scroll"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:fillViewport="true"
+                android:paddingBottom="@dimen/home_content_bottom_clearance"
                 android:scrollbars="none">
 
                 <LinearLayout
-                    android:orientation="horizontal"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent">
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="@dimen/home_margin">
 
-                    <androidx.cardview.widget.CardView
-                        android:id="@+id/myata_stream_banner_container"
-                        android:layout_width="wrap_content"
+                    <!--
+                      minHeight is the token's own line height, for the reason
+                      measured in B2: a token applied to a single line arrives as
+                      line spacing, StaticLayout adds none after the last line, and
+                      the view would measure at the font's natural height instead
+                      of the frozen 36. Without it the streams row starts half a dp
+                      high and every anchor below drifts with it.
+                    -->
+                    <TextView
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:layout_marginStart="21dp"
-                        android:layout_marginEnd="7dp"
-                        app:cardCornerRadius="20dp"
-                        app:cardElevation="4dp"
-                        app:cardBackgroundColor="@android:color/transparent">
-                        <ImageView
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/line_height_montserrat_bold_28_36"
+                        android:paddingStart="@dimen/home_margin"
+                        android:paddingEnd="@dimen/home_margin"
+                        android:text="@string/home_streams_heading"
+                        android:textAppearance="@style/TextAppearance.Myata.Montserrat.Bold.28_36"
+                        android:textColor="@color/text_heading" />
+
+                    <!--
+                      Live Streams Section. The cards are the existing brand
+                      banners, which are already authored at exactly the frozen
+                      316x198 - nothing is rescaled.
+                    -->
+                    <HorizontalScrollView
+                        android:id="@+id/streams"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/home_stream_row_height"
+                        android:layout_marginTop="@dimen/home_section_gap"
+                        android:clipToPadding="false"
+                        android:paddingStart="@dimen/home_margin"
+                        android:paddingEnd="@dimen/home_margin"
+                        android:scrollbars="none">
+
+                        <LinearLayout
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:src="@drawable/myata_banner_new"
-                            android:id="@+id/myata_stream_banner"
-                            android:adjustViewBounds="true"/>
-                    </androidx.cardview.widget.CardView>
+                            android:orientation="horizontal">
 
-                    <androidx.cardview.widget.CardView
-                        android:id="@+id/gold_stream_banner_container"
-                        android:layout_width="wrap_content"
+                            <com.google.android.material.card.MaterialCardView
+                                android:id="@+id/myata_stream_banner_container"
+                                style="@style/HomeStreamCard">
+
+                                <ImageView
+                                    android:id="@+id/myata_stream_banner"
+                                    style="@style/HomeStreamCardImage"
+                                    android:contentDescription="@string/home_stream_myata"
+                                    android:src="@drawable/myata_banner_new" />
+                            </com.google.android.material.card.MaterialCardView>
+
+                            <com.google.android.material.card.MaterialCardView
+                                android:id="@+id/gold_stream_banner_container"
+                                style="@style/HomeStreamCard"
+                                android:layout_marginStart="@dimen/home_stream_card_gap">
+
+                                <ImageView
+                                    android:id="@+id/gold_stream_banner"
+                                    style="@style/HomeStreamCardImage"
+                                    android:contentDescription="@string/home_stream_gold"
+                                    android:src="@drawable/gold_banner_new" />
+                            </com.google.android.material.card.MaterialCardView>
+
+                            <com.google.android.material.card.MaterialCardView
+                                android:id="@+id/xtra_stream_banner_container"
+                                style="@style/HomeStreamCard"
+                                android:layout_marginStart="@dimen/home_stream_card_gap">
+
+                                <ImageView
+                                    android:id="@+id/xtra_stream_banner"
+                                    style="@style/HomeStreamCardImage"
+                                    android:contentDescription="@string/home_stream_xtra"
+                                    android:src="@drawable/xtra_banner_new" />
+                            </com.google.android.material.card.MaterialCardView>
+                        </LinearLayout>
+                    </HorizontalScrollView>
+
+                    <TextView
+                        android:id="@+id/playlistString"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:layout_marginStart="7dp"
-                        android:layout_marginEnd="7dp"
-                        app:cardCornerRadius="20dp"
-                        app:cardElevation="4dp"
-                        app:cardBackgroundColor="@android:color/transparent">
-                        <ImageView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:src="@drawable/gold_banner_new"
-                            android:id="@+id/gold_stream_banner"
-                            android:adjustViewBounds="true"/>
-                    </androidx.cardview.widget.CardView>
+                        android:layout_marginTop="@dimen/home_section_gap"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/line_height_montserrat_bold_28_36"
+                        android:paddingStart="@dimen/home_margin"
+                        android:paddingEnd="@dimen/home_margin"
+                        android:text="@string/home_playlists_heading"
+                        android:textAppearance="@style/TextAppearance.Myata.Montserrat.Bold.28_36"
+                        android:textColor="@color/text_heading" />
 
-                    <androidx.cardview.widget.CardView
-                        android:id="@+id/xtra_stream_banner_container"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:layout_marginStart="7dp"
-                        android:layout_marginEnd="14dp"
-                        app:cardCornerRadius="20dp"
-                        app:cardElevation="4dp"
-                        app:cardBackgroundColor="@android:color/transparent">
-                        <ImageView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:src="@drawable/xtra_banner_new"
-                            android:id="@+id/xtra_stream_banner"
-                            android:adjustViewBounds="true"/>
-                    </androidx.cardview.widget.CardView>
-
+                    <!--
+                      Mint Playlists Section. The frozen `Horizontal Scroll
+                      Container` starts at 16 and runs to the screen edge, so the
+                      row has a leading inset and no trailing one - the last card's
+                      own 16 gap provides the trailing air.
+                    -->
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/playlists"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/home_playlist_row_height"
+                        android:layout_marginTop="@dimen/home_section_gap"
+                        android:clipToPadding="false"
+                        android:paddingStart="@dimen/home_margin"
+                        tools:listitem="@layout/rw_playlist_item" />
                 </LinearLayout>
-
-            </HorizontalScrollView>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:text="Мятные плейлисты"
-                android:id="@+id/playlistString"
-                android:gravity=""
-                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Bold.28_36"
-                android:layout_marginStart="22dp"
-                android:textColor="#F5F7FA"
-                android:layout_weight="1" />
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="6"
-                android:layout_marginTop="20dp"
-                android:paddingEnd="14dp"
-                android:clipToPadding="false"
-                tools:listitem="@layout/rw_playlist_item"
-                android:id="@+id/playlists"
-                android:layout_marginBottom="55dp">
-            </androidx.recyclerview.widget.RecyclerView>
-
+            </androidx.core.widget.NestedScrollView>
         </LinearLayout>
-
     </FrameLayout>
-
 </layout>

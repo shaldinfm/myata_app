@@ -19,6 +19,7 @@ import com.example.musicplayerapp.data.Streams
 import com.example.musicplayerapp.databinding.ActivityMainBinding
 import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.service.PlaybackLog
+import com.example.musicplayerapp.ui.MiniPlayer
 import com.example.musicplayerapp.ui.MyataTypography
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 
@@ -139,6 +140,11 @@ class MainActivity : AppCompatActivity() {
             )
             insets
         }
+
+        // The Mini Player is bound once, here, for the reason given in
+        // activity_main.xml: one pill on the shell, reading the one playback
+        // state, outliving every fragment transaction.
+        MiniPlayer(binding.miniPlayer, viewModel).bind(this)
 
         viewModel.currentFragmentLiveData.observe(this, Observer { current ->
             // Frozen 3.6.6 BottomNavBar: the active destination gets a #FFCCFF pill

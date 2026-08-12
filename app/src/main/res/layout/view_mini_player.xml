@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      Mini Player, frozen 3.6.6 canonical (B2).
+
+      Source: `Now Playing Mini Player (Floating above Bottom Nav)` on HOME,
+      COLLECTION, COLLECTION pusto and ABOUT US of both canonical pages. It is
+      included once by the shared shell rather than per screen, because that is
+      what keeps one pill bound to one playback state - see activity_main.xml.
+
+      Frozen row, at the 390 reference width:
+
+        13 | artwork 48 | 12 | text 233 (fills) | 12 | button 27 | 13    = 358
+
+      Vertically the frame HUGs: 13 + max(child) + 13. The artwork is 48 and the
+      text column is 27.5 + 20 = 47.5, so the artwork governs and the pill is 74.
+
+      THE 18px BOX IS NOT REPRODUCED. On the canonical page the title sits in a
+      233x18 container with clipsContent on, against a 27.5 line height, so the
+      glyphs are genuinely cut - a legacy finding recorded in
+      screens-3.6.6/IMPLEMENTATION-NOTES.md and explicitly out of scope for 3.6.6.
+      Here the title is wrap_content and carries its real 27.5 line height. The
+      outer geometry is unaffected: 47.5 was already under the artwork's 48.
+    -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_mini_player"
+        android:elevation="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="@dimen/mini_player_padding"
+        tools:showIn="@layout/activity_main">
+
+        <!--
+          48x48 r8, image CROP. `zaglushka_logo` is the placeholder the player
+          screen already falls back to, so an idle pill and an idle player agree.
+        -->
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/mini_player_artwork"
+            android:layout_width="@dimen/mini_player_artwork_size"
+            android:layout_height="@dimen/mini_player_artwork_size"
+            android:contentDescription="@string/mini_player_artwork"
+            android:scaleType="centerCrop"
+            android:src="@drawable/zaglushka_logo"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Myata.Artwork48" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/mini_player_gap"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!--
+              Onest Medium 15 on a 27.5 line.
+
+              wrap_content plus a minHeight of the token's own line height, not a
+              fixed box. That combination is what gives the line its real height,
+              and it takes a measurement to see why nothing simpler does: a token
+              applied to a single line does not produce a taller view. The line
+              height arrives as line *spacing* - MyataTypography sets it that way
+              on purpose, because below API 28 nothing else is honoured - and
+              StaticLayout does not add spacing after the last line. So a
+              one-line 15/27.5 TextView measures the font's own 19dp and the 27.5
+              exists only on paper. minHeight makes it exist in the layout, and
+              center_vertical is the frozen textAlignVertical.
+
+              27.5 + the artist's 20 comes to 47.5, which stays under the 48
+              artwork, which is why the pill is still 74. The 18px canonical box
+              is not reproduced - see the header comment.
+
+              One line, ellipsized. The frozen box clips instead; the decision is
+              the same - the title does not wrap and the pill does not grow -
+              written the way Android writes it.
+            -->
+            <TextView
+                android:id="@+id/mini_player_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:gravity="center_vertical"
+                android:maxLines="1"
+                android:minHeight="@dimen/line_height_onest_medium_15_27_5"
+                android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.15_27_5"
+                android:textColor="@color/brand_mini_player_title"
+                tools:text="WHAT YOU KNOW" />
+
+            <!-- Onest Regular 14 on a 20 line, in the frozen 20-tall box. Same
+                 minHeight reasoning as the title. -->
+            <TextView
+                android:id="@+id/mini_player_artist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:gravity="center_vertical"
+                android:maxLines="1"
+                android:minHeight="@dimen/line_height_onest_regular_14_20"
+                android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                android:textColor="@color/mini_player_artist"
+                tools:text="TWO DOOR CINEMA CLUB" />
+        </LinearLayout>
+
+        <!--
+          Play / pause. The frozen slot is 27 wide, which is what fixes the text
+          column at 233; the height is taken to the full 48 of the row so the
+          target is not 25 tall. The glyph drawables are glyph-tight, so
+          scaleType=center reproduces the canonical x for both states.
+        -->
+        <ImageButton
+            android:id="@+id/mini_player_play_pause"
+            android:layout_width="@dimen/mini_player_button_width"
+            android:layout_height="@dimen/mini_player_button_height"
+            android:layout_marginStart="@dimen/mini_player_gap"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/mini_player_play"
+            android:scaleType="center"
+            android:src="@drawable/ic_mini_player_play"
+            app:tint="@color/brand_mini_player_icon" />
+    </LinearLayout>
+</layout>

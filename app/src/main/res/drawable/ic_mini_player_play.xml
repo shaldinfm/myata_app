@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Mini Player play glyph.
+
+  The canonical snapshot exporter records a vector's size, position and fills but
+  never its geometry - there is no vectorPaths, vectorNetwork or exportAsync in
+  canonical/code.js - so no path data for this icon exists in the repository. It
+  does not have to be guessed, because the box it occupies identifies it:
+
+    Figma  `Button > Container > Icon`, 11x14, at (8,5) of the 24x24 icon frame
+    Material Symbols `play_arrow` at 24dp, "M8 5v14l11-7z"
+                     -> x 8..19 = 11 wide, y 5..19 = 14 tall, origin (8,5)
+
+  Bounding box, origin and canvas all agree exactly, so this is that glyph.
+
+  The path is written glyph-tight: the Material path translated by (-8,-5) into
+  an 11x14 viewport. That makes the drawable's intrinsic size the glyph itself,
+  so centring it in the 27dp button slot puts it at x=8 of the slot - the
+  canonical position - instead of the 9.5 a 24dp canvas would give.
+
+  Untinted, like the BottomNav icons: the colour is applied from the layout.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="11dp"
+    android:height="14dp"
+    android:viewportWidth="11"
+    android:viewportHeight="14">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M0,0 L0,14 L11,7 Z" />
+</vector>

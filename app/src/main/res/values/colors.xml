@@ -79,4 +79,43 @@
     -->
     <color name="brand_donate_cta_container">#003056</color>
     <color name="brand_donate_cta_content">#FFFFFF</color>
+
+    <!--
+      Mini Player (B2), frozen 3.6.6 canonical.
+
+      Provenance: `Now Playing Mini Player (Floating above Bottom Nav)` on HOME,
+      COLLECTION, COLLECTION pusto and ABOUT US of both canonical pages. Where a
+      screen carries two stacked copies of the pill, the values below are the
+      topmost one - the copy that actually renders. The lower copies are earlier
+      residue (title/artist/icon all #8FB6E6) and are ignored.
+
+      Four of the five are FIXED BRAND COLOURS, in the sense the block above
+      defines: the Light and the Dark page carry the same value, so there is no
+      night variant and the absence of one is what keeps them identical. The pill
+      reads as `primary` on the Light page (#1C4771 is the light primary) and as
+      `surface_container` on the Dark page (#1C4771 is the dark surfaceContainer),
+      which is why one hex is legible in both themes and why neither semantic role
+      can express it on its own.
+
+      Only the artist line genuinely differs between the pages, so it is the one
+      that gets a values-night counterpart.
+    -->
+    <!-- pill fill, r=16 -->
+    <color name="brand_mini_player_container">#1C4771</color>
+    <!-- 1px INSIDE stroke, #FFFFFF at 10% -->
+    <color name="brand_mini_player_hairline">#1AFFFFFF</color>
+    <!-- track title -->
+    <color name="brand_mini_player_title">#E0E8F2</color>
+    <!-- play / pause glyph -->
+    <color name="brand_mini_player_icon">#F5F7FA</color>
+
+    <!--
+      Artist line. #DCEBFE on all four Light instances; #B3C4D1 on HOME and
+      COLLECTION in Dark, with ABOUT US the one outlier at #DCEBFE @ 80%. The Dark
+      UI KIT component `Component / Dark / Mini-player / *` settles it at #B3C4D1,
+      which is also exactly text_secondary in Dark - but not in Light, where
+      text_secondary is #42474E and would vanish on the navy pill. Hence its own
+      pair rather than a reference to the role.
+    -->
+    <color name="mini_player_artist">#DCEBFE</color>
 </resources>

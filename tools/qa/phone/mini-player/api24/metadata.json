@@ -1,0 +1,146 @@
+{
+  "run": "api24",
+  "density": 420,
+  "themeSwitch": "unavailable on this image - light only",
+  "widths": [
+    {
+      "width": 320,
+      "theme": "light",
+      "pill": {
+        "x": 16,
+        "width": 288,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "THANK YOU",
+        "artist": "ALL TVVINS"
+      }
+    },
+    {
+      "width": 360,
+      "theme": "light",
+      "pill": {
+        "x": 16,
+        "width": 328,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "THANK YOU",
+        "artist": "ALL TVVINS"
+      }
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "THANK YOU",
+        "artist": "ALL TVVINS"
+      }
+    },
+    {
+      "width": 412,
+      "theme": "light",
+      "pill": {
+        "x": 16,
+        "width": 380,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "THANK YOU",
+        "artist": "ALL TVVINS"
+      }
+    }
+  ],
+  "flow": [
+    {
+      "theme": "light",
+      "step": "01-home-idle",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "THANK YOU",
+        "artist": "ALL TVVINS"
+      }
+    },
+    {
+      "theme": "light",
+      "step": "02-home-playing",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "THANK YOU",
+        "artist": "ALL TVVINS"
+      }
+    },
+    {
+      "theme": "light",
+      "step": "03-home-paused",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "THANK YOU",
+        "artist": "ALL TVVINS"
+      }
+    },
+    {
+      "theme": "light",
+      "step": "04-collection",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "THANK YOU",
+        "artist": "ALL TVVINS"
+      }
+    },
+    {
+      "theme": "light",
+      "step": "05-about",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "THANK YOU",
+        "artist": "ALL TVVINS"
+      }
+    },
+    {
+      "theme": "light",
+      "step": "06-player",
+      "pill": null
+    },
+    {
+      "theme": "light",
+      "step": "07-back-home",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "THANK YOU",
+        "artist": "ALL TVVINS"
+      }
+    },
+    {
+      "theme": "light",
+      "step": "08-after-background",
+      "pill": {
+        "x": 16,
+        "width": 358,
+        "height": 74,
+        "button": "Воспроизвести",
+        "title": "THANK YOU",
+        "artist": "ALL TVVINS"
+      }
+    }
+  ]
+}

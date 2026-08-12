@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!--
       Typography tokens, generated from the FINAL Figma export by
       tools/fonts/gen-typography.mjs. Do not hand-edit.
@@ -20,6 +20,12 @@
       on it by itself, which is worth having for any token applied by something
       other than MyataTypography.
 
+      Each style therefore carries tools:ignore="NewApi". Lint is right that the
+      attribute is API 28 and wrong that it is a problem: below 28 the framework
+      does not read it, nothing throws, and the line height arrives from
+      myataLineHeight instead. Suppressed per style rather than by a baseline file,
+      so it stays attached to the thing it is about.
+
       android:includeFontPadding does nothing on any API level, 36 included. It is
       a TextView attribute and this is a TextAppearance, which carries a fixed list
       that does not include it. It is written here because it is part of what the
@@ -28,7 +34,7 @@
     -->
 
     <!-- 4 node(s); line height @dimen/line_height_montserrat_medium_12_16 -->
-    <style name="TextAppearance.Myata.Montserrat.Medium.12_16" parent="">
+    <style name="TextAppearance.Myata.Montserrat.Medium.12_16" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/montserrat_medium</item>
         <item name="android:textSize">12sp</item>
         <item name="android:lineHeight">@dimen/line_height_montserrat_medium_12_16</item>
@@ -37,7 +43,7 @@
     </style>
 
     <!-- 2 node(s); line height @dimen/line_height_montserrat_regular_18_18 -->
-    <style name="TextAppearance.Myata.Montserrat.Regular.18_18" parent="">
+    <style name="TextAppearance.Myata.Montserrat.Regular.18_18" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/montserrat_regular</item>
         <item name="android:textSize">18sp</item>
         <item name="android:lineHeight">@dimen/line_height_montserrat_regular_18_18</item>
@@ -46,7 +52,7 @@
     </style>
 
     <!-- 38 node(s); line height @dimen/line_height_montserrat_medium_21_28 -->
-    <style name="TextAppearance.Myata.Montserrat.Medium.21_28" parent="">
+    <style name="TextAppearance.Myata.Montserrat.Medium.21_28" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/montserrat_medium</item>
         <item name="android:textSize">21sp</item>
         <item name="android:lineHeight">@dimen/line_height_montserrat_medium_21_28</item>
@@ -55,7 +61,7 @@
     </style>
 
     <!-- 7 node(s); line height @dimen/line_height_montserrat_medium_22_24 -->
-    <style name="TextAppearance.Myata.Montserrat.Medium.22_24" parent="">
+    <style name="TextAppearance.Myata.Montserrat.Medium.22_24" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/montserrat_medium</item>
         <item name="android:textSize">22sp</item>
         <item name="android:lineHeight">@dimen/line_height_montserrat_medium_22_24</item>
@@ -64,7 +70,7 @@
     </style>
 
     <!-- 12 node(s); line height @dimen/line_height_montserrat_medium_22_28 -->
-    <style name="TextAppearance.Myata.Montserrat.Medium.22_28" parent="">
+    <style name="TextAppearance.Myata.Montserrat.Medium.22_28" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/montserrat_medium</item>
         <item name="android:textSize">22sp</item>
         <item name="android:lineHeight">@dimen/line_height_montserrat_medium_22_28</item>
@@ -73,7 +79,7 @@
     </style>
 
     <!-- 2 node(s); line height @dimen/line_height_montserrat_black_24_24 -->
-    <style name="TextAppearance.Myata.Montserrat.Black.24_24" parent="">
+    <style name="TextAppearance.Myata.Montserrat.Black.24_24" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/montserrat_black</item>
         <item name="android:textSize">24sp</item>
         <item name="android:lineHeight">@dimen/line_height_montserrat_black_24_24</item>
@@ -82,7 +88,7 @@
     </style>
 
     <!-- 50 node(s); line height @dimen/line_height_montserrat_medium_24_32 -->
-    <style name="TextAppearance.Myata.Montserrat.Medium.24_32" parent="">
+    <style name="TextAppearance.Myata.Montserrat.Medium.24_32" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/montserrat_medium</item>
         <item name="android:textSize">24sp</item>
         <item name="android:lineHeight">@dimen/line_height_montserrat_medium_24_32</item>
@@ -91,7 +97,7 @@
     </style>
 
     <!-- 2 node(s); line height @dimen/line_height_montserrat_bold_24_32 -->
-    <style name="TextAppearance.Myata.Montserrat.Bold.24_32" parent="">
+    <style name="TextAppearance.Myata.Montserrat.Bold.24_32" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/montserrat_bold</item>
         <item name="android:textSize">24sp</item>
         <item name="android:lineHeight">@dimen/line_height_montserrat_bold_24_32</item>
@@ -100,7 +106,7 @@
     </style>
 
     <!-- 6 node(s); line height @dimen/line_height_montserrat_bold_28_36 -->
-    <style name="TextAppearance.Myata.Montserrat.Bold.28_36" parent="">
+    <style name="TextAppearance.Myata.Montserrat.Bold.28_36" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/montserrat_bold</item>
         <item name="android:textSize">28sp</item>
         <item name="android:lineHeight">@dimen/line_height_montserrat_bold_28_36</item>
@@ -109,7 +115,7 @@
     </style>
 
     <!-- 2 node(s); line height @dimen/line_height_montserrat_regular_28_36 -->
-    <style name="TextAppearance.Myata.Montserrat.Regular.28_36" parent="">
+    <style name="TextAppearance.Myata.Montserrat.Regular.28_36" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/montserrat_regular</item>
         <item name="android:textSize">28sp</item>
         <item name="android:lineHeight">@dimen/line_height_montserrat_regular_28_36</item>
@@ -118,7 +124,7 @@
     </style>
 
     <!-- 13 node(s); line height @dimen/line_height_onest_medium_11_14 -->
-    <style name="TextAppearance.Myata.Onest.Medium.11_14" parent="">
+    <style name="TextAppearance.Myata.Onest.Medium.11_14" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_medium</item>
         <item name="android:textSize">11sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_medium_11_14</item>
@@ -127,7 +133,7 @@
     </style>
 
     <!-- 40 node(s); line height @dimen/line_height_onest_medium_12_16 -->
-    <style name="TextAppearance.Myata.Onest.Medium.12_16" parent="">
+    <style name="TextAppearance.Myata.Onest.Medium.12_16" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_medium</item>
         <item name="android:textSize">12sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_medium_12_16</item>
@@ -136,7 +142,7 @@
     </style>
 
     <!-- 6 node(s); line height @dimen/line_height_onest_regular_12_16 -->
-    <style name="TextAppearance.Myata.Onest.Regular.12_16" parent="">
+    <style name="TextAppearance.Myata.Onest.Regular.12_16" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_regular</item>
         <item name="android:textSize">12sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_regular_12_16</item>
@@ -145,7 +151,7 @@
     </style>
 
     <!-- 16 node(s); line height @dimen/line_height_onest_bold_12_16 -->
-    <style name="TextAppearance.Myata.Onest.Bold.12_16" parent="">
+    <style name="TextAppearance.Myata.Onest.Bold.12_16" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_bold</item>
         <item name="android:textSize">12sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_bold_12_16</item>
@@ -154,7 +160,7 @@
     </style>
 
     <!-- 8 node(s); line height @dimen/line_height_onest_regular_12_20 -->
-    <style name="TextAppearance.Myata.Onest.Regular.12_20" parent="">
+    <style name="TextAppearance.Myata.Onest.Regular.12_20" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_regular</item>
         <item name="android:textSize">12sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_regular_12_20</item>
@@ -163,7 +169,7 @@
     </style>
 
     <!-- 9 node(s); line height @dimen/line_height_onest_medium_13_18 -->
-    <style name="TextAppearance.Myata.Onest.Medium.13_18" parent="">
+    <style name="TextAppearance.Myata.Onest.Medium.13_18" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_medium</item>
         <item name="android:textSize">13sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_medium_13_18</item>
@@ -172,7 +178,7 @@
     </style>
 
     <!-- 3 node(s); line height @dimen/line_height_onest_medium_14_18 -->
-    <style name="TextAppearance.Myata.Onest.Medium.14_18" parent="">
+    <style name="TextAppearance.Myata.Onest.Medium.14_18" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_medium</item>
         <item name="android:textSize">14sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_medium_14_18</item>
@@ -181,7 +187,7 @@
     </style>
 
     <!-- 230 node(s); line height @dimen/line_height_onest_regular_14_20 -->
-    <style name="TextAppearance.Myata.Onest.Regular.14_20" parent="">
+    <style name="TextAppearance.Myata.Onest.Regular.14_20" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_regular</item>
         <item name="android:textSize">14sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_regular_14_20</item>
@@ -190,7 +196,7 @@
     </style>
 
     <!-- 3 node(s); line height @dimen/line_height_onest_medium_14_20 -->
-    <style name="TextAppearance.Myata.Onest.Medium.14_20" parent="">
+    <style name="TextAppearance.Myata.Onest.Medium.14_20" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_medium</item>
         <item name="android:textSize">14sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_medium_14_20</item>
@@ -199,7 +205,7 @@
     </style>
 
     <!-- 3 node(s); line height @dimen/line_height_onest_bold_14_20 -->
-    <style name="TextAppearance.Myata.Onest.Bold.14_20" parent="">
+    <style name="TextAppearance.Myata.Onest.Bold.14_20" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_bold</item>
         <item name="android:textSize">14sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_bold_14_20</item>
@@ -208,7 +214,7 @@
     </style>
 
     <!-- 9 node(s); line height @dimen/line_height_onest_medium_15_20 -->
-    <style name="TextAppearance.Myata.Onest.Medium.15_20" parent="">
+    <style name="TextAppearance.Myata.Onest.Medium.15_20" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_medium</item>
         <item name="android:textSize">15sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_medium_15_20</item>
@@ -217,7 +223,7 @@
     </style>
 
     <!-- 12 node(s); line height @dimen/line_height_onest_medium_15_22 -->
-    <style name="TextAppearance.Myata.Onest.Medium.15_22" parent="">
+    <style name="TextAppearance.Myata.Onest.Medium.15_22" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_medium</item>
         <item name="android:textSize">15sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_medium_15_22</item>
@@ -226,7 +232,7 @@
     </style>
 
     <!-- 52 node(s); line height @dimen/line_height_onest_regular_15_22 -->
-    <style name="TextAppearance.Myata.Onest.Regular.15_22" parent="">
+    <style name="TextAppearance.Myata.Onest.Regular.15_22" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_regular</item>
         <item name="android:textSize">15sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_regular_15_22</item>
@@ -235,7 +241,7 @@
     </style>
 
     <!-- 6 node(s); line height @dimen/line_height_onest_regular_15_24 -->
-    <style name="TextAppearance.Myata.Onest.Regular.15_24" parent="">
+    <style name="TextAppearance.Myata.Onest.Regular.15_24" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_regular</item>
         <item name="android:textSize">15sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_regular_15_24</item>
@@ -244,7 +250,7 @@
     </style>
 
     <!-- 12 node(s); line height @dimen/line_height_onest_medium_15_27_5 -->
-    <style name="TextAppearance.Myata.Onest.Medium.15_27_5" parent="">
+    <style name="TextAppearance.Myata.Onest.Medium.15_27_5" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_medium</item>
         <item name="android:textSize">15sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_medium_15_27_5</item>
@@ -253,7 +259,7 @@
     </style>
 
     <!-- 9 node(s); line height @dimen/line_height_onest_medium_16_20 -->
-    <style name="TextAppearance.Myata.Onest.Medium.16_20" parent="">
+    <style name="TextAppearance.Myata.Onest.Medium.16_20" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_medium</item>
         <item name="android:textSize">16sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_medium_16_20</item>
@@ -262,7 +268,7 @@
     </style>
 
     <!-- 177 node(s); line height @dimen/line_height_onest_medium_16_22 -->
-    <style name="TextAppearance.Myata.Onest.Medium.16_22" parent="">
+    <style name="TextAppearance.Myata.Onest.Medium.16_22" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_medium</item>
         <item name="android:textSize">16sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_medium_16_22</item>
@@ -271,7 +277,7 @@
     </style>
 
     <!-- 6 node(s); line height @dimen/line_height_onest_regular_16_28 -->
-    <style name="TextAppearance.Myata.Onest.Regular.16_28" parent="">
+    <style name="TextAppearance.Myata.Onest.Regular.16_28" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_regular</item>
         <item name="android:textSize">16sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_regular_16_28</item>
@@ -280,7 +286,7 @@
     </style>
 
     <!-- 2 node(s); line height @dimen/line_height_onest_medium_16_28 -->
-    <style name="TextAppearance.Myata.Onest.Medium.16_28" parent="">
+    <style name="TextAppearance.Myata.Onest.Medium.16_28" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_medium</item>
         <item name="android:textSize">16sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_medium_16_28</item>
@@ -289,7 +295,7 @@
     </style>
 
     <!-- 30 node(s); line height @dimen/line_height_onest_regular_17_28 -->
-    <style name="TextAppearance.Myata.Onest.Regular.17_28" parent="">
+    <style name="TextAppearance.Myata.Onest.Regular.17_28" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_regular</item>
         <item name="android:textSize">17sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_regular_17_28</item>
@@ -298,7 +304,7 @@
     </style>
 
     <!-- 2 node(s); line height @dimen/line_height_onest_medium_24_30 -->
-    <style name="TextAppearance.Myata.Onest.Medium.24_30" parent="">
+    <style name="TextAppearance.Myata.Onest.Medium.24_30" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_medium</item>
         <item name="android:textSize">24sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_medium_24_30</item>
@@ -307,7 +313,7 @@
     </style>
 
     <!-- 34 node(s); line height @dimen/line_height_onest_medium_24_32 -->
-    <style name="TextAppearance.Myata.Onest.Medium.24_32" parent="">
+    <style name="TextAppearance.Myata.Onest.Medium.24_32" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_medium</item>
         <item name="android:textSize">24sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_medium_24_32</item>
@@ -316,7 +322,7 @@
     </style>
 
     <!-- 2 node(s); line height @dimen/line_height_onest_medium_26_77_26_77 -->
-    <style name="TextAppearance.Myata.Onest.Medium.26_77_26_77" parent="">
+    <style name="TextAppearance.Myata.Onest.Medium.26_77_26_77" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_medium</item>
         <item name="android:textSize">26.77sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_medium_26_77_26_77</item>
@@ -325,7 +331,7 @@
     </style>
 
     <!-- 1 node(s); line height @dimen/line_height_onest_black_28_36 -->
-    <style name="TextAppearance.Myata.Onest.Black.28_36" parent="">
+    <style name="TextAppearance.Myata.Onest.Black.28_36" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_black</item>
         <item name="android:textSize">28sp</item>
         <item name="android:lineHeight">@dimen/line_height_onest_black_28_36</item>

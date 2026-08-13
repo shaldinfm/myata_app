@@ -344,13 +344,21 @@
         <item name="android:paddingBottom">@dimen/player_action_icon_inset_bottom</item>
     </style>
 
+    <!--
+      Only the trailing slot now: `like` has its own style with the frozen glyph
+      placement. This one still fitCenter's a 24dp icon inside 12dp of padding,
+      because the History entry that occupies the frozen `dislike` slot keeps its
+      own glyph and its own behaviour until the phase that owns it. What it does
+      take is the frozen row's colour, which the design defines unambiguously and
+      identically on both pages.
+    -->
     <style name="PlayerActionSlot">
         <item name="android:layout_width">@dimen/player_action_width</item>
         <item name="android:layout_height">@dimen/player_action_height</item>
         <item name="android:background">?attr/selectableItemBackgroundBorderless</item>
         <item name="android:scaleType">fitCenter</item>
         <item name="android:padding">12dp</item>
-        <item name="tint">@color/text_primary</item>
+        <item name="tint">@color/player_control_action</item>
     </style>
 
     <!--

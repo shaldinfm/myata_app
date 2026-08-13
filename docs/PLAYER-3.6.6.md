@@ -188,10 +188,17 @@ The canonical exporter records a vector's box, position and fills but never its
 geometry — `canonical/code.js` reads no `vectorPaths` and calls no `exportAsync`.
 So every icon on this screen has an **exact box and a reconstructed outline**.
 
-`tools/figma-export/nav-icons` already solves this: it exports real SVG via
-`exportAsync(SVG)` and resolves nodes by id, and it was only ever run over the
-four bottom-nav icons. Running it over these nodes would replace the
-reconstructions with the literal paths:
+**[tools/figma-export/player-icons](../tools/figma-export/player-icons/) is built
+and waiting to be run.** It is `nav-icons`' machinery — `exportAsync(SVG)`, ids
+with a structural fallback, VectorDrawable XML out — pointed at these nodes. It
+needs Figma Desktop and the file open, which is an owner action; nothing in the
+repository can reach the document.
+
+There is **no separate Pause node** to export: `Controls > play/pause` holds one
+glyph per page, whichever state the frozen frame shows. The other glyph stays
+derived until one exists.
+
+The nodes, all read off the visible `Controls` row:
 
 | icon | light | dark | box |
 |---|---|---|---|
@@ -334,10 +341,10 @@ line up to the same tolerance in both themes.
 
 Two differences are deliberate and deferred: the app reserves the header's
 trailing overflow slot and draws nothing in it, and it keeps its History entry in
-the frozen `dislike` slot — so the right-hand glyph differs, and it is still
-tinted `text_primary` rather than the frozen row colour, which lands a shade
-darker than the `like` beside it in Light. Aligning it belongs with the phase that
-owns that slot.
+the frozen `dislike` slot, so the right-hand **glyph** differs. Its **colour** no
+longer does — the frozen row defines that slot unambiguously and identically on
+both pages, so the slot takes `player_control_action` while the glyph and the
+behaviour stay the app's until the phase that owns them.
 
 ### Mini Player, re-verified
 

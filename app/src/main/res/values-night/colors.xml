@@ -58,6 +58,12 @@
     <color name="player_like">#F5F7FA</color>
 
     <!--
+      PLAYER control row, trailing action. The frozen `dislike` glyph, which the
+      History entry occupies until its own phase - see values/colors.xml.
+    -->
+    <color name="player_control_action">#F5F7FA</color>
+
+    <!--
       COLLECTION header trailing action. Exactly text_primary in dark while its
       light value is exactly text_secondary - see values/colors.xml for why that
       forces a pair rather than a role.

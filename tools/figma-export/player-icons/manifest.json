@@ -1,0 +1,12 @@
+{
+  "name": "Radio Myata · PLAYER icon vectors (read-only)",
+  "id": "radio-myata-player-icon-vectors",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "reasoning": "Exports SVG geometry from the PLAYER frames' icon nodes in the open document and hands the result to its own UI for download. It never writes to the document and never contacts a server."
+  }
+}

@@ -127,18 +127,72 @@ the art loads.
 
 ## Icons
 
-`Controls > play/pause > Container > Icon` is 23×23 — a full icon canvas, unlike
-the Mini Player's glyph-tight box — so `ic_player_play` and `ic_player_pause` keep
-Material's 24 canvas and render at 23. Same glyphs and same provenance as B2:
-`play_arrow` and `pause`, identified by bounding box and origin.
+`Controls > play/pause > Container > Icon` is 23.33×23.33, and `Container` is
+`layoutSizing: HUG` — it hugs its child. So that box is **ink, not a canvas**: the
+frozen glyph is exactly square and centred at (40, 40) of the 80×80 control. The
+two side slots read the same way (`like`/`dislike > Container > Icon`, 24.5×23.33).
+
+`ic_player_play` and `ic_player_pause` are therefore written glyph-tight, as the
+Mini Player's are: the viewport is the frozen box, the ink runs edge to edge, and
+the drawable's intrinsic size is the glyph. `pause` keeps Material's 1:1:1
+bar/gap/bar split, taken to the full box; `play` is the triangle that fills it.
+Both paint the same 23×23dp of ink, so the control does not change size when the
+state changes.
+
+> The canonical exporter records no vector geometry, so the box is all the source
+> gives and the play triangle's proportions are a reading of it rather than a
+> path copied across. It is the reading that matches the recorded ink exactly.
+
+**This is the correction in [the play/pause follow-up](#the-central-control-three-faces).**
+The first Phase B pass read the 23.33 box as a canvas and kept Material
+`play_arrow`/`pause` on a 24 canvas rendered at 23. That paints 10.5×13.4dp of ink
+— 46% of the frozen box — and `play_arrow` is not centred in its own canvas, so it
+also landed 1.6dp right of centre. The fill was always the right size; the glyph
+inside it is what made the control read as smaller than the frozen 80×80.
+
+## The central control: three faces
+
+One control, `Controls > play/pause`: 80×80 r20 filled with `primary`, the
+`on_primary` glyph centred in it. The **fill is the button's own background**, so
+it is painted in every state and only the middle changes.
+
+| state | source | middle |
+|---|---|---|
+| paused / idle | `isPlaying == false` | Play glyph |
+| connecting / buffering | `isBuffering == true` | progress indicator, 23dp, `on_primary`, centred |
+| playing | `isPlaying == true` | Pause glyph |
+
+Both inputs are the service's own, read through the MediaController
+`StreamsViewModel` already holds: `isPlaying` from `onIsPlayingChanged`,
+`isBuffering` from `onPlaybackStateChanged(STATE_BUFFERING)`. `PlayerControlState`
+projects the pair onto a face — buffering wins, so a stream switch reads as
+connecting rather than playing — and `PlayerControl` paints it. No second state
+machine, and nothing new is stored.
+
+**What was wrong.** Connecting used to hide the whole button (`View.INVISIBLE`)
+and leave a bare 23dp spinner where the control had been. With no fill behind it
+the indicator has no contrast of its own: `on_primary` is `#FFFFFF` against a
+`#F8F9FA` background in Light and `#0F253E` against a `#0F253E` one in Dark. It
+was invisible in **both** themes, and the control appeared to vanish mid-connect.
+Two observers each owned half the control and neither owned the surface, so
+nothing was responsible for keeping it on screen; that is the shape of the bug,
+and one projection is the fix.
+
+The button stops taking taps while connecting, which is what hiding it used to do
+— an `INVISIBLE` view receives no touches — so a tap during connect still does
+nothing and no second start command can be issued. Only the appearance changed.
+TalkBack gains `player_connecting` for the state that now has a visible face and
+no action.
 
 ## Playback contract
 
 Untouched. No second state machine, no change to `MediaPlayerService`, and no
 speculative fix for the open issue #15. `MyataStreamFragment` keeps the same
 observers on the same LiveData; what changed is which drawable and which colour
-they apply. Stream switching, swiping, buffering, artwork and metadata updates,
-favourites and background playback are all as they were.
+they apply, and — in the follow-up — that the two observers now feed one
+projection instead of dividing the control between them. Stream switching,
+swiping, buffering, artwork and metadata updates, favourites and background
+playback are all as they were.
 
 The Mini Player stays absent on PLAYER, and its session/visibility contract from
 B2 is not modified.
@@ -148,10 +202,12 @@ B2 is not modified.
 | | |
 |---|---|
 | `./gradlew assembleDebug` | pass |
-| `./gradlew lintDebug` | 0 errors, **394 warnings, down from 409** — 0 findings on any PLAYER file |
+| `./gradlew lintDebug` | 0 errors, 389 warnings — 0 findings on any PLAYER file (Phase B took this from 409 to 394; COLLECTION took it to 389, and the follow-up added none) |
 | `./gradlew testDebugUnitTest` | pass |
 | `PlayerLayoutTest` | instrumented — the frozen anchors at 320/360/390/412dp in both themes, the reserved header slot proven non-clickable, worst-case long Russian metadata on one line with no clipping or overlap. **API 24 and API 36, byte-identical.** |
-| regression | `MiniPlayerContractTest` and `HomeLayoutTest` re-run on API 24 |
+| `PlayerControlStateTest` | unit — the three faces, and buffering winning over playing |
+| `PlayerControlRenderTest` | instrumented — the control **as painted**, in all three states and both themes. **API 24 and API 36, byte-identical.** |
+| regression | `MiniPlayerContractTest` on both images; `HomeLayoutTest` on API 24 |
 | live | `tools/qa/phone/capture-player.mjs` on both APIs — [tools/qa/phone/player/](../tools/qa/phone/player/) |
 | TV | smoke: renders unchanged, `DPAD_CENTER` reaches `STATE_CHANGED state=READY playWhenReady=true`, no crash |
 
@@ -159,3 +215,40 @@ The live run confirms, in both themes: idle → play glyph; tap → `Пауза`
 toggles both ways; swiping reaches GOLD and XTRA with playback following; the
 History sheet still opens; pause returns the play glyph; state survives a
 background round trip; and **the Mini Player is absent at every step**.
+
+### Measuring the control, not its bounds
+
+`PlayerLayoutTest` measures `btn_play`'s bounds, which is where the frozen control
+sits but not what a user sees — a view can report 80×80 and paint a smaller shape,
+or paint nothing at all, which is exactly what connecting did. So
+`PlayerControlRenderTest` reads no view bound for the control's size. It rasterises
+`player_controls`, finds the `primary`-coloured region, and every claim about size,
+radius and position is a claim about those pixels:
+
+- the painted surface is 80×80 **and** coincides with `btn_play` — an 80dp box
+  holding a 64dp visible shape passes the first and fails the second;
+- the top-left pixel is not filled and the fill first spans its full width 20dp
+  down, so the radius is 20;
+- the `on_primary` glyph inside it is 23×23, centred (searched inset by the
+  radius, because in Dark `on_primary` and `background` are the same `#0F253E`
+  and the page showing through the corners would otherwise read as glyph);
+- connecting paints the **same** surface rectangle, with the indicator's box
+  contained in it and the fill sampled just outside the indicator;
+- and the surface rectangle is identical across all three faces.
+
+Live pixel measurements agree, at 390dp/420dpi on both images: the painted control
+is 210×210px = 80.0×80.0dp at the same origin in idle, connecting and playing, in
+both themes, with the corner arc reaching full width 52px ≈ 20dp down.
+
+### Mini Player, re-verified
+
+No change was needed and none was made: the B2 contract holds live on **HOME,
+COLLECTION and ABOUT US**, on both images. A cold launch with nothing selected
+shows no pill on any section; starting MYATA brings it up on all three and never
+on PLAYER; pausing and resuming leave it up; it survives navigation between
+sections and an Activity relaunch with the session alive; and a force-stop, which
+takes the service with it, returns to no pill. On API 24 the emulator image cannot
+reach the stream host, so the session exists there with nothing ever playing —
+which is the `isPlaying`-is-not-a-session distinction demonstrated by accident.
+`MiniPlayerContractTest` already covers all of this, step 8 included, so no test
+was added.

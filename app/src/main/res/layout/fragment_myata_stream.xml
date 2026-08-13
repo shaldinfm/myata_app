@@ -169,7 +169,19 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
-                <!-- Buffering: replaces the play glyph in place, as it does today. -->
+                <!--
+                  Connecting and re-buffering. It replaces the glyph, not the
+                  control: `btn_play` keeps drawing its 80x80 primary surface
+                  underneath, this is constrained to that surface's four edges so
+                  it is centred inside it, and it takes the frozen glyph box so
+                  nothing moves or changes size between Play, connecting and
+                  Pause. Declared after `btn_play`, so it draws on top of it.
+
+                  `on_primary` is legible here only because the fill is behind it:
+                  the tint is #FFFFFF on a #1C4771 surface in Light and #0F253E on
+                  a #5FD9B4 one in Dark. See PlayerControl for what hiding the
+                  surface used to do to it.
+                -->
                 <ProgressBar
                     android:id="@+id/loading_spinner"
                     android:layout_width="@dimen/player_play_icon"

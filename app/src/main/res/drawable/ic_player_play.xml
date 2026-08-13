@@ -2,13 +2,26 @@
 <!--
   PLAYER play glyph.
 
-  Same derivation as the Mini Player's, and deliberately the same glyph: the
-  canonical exporter records no vector geometry, but the box identifies the icon.
-  `Controls > play/pause > Container > Icon` is 23x23 - a full icon canvas rather
-  than the Mini Player's glyph-tight box - so this keeps Material's 24 canvas and
-  is rendered at 23.
+  The canonical exporter records a vector's box, position and fills but never its
+  geometry, so the box is what identifies the glyph - the same derivation the Mini
+  Player's icons use. Here the box is:
 
-    Material Symbols `play_arrow` at 24dp, "M8 5v14l11-7z"
+    `Controls > play/pause > Container > Icon`   23.33 x 23.33, at (28.33, 28.33)
+
+  `Container` is layoutSizing HUG, so it hugs its child and 23.33 x 23.33 is the
+  ink rather than a canvas: the frozen glyph is exactly square, and centred at
+  (40, 40) of the 80x80 control.
+
+  #40 read that box as "a full icon canvas" and kept Material `play_arrow`
+  ("M8 5v14l11-7z") on a 24 canvas rendered at 23. That paints 10.5 x 13.4dp of
+  ink - 46% of the frozen box - and `play_arrow` is not centred in its own canvas,
+  so it also landed 1.6dp right of centre. That is what made the control read as
+  smaller than the frozen 80x80 even though the fill was the right size.
+
+  So the glyph is written glyph-tight, as the Mini Player's are: the viewport IS
+  the frozen box, the ink runs edge to edge, and the drawable's intrinsic size is
+  the glyph itself. Centring it in the control then puts it exactly where the
+  frozen design puts it, with no canvas padding to absorb.
 
   Untinted: the colour is `on_primary`, applied from the layout.
 -->
@@ -19,5 +32,5 @@
     android:viewportHeight="24">
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M8,5 L8,19 L19,12 Z" />
+        android:pathData="M0,0 L0,24 L24,12 Z" />
 </vector>

@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  PLAYER pause glyph. Same derivation as ic_player_play.
+  PLAYER pause glyph. Same derivation as ic_player_play: glyph-tight, the viewport
+  is the frozen 23.33 x 23.33 box, and the ink fills it.
 
-    Material Symbols `pause` at 24dp, "M6 19h4V5H6v14zm8-14v14h4V5h-4z"
+  Material `pause` ("M6 19h4V5H6v14zm8-14v14h4V5h-4z") is two 4-wide bars with a
+  4-wide gap - the 1:1:1 split kept here - and 14 tall on a 24 canvas. Filling the
+  frozen square keeps that split and takes the bars to the full box, so play and
+  pause paint the same 23 x 23dp of ink and the control does not change size when
+  the state changes.
 
   Two disjoint rectangles wound the same way, so the default non-zero fill is
   correct and no android:fillType is needed.
+
+  Untinted: the colour is `on_primary`, applied from the layout.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="@dimen/player_play_icon"
@@ -14,5 +21,5 @@
     android:viewportHeight="24">
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M6,19 L10,19 L10,5 L6,5 Z M14,5 L14,19 L18,19 L18,5 Z" />
+        android:pathData="M0,0 L8,0 L8,24 L0,24 Z M16,0 L24,0 L24,24 L16,24 Z" />
 </vector>

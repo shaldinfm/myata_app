@@ -20,8 +20,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "BITTERSWEET",
-      "artist": "MATILDA MANN",
+      "title": "RODEO",
+      "artist": "IIL PEACH",
       "play": {
         "x": 120,
         "y": 478,
@@ -60,8 +60,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "BITTERSWEET",
-      "artist": "MATILDA MANN",
+      "title": "OK OK OK",
+      "artist": "FITZ AND THE TANTRUMS",
       "play": {
         "x": 120,
         "y": 478,
@@ -100,8 +100,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "BITTERSWEET",
-      "artist": "MATILDA MANN",
+      "title": "OK OK OK",
+      "artist": "FITZ AND THE TANTRUMS",
       "play": {
         "x": 140,
         "y": 483,
@@ -140,8 +140,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "BITTERSWEET",
-      "artist": "MATILDA MANN",
+      "title": "OK OK OK",
+      "artist": "FITZ AND THE TANTRUMS",
       "play": {
         "x": 140,
         "y": 483,
@@ -180,8 +180,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "BITTERSWEET",
-      "artist": "MATILDA MANN",
+      "title": "OK OK OK",
+      "artist": "FITZ AND THE TANTRUMS",
       "play": {
         "x": 155,
         "y": 486,
@@ -220,8 +220,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "RADIO MYATA",
-      "artist": "YOUR MUSIC! YOUR STATION!",
+      "title": "UR MUM",
+      "artist": "WET LEG",
       "play": {
         "x": 155,
         "y": 486,
@@ -260,8 +260,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "REFLEKTOR",
-      "artist": "ARCADE FIRE",
+      "title": "UR MUM",
+      "artist": "WET LEG",
       "play": {
         "x": 166,
         "y": 489,
@@ -300,8 +300,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "REFLEKTOR",
-      "artist": "ARCADE FIRE",
+      "title": "UR MUM",
+      "artist": "WET LEG",
       "play": {
         "x": 166,
         "y": 489,
@@ -330,8 +330,8 @@
       "step": "01-player-idle",
       "play": "Воспроизвести",
       "favourite": "Добавить в коллекцию",
-      "title": "REFLEKTOR",
-      "artist": "ARCADE FIRE",
+      "title": "UR MUM",
+      "artist": "WET LEG",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -340,8 +340,8 @@
       "step": "02-playing",
       "play": "Пауза",
       "favourite": "Добавить в коллекцию",
-      "title": "REFLEKTOR",
-      "artist": "ARCADE FIRE",
+      "title": "UR MUM",
+      "artist": "WET LEG",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -350,8 +350,8 @@
       "step": "03-favourited",
       "play": "Пауза",
       "favourite": "Убрать из коллекции",
-      "title": "REFLEKTOR",
-      "artist": "ARCADE FIRE",
+      "title": "UR MUM",
+      "artist": "WET LEG",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -360,8 +360,8 @@
       "step": "04-gold",
       "play": "Пауза",
       "favourite": "Добавить в коллекцию",
-      "title": "MISSING",
-      "artist": "EVERYTHING BUT THE GIRL",
+      "title": "UR MUM",
+      "artist": "WET LEG",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -370,8 +370,8 @@
       "step": "05-xtra",
       "play": "Пауза",
       "favourite": "Добавить в коллекцию",
-      "title": "ИГРЫ",
-      "artist": "ГОСТИ ИЗ БУДУЩЕГО",
+      "title": "I CAN'T GET ENOUGH",
+      "artist": "FIREFLIES/ALEXANDRA PRINCE",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -390,8 +390,8 @@
       "step": "07-paused",
       "play": "Воспроизвести",
       "favourite": "Добавить в коллекцию",
-      "title": "ИГРЫ",
-      "artist": "ГОСТИ ИЗ БУДУЩЕГО",
+      "title": "I CAN'T GET ENOUGH",
+      "artist": "FIREFLIES/ALEXANDRA PRINCE",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -400,8 +400,8 @@
       "step": "08-after-background",
       "play": "Воспроизвести",
       "favourite": "Добавить в коллекцию",
-      "title": "ИГРЫ",
-      "artist": "ГОСТИ ИЗ БУДУЩЕГО",
+      "title": "I CAN'T GET ENOUGH",
+      "artist": "FIREFLIES/ALEXANDRA PRINCE",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -410,8 +410,8 @@
       "step": "01-player-idle",
       "play": "Воспроизвести",
       "favourite": "Добавить в коллекцию",
-      "title": "REFLEKTOR",
-      "artist": "ARCADE FIRE",
+      "title": "FLY AWAY",
+      "artist": "LENNY KRAVITZ",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -420,8 +420,8 @@
       "step": "02-playing",
       "play": "Пауза",
       "favourite": "Добавить в коллекцию",
-      "title": "REFLEKTOR",
-      "artist": "ARCADE FIRE",
+      "title": "FLY AWAY",
+      "artist": "LENNY KRAVITZ",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -430,8 +430,8 @@
       "step": "03-favourited",
       "play": "Пауза",
       "favourite": "Убрать из коллекции",
-      "title": "REFLEKTOR",
-      "artist": "ARCADE FIRE",
+      "title": "FLY AWAY",
+      "artist": "LENNY KRAVITZ",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -440,8 +440,8 @@
       "step": "04-gold",
       "play": "Пауза",
       "favourite": "Добавить в коллекцию",
-      "title": "MISSING",
-      "artist": "EVERYTHING BUT THE GIRL",
+      "title": "I CAN'T GET ENOUGH",
+      "artist": "FIREFLIES/ALEXANDRA PRINCE",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -450,8 +450,8 @@
       "step": "05-xtra",
       "play": "Пауза",
       "favourite": "Добавить в коллекцию",
-      "title": "ИГРЫ",
-      "artist": "ГОСТИ ИЗ БУДУЩЕГО",
+      "title": "I CAN'T GET ENOUGH",
+      "artist": "FIREFLIES/ALEXANDRA PRINCE",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -470,8 +470,8 @@
       "step": "07-paused",
       "play": "Воспроизвести",
       "favourite": "Добавить в коллекцию",
-      "title": "ИГРЫ",
-      "artist": "ГОСТИ ИЗ БУДУЩЕГО",
+      "title": "I CAN'T GET ENOUGH",
+      "artist": "FIREFLIES/ALEXANDRA PRINCE",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -480,8 +480,8 @@
       "step": "08-after-background",
       "play": "Воспроизвести",
       "favourite": "Добавить в коллекцию",
-      "title": "ИГРЫ",
-      "artist": "ГОСТИ ИЗ БУДУЩЕГО",
+      "title": "I CAN'T GET ENOUGH",
+      "artist": "FIREFLIES/ALEXANDRA PRINCE",
       "miniPlayer": "none",
       "sheetOpen": false
     }

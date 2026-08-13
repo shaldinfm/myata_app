@@ -61,6 +61,13 @@
     <string name="player_now_playing">Сейчас играет</string>
     <string name="player_play">Воспроизвести</string>
     <string name="player_pause">Пауза</string>
+    <!--
+      Announced while the control shows its progress indicator. The frozen design
+      has no connecting state to take a label from, and the control genuinely has
+      no action then, so this describes what it is doing rather than what a tap
+      would do.
+    -->
+    <string name="player_connecting">Подключение</string>
     <string name="player_favorite_add">Добавить в коллекцию</string>
     <string name="player_favorite_remove">Убрать из коллекции</string>
     <string name="player_history">История эфира</string>

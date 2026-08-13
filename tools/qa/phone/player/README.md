@@ -34,9 +34,15 @@ Steps 4 and 5 swipe the pager, so they check that switching stream still works a
 that playback follows. Step 6 checks only that the History entry still opens its
 bottom sheet - Phase C owns the redesign, and Phase B is not allowed to touch it.
 
-`play="null"` at a step means `btn_play` was not in the hierarchy, which is the
-existing buffering behaviour: the spinner replaces the button while the stream
-connects. It shows up more on API 24, whose image cannot reach the stream host.
+`play="Подключение"` at a step is the control's connecting face: the 80x80 surface
+stays on screen and the progress indicator replaces the glyph inside it. It shows
+up more on API 24, whose image cannot reach the stream host.
+
+Connecting used to read `play="null"` instead, meaning `btn_play` was not in the
+hierarchy at all: the button was hidden and only a bare, invisible spinner was
+left. That is the defect the play/pause follow-up fixed, so a `null` at any step
+but `06-history-sheet` would mean it had come back. At that step the sheet is over
+the screen and there is genuinely no control to read.
 
 ## Re-running
 

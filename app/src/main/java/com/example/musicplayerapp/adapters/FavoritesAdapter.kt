@@ -42,10 +42,12 @@ class FavoritesAdapter(
         
         holder.tvArtist.text = track.artist.uppercase()
         holder.tvTrack.text = track.track
-        
-        // Unified artist color as per request
-        holder.tvArtist.setTextColor(Color.parseColor("#00E5FF"))
-        
+
+        // The artist line used to be re-coloured here to a hardcoded #00E5FF,
+        // overriding whatever the layout said. It is the text_secondary semantic
+        // role now and comes from item_favorite_track.xml, so it resolves per
+        // theme - setting it again from code would pin it to one of them.
+
         // Set stream badge with specific colors
         when (track.stream) {
             "myata" -> {

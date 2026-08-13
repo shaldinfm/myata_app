@@ -1,0 +1,378 @@
+{
+  "run": "api24",
+  "sdk": 24,
+  "density": 420,
+  "themeSwitch": "unavailable",
+  "widths": [
+    {
+      "width": 320,
+      "theme": "light",
+      "header": {
+        "x": 0,
+        "y": 24,
+        "w": 320,
+        "h": 64
+      },
+      "title": {
+        "x": 16,
+        "y": 41,
+        "w": 288,
+        "h": 29
+      },
+      "subtitle": {
+        "x": 0,
+        "y": 104,
+        "w": 320,
+        "h": 20
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 156,
+        "w": 288,
+        "h": 359
+      },
+      "emptyTitle": {
+        "x": 93,
+        "y": 392,
+        "w": 135,
+        "h": 28
+      },
+      "emptyBody": {
+        "x": 32,
+        "y": 420,
+        "w": 256,
+        "h": 40
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 360,
+      "theme": "light",
+      "header": {
+        "x": 0,
+        "y": 24,
+        "w": 360,
+        "h": 64
+      },
+      "title": {
+        "x": 16,
+        "y": 41,
+        "w": 328,
+        "h": 29
+      },
+      "subtitle": {
+        "x": 0,
+        "y": 104,
+        "w": 360,
+        "h": 20
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 156,
+        "w": 328,
+        "h": 359
+      },
+      "emptyTitle": {
+        "x": 112,
+        "y": 392,
+        "w": 135,
+        "h": 28
+      },
+      "emptyBody": {
+        "x": 32,
+        "y": 420,
+        "w": 296,
+        "h": 40
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "header": {
+        "x": 0,
+        "y": 24,
+        "w": 390,
+        "h": 64
+      },
+      "title": {
+        "x": 16,
+        "y": 41,
+        "w": 358,
+        "h": 29
+      },
+      "subtitle": {
+        "x": 0,
+        "y": 104,
+        "w": 390,
+        "h": 20
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 156,
+        "w": 358,
+        "h": 359
+      },
+      "emptyTitle": {
+        "x": 128,
+        "y": 392,
+        "w": 135,
+        "h": 28
+      },
+      "emptyBody": {
+        "x": 32,
+        "y": 420,
+        "w": 326,
+        "h": 40
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 412,
+      "theme": "light",
+      "header": {
+        "x": 0,
+        "y": 24,
+        "w": 412,
+        "h": 64
+      },
+      "title": {
+        "x": 16,
+        "y": 41,
+        "w": 380,
+        "h": 29
+      },
+      "subtitle": {
+        "x": 0,
+        "y": 104,
+        "w": 412,
+        "h": 20
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 156,
+        "w": 380,
+        "h": 359
+      },
+      "emptyTitle": {
+        "x": 139,
+        "y": 392,
+        "w": 135,
+        "h": 28
+      },
+      "emptyBody": {
+        "x": 32,
+        "y": 420,
+        "w": 348,
+        "h": 40
+      },
+      "miniPlayer": null
+    }
+  ],
+  "flow": [
+    {
+      "theme": "light",
+      "step": "01-empty-no-session",
+      "miniPlayer": null,
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 156,
+        "w": 358,
+        "h": 359
+      },
+      "firstRow": null,
+      "badge": null,
+      "services": null,
+      "delete": null
+    },
+    {
+      "theme": "light",
+      "step": "02-empty-with-pill",
+      "miniPlayer": {
+        "x": 16,
+        "y": 578,
+        "w": 358,
+        "h": 74
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 156,
+        "w": 358,
+        "h": 359
+      },
+      "firstRow": null,
+      "badge": null,
+      "services": null,
+      "delete": null
+    },
+    {
+      "theme": "light",
+      "step": "03-empty-pill-paused",
+      "miniPlayer": {
+        "x": 16,
+        "y": 578,
+        "w": 358,
+        "h": 74
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 156,
+        "w": 358,
+        "h": 359
+      },
+      "firstRow": null,
+      "badge": null,
+      "services": null,
+      "delete": null
+    },
+    {
+      "theme": "light",
+      "step": "04-populated",
+      "miniPlayer": {
+        "x": 16,
+        "y": 578,
+        "w": 358,
+        "h": 74
+      },
+      "overflow": {
+        "x": 326,
+        "y": 32,
+        "w": 48,
+        "h": 48
+      },
+      "emptyCard": null,
+      "firstRow": {
+        "x": 33,
+        "y": 173,
+        "w": 259,
+        "h": 28
+      },
+      "badge": {
+        "x": 304,
+        "y": 173,
+        "w": 53,
+        "h": 19
+      },
+      "services": {
+        "x": 33,
+        "y": 245,
+        "w": 306,
+        "h": 32
+      },
+      "delete": {
+        "x": 339,
+        "y": 252,
+        "w": 18,
+        "h": 18
+      }
+    },
+    {
+      "theme": "light",
+      "step": "05-overflow-menu",
+      "rows": [
+        "Экспорт в TXT",
+        "Экспорт в CSV"
+      ]
+    },
+    {
+      "theme": "light",
+      "step": "06-export-txt-picker",
+      "sawFilename": true,
+      "texts": [
+        "myata_favorites.csv",
+        "myata_favorites.txt",
+        "myata_favorites.txt"
+      ]
+    },
+    {
+      "theme": "light",
+      "step": "06b-export-txt-file",
+      "saved": true,
+      "path": "/sdcard/Download/myata_favorites.txt",
+      "bom": true,
+      "crlf": false,
+      "rows": 1,
+      "first": "M83 - REUNION"
+    },
+    {
+      "theme": "light",
+      "step": "06c-export-csv-file",
+      "saved": true,
+      "path": "/sdcard/Download/myata_favorites.csv",
+      "bom": true,
+      "crlf": true,
+      "rows": 2,
+      "header": "\"Artist\";\"Track\";\"Stream\";\"Added\"",
+      "first": "\"Artist\";\"Track\";\"Stream\";\"Added\""
+    },
+    {
+      "theme": "light",
+      "step": "07-scrolled-to-end",
+      "miniPlayer": {
+        "x": 16,
+        "y": 578,
+        "w": 358,
+        "h": 74
+      },
+      "overflow": {
+        "x": 326,
+        "y": 32,
+        "w": 48,
+        "h": 48
+      },
+      "emptyCard": null,
+      "firstRow": {
+        "x": 33,
+        "y": 173,
+        "w": 259,
+        "h": 28
+      },
+      "badge": {
+        "x": 304,
+        "y": 173,
+        "w": 53,
+        "h": 19
+      },
+      "services": {
+        "x": 33,
+        "y": 245,
+        "w": 306,
+        "h": 32
+      },
+      "delete": {
+        "x": 339,
+        "y": 252,
+        "w": 18,
+        "h": 18
+      }
+    },
+    {
+      "theme": "light",
+      "step": "08-empty-again-after-delete",
+      "miniPlayer": {
+        "x": 16,
+        "y": 578,
+        "w": 358,
+        "h": 74
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 156,
+        "w": 358,
+        "h": 359
+      },
+      "firstRow": null,
+      "badge": null,
+      "services": null,
+      "delete": null
+    }
+  ]
+}

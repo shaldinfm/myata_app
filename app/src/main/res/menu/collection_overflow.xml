@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  COLLECTION header overflow.
+
+  The frozen `collection-overflow-menu` frame has exactly two rows, "Экспорт в
+  TXT" and "Экспорт в CSV", and no third - the 50 of slack below them in the 260
+  x160 frame is empty, not a hidden item.
+
+  Phase B carries the wording and the actions; the surface is a platform
+  PopupMenu. F2 replaces it with the frozen 260x160 r20 menu on `menu_surface`.
+-->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/collection_action_export_txt"
+        android:title="@string/collection_export_txt" />
+    <item
+        android:id="@+id/collection_action_export_csv"
+        android:title="@string/collection_export_csv" />
+</menu>

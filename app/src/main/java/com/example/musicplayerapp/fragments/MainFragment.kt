@@ -65,7 +65,7 @@ class MainFragment : Fragment() {
                 scroll.paddingLeft,
                 scroll.paddingTop,
                 scroll.paddingRight,
-                resources.getDimensionPixelSize(R.dimen.home_content_bottom_clearance) + bars.bottom,
+                resources.getDimensionPixelSize(R.dimen.content_bottom_clearance) + bars.bottom,
             )
             insets
         }

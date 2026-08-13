@@ -43,4 +43,19 @@
       exactly text_secondary - see values/colors.xml for why that forces a pair.
     -->
     <color name="player_header_label">#F5F7FA</color>
+
+    <!--
+      COLLECTION header trailing action. Exactly text_primary in dark while its
+      light value is exactly text_secondary - see values/colors.xml for why that
+      forces a pair rather than a role.
+    -->
+    <color name="collection_header_action">#F5F7FA</color>
+
+    <!--
+      COLLECTION empty-state illustration - the two disc rings the frozen design
+      changes between the pages. The hub, the spindle, the badge plate and the
+      heart are identical on both and deliberately have no entry here.
+    -->
+    <color name="collection_empty_disc_outer">#FFCCFF</color>
+    <color name="collection_empty_disc_inner">#E29AE2</color>
 </resources>

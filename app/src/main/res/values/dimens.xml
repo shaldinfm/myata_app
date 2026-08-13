@@ -90,8 +90,112 @@
 
       The system bar inset is added on top of this at runtime, because
       MainActivity adds the same inset to the navigation bar's own padding.
+
+      Shared, not HOME's. The frozen COLLECTION frame states the same number
+      outright - its `Main` carries `paddingBottom: 154` and the populated
+      `Collection List` ends exactly on it - so the value HOME had to derive is
+      confirmed by a second frame. Every screen the Mini Player floats over
+      reserves the same band, and duplicating the literal would let two of them
+      drift apart.
     -->
-    <dimen name="home_content_bottom_clearance">154dp</dimen>
+    <dimen name="content_bottom_clearance">154dp</dimen>
+
+    <!--
+      COLLECTION, frozen 3.6.6 canonical.
+
+      Measured off `COLLECTION` / `COLLECTION_dark` and `COLLECTION pusto` /
+      `COLLECTION pusto_dark`, all four 390x740 with identical geometry - only
+      the fills differ between the themes. The frame is `Header - TopAppBar`
+      0..64 over a `Main` at 80..612 padded (0,16,154,16) with a 32 gap:
+
+        subtitle    80    list / empty card   132
+
+      The 16 between the app bar and the subtitle is the frame's own 80 top
+      padding against the absolutely-positioned 64 bar.
+    -->
+    <dimen name="collection_header_height">64dp</dimen>
+    <dimen name="collection_margin">16dp</dimen>
+    <!-- `Main` top padding 80 minus the 64 app bar. -->
+    <dimen name="collection_header_gap">16dp</dimen>
+    <!-- `Main` itemSpacing, between `Header Section` and `Collection List`. -->
+    <dimen name="collection_section_gap">32dp</dimen>
+
+    <!--
+      The subtitle's frozen box, 275x20, applied as a minimum.
+
+      It has to be stated: a token applied to a single line does not produce a
+      view of that height. MyataTypography delivers the line height as line
+      SPACING, deliberately, because nothing else is honoured below API 28 - and
+      StaticLayout adds no spacing after the last line. Measured, this line came
+      out at the font's own 17.9dp, which pulled the list 2dp above its frozen
+      132. The same reasoning gives the Mini Player title its minHeight in B2.
+    -->
+    <dimen name="collection_subtitle_min_height">20dp</dimen>
+
+    <!--
+      Trailing header action - the frozen 3-dot overflow, `Button:margin` with a
+      4x16 dot column inside.
+
+      Figma left-aligns a 20-wide button inside a 32.02-wide "margin" wrapper
+      whose right edge is on the 16 margin, which leaves 20 of slack and puts the
+      glyph centre at x=352. A 48dp touch target - the platform minimum, and what
+      the trailing slot needs to be tappable at all - with its right edge on the
+      same 16 margin puts that centre at 350. Two dp, against a wrapper that is
+      slack by construction and against HOME and ABOUT US, which put their own
+      trailing action flush on the margin.
+    -->
+    <dimen name="collection_header_action_size">48dp</dimen>
+
+    <!--
+      Track row card, frozen `Track Item N`: 358x98, r24, 16 auto-layout padding
+      plus a 1px INSIDE stroke, 16 between rows.
+
+      Padding is 17 for the same reason the Mini Player's is 13: Figma offsets
+      auto-layout children by an inside stroke as well as by the padding, and on
+      Android the stroke is painted within the view rather than added to it.
+
+      Height is NOT among these. The frozen 98 is 17 + a 64 cover + 17, and the
+      cover needs artwork the collection does not store - see
+      docs/COLLECTION-3.6.6.md. The Phase B row keeps its own content height.
+    -->
+    <dimen name="collection_card_corner">24dp</dimen>
+    <dimen name="collection_card_stroke">1dp</dimen>
+    <dimen name="collection_card_padding">17dp</dimen>
+    <dimen name="collection_row_gap">16dp</dimen>
+
+    <!--
+      Empty state, frozen `COLLECTION pusto` > `Collection List` > `Track Item 1`:
+      one 358x359 card carrying the same surface, radius and stroke as a track
+      row, with absolutely-positioned children.
+
+        illustration  (96,55)   166x166      centred: (358-166)/2 = 96
+        title         (111,241) 136x18       centred: (358-136)/2 = 111
+        body          (83,264)  191x40       centred: (358-191)/2 = 83.5
+
+      The two text blocks are anchored on their frozen box CENTRES - 250 and 284
+      - rather than their tops. Anchoring on the tops would work only if the
+      boxes were reproduced literally, and they cannot be: the title's frozen box
+      is 18 against a 28 line height, the same authoring pathology B2 refused to
+      reproduce on the Mini Player title. Centred, the title takes its real 28
+      and lands 236..264 while the body keeps 264..304 - they abut exactly, and
+      the frozen centres are preserved.
+
+      The body's frozen 191 width is deliberately NOT carried. It is a Muller
+      measurement, Onest sets the same string wider, and pinning it forced a
+      third line - which breaks the two-line block the frozen frame draws far
+      more visibly than a few dp of width does. The copy carries its own line
+      break, so the box hugs its two lines and keeps the frozen break and the
+      frozen centre. This is the licensing-driven metric delta
+      docs/TYPOGRAPHY-3.6.6.md records elsewhere, not a layout choice.
+    -->
+    <dimen name="collection_empty_card_height">359dp</dimen>
+    <dimen name="collection_empty_illustration_size">166dp</dimen>
+    <dimen name="collection_empty_illustration_top">55dp</dimen>
+    <dimen name="collection_empty_title_center">250dp</dimen>
+    <dimen name="collection_empty_body_center">284dp</dimen>
+    <!-- Frozen box heights, applied as minima so a glyph is never clipped. -->
+    <dimen name="collection_empty_title_min_height">28dp</dimen>
+    <dimen name="collection_empty_body_min_height">40dp</dimen>
 
     <!--
       PLAYER upper section, frozen 3.6.6 canonical.

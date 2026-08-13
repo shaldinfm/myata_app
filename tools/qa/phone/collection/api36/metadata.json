@@ -1,0 +1,750 @@
+{
+  "run": "api36",
+  "sdk": 36,
+  "density": 420,
+  "themeSwitch": "cmd uimode",
+  "widths": [
+    {
+      "width": 320,
+      "theme": "light",
+      "header": {
+        "x": 0,
+        "y": 36,
+        "w": 320,
+        "h": 64
+      },
+      "title": {
+        "x": 16,
+        "y": 53,
+        "w": 288,
+        "h": 29
+      },
+      "subtitle": {
+        "x": 0,
+        "y": 116,
+        "w": 320,
+        "h": 20
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 168,
+        "w": 288,
+        "h": 359
+      },
+      "emptyTitle": {
+        "x": 93,
+        "y": 404,
+        "w": 135,
+        "h": 28
+      },
+      "emptyBody": {
+        "x": 32,
+        "y": 432,
+        "w": 256,
+        "h": 40
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "header": {
+        "x": 0,
+        "y": 36,
+        "w": 320,
+        "h": 64
+      },
+      "title": {
+        "x": 16,
+        "y": 53,
+        "w": 288,
+        "h": 29
+      },
+      "subtitle": {
+        "x": 0,
+        "y": 116,
+        "w": 320,
+        "h": 20
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 168,
+        "w": 288,
+        "h": 359
+      },
+      "emptyTitle": {
+        "x": 93,
+        "y": 404,
+        "w": 135,
+        "h": 28
+      },
+      "emptyBody": {
+        "x": 32,
+        "y": 432,
+        "w": 256,
+        "h": 40
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 360,
+      "theme": "light",
+      "header": {
+        "x": 0,
+        "y": 41,
+        "w": 360,
+        "h": 64
+      },
+      "title": {
+        "x": 16,
+        "y": 58,
+        "w": 328,
+        "h": 29
+      },
+      "subtitle": {
+        "x": 0,
+        "y": 121,
+        "w": 360,
+        "h": 20
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 173,
+        "w": 328,
+        "h": 359
+      },
+      "emptyTitle": {
+        "x": 112,
+        "y": 409,
+        "w": 135,
+        "h": 28
+      },
+      "emptyBody": {
+        "x": 32,
+        "y": 437,
+        "w": 296,
+        "h": 40
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 360,
+      "theme": "dark",
+      "header": {
+        "x": 0,
+        "y": 41,
+        "w": 360,
+        "h": 64
+      },
+      "title": {
+        "x": 16,
+        "y": 58,
+        "w": 328,
+        "h": 29
+      },
+      "subtitle": {
+        "x": 0,
+        "y": 121,
+        "w": 360,
+        "h": 20
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 173,
+        "w": 328,
+        "h": 359
+      },
+      "emptyTitle": {
+        "x": 112,
+        "y": 409,
+        "w": 135,
+        "h": 28
+      },
+      "emptyBody": {
+        "x": 32,
+        "y": 437,
+        "w": 296,
+        "h": 40
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "header": {
+        "x": 0,
+        "y": 44,
+        "w": 390,
+        "h": 64
+      },
+      "title": {
+        "x": 16,
+        "y": 61,
+        "w": 358,
+        "h": 29
+      },
+      "subtitle": {
+        "x": 0,
+        "y": 124,
+        "w": 390,
+        "h": 20
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 176,
+        "w": 358,
+        "h": 359
+      },
+      "emptyTitle": {
+        "x": 128,
+        "y": 412,
+        "w": 135,
+        "h": 28
+      },
+      "emptyBody": {
+        "x": 32,
+        "y": 440,
+        "w": 326,
+        "h": 40
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "header": {
+        "x": 0,
+        "y": 44,
+        "w": 390,
+        "h": 64
+      },
+      "title": {
+        "x": 16,
+        "y": 61,
+        "w": 358,
+        "h": 29
+      },
+      "subtitle": {
+        "x": 0,
+        "y": 124,
+        "w": 390,
+        "h": 20
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 176,
+        "w": 358,
+        "h": 359
+      },
+      "emptyTitle": {
+        "x": 128,
+        "y": 412,
+        "w": 135,
+        "h": 28
+      },
+      "emptyBody": {
+        "x": 32,
+        "y": 440,
+        "w": 326,
+        "h": 40
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 412,
+      "theme": "light",
+      "header": {
+        "x": 0,
+        "y": 47,
+        "w": 412,
+        "h": 64
+      },
+      "title": {
+        "x": 16,
+        "y": 64,
+        "w": 380,
+        "h": 29
+      },
+      "subtitle": {
+        "x": 0,
+        "y": 127,
+        "w": 412,
+        "h": 20
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 179,
+        "w": 380,
+        "h": 359
+      },
+      "emptyTitle": {
+        "x": 139,
+        "y": 415,
+        "w": 135,
+        "h": 28
+      },
+      "emptyBody": {
+        "x": 32,
+        "y": 443,
+        "w": 348,
+        "h": 40
+      },
+      "miniPlayer": null
+    },
+    {
+      "width": 412,
+      "theme": "dark",
+      "header": {
+        "x": 0,
+        "y": 47,
+        "w": 412,
+        "h": 64
+      },
+      "title": {
+        "x": 16,
+        "y": 64,
+        "w": 380,
+        "h": 29
+      },
+      "subtitle": {
+        "x": 0,
+        "y": 127,
+        "w": 412,
+        "h": 20
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 179,
+        "w": 380,
+        "h": 359
+      },
+      "emptyTitle": {
+        "x": 139,
+        "y": 415,
+        "w": 135,
+        "h": 28
+      },
+      "emptyBody": {
+        "x": 32,
+        "y": 443,
+        "w": 348,
+        "h": 40
+      },
+      "miniPlayer": null
+    }
+  ],
+  "flow": [
+    {
+      "theme": "light",
+      "step": "01-empty-no-session",
+      "miniPlayer": null,
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 176,
+        "w": 358,
+        "h": 359
+      },
+      "firstRow": null,
+      "badge": null,
+      "services": null,
+      "delete": null
+    },
+    {
+      "theme": "light",
+      "step": "02-empty-with-pill",
+      "miniPlayer": {
+        "x": 16,
+        "y": 602,
+        "w": 358,
+        "h": 74
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 176,
+        "w": 358,
+        "h": 359
+      },
+      "firstRow": null,
+      "badge": null,
+      "services": null,
+      "delete": null
+    },
+    {
+      "theme": "light",
+      "step": "03-empty-pill-paused",
+      "miniPlayer": {
+        "x": 16,
+        "y": 602,
+        "w": 358,
+        "h": 74
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 176,
+        "w": 358,
+        "h": 359
+      },
+      "firstRow": null,
+      "badge": null,
+      "services": null,
+      "delete": null
+    },
+    {
+      "theme": "light",
+      "step": "04-populated",
+      "miniPlayer": {
+        "x": 16,
+        "y": 602,
+        "w": 358,
+        "h": 74
+      },
+      "overflow": {
+        "x": 326,
+        "y": 52,
+        "w": 48,
+        "h": 48
+      },
+      "emptyCard": null,
+      "firstRow": {
+        "x": 33,
+        "y": 194,
+        "w": 259,
+        "h": 28
+      },
+      "badge": {
+        "x": 304,
+        "y": 194,
+        "w": 53,
+        "h": 19
+      },
+      "services": {
+        "x": 33,
+        "y": 265,
+        "w": 306,
+        "h": 32
+      },
+      "delete": {
+        "x": 339,
+        "y": 272,
+        "w": 18,
+        "h": 18
+      }
+    },
+    {
+      "theme": "light",
+      "step": "05-overflow-menu",
+      "rows": [
+        "Экспорт в TXT",
+        "Экспорт в CSV"
+      ]
+    },
+    {
+      "theme": "light",
+      "step": "06-export-txt-picker",
+      "sawFilename": true,
+      "texts": [
+        "myata_favorites.csv",
+        "myata_favorites.txt",
+        "myata_favorites.csv",
+        "myata_favorites.txt",
+        "myata_favorites.txt"
+      ]
+    },
+    {
+      "theme": "light",
+      "step": "06b-export-txt-file",
+      "saved": true,
+      "path": "/sdcard/Download/myata_favorites.txt",
+      "bom": true,
+      "crlf": false,
+      "rows": 1,
+      "first": "DAYGLOW - CAN I CALL YOU TONIGHT?"
+    },
+    {
+      "theme": "light",
+      "step": "06c-export-csv-file",
+      "saved": true,
+      "path": "/sdcard/Download/myata_favorites.csv",
+      "bom": true,
+      "crlf": true,
+      "rows": 2,
+      "header": "\"Artist\";\"Track\";\"Stream\";\"Added\"",
+      "first": "\"Artist\";\"Track\";\"Stream\";\"Added\""
+    },
+    {
+      "theme": "light",
+      "step": "07-scrolled-to-end",
+      "miniPlayer": {
+        "x": 16,
+        "y": 602,
+        "w": 358,
+        "h": 74
+      },
+      "overflow": {
+        "x": 326,
+        "y": 52,
+        "w": 48,
+        "h": 48
+      },
+      "emptyCard": null,
+      "firstRow": {
+        "x": 33,
+        "y": 194,
+        "w": 259,
+        "h": 28
+      },
+      "badge": {
+        "x": 304,
+        "y": 194,
+        "w": 53,
+        "h": 19
+      },
+      "services": {
+        "x": 33,
+        "y": 265,
+        "w": 306,
+        "h": 32
+      },
+      "delete": {
+        "x": 339,
+        "y": 272,
+        "w": 18,
+        "h": 18
+      }
+    },
+    {
+      "theme": "light",
+      "step": "08-empty-again-after-delete",
+      "miniPlayer": {
+        "x": 16,
+        "y": 602,
+        "w": 358,
+        "h": 74
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 176,
+        "w": 358,
+        "h": 359
+      },
+      "firstRow": null,
+      "badge": null,
+      "services": null,
+      "delete": null
+    },
+    {
+      "theme": "dark",
+      "step": "01-empty-no-session",
+      "miniPlayer": null,
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 176,
+        "w": 358,
+        "h": 359
+      },
+      "firstRow": null,
+      "badge": null,
+      "services": null,
+      "delete": null
+    },
+    {
+      "theme": "dark",
+      "step": "02-empty-with-pill",
+      "miniPlayer": {
+        "x": 16,
+        "y": 602,
+        "w": 358,
+        "h": 74
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 176,
+        "w": 358,
+        "h": 359
+      },
+      "firstRow": null,
+      "badge": null,
+      "services": null,
+      "delete": null
+    },
+    {
+      "theme": "dark",
+      "step": "03-empty-pill-paused",
+      "miniPlayer": {
+        "x": 16,
+        "y": 602,
+        "w": 358,
+        "h": 74
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 176,
+        "w": 358,
+        "h": 359
+      },
+      "firstRow": null,
+      "badge": null,
+      "services": null,
+      "delete": null
+    },
+    {
+      "theme": "dark",
+      "step": "04-populated",
+      "miniPlayer": {
+        "x": 16,
+        "y": 602,
+        "w": 358,
+        "h": 74
+      },
+      "overflow": {
+        "x": 326,
+        "y": 52,
+        "w": 48,
+        "h": 48
+      },
+      "emptyCard": null,
+      "firstRow": {
+        "x": 33,
+        "y": 194,
+        "w": 259,
+        "h": 28
+      },
+      "badge": {
+        "x": 304,
+        "y": 194,
+        "w": 53,
+        "h": 19
+      },
+      "services": {
+        "x": 33,
+        "y": 265,
+        "w": 306,
+        "h": 32
+      },
+      "delete": {
+        "x": 339,
+        "y": 272,
+        "w": 18,
+        "h": 18
+      }
+    },
+    {
+      "theme": "dark",
+      "step": "05-overflow-menu",
+      "rows": [
+        "Экспорт в TXT",
+        "Экспорт в CSV"
+      ]
+    },
+    {
+      "theme": "dark",
+      "step": "06-export-txt-picker",
+      "sawFilename": true,
+      "texts": [
+        "myata_favorites.csv",
+        "myata_favorites.txt",
+        "myata_favorites.csv",
+        "myata_favorites.txt",
+        "myata_favorites.txt"
+      ]
+    },
+    {
+      "theme": "dark",
+      "step": "06b-export-txt-file",
+      "saved": true,
+      "path": "/sdcard/Download/myata_favorites.txt",
+      "bom": true,
+      "crlf": false,
+      "rows": 1,
+      "first": "MUSE - NIGHTSHIFT SUPERSTAR"
+    },
+    {
+      "theme": "dark",
+      "step": "06c-export-csv-file",
+      "saved": true,
+      "path": "/sdcard/Download/myata_favorites.csv",
+      "bom": true,
+      "crlf": true,
+      "rows": 2,
+      "header": "\"Artist\";\"Track\";\"Stream\";\"Added\"",
+      "first": "\"Artist\";\"Track\";\"Stream\";\"Added\""
+    },
+    {
+      "theme": "dark",
+      "step": "07-scrolled-to-end",
+      "miniPlayer": {
+        "x": 16,
+        "y": 602,
+        "w": 358,
+        "h": 74
+      },
+      "overflow": {
+        "x": 326,
+        "y": 52,
+        "w": 48,
+        "h": 48
+      },
+      "emptyCard": null,
+      "firstRow": {
+        "x": 33,
+        "y": 194,
+        "w": 259,
+        "h": 28
+      },
+      "badge": {
+        "x": 304,
+        "y": 194,
+        "w": 53,
+        "h": 19
+      },
+      "services": {
+        "x": 33,
+        "y": 265,
+        "w": 306,
+        "h": 32
+      },
+      "delete": {
+        "x": 339,
+        "y": 272,
+        "w": 18,
+        "h": 18
+      }
+    },
+    {
+      "theme": "dark",
+      "step": "08-empty-again-after-delete",
+      "miniPlayer": {
+        "x": 16,
+        "y": 602,
+        "w": 358,
+        "h": 74
+      },
+      "overflow": null,
+      "emptyCard": {
+        "x": 16,
+        "y": 176,
+        "w": 358,
+        "h": 359
+      },
+      "firstRow": null,
+      "badge": null,
+      "services": null,
+      "delete": null
+    }
+  ]
+}

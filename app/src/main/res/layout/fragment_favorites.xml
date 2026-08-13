@@ -3,141 +3,264 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <FrameLayout
+    <!--
+      COLLECTION, migrated to the frozen 3.6.6 canonical design (Phase B).
+
+      Source: the canonical `COLLECTION` / `COLLECTION_dark` and `COLLECTION
+      pusto` / `COLLECTION pusto_dark` frames. All four are 390x740 with
+      identical geometry - only the fills differ - so one layout serves both
+      themes and both states:
+
+        Header - TopAppBar   0..64    "Моя коллекция", trailing overflow
+        subtitle             y=80     "Здесь хранятся ваши сохранённые треки"
+        list / empty card    y=132
+        Main ends            612      after a 154 bottom padding
+
+      Three structural notes.
+
+      **The outer card is gone.** The screen used to put everything inside one
+      #0F253E MaterialCardView with 40dp side margins. The frozen design has no
+      such container: the rows are the cards, on the plain `background` role. The
+      empty state is the one card the frozen design does draw, and it is drawn to
+      the same radius, surface and stroke as a track row.
+
+      **The subtitle does not scroll.** It is 20 tall and the frozen `Main` does
+      not scroll at all; scrolling it away would mean a header view type in
+      FavoritesAdapter, which is behaviour this re-skin does not touch. The list
+      below it scrolls, and it is the list that carries the clearance.
+
+      **Nothing here draws the Mini Player.** It lives on the shell (B2), already
+      lists "favorites" among the screens it appears on, and is untouched by this
+      migration. All this screen owes it is the 154 of bottom clearance the
+      frozen `Main` reserves.
+    -->
+    <LinearLayout
+        android:id="@+id/collection_root"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#1C3F5F">
+        android:background="@color/background"
+        android:orientation="vertical"
+        tools:context=".fragments.FavoritesFragment">
 
+        <!--
+          Header - TopAppBar, 390x64: the title vertically centred 16 from
+          the leading edge, the overflow on the trailing one.
+
+          The frozen `COLLECTION pusto` header carries a 40x40 circular
+          control in that trailing slot instead of the overflow. It is the
+          same node HOME and ABOUT US carry, it opens the profile, and it is
+          Phase G - deferred here exactly as fragment_main.xml defers it.
+        -->
         <LinearLayout
-            android:id="@+id/favorites_content"
+            android:id="@+id/collection_header"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            tools:context=".fragments.FavoritesFragment">
+            android:layout_height="@dimen/collection_header_height"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/collection_margin"
+            android:paddingEnd="@dimen/collection_margin">
 
-            <!-- Header -->
-            <!-- Header with more air -->
             <TextView
                 android:id="@+id/title"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="70dp"
-                android:layout_marginBottom="24dp"
-                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.24_32"
-                android:text="ВАША КОЛЛЕКЦИЯ"
-                android:textColor="#FFFFFF" />
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
                 android:layout_weight="1"
-                android:layout_marginStart="40dp"
-                android:layout_marginEnd="40dp"
-                android:layout_marginTop="10dp"
-                android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="#0F253E"
-                app:cardCornerRadius="24dp"
-                app:strokeColor="#000000"
-                app:strokeWidth="1.5dp">
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/collection_title"
+                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.24_32"
+                android:textColor="@color/text_heading" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="vertical">
-
-                    <!-- Export Buttons Container -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:padding="20dp"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:id="@+id/btn_export_txt"
-                            android:layout_width="0dp"
-                            android:layout_height="40dp"
-                            android:layout_weight="1"
-                            android:text="Скачать TXT"
-                            android:textColor="#FFFFFF"
-                            android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.12_16"
-                            android:gravity="center"
-                            android:background="@drawable/pill_button_bg"
-                            android:layout_marginEnd="8dp"/>
-
-                        <TextView
-                            android:id="@+id/btn_export_csv"
-                            android:layout_width="0dp"
-                            android:layout_height="40dp"
-                            android:layout_weight="1"
-                            android:text="Скачать CSV"
-                            android:textColor="#FFFFFF"
-                            android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.12_16"
-                            android:gravity="center"
-                            android:background="@drawable/pill_button_bg"
-                            android:layout_marginStart="8dp"/>
-                    </LinearLayout>
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="#1E3754"
-                        android:layout_marginStart="20dp"
-                        android:layout_marginEnd="20dp"/>
-
-                    <!-- Favorites List with scrolling air -->
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/rv_favorites"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:clipToPadding="false"
-                        android:padding="16dp"
-                        android:paddingBottom="30dp"
-                        android:layout_marginStart="4dp"
-                        android:layout_marginEnd="4dp"/>
-
-                    <!-- Empty State -->
-                    <LinearLayout
-                        android:id="@+id/empty_state"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:orientation="vertical"
-                        android:gravity="center"
-                        android:visibility="gone">
-
-                        <ImageView
-                            android:layout_width="80dp"
-                            android:layout_height="80dp"
-                            android:src="@drawable/ic_heart_outline"
-                            android:alpha="0.4"
-                            app:tint="#FFFFFF"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Твой идеальный плейлист начинается с первого лайка!"
-                            android:textColor="#88FFFFFF"
-                            android:textAlignment="center"
-                            android:paddingStart="40dp"
-                            android:paddingEnd="40dp"
-                            android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_28"
-                            android:layout_marginTop="16dp"/>
-
-                    </LinearLayout>
-
-                </LinearLayout>
-
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Bottom Spacer to block tap bar overlap -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="120dp" />
-
-
+            <!--
+              The frozen 3-dot overflow. Phase B fills it with the two export
+              actions the screen already had as inline pills, in a platform
+              PopupMenu; F2 replaces that styling with the frozen
+              `Menu / Коллекция` surface. It is hidden while the collection
+              is empty, which is what the frozen empty frame does too - there
+              is nothing to export.
+            -->
+            <ImageView
+                android:id="@+id/collection_overflow"
+                android:layout_width="@dimen/collection_header_action_size"
+                android:layout_height="@dimen/collection_header_action_size"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/collection_overflow"
+                android:scaleType="center"
+                android:src="@drawable/ic_collection_overflow" />
         </LinearLayout>
 
-    </FrameLayout>
+        <TextView
+            android:id="@+id/collection_subtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/collection_header_gap"
+            android:gravity="center_vertical"
+            android:minHeight="@dimen/collection_subtitle_min_height"
+            android:paddingStart="@dimen/collection_margin"
+            android:paddingEnd="@dimen/collection_margin"
+            android:text="@string/collection_subtitle"
+            android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+            android:textColor="@color/text_secondary" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="@dimen/collection_section_gap"
+            android:layout_weight="1">
+
+            <!--
+              clipToPadding=false on both children, so the reserved bottom
+              clearance is scroll room rather than a dead band and the last
+              row can be brought clear of the Mini Player.
+            -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_favorites"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingStart="@dimen/collection_margin"
+                android:paddingEnd="@dimen/collection_margin"
+                android:paddingBottom="@dimen/content_bottom_clearance"
+                android:scrollbars="none"
+                tools:listitem="@layout/item_favorite_track" />
+
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/empty_state"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingStart="@dimen/collection_margin"
+                android:paddingEnd="@dimen/collection_margin"
+                android:paddingBottom="@dimen/content_bottom_clearance"
+                android:scrollbars="none"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <!--
+                  A wrapper, and it is load-bearing. NestedScrollView measures
+                  its one direct child with an UNSPECIFIED height whatever that
+                  child's layout_height says, so a fixed 359 put straight on
+                  the card is discarded and the card wraps its content instead.
+                  The wrapper takes the UNSPECIFIED and the card keeps its
+                  frozen height inside it.
+                -->
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <!--
+                      The frozen empty card: 358x359, the same surface, radius and
+                      stroke as a track row, with absolutely-positioned children.
+
+                      The two text blocks are centred on their frozen box centres
+                      rather than anchored on their tops - see dimens.xml for why
+                      the boxes themselves cannot be reproduced literally.
+                    -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/empty_card"
+                        style="@style/CollectionCard"
+                        android:layout_height="@dimen/collection_empty_card_height">
+
+                        <androidx.constraintlayout.widget.ConstraintLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent">
+
+                            <androidx.constraintlayout.widget.Guideline
+                                android:id="@+id/empty_title_center"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                app:layout_constraintGuide_begin="@dimen/collection_empty_title_center" />
+
+                            <androidx.constraintlayout.widget.Guideline
+                                android:id="@+id/empty_body_center"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                app:layout_constraintGuide_begin="@dimen/collection_empty_body_center" />
+
+                            <ImageView
+                                android:id="@+id/empty_illustration"
+                                android:layout_width="@dimen/collection_empty_illustration_size"
+                                android:layout_height="@dimen/collection_empty_illustration_size"
+                                android:layout_marginTop="@dimen/collection_empty_illustration_top"
+                                android:contentDescription="@string/collection_empty_illustration"
+                                android:src="@drawable/ic_collection_empty"
+                                app:layout_constraintEnd_toEndOf="parent"
+                                app:layout_constraintStart_toStartOf="parent"
+                                app:layout_constraintTop_toTopOf="parent" />
+
+                            <TextView
+                                android:id="@+id/empty_title"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:minHeight="@dimen/collection_empty_title_min_height"
+                                android:text="@string/collection_empty_title"
+                                android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_28"
+                                android:textColor="@color/text_primary"
+                                app:layout_constraintBottom_toBottomOf="@id/empty_title_center"
+                                app:layout_constraintEnd_toEndOf="parent"
+                                app:layout_constraintStart_toStartOf="parent"
+                                app:layout_constraintTop_toTopOf="@id/empty_title_center" />
+
+                            <!--
+                              Two things about this line.
+
+                              Its light colour on the canonical page is #000000,
+                              which is an outlier: every other secondary line in
+                              the same frame, the header subtitle included, is
+                              #42474E, and the dark page has this one on #B3C4D1,
+                              which is exactly text_secondary. One role, both
+                              themes.
+
+                              And the box hugs its two lines rather than taking the
+                              frozen 191. That 191 is a Muller measurement, Onest
+                              sets this string wider, and pinning it forced a third
+                              line - which breaks the two-line block the frozen
+                              frame draws. The copy carries its own line break, so
+                              hugging keeps exactly the frozen break and the frozen
+                              centre while letting the replacement font have the
+                              width it needs; the same licensing-driven metric
+                              delta docs/TYPOGRAPHY-3.6.6.md records elsewhere.
+
+                              The box is the card minus a 16 inset on each side
+                              and the text is centred inside it, rather than the
+                              box hugging the text. Hugging needs
+                              layout_constrainedWidth to stay inside the card,
+                              and that is a two-pass measure which settled 10px
+                              narrower than the line it had to hold on API 24 -
+                              a real overflow, caught by the width sweep. A
+                              fixed box has no second pass to disagree with, and
+                              centred text puts the block in exactly the same
+                              place.
+                            -->
+                            <TextView
+                                android:id="@+id/empty_body"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/collection_margin"
+                                android:layout_marginEnd="@dimen/collection_margin"
+                                android:gravity="center"
+                                android:minHeight="@dimen/collection_empty_body_min_height"
+                                android:text="@string/collection_empty_body"
+                                android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.12_20"
+                                android:textColor="@color/text_secondary"
+                                app:layout_constraintBottom_toBottomOf="@id/empty_body_center"
+                                app:layout_constraintEnd_toEndOf="parent"
+                                app:layout_constraintStart_toStartOf="parent"
+                                app:layout_constraintTop_toTopOf="@id/empty_body_center" />
+
+                        </androidx.constraintlayout.widget.ConstraintLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                </FrameLayout>
+
+            </androidx.core.widget.NestedScrollView>
+
+        </FrameLayout>
+
+    </LinearLayout>
 
 </layout>

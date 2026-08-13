@@ -65,4 +65,27 @@
     <string name="player_favorite_remove">Убрать из коллекции</string>
     <string name="player_history">История эфира</string>
     <string name="player_artwork">Обложка трека</string>
+
+    <!--
+      COLLECTION, frozen 3.6.6 canonical. Verbatim from `COLLECTION` and
+      `COLLECTION pusto`, with one deliberate correction.
+
+      The frozen empty-state body reads "понравившеся", which is a typo in the
+      design source. The owner's decision is to ship the correct form; the line
+      break is the frozen one and is kept, since the copy is drawn as two centred
+      lines in a 191-wide box.
+
+      The two export labels come from the proposals frame
+      `collection-overflow-menu`, whose rows are "Экспорт в TXT" and
+      "Экспорт в CSV". Phase B puts them in a platform PopupMenu; F2 replaces the
+      styling with the frozen `Menu / Коллекция` surface, not the wording.
+    -->
+    <string name="collection_title">Моя коллекция</string>
+    <string name="collection_subtitle">Здесь хранятся ваши сохранённые треки</string>
+    <string name="collection_overflow">Действия с коллекцией</string>
+    <string name="collection_export_txt">Экспорт в TXT</string>
+    <string name="collection_export_csv">Экспорт в CSV</string>
+    <string name="collection_empty_title">Здесь пока пусто</string>
+    <string name="collection_empty_body">Сохраняйте понравившиеся треки\nв плеере, и они появятся здесь.</string>
+    <string name="collection_empty_illustration">Коллекция пуста</string>
 </resources>

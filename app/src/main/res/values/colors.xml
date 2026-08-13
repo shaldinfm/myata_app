@@ -134,6 +134,45 @@
     <color name="player_header_label">#42474E</color>
 
     <!--
+      COLLECTION header trailing action - the frozen 3-dot overflow glyph.
+
+      Provenance: canonical `COLLECTION` / `COLLECTION_dark`, `Header - TopAppBar
+      > Button:margin > Button > Container > Icon` (4x16). #42474E light,
+      #F5F7FA dark.
+
+      It needs its own pair for the same reason player_header_label does: #42474E
+      is exactly text_secondary in light while #F5F7FA is exactly text_primary in
+      dark, so no single role is right in both themes. It is deliberately a
+      separate resource from player_header_label rather than a reuse of it - the
+      two carry the same values today by coincidence of the palette, not because
+      one screen's header action is defined as the other's.
+    -->
+    <color name="collection_header_action">#42474E</color>
+
+    <!--
+      COLLECTION empty-state illustration.
+
+      Provenance: canonical `COLLECTION pusto` / `COLLECTION pusto_dark`,
+      `Collection List > Track Item 1 > Circle` and `> Frame 5`.
+
+      ILLUSTRATION-SPECIFIC, NOT SEMANTIC ROLES. These are the colours of one
+      drawing and they are deliberately kept out of the token system: #6750A4 and
+      #EADDFF are Material 3 baseline values, #E74C3C and #FFD8E4 are the heart,
+      and none of them describes a surface, a text or an outline anywhere else in
+      the app. Do not fold them into the eleven roles and do not reuse them.
+
+      Four of the six are identical on both canonical pages and so carry no night
+      variant, by the same contract the fixed brand colours above use. The two
+      disc rings are the only ones the design changes between themes.
+    -->
+    <color name="collection_empty_disc_outer">#F3EDF7</color>
+    <color name="collection_empty_disc_inner">#EADDFF</color>
+    <color name="collection_empty_disc_hub">#6750A4</color>
+    <color name="collection_empty_disc_spindle">#FFFFFF</color>
+    <color name="collection_empty_badge_plate">#FFD8E4</color>
+    <color name="collection_empty_badge_heart">#E74C3C</color>
+
+    <!--
       HOME playlist card, behind the cover art.
 
       Provenance: canonical HOME, `Mint Playlists Section > Horizontal Scroll

@@ -304,6 +304,28 @@
         <item name="tint">@color/text_primary</item>
     </style>
 
+    <!--
+      COLLECTION card, frozen 3.6.6 canonical.
+
+      One style for both surfaces the screen draws, because the frozen design
+      draws them the same: `Track Item N` on `COLLECTION` and the single 358x359
+      empty card on `COLLECTION pusto` are both r24 on `surface` with a 1px
+      INSIDE stroke on `outline`. Every one of those four values is an exact
+      match to a semantic role on both canonical pages, so this needs no new
+      colour of its own.
+
+      Elevation 0: the frozen cards carry no shadow. The rounding is the whole
+      of their separation from the background.
+    -->
+    <style name="CollectionCard">
+        <item name="android:layout_width">match_parent</item>
+        <item name="cardCornerRadius">@dimen/collection_card_corner</item>
+        <item name="cardElevation">0dp</item>
+        <item name="cardBackgroundColor">@color/surface</item>
+        <item name="strokeColor">@color/outline</item>
+        <item name="strokeWidth">@dimen/collection_card_stroke</item>
+    </style>
+
     <style name="RoundedCornerImage">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">24dp</item>

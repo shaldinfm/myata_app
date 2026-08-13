@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  COLLECTION empty-state illustration.
+
+  Frozen canonical: `COLLECTION pusto` > `Collection List` > `Track Item 1`,
+  where `Circle` is a 166x166 box at (96,55) and `Frame 5` a 46x46 badge at
+  (211,157). The badge sits entirely inside the disc's bounding box, so the whole
+  illustration is one 166x166 drawable and the badge is placed at (115,102)
+  within it.
+
+  Every box below is verbatim from the export:
+
+    disc / outer ring   139.79 at (13.11,13.11)   -> r 69.895 at (83.005,83.005)
+    disc / inner ring   111    at (27,27.5)       -> r 55.5   at (82.5,83)
+    disc / hub           54    at (56,56)         -> r 27     at (83,83)
+    disc / spindle       14    at (76,76)         -> r 7      at (83,83)
+    badge / plate        46    at (115,102)       -> r 23     at (138,125)
+    badge / heart     23.8x21.69 at (126.1,115.22)
+
+  Two things are authored rather than measured, and both are forced.
+
+  **The shapes are circles.** The exporter records a vector's box and its fills
+  but never its geometry, so no path data for any of these six exists in the
+  repository. Four of them are the rings of a record and are unambiguous. The
+  46x46 badge plate is not: its silhouette carries no path data either, and the
+  one preview that renders this frame - tools/figma-export/dark-theme/previews/
+  dark-collection-empty.png, an earlier revision - does not draw it at all. A
+  circle is what the rest of the illustration is made of and what a square
+  bounding box with no other evidence gives, so a circle is what it is.
+
+  **The heart is Material's `favorite`.** The frozen node carries no path either,
+  but Frame 5 also holds a hidden second heart at exactly 20x18.35 - which is the
+  bounding box of Material's `favorite` path to the decimal. So the family is not
+  a guess. That path is placed here through a group transform that maps its
+  source box (2,3)-(22,21.35) onto the visible heart's 23.8x21.69 at (126.1,
+  115.22): scale 1.19 / 1.182016, translate 123.72 / 111.674. Both corners land
+  exactly.
+
+  Colours are illustration-specific and stay out of the semantic token system -
+  see the block in values/colors.xml. The two rings are the only ones the design
+  changes between the themes; the rest have no night variant on purpose.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="166dp"
+    android:height="166dp"
+    android:viewportWidth="166"
+    android:viewportHeight="166">
+
+    <path
+        android:fillColor="@color/collection_empty_disc_outer"
+        android:pathData="M13.11,83.005 a69.895,69.895 0 1,0 139.79,0 a69.895,69.895 0 1,0 -139.79,0 Z" />
+    <path
+        android:fillColor="@color/collection_empty_disc_inner"
+        android:pathData="M27,83 a55.5,55.5 0 1,0 111,0 a55.5,55.5 0 1,0 -111,0 Z" />
+    <path
+        android:fillColor="@color/collection_empty_disc_hub"
+        android:pathData="M56,83 a27,27 0 1,0 54,0 a27,27 0 1,0 -54,0 Z" />
+    <path
+        android:fillColor="@color/collection_empty_disc_spindle"
+        android:pathData="M76,83 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0 Z" />
+
+    <path
+        android:fillColor="@color/collection_empty_badge_plate"
+        android:pathData="M115,125 a23,23 0 1,0 46,0 a23,23 0 1,0 -46,0 Z" />
+
+    <group
+        android:scaleX="1.19"
+        android:scaleY="1.182016"
+        android:translateX="123.72"
+        android:translateY="111.674">
+        <path
+            android:fillColor="@color/collection_empty_badge_heart"
+            android:pathData="M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z" />
+    </group>
+</vector>

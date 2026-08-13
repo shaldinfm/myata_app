@@ -603,11 +603,23 @@ class TypographyProbeTest {
             Triple(R.layout.fragment_info, R.id.description, R.dimen.line_height_onest_regular_15_24),
             Triple(R.layout.fragment_info, R.id.donate_cta, R.dimen.line_height_montserrat_medium_22_28),
             Triple(R.layout.fragment_favorites, R.id.title, R.dimen.line_height_montserrat_medium_24_32),
-            Triple(R.layout.fragment_favorites, R.id.btn_export_txt, R.dimen.line_height_montserrat_medium_12_16),
-            Triple(R.layout.fragment_favorites, R.id.btn_export_csv, R.dimen.line_height_montserrat_medium_12_16),
+            // The two export pills these used to name are gone: Phase B moves the
+            // export actions into the header overflow, where the frozen design
+            // puts them. Their place in this table is taken by the surfaces the
+            // migrated screen actually draws.
+            Triple(R.layout.fragment_favorites, R.id.collection_subtitle, R.dimen.line_height_onest_regular_14_20),
+            Triple(R.layout.fragment_favorites, R.id.empty_title, R.dimen.line_height_onest_medium_16_28),
+            Triple(R.layout.fragment_favorites, R.id.empty_body, R.dimen.line_height_onest_regular_12_20),
             Triple(R.layout.fragment_main, R.id.playlistString, R.dimen.line_height_montserrat_bold_28_36),
-            Triple(R.layout.fragment_myata_stream, R.id.main_author, R.dimen.line_height_montserrat_black_24_24),
-            Triple(R.layout.fragment_myata_stream, R.id.main_song, R.dimen.line_height_montserrat_regular_18_18),
+            // These two were the wrong way round, and have been failing on main
+            // since PR #40: that PR corrected PLAYER, which had the artist in the
+            // 24 Black slot and the title in the 18 Regular one, but this table
+            // was not moved with it. main_song carries Black 24/24 now and
+            // main_author Regular 18/18, which is what fragment_myata_stream.xml
+            // says. Corrected here because the suite has to pass to be evidence;
+            // nothing on PLAYER is touched.
+            Triple(R.layout.fragment_myata_stream, R.id.main_song, R.dimen.line_height_montserrat_black_24_24),
+            Triple(R.layout.fragment_myata_stream, R.id.main_author, R.dimen.line_height_montserrat_regular_18_18),
             Triple(R.layout.item_history_track, R.id.tv_time, R.dimen.line_height_onest_regular_14_20),
             Triple(R.layout.item_history_track, R.id.tv_artist, R.dimen.line_height_onest_regular_14_20),
             Triple(R.layout.item_history_track, R.id.tv_title, R.dimen.line_height_onest_regular_17_28),

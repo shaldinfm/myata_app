@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.databinding.DataBindingUtil
@@ -31,7 +32,7 @@ class FavoritesFragment : Fragment() {
     private lateinit var viewModel: FavoritesViewModel
     private lateinit var adapter: FavoritesAdapter
     private var currentFavorites: List<FavoriteTrack> = emptyList()
-    
+
     // File create launchers
     private val createTxtFile = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -54,7 +55,7 @@ class FavoritesFragment : Fragment() {
             }
         }
     }
-    
+
     private val createCsvFile = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -88,14 +89,35 @@ class FavoritesFragment : Fragment() {
             container,
             false
         )
-        
+
         // Update current fragment for navigation
         (activity as MainActivity).viewModel.currentFragmentLiveData.value = "favorites"
 
         // Handle window insets for safe area
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.title) { v, insets ->
+        //
+        // Top goes on the whole column rather than on the title, so the frozen
+        // 64dp app bar keeps its height under a notch instead of growing by the
+        // inset and pushing everything below it down.
+        //
+        // Bottom is the frozen 154 clearance plus the same system inset
+        // MainActivity adds to the navigation bar's own padding - without it the
+        // last row ends up under the Mini Player on a gesture-nav device. Both
+        // scrolling containers get it, because either one of them can be the one
+        // on screen.
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.collectionRoot) { v, insets ->
             val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             v.setPadding(v.paddingLeft, bars.top, v.paddingRight, v.paddingBottom)
+
+            val clearance = resources.getDimensionPixelSize(R.dimen.content_bottom_clearance) +
+                bars.bottom
+            for (scroller in listOf<View>(binding.rvFavorites, binding.emptyState)) {
+                scroller.setPadding(
+                    scroller.paddingLeft,
+                    scroller.paddingTop,
+                    scroller.paddingRight,
+                    clearance,
+                )
+            }
             insets
         }
 
@@ -104,7 +126,7 @@ class FavoritesFragment : Fragment() {
         adapter = FavoritesAdapter { track ->
             viewModel.removeFavorite(track)
         }
-        
+
         binding.rvFavorites.layoutManager = LinearLayoutManager(context)
         binding.rvFavorites.adapter = adapter
 
@@ -112,47 +134,79 @@ class FavoritesFragment : Fragment() {
         lifecycleScope.launch {
             viewModel.favorites.collectLatest { favorites ->
                 currentFavorites = favorites
-                
+
                 if (favorites.isEmpty()) {
                     binding.rvFavorites.visibility = View.GONE
                     binding.emptyState.visibility = View.VISIBLE
-                    binding.btnExportTxt.isEnabled = false
-                    binding.btnExportCsv.isEnabled = false
+                    // The frozen empty frame hides the overflow: with nothing in
+                    // the collection there is nothing to export. This is the same
+                    // condition the two export pills used to express by going
+                    // disabled.
+                    binding.collectionOverflow.visibility = View.GONE
                 } else {
                     binding.rvFavorites.visibility = View.VISIBLE
                     binding.emptyState.visibility = View.GONE
-                    binding.btnExportTxt.isEnabled = true
-                    binding.btnExportCsv.isEnabled = true
+                    binding.collectionOverflow.visibility = View.VISIBLE
                     adapter.submitList(favorites)
                 }
             }
         }
 
-        // Export TXT
-        binding.btnExportTxt.setOnClickListener {
-            if (currentFavorites.isNotEmpty()) {
-                val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TITLE, "myata_favorites.txt")
+        // Export, from the frozen header overflow.
+        //
+        // The two actions are the ones the screen already had as always-visible
+        // pills inside the container card the frozen design removes. Everything
+        // behind them is untouched - the same SAF ACTION_CREATE_DOCUMENT intents,
+        // the same MIME types and filenames, the same UTF-8 BOM, the same CSV
+        // formatting in FavoritesViewModel and the same two toasts. Only where
+        // the user reaches them has moved.
+        //
+        // A platform PopupMenu is deliberate and temporary: F2 replaces it with
+        // the frozen `Menu / Коллекция` surface. Relocating the actions first
+        // keeps export reachable across the interval instead of removing it and
+        // waiting for F2 to bring it back.
+        binding.collectionOverflow.setOnClickListener { anchor ->
+            PopupMenu(anchor.context, anchor).apply {
+                menuInflater.inflate(R.menu.collection_overflow, menu)
+                setOnMenuItemClickListener { item ->
+                    when (item.itemId) {
+                        R.id.collection_action_export_txt -> {
+                            exportTxt()
+                            true
+                        }
+                        R.id.collection_action_export_csv -> {
+                            exportCsv()
+                            true
+                        }
+                        else -> false
+                    }
                 }
-                createTxtFile.launch(intent)
-            }
-        }
-
-        // Export CSV
-        binding.btnExportCsv.setOnClickListener {
-            if (currentFavorites.isNotEmpty()) {
-                val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    type = "text/csv"
-                    putExtra(Intent.EXTRA_TITLE, "myata_favorites.csv")
-                }
-                createCsvFile.launch(intent)
-            }
+            }.show()
         }
 
         return binding.root
+    }
+
+    private fun exportTxt() {
+        if (currentFavorites.isNotEmpty()) {
+            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TITLE, "myata_favorites.txt")
+            }
+            createTxtFile.launch(intent)
+        }
+    }
+
+    private fun exportCsv() {
+        if (currentFavorites.isNotEmpty()) {
+            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "text/csv"
+                putExtra(Intent.EXTRA_TITLE, "myata_favorites.csv")
+            }
+            createCsvFile.launch(intent)
+        }
     }
 
     override fun onResume() {

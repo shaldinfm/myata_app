@@ -234,17 +234,32 @@ class TypographyWidthSweepTest {
                 log += "about @${dp}dp: cta ${cta.lineCount}L in ${cta.height}px, desc ${desc.lineCount}L"
             }
 
-            // --- COLLECTION screen: heading and the two export buttons ---
-            measured(inflater, R.layout.fragment_favorites, w).let { root ->
+            // --- COLLECTION screen: heading, subtitle and the empty-state copy ---
+            //
+            // The two export buttons this used to sweep are gone: Phase B moves
+            // the export actions into the header overflow, where the frozen design
+            // puts them. What is swept now is the frozen screen's own text.
+            measured(inflater, R.layout.fragment_favorites, w, { root ->
+                // The empty state ships gone - the fragment turns it on when the
+                // collection is empty - so it has to be turned on here or its two
+                // text blocks are never measured and report zero lines.
+                root.findViewById<View>(R.id.rv_favorites).visibility = View.GONE
+                root.findViewById<View>(R.id.empty_state).visibility = View.VISIBLE
+            }).let { root ->
                 inspect(root, "fragment_favorites", w)
                 val title = root.findViewById<TextView>(R.id.title)
-                val txt = root.findViewById<TextView>(R.id.btn_export_txt)
-                val csv = root.findViewById<TextView>(R.id.btn_export_csv)
+                val subtitle = root.findViewById<TextView>(R.id.collection_subtitle)
+                val emptyTitle = root.findViewById<TextView>(R.id.empty_title)
+                val emptyBody = root.findViewById<TextView>(R.id.empty_body)
                 requireLines(title, 1, "collection/title", w)
-                requireLines(txt, 1, "collection/btn_export_txt", w)
-                requireLines(csv, 1, "collection/btn_export_csv", w)
-                assertNoOverlap(txt, csv, "collection-buttons", w)
-                log += "collection screen @${dp}dp: title ${title.lineCount}L, buttons ${txt.width}/${csv.width}px"
+                requireLines(subtitle, 1, "collection/subtitle", w)
+                requireLines(emptyTitle, 1, "collection/empty_title", w)
+                // The frozen empty body is drawn as two centred lines in a fixed
+                // 191-wide box, which does not narrow with the screen.
+                requireLines(emptyBody, 2, "collection/empty_body", w)
+                log += "collection screen @${dp}dp: title ${title.lineCount}L, " +
+                    "subtitle ${subtitle.lineCount}L, empty ${emptyTitle.lineCount}L/" +
+                    "${emptyBody.lineCount}L"
             }
 
             // --- Donate flow entry (the old standalone screen, family-only swap) ---

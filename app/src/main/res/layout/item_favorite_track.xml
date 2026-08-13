@@ -1,146 +1,182 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  COLLECTION track row - PARTIALLY migrated to the frozen 3.6.6 design (Phase B).
+
+  What lands here is the card and the type: the frozen `Track Item N` is 358x98,
+  r24, on `surface` with a 1px INSIDE stroke on `outline`, 16 padding and 16
+  between rows, its title Onest Regular 16/28 on `text_primary` and its artist
+  Onest Regular 12/20 on `text_secondary`. All of that is reproduced, in both
+  themes, and every hardcoded hex the row used to carry is gone.
+
+  What does NOT land here, and why, in full - the same list is in
+  docs/COLLECTION-3.6.6.md:
+
+  **No 64x64 cover.** FavoriteTrack stores id, artist, track, stream and addedAt
+  and has nowhere to put an artwork URL. Adding one is a Room migration plus a
+  per-row network fetch through ArtworkRepository - data work, not a re-skin.
+
+  **So no 98dp row.** The frozen 98 is 17 + a 64 cover + 17. Without the cover
+  there is nothing to hold the row open, and forcing 98 would reserve a 64dp
+  hole to imitate a frame rather than to draw anything. The row keeps its own
+  content height until the cover has data behind it.
+
+  **One action, not five.** The frozen row has a single circular `arrow_forward`
+  opening the per-track service sheet. That sheet is F1 and does not exist; the
+  four inline service buttons and the delete control below are what the app ships
+  today and they are kept, unchanged, so no function is lost in the interval.
+  Removing them is F3 and explicitly gated.
+
+  **The stream badge stays.** The frozen row has no counterpart for it, but it
+  carries real information - which station the track came from, the same value
+  the CSV export writes - and its disposition is settled with the F3 row
+  migration, not here.
+
+  **Truncation is unchanged.** The frozen row specifies neither ellipsis nor
+  maxLines, only fixed 18 and 16 boxes against 28 and 20 line heights - the same
+  authoring pathology B2 refused to reproduce on the Mini Player title. Here the
+  boxes are applied as minima, so the tokens' real line boxes are honoured and no
+  glyph is clipped, while the one-line title and two-line artist ellipsis the
+  screen has always had is left exactly as it was.
+
+  Title above artist, matching the FINAL canonical row where the track is the
+  Heading 3 and the artist the secondary line below it.
+-->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/CollectionCard"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
-    app:cardBackgroundColor="#0A1D33"
-    app:cardCornerRadius="16dp"
-    app:strokeColor="#1E3754"
-    app:strokeWidth="1dp">
+    android:layout_marginBottom="@dimen/collection_row_gap">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="12dp">
+        android:padding="@dimen/collection_card_padding">
 
-        <!--
-          Top Section: Info and Badge.
-
-          Title above artist, matching the FINAL canonical Collection row, where
-          the track is the Heading 3 and the artist is the secondary line below
-          it. Android had them reversed.
-
-          Only the constraint chain moved: the title now hangs off the parent top
-          and the artist off the title. Each view keeps its own ellipsis
-          behaviour - the title one line, the artist up to two - so nothing
-          truncates that did not truncate before. Colours stay exactly where they
-          were: the near-white was already on the title and the accent on the
-          artist, so the order change puts them the right way round by itself.
-        -->
         <TextView
             android:id="@+id/tv_track"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:textColor="#F5F7FA"
-            android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.16_28"
-            android:text="Track Title"
-            android:maxLines="1"
+            android:layout_marginEnd="12dp"
             android:ellipsize="end"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
+            android:gravity="center_vertical"
+            android:maxLines="1"
+            android:minHeight="28dp"
+            android:text="Track Title"
+            android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.16_28"
+            android:textColor="@color/text_primary"
             app:layout_constraintEnd_toStartOf="@id/badge_stream"
-            android:layout_marginEnd="12dp"/>
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
             android:id="@+id/tv_artist"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:textColor="#00E5FF"
-            android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.12_20"
-            android:text="ARTIST NAME"
-            android:maxLines="2"
-            android:ellipsize="end"
             android:layout_marginTop="2dp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tv_track"
+            android:layout_marginEnd="12dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:minHeight="20dp"
+            android:text="ARTIST NAME"
+            android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.12_20"
+            android:textColor="@color/text_secondary"
             app:layout_constraintEnd_toStartOf="@id/badge_stream"
-            android:layout_marginEnd="12dp"/>
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_track" />
 
+        <!--
+          Retained, and an accepted temporary deviation from FINAL - see the
+          block at the top of this file. Its background is tinted per stream by
+          FavoritesAdapter, so the label colour is fixed against those tints
+          rather than following the theme.
+        -->
         <TextView
             android:id="@+id/badge_stream"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:background="@drawable/rounded_banner_bg"
+            android:fontFamily="@font/onest_black"
             android:paddingHorizontal="10dp"
             android:paddingVertical="3dp"
+            android:text="MYATA"
             android:textColor="#000000"
             android:textSize="9sp"
             android:textStyle="bold"
-            android:fontFamily="@font/onest_black"
-            android:background="@drawable/rounded_banner_bg"
-            android:text="MYATA"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"/>
+            app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Separator -->
         <View
             android:id="@+id/separator"
             android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#1E3754"
+            android:layout_height="@dimen/collection_card_stroke"
             android:layout_marginTop="10dp"
-            app:layout_constraintTop_toBottomOf="@id/tv_artist"/>
+            android:background="@color/outline"
+            app:layout_constraintTop_toBottomOf="@id/tv_artist" />
 
-        <!-- Bottom Section: Services and Delete -->
         <LinearLayout
             android:id="@+id/music_services"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:layout_marginTop="10dp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/separator"
+            android:orientation="horizontal"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/btn_delete"
-            app:layout_constraintBottom_toBottomOf="parent">
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/separator">
 
             <ImageView
                 android:id="@+id/btn_spotify"
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:layout_marginEnd="8dp"
-                android:src="@drawable/ic_spotify"
                 android:background="@android:color/transparent"
-                android:contentDescription="Spotify"/>
+                android:contentDescription="Spotify"
+                android:src="@drawable/ic_spotify" />
 
             <ImageView
                 android:id="@+id/btn_apple_music"
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:layout_marginEnd="8dp"
-                android:src="@drawable/ic_apple_music"
                 android:background="@android:color/transparent"
-                android:contentDescription="Apple Music"/>
+                android:contentDescription="Apple Music"
+                android:src="@drawable/ic_apple_music" />
 
             <ImageView
                 android:id="@+id/btn_yandex"
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:layout_marginEnd="8dp"
-                android:src="@drawable/ic_yandex"
                 android:background="@android:color/transparent"
-                android:contentDescription="Yandex Music"/>
+                android:contentDescription="Yandex Music"
+                android:src="@drawable/ic_yandex" />
 
             <ImageView
                 android:id="@+id/btn_youtube"
                 android:layout_width="32dp"
                 android:layout_height="32dp"
-                android:src="@drawable/ic_youtube"
                 android:background="@android:color/transparent"
-                android:contentDescription="YouTube"/>
+                android:contentDescription="YouTube"
+                android:src="@drawable/ic_youtube" />
         </LinearLayout>
 
+        <!--
+          The cross used to be white at 40% alpha, which only ever read on the
+          navy the row no longer has. It follows text_secondary now, so it is
+          legible on `surface` in both themes.
+        -->
         <ImageView
             android:id="@+id/btn_delete"
             android:layout_width="18dp"
             android:layout_height="18dp"
-            android:src="@drawable/dismiss_cross"
-            android:alpha="0.4"
-            app:tint="#FFFFFF"
             android:background="@android:color/transparent"
             android:contentDescription="Delete"
+            android:src="@drawable/dismiss_cross"
+            app:layout_constraintBottom_toBottomOf="@id/music_services"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@id/music_services"
-            app:layout_constraintBottom_toBottomOf="@id/music_services"/>
+            app:tint="@color/text_secondary" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

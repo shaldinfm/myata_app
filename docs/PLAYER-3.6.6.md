@@ -84,6 +84,8 @@ artist below. The ids keep their meanings, so the clipboard copy still reads
 | full-bleed per-stream background artwork | the frozen PLAYER is a flat `background` fill; there is no such layer in the frame |
 | the decorative `artist_frame` overlay and the circular artwork crop | the frozen artwork is a 239 rounded square |
 | six per-stream play/pause drawables | the frozen control is tinted by role — `primary` and `on_primary` — not by station |
+| the heart on the favourite control | the frozen `like` is a thumbs-up; there is no heart anywhere in the frame |
+| three identical white swipe dots | the frozen active marker is a nine-lobed cookie in `primary`, against circles in the inactive pair |
 | per-stream accent tinting of the text and the two side controls | every control in the frozen frame takes a semantic colour |
 
 The drawables themselves stay in the repo; only this screen stops referencing
@@ -105,7 +107,11 @@ re-skin never appeared on a real device. One implementation now.
 | artwork stroke | `outline` | `#E1E3E4` | `#466D8F` |
 | artwork backdrop | `brand_player_artwork_backdrop` | `#1C4771` | same |
 | play/pause | `primary` / `on_primary` | `#1C4771` / `#FFFFFF` | `#5FD9B4` / `#0F253E` |
-| like, history | `text_primary` | | |
+| like | `player_like` | `#3F4A3C` | `#F5F7FA` |
+| like, in the collection | `primary` | | |
+| history (deferred slot) | `text_primary` | | |
+| swipe, active | `primary` | | |
+| swipe, inactive | `player_swipe_inactive` | `#801C4771` | `#6F899F` |
 
 The rule used where a frozen value does not match a role in both themes: prefer
 the approved role when the dark value matches it exactly and the light value is a
@@ -124,6 +130,77 @@ variant. In Figma it is a 229 square behind an opaque 239 one and never really
 shows; here it is the artwork card's background, which is the one state where it
 earns its place — the colour the design put behind the art fills the card while
 the art loads.
+
+## Two `Controls` rows, one of them stale
+
+Each frozen page carries **two** `Controls:margin` rows at the same y=426, and one
+of them is `visible: false`. They do not agree: the hidden copy's dark play/pause
+is still `#1C4771`, while the visible one is `#5FD9B4`. Everything in this
+document is read off the **visible** row, and anything else reading the snapshot
+should skip invisible nodes too — the hidden row is what makes the frozen dark
+control look like navy-on-navy, which it is not.
+
+| | light | dark | role |
+|---|---|---|---|
+| `play/pause` fill | `#1C4771` | `#5FD9B4` | exactly `primary` |
+| `play/pause` glyph | `#FFFFFF` | `#0F253E` | exactly `on_primary` |
+| `dislike` glyph | `#42474E` | `#F5F7FA` | the `player_header_label` pair |
+| `like` glyph | `#3F4A3C` | `#F5F7FA` | dark exactly `text_primary`; light a green-cast neighbour of `text_secondary` → its own pair, `player_like` |
+
+## The header label is upper-case
+
+`Mobile Header (Subtle) > Container > "Сейчас играет"` is `textCase: UPPER`, 12/16
+with 0.6px of tracking. It renders **СЕЙЧАС ИГРАЕТ**. The app drew it as written
+until this was corrected; the string keeps the characters the design stores and
+`textAllCaps` does what Figma's case does, with `letterSpacing="0.05"` for the
+0.6/12.
+
+## The swipe indicator is not three dots
+
+```
+swipe            104.42 x 10 at (126.79, 47), padding 38/38, itemSpacing 0
+  Shape Set      10 x 10 at 38   variant Shape = "9-sided cookie"   ← active
+    shape        8.53 x 8.42 at (0.74, 0.79)   primary, opacity 1
+  Shape Set      10 x 10 at 48   variant Shape = "Circle"
+    shape        8.42 x 8.42 at (0.79, 0.79)   inactive pair
+  shape          8.42 x 8.42 at 58             inactive pair
+```
+
+Three 10dp slots edge to edge — 30 wide, centred — each holding a marker about
+8.4 across, centred in its slot at (5, 5). **The active page is a different
+shape**, a nine-lobed scalloped disc rather than a circle, as well as a different
+colour. The app drew three identical white ovals filling the whole 10dp.
+
+The inactive colour is the one thing the two pages express differently: light says
+`primary` at 50% opacity, dark says a solid `#6F899F`. That forces a pair,
+`player_swipe_inactive`, and the light half keeps the frozen expression
+(`#801C4771`) rather than the composited `#8AA0B6` it lands on.
+
+`ic_player_swipe_active` is derived rather than copied, and the derivation is the
+box. A nine-fold scalloped disc `r(t) = 1 + a·cos(9(t + π/2))` has a square
+bounding box only when `a = 0`; the frozen 8.53 × 8.42 fixes the ratio at
+1.01306, and `a = 0.081` reproduces it to six decimal places. Sampled as 27
+cubics, which holds the analytic curve to 0.014dp.
+
+## The icons the export cannot give us
+
+The canonical exporter records a vector's box, position and fills but never its
+geometry — `canonical/code.js` reads no `vectorPaths` and calls no `exportAsync`.
+So every icon on this screen has an **exact box and a reconstructed outline**.
+
+`tools/figma-export/nav-icons` already solves this: it exports real SVG via
+`exportAsync(SVG)` and resolves nodes by id, and it was only ever run over the
+four bottom-nav icons. Running it over these nodes would replace the
+reconstructions with the literal paths:
+
+| icon | light | dark | box |
+|---|---|---|---|
+| play/pause glyph | `2399:31221` | `2444:18274` | 23.33 × 23.33 |
+| like | `2399:31217` | `2444:18270` | 24.5 × 23.33 |
+| swipe active (cookie) | `I2402:31398;58548:7288` | `I2444:18241;58548:7288` | 8.53 × 8.42 |
+| swipe inactive (circle) | `I2402:31378;58548:7250` | `I2444:18242;58548:7250` | 8.42 × 8.42 |
+| dislike *(deferred)* | `2399:31224` | `2444:18277` | 24.5 × 23.33 |
+| header overflow *(deferred)* | `2396:30741` | `2444:18239` | 4 × 16 |
 
 ## Icons
 
@@ -239,6 +316,28 @@ radius and position is a claim about those pixels:
 Live pixel measurements agree, at 390dp/420dpi on both images: the painted control
 is 210×210px = 80.0×80.0dp at the same origin in idle, connecting and playing, in
 both themes, with the corner arc reaching full width 52px ≈ 20dp down.
+
+### The app beside FINAL, in pixels
+
+No render of FINAL exists in this repository — the snapshot is JSON, and the PNGs
+under `tools/figma-export/dark-theme/previews/` are of the *earlier* dark
+reconstruction. So [tools/qa/player-parity/](../tools/qa/player-parity/) draws
+FINAL from the snapshot, node for node, and the device capture goes beside it at
+the same 390 scale. Everything except the icon outlines is read out of the
+snapshot; the outlines are the app's own, and the harness names each one.
+
+Measured off those two images at 390/420dpi, the painted control lands on the
+frozen rectangle: 155–235 × 442–522 in the reference, 156–234 × 442–521 on the
+device, the 1-unit shortfall being anti-aliasing from downscaling a 1024px
+screenshot. Header, swipe row, album art, both text lines and the `like` slot
+line up to the same tolerance in both themes.
+
+Two differences are deliberate and deferred: the app reserves the header's
+trailing overflow slot and draws nothing in it, and it keeps its History entry in
+the frozen `dislike` slot — so the right-hand glyph differs, and it is still
+tinted `text_primary` rather than the frozen row colour, which lands a shade
+darker than the `like` beside it in Light. Aligning it belongs with the phase that
+owns that slot.
 
 ### Mini Player, re-verified
 

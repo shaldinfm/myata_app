@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PLAYER swipe indicator tint. The active page's marker is `primary` at full
+  opacity; the other two take the declared inactive pair. The shape changes too -
+  a nine-lobed cookie against plain circles - so the state is carried twice over.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/primary" android:state_selected="true" />
+    <item android:color="@color/player_swipe_inactive" />
+</selector>

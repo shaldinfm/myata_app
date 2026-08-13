@@ -227,6 +227,13 @@
     <!-- The swipe dots abut the header row: it ends at 63 and they start at 63.
          They end at 73 and the page starts at 79, so 6 between. -->
     <dimen name="player_swipe_size">10dp</dimen>
+    <!--
+      The marker inside each 10 slot. `Shape Set > shape` is 8.42 square for the
+      circles and 8.53x8.42 for the active nine-lobed cookie, both centred at
+      (5, 5) of their slot - a cookie's bounding box cannot be square.
+    -->
+    <dimen name="player_swipe_shape_size">8.42dp</dimen>
+    <dimen name="player_swipe_active_width">8.53dp</dimen>
     <dimen name="player_page_gap">6dp</dimen>
 
     <!-- `Album Art (Organic Shape)`, 239x239 r20, image FILL, 1px stroke. -->
@@ -264,6 +271,13 @@
     <dimen name="player_play_icon">23dp</dimen>
     <dimen name="player_action_width">49dp</dimen>
     <dimen name="player_action_height">54dp</dimen>
-    <dimen name="player_action_icon_width">25dp</dimen>
-    <dimen name="player_action_icon_height">23dp</dimen>
+    <!--
+      `like > Container`, 24.5x23.33 at (12, 12) of the 48.5x54.33 slot. It is not
+      centred in the slot: 12 above and 19 below, so the glyph sits 3.5 higher
+      than the row's middle. The paddings below reproduce that.
+    -->
+    <dimen name="player_action_icon_width">24.5dp</dimen>
+    <dimen name="player_action_icon_height">23.33dp</dimen>
+    <dimen name="player_action_icon_inset">12dp</dimen>
+    <dimen name="player_action_icon_inset_bottom">19dp</dimen>
 </resources>

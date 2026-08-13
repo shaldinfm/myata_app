@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PLAYER swipe indicator, active page.
+
+  The frozen `swipe` row is three 10x10 slots edge to edge, and the active one is
+  not a dot:
+
+    `swipe > Shape Set`   INSTANCE, variant Shape = "9-sided cookie"
+    `Shape Set > shape`   VECTOR 8.53 x 8.42 at (0.74, 0.79) of the 10x10 slot
+
+  So the active marker is a nine-lobed scalloped disc, 8.53 x 8.42 centred in its
+  slot - (0.74 + 8.53/2, 0.79 + 8.42/2) is (5.0, 5.0). The inactive ones are plain
+  circles, 8.42 across. The app drew three identical white ovals filling the whole
+  10dp before this.
+
+  The exporter records a vector's box but never its geometry, so the outline here
+  is derived rather than copied. The derivation is the box:
+
+    r(t) = 1 + a * cos(9 * (t + pi/2))
+
+  a nine-fold scalloped disc with one lobe pointing up. Its bounding box is only
+  square when a = 0; the frozen 8.53 x 8.42 fixes the ratio at 1.01306, and
+  a = 0.081 reproduces that to six decimal places. Sampled as 27 cubics - three
+  per lobe, which holds the analytic curve to 0.014dp - and scaled so the path's
+  own bounds are exactly the frozen 8.53 x 8.42.
+
+  Control points sit slightly outside the viewport at the extremes; the curve
+  itself does not.
+
+  Untinted: `primary` at full opacity, applied from the layout.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="@dimen/player_swipe_active_width"
+    android:height="@dimen/player_swipe_shape_size"
+    android:viewportWidth="8.53"
+    android:viewportHeight="8.42">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M8.27,4.32 C8.05,4.63 7.85,4.87 7.89,5.18 C7.94,5.48 8.15,5.89 8.1,6.24 C8.05,6.59 7.71,6.8 7.34,6.89 C6.96,6.98 6.66,7.04 6.49,7.3 C6.33,7.57 6.23,8.01 5.97,8.25 C5.71,8.48 5.31,8.43 4.96,8.26 C4.62,8.09 4.35,7.94 4.05,8.03 C3.76,8.13 3.39,8.41 3.04,8.42 C2.69,8.43 2.42,8.13 2.27,7.78 C2.11,7.43 2,7.14 1.71,7.02 C1.43,6.91 0.97,6.89 0.69,6.67 C0.41,6.46 0.4,6.06 0.51,5.69 C0.61,5.32 0.72,5.02 0.57,4.75 C0.43,4.48 0.09,4.16 0.01,3.82 C-0.06,3.48 0.19,3.16 0.51,2.95 C0.83,2.73 1.09,2.58 1.16,2.27 C1.22,1.97 1.16,1.51 1.33,1.2 C1.49,0.89 1.89,0.81 2.27,0.85 C2.65,0.89 2.96,0.94 3.2,0.75 C3.45,0.56 3.7,0.18 4.02,0.04 C4.35,-0.09 4.7,0.1 4.96,0.38 C5.23,0.65 5.43,0.89 5.74,0.9 C6.05,0.91 6.49,0.78 6.83,0.88 C7.16,0.99 7.31,1.36 7.34,1.75 C7.36,2.13 7.37,2.44 7.6,2.65 C7.83,2.86 8.25,3.03 8.44,3.33 C8.63,3.63 8.5,4.01 8.27,4.32 Z" />
+</vector>

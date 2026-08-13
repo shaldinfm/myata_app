@@ -40,14 +40,22 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
+            <!--
+              The frozen label is `textCase: UPPER` with 0.6px of tracking at 12,
+              so it reads "СЕЙЧАС ИГРАЕТ". The string keeps the source characters
+              the design stores and textAllCaps does what Figma's case does;
+              0.6/12 is the 0.05em below.
+            -->
             <TextView
                 android:id="@+id/player_header_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:ellipsize="end"
+                android:letterSpacing="0.05"
                 android:maxLines="1"
                 android:text="@string/player_now_playing"
+                android:textAllCaps="true"
                 android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.12_16"
                 android:textColor="@color/player_header_label" />
 
@@ -68,8 +76,17 @@
         </FrameLayout>
 
         <!--
-          `swipe`: which of MYATA / GOLD / XTRA is showing. Unchanged behaviour,
-          moved to the frozen offset.
+          `swipe`: which of MYATA / GOLD / XTRA is showing.
+
+          Three 10x10 slots edge to edge - the frozen row has itemSpacing 0 - each
+          holding a marker about 8.4 across, centred. The active page is a
+          nine-lobed cookie at full `primary`; the other two are plain circles in
+          the declared inactive pair. `scaleType=center` draws each marker at its
+          own intrinsic size, so the 10 slot stays the frozen slot and the shape
+          inside it stays the frozen shape.
+
+          `isSelected` drives the tint through player_swipe_tint; PlayerFragment
+          sets it together with the drawable.
         -->
         <LinearLayout
             android:id="@+id/dots_indicator"
@@ -82,24 +99,18 @@
 
             <ImageView
                 android:id="@+id/dot_1"
-                android:layout_width="@dimen/player_swipe_size"
-                android:layout_height="@dimen/player_swipe_size"
-                android:contentDescription="@null"
-                android:src="@drawable/dot_active" />
+                style="@style/PlayerSwipeDot"
+                android:src="@drawable/ic_player_swipe_active" />
 
             <ImageView
                 android:id="@+id/dot_2"
-                android:layout_width="@dimen/player_swipe_size"
-                android:layout_height="@dimen/player_swipe_size"
-                android:contentDescription="@null"
-                android:src="@drawable/dot_inactive" />
+                style="@style/PlayerSwipeDot"
+                android:src="@drawable/ic_player_swipe_inactive" />
 
             <ImageView
                 android:id="@+id/dot_3"
-                android:layout_width="@dimen/player_swipe_size"
-                android:layout_height="@dimen/player_swipe_size"
-                android:contentDescription="@null"
-                android:src="@drawable/dot_inactive" />
+                style="@style/PlayerSwipeDot"
+                android:src="@drawable/ic_player_swipe_inactive" />
         </LinearLayout>
 
         <androidx.viewpager2.widget.ViewPager2

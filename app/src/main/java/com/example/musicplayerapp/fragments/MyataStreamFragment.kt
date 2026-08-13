@@ -1,12 +1,15 @@
 package com.example.musicplayerapp.fragments
 
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
+import androidx.core.widget.ImageViewCompat
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
@@ -169,9 +172,20 @@ class MyataStreamFragment() : Fragment() {
     }
     
     
+    /**
+     * The frozen `like`. One glyph, always the same 24.5x23.33 thumbs-up in the
+     * same place: the frozen frame records a single visual and no states, so the
+     * collection toggle is the tint. Nothing here changes geometry.
+     */
     private fun updateHeartIcon(isFavorite: Boolean) {
-        binding.btnFavorite.setImageResource(
-            if (isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
+        ImageViewCompat.setImageTintList(
+            binding.btnFavorite,
+            ColorStateList.valueOf(
+                ContextCompat.getColor(
+                    requireContext(),
+                    if (isFavorite) R.color.primary else R.color.player_like,
+                )
+            )
         )
         binding.btnFavorite.contentDescription = getString(
             if (isFavorite) R.string.player_favorite_remove else R.string.player_favorite_add

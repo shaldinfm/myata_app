@@ -313,6 +313,37 @@
       app today, and History has nowhere else to go until Phase C brings the
       Broadcast History card onto this screen.
     -->
+    <!--
+      PLAYER swipe marker, frozen canonical `swipe > Shape Set`: a 10x10 slot with
+      an ~8.4 shape centred in it. `center` rather than `fitCenter` so the shape
+      keeps its own size instead of filling the slot, and the tint is a selector
+      on `state_selected`.
+    -->
+    <style name="PlayerSwipeDot">
+        <item name="android:layout_width">@dimen/player_swipe_size</item>
+        <item name="android:layout_height">@dimen/player_swipe_size</item>
+        <item name="android:scaleType">center</item>
+        <item name="android:contentDescription">@null</item>
+        <item name="tint">@color/player_swipe_tint</item>
+    </style>
+
+    <!--
+      PLAYER `like`, frozen canonical: the same 49x54 slot as the other action,
+      but the glyph inside it is placed rather than centred - 24.5x23.33 with 12
+      above it and 19 below, which puts it 3.5 higher than the middle of the row.
+      `center` keeps the drawable at its own 24.5x23.33.
+    -->
+    <style name="PlayerLikeSlot">
+        <item name="android:layout_width">@dimen/player_action_width</item>
+        <item name="android:layout_height">@dimen/player_action_height</item>
+        <item name="android:background">?attr/selectableItemBackgroundBorderless</item>
+        <item name="android:scaleType">center</item>
+        <item name="android:paddingStart">@dimen/player_action_icon_inset</item>
+        <item name="android:paddingEnd">@dimen/player_action_icon_inset</item>
+        <item name="android:paddingTop">@dimen/player_action_icon_inset</item>
+        <item name="android:paddingBottom">@dimen/player_action_icon_inset_bottom</item>
+    </style>
+
     <style name="PlayerActionSlot">
         <item name="android:layout_width">@dimen/player_action_width</item>
         <item name="android:layout_height">@dimen/player_action_height</item>

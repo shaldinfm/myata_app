@@ -135,15 +135,24 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent">
 
+                <!--
+                  The frozen `like`: a filled thumbs-up, 24.5x23.33, 12 from the
+                  top of its 49x54 slot. It replaces the heart the app drew here,
+                  which had no counterpart in the design at all. The frozen frame
+                  records one visual and no states, so the collection toggle is
+                  carried by the tint - `text_primary` off, `primary` on - and the
+                  geometry never changes.
+                -->
                 <ImageView
                     android:id="@+id/btn_favorite"
-                    style="@style/PlayerActionSlot"
+                    style="@style/PlayerLikeSlot"
                     android:layout_marginStart="@dimen/player_controls_inset"
                     android:contentDescription="@string/player_favorite_add"
-                    android:src="@drawable/ic_heart_outline"
+                    android:src="@drawable/ic_player_like"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:tint="@color/player_like" />
 
                 <ImageView
                     android:id="@+id/btn_play"

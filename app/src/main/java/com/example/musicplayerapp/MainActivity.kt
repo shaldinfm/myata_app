@@ -28,6 +28,7 @@ class MainActivity : AppCompatActivity() {
 
     lateinit var viewModel: StreamsViewModel
     lateinit var binding: ActivityMainBinding
+    private var dismissReceiver: BroadcastReceiver? = null
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
@@ -109,8 +110,9 @@ class MainActivity : AppCompatActivity() {
              return
         }
 
-        val receiver = closeBroadcastReceiver()
-        LocalBroadcastManager.getInstance(this).registerReceiver(receiver, IntentFilter("Dismiss"))
+        dismissReceiver = closeBroadcastReceiver()
+        LocalBroadcastManager.getInstance(this)
+            .registerReceiver(dismissReceiver!!, IntentFilter("Dismiss"))
 
         val viewModelProviderFactory = StreamsViewModelFactory(application, this)
         viewModel = ViewModelProvider(this, viewModelProviderFactory).get(StreamsViewModel ::class.java)
@@ -262,6 +264,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        dismissReceiver?.let { LocalBroadcastManager.getInstance(this).unregisterReceiver(it) }
+        dismissReceiver = null
         super.onDestroy()
         Log.d("MainActivity", "Destroyed")
     }

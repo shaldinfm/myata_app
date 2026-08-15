@@ -41,8 +41,19 @@ const canonical = path.join(repo, "tools/figma-export/canonical");
  */
 const EXACT = path.join(repo, "tools/figma-export/player-icons/exact");
 
+/*
+ * The one export artefact the app also drops, so the two sides stay comparable.
+ *
+ * Flattening the cookie's vector network emitted 18 degenerate segments; this is
+ * the only one whose control points landed outside the shape, and it paints a
+ * 3px spur that breaks the component's nine-fold symmetry. The bundle keeps it -
+ * that file is the supplied artefact and stays verbatim - and both the drawable
+ * and this reference drop it. See ic_player_swipe_active.xml.
+ */
+const COOKIE_ARTEFACT = "C 170.5194359 -3.4627247 145.2386589 -3.4627247 126.9319992 10.3881721 ";
+
 function exactGlyph(file, label, deferred) {
-  const svg = fs.readFileSync(path.join(EXACT, file), "utf8");
+  const svg = fs.readFileSync(path.join(EXACT, file), "utf8").replace(COOKIE_ARTEFACT, "");
   const head = /<svg\b[^>]*>/.exec(svg)[0];
   const viewBox = /viewBox="([^"]*)"/.exec(head)[1];
   const inner = svg.slice(svg.indexOf(">", svg.indexOf("<svg")) + 1, svg.lastIndexOf("</svg>"));

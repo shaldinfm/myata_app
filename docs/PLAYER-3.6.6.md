@@ -200,7 +200,7 @@ bounding box could have revealed, and which every reconstruction got wrong:
 | `ic_player_play` | a solid triangle filling a 23.33 square, read off a box | node `2484:59`, **23.33 × 29.6927299**, hollow triangle |
 | `ic_player_pause` | solid bars, Material's 1:1:1 split taken to a 23.33 square | node `2399:31221`, 23.3333334 square, **two hollow bars** |
 | `ic_player_like` | a thumbs-up drawn to fill the 24.5 × 23.33 box | node `2399:31217`, same box, **outlined** |
-| `ic_player_swipe_active` | a cosine-lobed disc, amplitude solved from the box | master `2401:38`, the **54-segment vector network** |
+| `ic_player_swipe_active` | a cosine-lobed disc, amplitude solved from the box | master `2401:38`, its **vector network**, less one export artefact |
 | `ic_player_swipe_inactive` | a circle drawn to the box | master `2400:31363`, the component's own circle |
 
 **The play and pause glyphs are not the same size.** Pause is 23.33 square; play
@@ -218,16 +218,38 @@ records for those nodes, which is the two sources agreeing.
 Dislike and overflow are in the bundle and deliberately not installed: their
 phases own them.
 
-Two things carried knowingly:
+### One export artefact removed from the cookie
 
-- the supplied cookie path contains 18 degenerate segments that return to their
-  own start point, an artefact of converting a vector network to a single path.
-  Seventeen are sub-pixel; the first has control points at y=-3.46 and paints a
-  faint spike above the top lobe — **3 pixels at the 26px this renders at** on a
-  420dpi screen. Dropping that one no-op segment would remove it. It is left in
-  rather than editing geometry supplied as exact.
-- lint's `VectorPath` warns that the cookie's 3854-character path is long. That
-  is what a literal 54-segment network costs, and it is drawn once per page.
+Flattening a vector network into a single contour emits degenerate segments —
+curves that return to their own start point. The supplied cookie has **18**, and
+seventeen form a perfectly regular pattern: nine straying 1.178 units from their
+anchor and nine straying 0.558, one of each per lobe, all far under a pixel at
+the 26px this renders at.
+
+The eighteenth, at (126.932, 10.388), strays **26.13 units — 22× the next
+largest** — because its control points landed at y=−3.46, outside the shape. It
+paints a thin spur up and to the left of the top lobe: 3 pixels at render size,
+and the only feature on the whole outline that breaks the component's nine-fold
+symmetry. `Shape=9-sided cookie` has nine identical lobes; a spur on one of them
+is not one of them.
+
+So `ic_player_swipe_active` drops that one segment and keeps the other 53
+untouched — no simplification, no redrawing, every remaining number verbatim.
+**This is the removal of an export artefact, not a design change.** The bundle
+keeps the segment: that file is the supplied artefact and stays as delivered. The
+parity harness applies the same removal so both sides of the comparison match.
+
+Two things still carried knowingly:
+
+- a second artefact of the same mis-flattened seam is **not** repaired, because
+  repairing it would mean redrawing geometry. The top lobe comes out flat rather
+  than rounded, which is why the path measures 315.76 × 312.52 against the
+  324.000244 × 319.950256 that both the manifest's `childNodeSize` and the
+  canonical snapshot record for this node. That is 0.22 slot units, and the lobes
+  are only about 0.6px deep at 10dp — a sub-pixel difference on screen. Fixing it
+  means re-exporting the node.
+- lint's `VectorPath` warns that the cookie's 3783-character path is long. That
+  is what a literal vector network costs, and it is drawn once per page.
 
 ## The icons the export cannot give us
 
@@ -322,7 +344,7 @@ B2 is not modified.
 | | |
 |---|---|
 | `./gradlew assembleDebug` | pass |
-| `./gradlew lintDebug` | 0 errors, 385 warnings. One is on a PLAYER file: `VectorPath` on the exact cookie's 3854-character path, which is what a literal 54-segment network costs |
+| `./gradlew lintDebug` | 0 errors, 385 warnings. One is on a PLAYER file: `VectorPath` on the exact cookie's 3783-character path, which is what a literal vector network costs |
 | `./gradlew testDebugUnitTest` | pass |
 | `PlayerLayoutTest` | instrumented — the frozen anchors at 320/360/390/412dp in both themes, the reserved header slot proven non-clickable, worst-case long Russian metadata on one line with no clipping or overlap. **API 24 and API 36, byte-identical.** |
 | `PlayerControlStateTest` | unit — the three faces, and buffering winning over playing |

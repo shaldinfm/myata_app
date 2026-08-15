@@ -292,4 +292,22 @@
       is all that shows when ArtworkRepository finds nothing.
     -->
     <color name="brand_player_history_artwork_placeholder">#E1E3E4</color>
+
+    <!--
+      PLAYER play/pause glyph.
+
+      Provenance: the owner-supplied FINAL assets in
+      tools/figma-export/player-icons/owner-final - the `stroke` on the paths in
+      play_light.svg / pause_light.svg and their dark counterparts.
+
+      A PAIR rather than a role, and specifically NOT `on_primary`. Dark's
+      #0F253E is exactly `on_primary` there, but light's #F8F9FA is not - that
+      role is #FFFFFF - and `on_primary` is bound to `colorOnPrimary` in
+      Theme.Myata.Base, so moving it to satisfy this glyph would repaint every
+      Material component in the app for a three-step change on one control.
+
+      The surface under it needs nothing: `primary` already resolves to the
+      #1C4771 and #5FD9B4 the same files fill their 80x80 rect with.
+    -->
+    <color name="player_play_glyph">#F8F9FA</color>
 </resources>

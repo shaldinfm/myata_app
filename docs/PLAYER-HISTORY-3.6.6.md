@@ -40,20 +40,22 @@ it use — and 30 below where `Controls` ends. Geometry is identical on both pag
       17  padding
       32  heading      "История эфира"
       16  gap
-      74  History Item 1..3
+     120  History Item 1..3        (the frozen mock's row is 74 - see below)
       16  gap
       54  "Показать ещё"
       17  padding
    ------
-     374  with three one-line rows and a fourth entry behind the button
+     512  with three one-line rows and a fourth entry behind the button
 ```
 
-A row, 324×74 with 13 of padding around a 48-tall content row:
+A row, 13 of padding around a 48-tall content row with the service links under
+it:
 
 ```
    0   13        51.98      63.98          102.98             311
    |   | 38.98   |  12      | 40×40 r6     |  12   title 28   |
    |   | time R  |          | artwork      |       artist 20  |
+   |                                    12   service links 34 |
 ```
 
 The row *has* `cornerRadius 8` and a 1px `INSIDE` stroke, and paints neither: the
@@ -138,44 +140,41 @@ standing owner decision recorded on `item_history_track.xml`: History rows are
 variable height with **no ellipsis**, so a long Russian title adds a line rather
 than losing its end. There is no `maxLines` and no `ellipsize` on either line.
 
-### The trailing group is 82, not 51.17
+### The service links are under the text, not in the trailing slot
 
 The frozen slot holds two buttons named *"Button - Mock platform icons using
-generic material symbols for layout"* — placeholders, self-declared. The app's
-three real service links go there instead, each in the frozen 22×34 button box,
-8 apart, which is the gap the frozen pair uses.
+generic material symbols for layout"* — placeholders, self-declared. The app has
+three real ones, each in the frozen 22×34 button box, 8 apart, which is the gap
+the frozen pair itself uses: its second button starts at x=30 against a 22-wide
+first. Three of them measure 82.
 
-The frozen slot could not be taken literally in any case. On `History Item 1`
-(`2399:31072`) the text column HUGs to 169, which pushes the trailing container's
-right edge to **336.15** inside a row whose content ends at **311**. That row
-overflows itself in the frozen frame, which is what a mock does and a real row
-cannot.
+**Beside the text, 82 did not fit.** The title column came out at:
 
-**This is the one visible cost of the section.** With three 22dp buttons the text
-column measures **113dp** at the frozen width, against the ~157dp the frozen row
-leaves its own two-button group. Real track names wrap: `LOADED WITH PEARLS` sets
-over three lines, `SOMEDAY, SOMEWHERE` over two. Two ways out, both owner calls:
-drop a service link, or move the group under the text at every width — the second
-costs the frozen 74 row and the frozen 374 section.
-
-### Under 390dp the row reflows
-
-The frozen composition is reproduced at the width it was frozen at and adapted
-below it, where the arithmetic runs out:
-
-| width | row | text column |
+| width | row | text column, links beside it |
 |---|---|---|
 | 412dp | 346 | 135 |
-| 390dp | 324 | **113** — the frozen composition |
+| 390dp | 324 | **113** |
 | 360dp | 294 | 83 — about nine characters to a line |
 | 320dp | 254 | 43 — `CRYOGEN` breaks over three lines |
 
-Below 390 the three links move under the text and the row is 116 rather than 74;
-everything else — paddings, the 40dp artwork, the time box, type, colours, ids —
-is identical. Measured, a 42-character Russian title sets over 7 lines in the 83dp
-column at 360 and over 4 in the 177dp the adaptation gives it there.
-`layout/item_player_history_track.xml` is the adaptation and is the default
-because qualifiers only add; `layout-w390dp/` carries the frozen composition.
+At 113 real names wrapped hard on live history — `LOADED WITH PEARLS` over three
+lines, `SOMEDAY, SOMEWHERE` over two — and truncating them was ruled out by the
+no-ellipsis decision above. So by owner decision the links moved **under** the
+text at every width, real content taking precedence over the mock's two-icon slot.
+The column is **195** at the frozen width and the same names fit on one line;
+measured live, all three rows come out at exactly 120.
+
+What that costs is the frozen 74: the row is `13 + 48 + 12 + 34 + 13` = 120 on
+one-line content, and the section 512 rather than 374 with three rows in it. What
+it keeps is every other frozen number, all three working service links, the frozen
+trailing edge they align to, and **one layout at every width** — the
+`layout-w390dp/` variant an earlier revision of this PR needed is gone.
+
+The frozen slot could not have been taken literally in any case. On `History
+Item 1` (`2399:31072`) the text column HUGs to 169, which pushes the trailing
+container's right edge to **336.15** inside a row whose content ends at **311**.
+That row overflows itself in the frozen frame, which is what a mock does and a
+real row cannot.
 
 ### The hidden `Ещё` button is not drawn
 
@@ -227,27 +226,26 @@ asserted present and wired by `PlayerHistoryLayoutTest`.
 ## Validation
 
 `PlayerHistoryLayoutTest` measures the section at 320/360/390/412dp in both
-themes, and sets `screenWidthDp` as well as the measure width so each variant is
-the one that device would actually inflate. Byte-identical on API 24 and API 36
-for every anchor:
+themes. Byte-identical on API 24 and API 36 for every anchor:
 
 ```
-  section@1242px (473dp)   heading 84px (32dp)
-  row 195px (74dp) at 390/412      row 305px (116dp) at 320/360
+  section@1242px (473dp)   heading 84px (32dp)   row 316px (120dp) at every width
 ```
 
-It asserts the frozen 374 on the page the frozen frame draws — three rows with the
-button under them, meaning a fourth entry behind it — and 304 for a history of
-exactly three, where the button is correctly gone. It also asserts `controls y`
-at 363, so a regression in the section cannot move the upper section #42 froze.
+It asserts 512 on the page the frozen frame draws — three rows with the button
+under them, meaning a fourth entry behind it — and 442 for a history of exactly
+three, where the button is correctly gone. It asserts the links sit below the text
+and 12 clear of it, and that the title column is 195 at the frozen width. It also
+asserts `controls y` at 363, so a regression in the section cannot move the upper
+section #42 froze.
 
 On the running app, both themes, real history from the live API:
 
 ```
   390dp  section 358dp @552 (+44 status inset)   3 rows, "Показать ещё" offered
-         18:00 SOMEDAY, SOMEWHERE / JUNGLE       covers resolved per row
-         17:55 BORDERLINE / TAME IMPALA
-         17:52 LOADED WITH PEARLS / BALANCING ACT
+         21:06 CARRY ME / BOMBAY BICYCLE CLUB    covers resolved per row
+         21:04 4.3 FORTY / KNOX                  rows 120, 120, 120dp
+         21:00 EVERGREEN / YOUNG THE GIANT       every line unwrapped
 ```
 
 `capture-player.mjs` step 6 is now `06-history-inline` and step 7

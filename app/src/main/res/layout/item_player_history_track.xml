@@ -1,38 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  PLAYER Broadcast History row - the NARROW adaptation, under 390dp.
+  PLAYER Broadcast History row, frozen 3.6.6 canonical (Phase C).
 
-  Same source and same parts as layout-w390dp/item_player_history_track.xml,
-  which carries the frozen composition and the full provenance. The only
-  difference is where the three service links sit, and it is forced by
-  arithmetic rather than chosen:
+  Source: `Broadcast History Section > History Item N` - light nodes 2396:30794,
+  2399:31072, 2399:31091; dark 2444:18298, 2444:18316, 2444:18334. All six are
+  the same row and differ only in their fills.
 
-    row width      screen - 32 section margin - 34 section padding
-    text column    row - 26 row padding - 38.98 time - 40 artwork
-                       - 3x12 gaps - 82 trailing group
+  The frozen row is 324x74 with cornerRadius 8 and a 1px INSIDE stroke, and it
+  paints neither: it has no fill and its stroke is #000000 at opacity 0. So there
+  is no card here, only 13 of padding around its content.
 
-      412dp  ->  346 row  ->  135 of text    the frozen composition
-      390dp  ->  324 row  ->  113 of text    the width it was frozen at
-      360dp  ->  294 row  ->   83 of text    ~9 characters to a line
-      320dp  ->  254 row  ->   43 of text    "CRYOGEN" breaks over three lines
+     0    13         51.98        63.98            102.98              311
+     |    | time     |  gap 12    | 40x40 r6 art   | gap 12  title     |
+          | 38.98 R  |            |                |         artist    |
+          |                                    gap 12  service links   |
 
-  Everything competing for that column is fixed by the design or by the brief -
-  the 40 artwork is specified, the 38.98 time box is the frozen one, and the
-  three service links are the app's own function - so the only thing that can
-  move is where the links go, and below 390 they go under the text. Measured, a
-  42-character Russian title sets over 7 lines in the 83dp column at 360 and over
-  4 in the 177dp this file gives it there.
+  **The service links are under the text, not beside it.**
 
-  390 rather than some rounder number because 390 is the width the section was
-  frozen at: the frozen composition is reproduced exactly wherever there is room
-  for it and adapted only where there is not.
+  The frozen row puts two buttons in a trailing slot and names them "Button -
+  Mock platform icons using generic material symbols for layout" - placeholders,
+  self-declared. The app has three real ones, and three in the frozen 22x34 box
+  measure 82 wide. Beside the text that left the title column 113 at the frozen
+  width, where a real track name wraps hard: LOADED WITH PEARLS set over three
+  lines and SOMEDAY, SOMEWHERE over two, measured on live history. Under the text
+  the column is 195 and both fit on one line.
 
-  Nothing else changes. Same paddings, same 40dp artwork, same time box, same
-  type, same colours, same ids, same no-ellipsis rule. The row is 116 tall on
-  one-line content here against the frozen 74, which is the cost of the reflow
-  and is why it is confined to widths that cannot do it any other way. This file
-  is the default because resource qualifiers only add: -w390dp catches 390 and
-  wider, and everything narrower falls here.
+  The frozen slot could not be reproduced literally in any case. On `History
+  Item 1` (2399:31072) the hugging text column pushes the trailing container's
+  right edge to 336.15 inside a row whose content ends at 311 - the mock overflows
+  its own row, which is what a mock does and a real row cannot.
+
+  So real content wins over the mock's two-icon slot, by owner decision, at every
+  width. What that costs is the frozen 74: the row is 120 on one-line content -
+  13 + 48 + 12 + 34 + 13 - and the section is 512 rather than 374 with three rows
+  in it. What it keeps is every other frozen number, all three working service
+  links, and one layout instead of a width-qualified pair.
+
+  **Height.** 74 is 13 + 48 + 13, and the 48 is one line of the title's 28 over
+  one line of the artist's 20 - the height of the mock's content, not of real
+  content. Every vertical number here is therefore a MINIMUM: the row grows when
+  a track name needs a second line and shrinks back when it does not.
+
+  No maxLines and no ellipsis, which is the standing owner decision for History
+  rows recorded on item_history_track.xml: a long Russian title adds a line
+  rather than losing its end. The row is the thing that gives.
+
+  **Alignment.** Time and artwork are centred against each other - the frozen
+  time box sits at y=14 in a 48 content row with height 20, and the artwork at
+  y=4 with height 40, both exactly centred - so they stay centred as the row
+  grows.
 -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -42,6 +58,12 @@
     android:layout_height="wrap_content"
     android:padding="@dimen/player_history_row_padding">
 
+    <!--
+      `Container > Container > NN:NN`, 38.98 wide with the text RIGHT aligned
+      inside it. Onest Regular 14/20 on `text_secondary` - Broadcast History's
+      timestamp is Onest by the typography contract, and #42474E / #B3C4D1 is
+      exactly that role on both pages.
+    -->
     <TextView
         android:id="@+id/tv_time"
         android:layout_width="@dimen/player_history_time_width"
@@ -56,6 +78,13 @@
         app:layout_constraintTop_toTopOf="@id/artwork"
         tools:text="10:45" />
 
+    <!--
+      `Background` + its `Album Art` child: a 40x40 r6 plate with an image fill
+      set to CROP over it. HistoryTrack has no artwork field, so the cover is
+      resolved from the row's artist and track through ArtworkRepository - the
+      app's single source of truth for artwork, and already the ViewModel's - and
+      the plate is what shows until it arrives, or for good if nothing is found.
+    -->
     <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/artwork"
         android:layout_width="@dimen/player_history_artwork_size"
@@ -68,7 +97,19 @@
         app:layout_constraintTop_toTopOf="parent"
         app:shapeAppearanceOverlay="@style/ShapeAppearance.Myata.PlayerHistoryArtwork" />
 
-    <!-- The text runs to the row's own edge here: nothing is beside it. -->
+    <!--
+      `Container > Container`: the title above the artist, no gap between them -
+      the frozen boxes abut at 28 and 48. Onest for both, by the typography
+      contract's Broadcast History entry; 17/28 on `text_primary` over 14/20 on
+      `text_secondary`, each an exact role match on both pages.
+
+      The column runs to the row's own edge: nothing is beside it any more.
+
+      The frozen mock uppercases nothing - "CRYOGEN", "MUSE" and the rest are
+      stored that way in the design - so no textAllCaps here. The History bottom
+      sheet uppercases its artist in code; the frozen section gives no instruction
+      to, so the inline row shows what the API returns.
+    -->
     <TextView
         android:id="@+id/tv_title"
         android:layout_width="0dp"
@@ -95,8 +136,9 @@
         tools:text="BLOSSOMS" />
 
     <!--
-      Under both the artwork and the text, whichever is taller, and right-aligned
-      so the group keeps the frozen row's trailing edge.
+      Under whichever of the artwork and the text runs deeper, and right-aligned
+      so the group keeps the frozen row's trailing edge. The 12 above it is the
+      row's own gap, the same one between time, artwork and text.
     -->
     <androidx.constraintlayout.widget.Barrier
         android:id="@+id/content_bottom"
@@ -109,7 +151,7 @@
         android:id="@+id/music_services"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/player_history_service_gap"
+        android:layout_marginTop="@dimen/player_history_row_gap"
         android:orientation="horizontal"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/content_bottom">

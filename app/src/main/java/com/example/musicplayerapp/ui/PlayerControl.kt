@@ -15,8 +15,8 @@ import com.example.musicplayerapp.R
  * of the button itself.
  *
  * That is the fix. Before this, connecting hid the whole button
- * (`View.INVISIBLE`) and left a bare 23dp spinner where the control had been: no
- * fill behind it, and `on_primary` is #FFFFFF against a #F8F9FA background in
+ * (`View.INVISIBLE`) and left a bare spinner where the control had been: no fill
+ * behind it, and the glyph colour is near-white against a #F8F9FA background in
  * Light and #0F253E against a #0F253E background in Dark, so the spinner was
  * invisible in both themes and the control appeared to vanish mid-connect.
  *

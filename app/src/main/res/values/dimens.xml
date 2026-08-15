@@ -269,20 +269,30 @@
     <dimen name="player_play_size">80dp</dimen>
     <dimen name="player_play_corner">20dp</dimen>
     <!--
-      The two glyphs are not the same size, and only one of them is in the frozen
-      PLAYER frame. `Controls > play/pause > Container` HUGs its child and is
-      23.33 square, which is the pause glyph; the play glyph lives on its own node
-      (2484:59) and is 23.33 wide by 29.69 tall - the same width, taller. Both are
-      drawn at their own size and centred, so the control does not move between
-      them.
+      The painted ink of the two glyphs, from the owner-supplied FINAL assets in
+      tools/figma-export/player-icons/owner-final.
 
-      The progress indicator takes the pause box: it stands in for the glyph, and
-      the design has nothing to say about a connecting state.
+      The glyphs themselves have no dimen. Both drawables take the 80x80 control
+      box as their viewport so the supplied pathData can be verbatim - see
+      ic_player_play.xml - so their size is player_play_size, and what they paint
+      inside that box is a property of the path, not a number anything sets. The
+      supplied paths are 4-wide strokes with round joins, so the ink runs 2 beyond
+      the centreline on every side:
+
+        play    28..51.33 x 25.0022..54.9979   ->  27.33 x 33.9957
+        pause   28.335..51.665, both axes      ->  27.33 x 27.33
+
+      Same width, play taller - the relationship the superseded 23.33x29.69
+      against 23.33-square also had. It is invisible in use either way: the 80x80
+      surface is what is seen and it belongs to the button, so the control cannot
+      change size between faces. PlayerControlRenderTest rasterises the control
+      and measures those two boxes against those two literals.
+
+      The progress indicator does need one, because it is a real view: it takes
+      the pause ink's box, standing in for the glyph, the design having nothing to
+      say about a connecting state.
     -->
-    <dimen name="player_pause_glyph_size">23.33dp</dimen>
-    <dimen name="player_play_glyph_width">23.33dp</dimen>
-    <dimen name="player_play_glyph_height">29.69dp</dimen>
-    <dimen name="player_play_icon">23.33dp</dimen>
+    <dimen name="player_play_icon">27.33dp</dimen>
     <dimen name="player_action_width">49dp</dimen>
     <dimen name="player_action_height">54dp</dimen>
     <!--
@@ -334,10 +344,17 @@
         38.98  time, RIGHT aligned    12   40x40 r6 artwork    12   title/artist
 
       74 is 13 + 48 + 13, and the 48 is the frozen mock's title (28) over its
-      artist (20). That is the height of ONE line of each. Real metadata does not
-      fit on one line of a ~100dp column, so these are minima and the row grows -
-      forcing 74 would mean truncating a real track name to preserve the height of
-      a mock one. See item_player_history_track.xml for the line caps.
+      artist (20). That is the height of ONE line of each, so these are minima and
+      the row grows - forcing 74 would mean truncating a real track name to
+      preserve the height of a mock one.
+
+      The row the app draws measures 120 on one-line content, not 74: the three
+      service links sit under the text rather than in the frozen trailing slot,
+      which adds 12 + 34 below the 48. See item_player_history_track.xml for the
+      measurement behind that - beside the text they left the title column 113 at
+      the frozen width and real names wrapped hard. 120 is what the row comes to,
+      not a number set anywhere, so it has no dimen; this one stays because the
+      section's empty and loading states reserve exactly the frozen band.
     -->
     <dimen name="player_history_row_height">74dp</dimen>
     <dimen name="player_history_row_padding">13dp</dimen>
@@ -350,17 +367,22 @@
     <dimen name="player_history_artist_height">20dp</dimen>
 
     <!--
-      The row's trailing controls. The frozen slot is 51.17x34 holding two
-      buttons explicitly named "Mock platform icons using generic material
-      symbols for layout" - placeholders, self-declared. The app's three real
-      service links go here instead, each in a button box of the frozen 22x34, so
-      the group is 22x3 + 8x2 = 82 rather than 51.17.
+      The row's service links. The frozen slot is 51.17x34 holding two buttons
+      explicitly named "Mock platform icons using generic material symbols for
+      layout" - placeholders, self-declared. The app's three real service links
+      go in the frozen 22x34 button box, 8 apart, which is the gap the frozen
+      pair itself uses (its second button starts at x=30 against a 22 first).
+      Three of them measure 82 rather than 51.17.
+
+      They sit UNDER the title and artist rather than in the trailing slot. At 82
+      beside the text the title column came out at 113 at the frozen width, and
+      real names wrapped hard - LOADED WITH PEARLS over three lines on live
+      history. Under it the column is 195 and the same names fit on one line.
 
       That the frozen slot cannot be taken literally is visible in the frame
       itself: on `History Item 1` (2399:31072) the text column HUGs to 169 and
       pushes this container to x=284.98, which puts its right edge at 336.15
-      inside a row whose content ends at 311. The mock overflows its own row. In a
-      real row the text column FILLs and the trailing group is what it measures.
+      inside a row whose content ends at 311. The mock overflows its own row.
     -->
     <dimen name="player_history_service_width">22dp</dimen>
     <dimen name="player_history_service_height">34dp</dimen>

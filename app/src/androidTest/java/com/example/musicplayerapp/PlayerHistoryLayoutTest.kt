@@ -27,12 +27,16 @@ import kotlin.math.roundToInt
  * frame - light node 2396:30784, dark 2444:18288.
  *
  * The section sits at 552 of a 1022-tall frame. The page starts at 79, so 473
- * here, which is 30 below where `Controls` ends. Inside it the frozen numbers add
- * up exactly, and with three one-line rows the whole thing is 374:
+ * here, which is 30 below where `Controls` ends. Every frozen number inside it is
+ * reproduced:
  *
- *   17  padding   32  heading   16  gap   74  row x3   16  gap   54  button   17
+ *   17  padding   32  heading   16  gap   row x3   16  gap   54  button   17
  *
  *      13  row padding   38.98  time (RIGHT)   12   40x40 r6 art   12   text
+ *                        12   service links, on their own line
+ *
+ * The row is the one part that is not the frozen figure, so the section adds up
+ * to 512 rather than 374 with three one-line rows in it.
  *
  * Two things here are deliberately NOT the frozen numbers, and both are asserted
  * as such rather than skipped:
@@ -42,17 +46,15 @@ import kotlin.math.roundToInt
  *    to grow when it does - truncating a real track name to hold a mock's height
  *    is the defect this checks for.
  *
- *  - **Below 390 the row reflows.** The frozen composition leaves the text 43dp
- *    at 320 and 83 at 360, so under the width it was frozen at the three service
- *    links move below the text and the row is 116 rather than 74. Both shapes are
- *    asserted here; neither is allowed to appear at the other's width.
- *
- *  - **The trailing group is 82, not 51.17.** The frozen slot holds two buttons
- *    named "Mock platform icons using generic material symbols for layout"; the
- *    app's three real service links go in the frozen 22x34 box instead. The frozen
- *    slot cannot be taken literally anyway: on `History Item 1` (2399:31072) the
- *    hugging text column pushes it to a right edge of 336.15 inside a row whose
- *    content ends at 311.
+ *  - **The service links are under the text, at every width.** The frozen slot
+ *    holds two buttons named "Mock platform icons using generic material symbols
+ *    for layout"; the app's three real ones go in the frozen 22x34 box and measure
+ *    82. Beside the text that left the title column 113 at the frozen width and
+ *    real names wrapped hard, so by owner decision real content wins over the
+ *    mock's slot. The row is 120 on one-line content - 13 + 48 + 12 + 34 + 13 -
+ *    and the section 512 with three rows in it. The frozen slot could not be taken
+ *    literally anyway: on `History Item 1` (2399:31072) the hugging text column
+ *    pushes it to a right edge of 336.15 inside a row whose content ends at 311.
  */
 @RunWith(AndroidJUnit4::class)
 class PlayerHistoryLayoutTest {
@@ -70,9 +72,9 @@ class PlayerHistoryLayoutTest {
         onMainActivity { activity ->
             for (night in listOf(false, true)) {
                 for (widthDp in widthsDp) {
-                    // screenWidthDp as well as the measure width: the row has a
-                    // -w360dp variant, so measuring the wrong one at a narrow
-                    // width would test a layout that device would never inflate.
+                    // screenWidthDp as well as the measure width, so anything
+                    // width-qualified resolves the way it would on that device.
+                    // The row itself is now one layout at every width.
                     sweep(inflaterFor(activity, night, widthDp), if (night) "dark" else "light", night, widthDp)
                 }
             }
@@ -97,11 +99,6 @@ class PlayerHistoryLayoutTest {
             val widthPx = dp(widthDp).roundToInt()
             val where = "$theme@${widthDp}dp"
 
-            // Under 390 - the width the section was frozen at - the row reflows
-            // its service links below the text: the frozen composition leaves
-            // 83dp of text column at 360 and 43 at 320. See
-            // layout/item_player_history_track.xml.
-            val frozenRow = widthDp >= 390
 
             /* ---- the section, with the three rows the frozen frame draws ---- */
 
@@ -148,13 +145,9 @@ class PlayerHistoryLayoutTest {
             val artist = row.findViewById<TextView>(R.id.tv_artist)
             val services = row.findViewById<ViewGroup>(R.id.music_services)
 
-            // 74 in the frozen composition; 116 once the links drop below the
-            // text - 13 + 48 + 8 + 34 + 13. Both are stated, neither is a floor
-            // being quietly missed.
-            expect(
-                where, "row height (one-line content)", row.height,
-                if (frozenRow) dp(74) else dp(116), tolerance = dp(1.5f),
-            )
+            // 120, not the frozen 74: 13 + 48 + 12 + 34 + 13, the links having
+            // moved below the text. Stated, not a floor being quietly missed.
+            expect(where, "row height (one-line content)", row.height, dp(120), tolerance = dp(1.5f))
             expect(where, "time x in row", leftIn(time, row), dp(13))
             expect(where, "time width", time.width, dp(38.98f))
             // The frozen time box is RIGHT aligned inside its fixed 38.98.
@@ -179,8 +172,8 @@ class PlayerHistoryLayoutTest {
             atLeast(where, "title box", title.height, dp(28))
             atLeast(where, "artist box", artist.height, dp(20))
 
-            // Three service links in the frozen 22x34 button box, on the row's
-            // trailing edge in both variants - only their line changes.
+            // Three service links in the frozen 22x34 button box, keeping the
+            // frozen row's trailing edge on their own line.
             expect(where, "service group width", services.width, dp(22 * 3 + 8 * 2))
             expect(where, "service group right edge", leftIn(services, row) + services.width, row.width - dp(13))
             for (id in listOf(R.id.btn_spotify, R.id.btn_apple_music, R.id.btn_yandex)) {
@@ -189,28 +182,30 @@ class PlayerHistoryLayoutTest {
                 expect(where, "service button height", button.height, dp(34))
             }
 
-            // The reflow is the whole difference between the two variants, so it
-            // is asserted rather than inferred: beside the text above 360, under
-            // it below.
-            val servicesBesideText = rectIn(services, row).top < rectIn(artist, row).bottom
-            if (frozenRow && !servicesBesideText) {
-                findings += "$where: the service links dropped below the text at the frozen width"
-            }
-            if (!frozenRow && servicesBesideText) {
+            // Under the text, at every width - that is the whole point of the
+            // change, so it is asserted rather than inferred.
+            if (rectIn(services, row).top < rectIn(artist, row).bottom) {
                 findings += "$where: the service links are still beside a ${
                     (title.width / dm.density).roundToInt()
                 }dp text column"
             }
+            expect(
+                where, "gap between text and service links",
+                rectIn(services, row).top - rectIn(artist, row).bottom, dp(12), tolerance = dp(1.5f),
+            )
 
             noOverlap(where, "time", time, "artwork", art, row)
             noOverlap(where, "artwork", art, "title", title, row)
             noOverlap(where, "title", title, "services", services, row)
             noOverlap(where, "artist", artist, "services", services, row)
 
-            // Whatever the variant, the text column has to be wide enough to set
-            // a word on a line. 43dp - what the frozen composition leaves at 320 -
-            // breaks "CRYOGEN" over three lines.
-            atLeast(where, "title column", title.width, dp(80))
+            // The column has to be wide enough to set a real name on a line. At
+            // the frozen width it is 195 with the links moved off it, against the
+            // 113 they left when they were beside it.
+            atLeast(where, "title column", title.width, dp(120))
+            if (widthDp == 390) {
+                expect(where, "title column at the frozen width", title.width, dp(195), tolerance = dp(1.5f))
+            }
             requireOneLine(title, "$where/title")
             requireOneLine(artist, "$where/artist")
 
@@ -261,20 +256,21 @@ class PlayerHistoryLayoutTest {
             noClipping(manyMore, "$where/show-more label")
 
             /*
-             * The frozen 374, at the frozen width.
+             * The section's own height, at the frozen width.
              *
              * This is the page the frozen frame draws and not the three-entry
              * one: it shows three rows with "Показать ещё" under them, which
              * means there is a fourth entry behind it. A history of exactly three
-             * hides the button and the section is 304 - the same numbers, one
+             * hides the button and the section is 442 - the same numbers, one
              * part fewer.
              *
-             * Nothing pins 374 anywhere. It is 17 + 32 + 16 + 3x74 + 16 + 54 + 17
-             * arriving at the number the frozen frame records.
+             * Nothing is pinned. It is 17 + 32 + 16 + 3x120 + 16 + 54 + 17, every
+             * term the frozen one except the row, which carries the service links
+             * on their own line and so measures 120 against the mock's 74.
              */
             if (widthDp == 390) {
-                expect(where, "frozen section height", manySection.height, dp(374), tolerance = dp(1.5f))
-                expect(where, "section height with all of a 3-entry history up", section.height, dp(304), tolerance = dp(1.5f))
+                expect(where, "section height, 3 rows + button", manySection.height, dp(512), tolerance = dp(2f))
+                expect(where, "section height with all of a 3-entry history up", section.height, dp(442), tolerance = dp(2f))
             }
             if (manyMore.visibility != View.VISIBLE) {
                 findings += "$where: \"Показать ещё\" is hidden over a history of 30 with only " +
@@ -317,8 +313,7 @@ class PlayerHistoryLayoutTest {
             if (longTitleView.lineCount <= 1) {
                 findings += "$where: a 42-character title is on one line in a ~101dp column - it is being cut"
             }
-            val oneLineRow = if (frozenRow) dp(74) else dp(116)
-            if (longRow.height <= oneLineRow + 1) {
+            if (longRow.height <= dp(120) + 1) {
                 findings += "$where: the row stayed at ${longRow.height}px under long metadata; " +
                     "rows must grow rather than truncate"
             }

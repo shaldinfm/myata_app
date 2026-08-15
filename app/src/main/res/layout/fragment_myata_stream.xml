@@ -167,7 +167,7 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:tint="@color/on_primary" />
+                    app:tint="@color/player_play_glyph" />
 
                 <ImageView
                     android:id="@+id/btn_history"
@@ -187,16 +187,17 @@
                   nothing moves or changes size between Play, connecting and
                   Pause. Declared after `btn_play`, so it draws on top of it.
 
-                  `on_primary` is legible here only because the fill is behind it:
-                  the tint is #FFFFFF on a #1C4771 surface in Light and #0F253E on
-                  a #5FD9B4 one in Dark. See PlayerControl for what hiding the
+                  It takes the glyph's own colour, `player_play_glyph`, because it
+                  stands in for the glyph: #F8F9FA on a #1C4771 surface in Light
+                  and #0F253E on a #5FD9B4 one in Dark. Legible only because the
+                  fill is behind it - see PlayerControl for what hiding the
                   surface used to do to it.
                 -->
                 <ProgressBar
                     android:id="@+id/loading_spinner"
                     android:layout_width="@dimen/player_play_icon"
                     android:layout_height="@dimen/player_play_icon"
-                    android:indeterminateTint="@color/on_primary"
+                    android:indeterminateTint="@color/player_play_glyph"
                     android:visibility="gone"
                     app:layout_constraintBottom_toBottomOf="@id/btn_play"
                     app:layout_constraintEnd_toEndOf="@id/btn_play"

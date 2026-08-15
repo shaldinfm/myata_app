@@ -97,9 +97,9 @@ class MyataStreamFragment() : Fragment() {
         binding.mainSong.setOnClickListener { copyTrackInfoToClipboard() }
 
         // One control for all three streams, with three faces. The frozen design
-        // tints play/pause by role - `primary` on the surface, `on_primary` on the
-        // glyph - not by station, so the six per-stream drawables this replaces
-        // have no canonical counterpart.
+        // tints play/pause by role - `primary` on the surface, `player_play_glyph`
+        // on the glyph - not by station, so the six per-stream drawables this
+        // replaces have no canonical counterpart.
         //
         // Both inputs feed one projection instead of one observer owning the glyph
         // and the other owning visibility. That is what the two used to do, and it

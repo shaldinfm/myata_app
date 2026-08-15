@@ -65,6 +65,24 @@
         <item name="colorOnSecondary">@color/black</item>
         <item name="android:statusBarColor">@color/main_fragment</item>
     </style>
+    <!--
+      AppTheme0..9 are the ten random window backgrounds. MainActivity picks one
+      per launch; this is product behaviour, not duplicate styles.
+
+      screen0..9 live in res/drawable-nodpi/ and must stay there. An unqualified
+      res/drawable/ does not mean "any density" - it means mdpi, so the framework
+      scales the bitmap up by the device density on decode. At 1080x1921 on a
+      420dpi device that decoded 2835x5043, 57MB per background, and the
+      instrumented suite died with OutOfMemoryError before it could finish.
+      nodpi means what drawable/ was mistaken for: decode as authored, 1080x1921,
+      8.3MB, the same on every device.
+
+      Nothing is lost by not scaling. A window background is drawn at the size of
+      the window, not at its intrinsic size (BitmapDrawable gravity FILL), so the
+      density scale never affected framing - only how many pixels were decoded
+      before being stretched back. 1080 wide is exactly the width of the screens
+      this app runs on, so the drawn result is unchanged.
+    -->
     <style name="AppTheme0" parent="Theme.Myata.Base">
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>

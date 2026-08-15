@@ -24,6 +24,7 @@
       that varies. Phase C's Broadcast History card lands in the space below.
     -->
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/stream_scroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
@@ -202,6 +203,152 @@
                     app:layout_constraintStart_toStartOf="@id/btn_play"
                     app:layout_constraintTop_toTopOf="@id/btn_play" />
             </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!--
+              `Broadcast History Section` (Phase C) - light node 2396:30784, dark
+              2444:18288. 358 wide at 552 of the frozen frame, which is 473 on the
+              page, 30 below where `Controls` ends.
+
+              This is the one block on the page that is NOT anchored absolutely.
+              Everything above it is positioned by its own offset from the page
+              top so that a text box needing more height grows into the gap above
+              the next block instead of pushing it down - see dimens.xml. That
+              trick needs a next block to grow into, and there is nothing below
+              this one: it is the end of the page, its height is HUG in the frozen
+              frame too, and its content is real history rather than three mock
+              rows. So it starts at the frozen 473 and is allowed to run as long as
+              the history it is holding.
+
+              The frozen section is 374 tall with three rows in it. Ten rows is
+              about 1000, and thirty about 2600, which the NestedScrollView above
+              was already there to carry.
+            -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/history_section"
+                style="@style/PlayerHistoryCard"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/player_margin"
+                android:layout_marginTop="@dimen/player_history_top"
+                android:layout_marginEnd="@dimen/player_margin"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/player_history_padding">
+
+                    <!--
+                      `Margin > Container > Heading 2`, 24/32 Bold on
+                      `text_primary`. Montserrat: section headings are Montserrat
+                      by the typography contract, at the weight the frozen node
+                      states. The 32 box is a minimum for the same reason the
+                      track info's boxes are - Figma honours a declared line
+                      height literally and Android cannot clip to it.
+
+                      Same string as the control in the `dislike` slot: one name
+                      for one thing.
+                    -->
+                    <TextView
+                        android:id="@+id/history_heading"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/player_history_heading_height"
+                        android:text="@string/player_history"
+                        android:textAppearance="@style/TextAppearance.Myata.Montserrat.Bold.24_32"
+                        android:textColor="@color/text_primary" />
+
+                    <!--
+                      The frozen `Ещё` button in the heading row is
+                      `visible: false` on both pages and is not drawn here.
+                    -->
+
+                    <!--
+                      `List`. nestedScrollingEnabled=false because the page above
+                      already scrolls and two nested scrollers would fight; with
+                      the list at wrap_content inside it, this measures every row
+                      it holds, which is what the frozen HUG section does and what
+                      the 30-entry ceiling keeps affordable.
+                    -->
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/history_list"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/player_history_heading_gap"
+                        android:nestedScrollingEnabled="false"
+                        android:overScrollMode="never"
+                        tools:itemCount="3"
+                        tools:listitem="@layout/item_player_history_track" />
+
+                    <!--
+                      Empty, and the failed-request state with it: the repository
+                      returns an empty list rather than raising, so the two are one
+                      state. It takes the list's own top gap so the section keeps
+                      its shape when it holds no rows.
+                    -->
+                    <TextView
+                        android:id="@+id/history_empty"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/player_history_heading_gap"
+                        android:gravity="center"
+                        android:minHeight="@dimen/player_history_row_height"
+                        android:text="@string/player_history_empty"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.17_28"
+                        android:textColor="@color/text_secondary"
+                        android:visibility="gone"
+                        tools:visibility="gone" />
+
+                    <!--
+                      Loading. The frozen frame has nothing to say about it, so it
+                      takes the same band the first row would and the section does
+                      not resize when the rows arrive. Only ever shown when there
+                      is nothing up yet - a refresh over existing rows leaves them
+                      alone rather than making the page jump.
+                    -->
+                    <ProgressBar
+                        android:id="@+id/history_loading"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/player_history_row_height"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="@dimen/player_history_heading_gap"
+                        android:indeterminateTint="@color/primary"
+                        android:visibility="gone"
+                        tools:visibility="gone" />
+
+                    <!--
+                      `Button:margin > Button`, 324x54 r12, 16 above it. Montserrat
+                      Medium 22/28: the typography contract puts buttons and CTAs
+                      in Montserrat Medium at 22, which is what the frozen node's
+                      22 with its pre-migration Muller weight maps to.
+
+                      It is hidden, not disabled, when there is nothing left to
+                      show - the frozen frame draws it over a list that has more
+                      behind it, and a permanently inert control is what the brief
+                      rules out.
+                    -->
+                    <TextView
+                        android:id="@+id/history_show_more"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/player_history_more_gap"
+                        android:background="@drawable/bg_player_history_more"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:gravity="center"
+                        android:minHeight="@dimen/player_history_more_height"
+                        android:text="@string/player_history_show_more"
+                        android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.22_28"
+                        android:textColor="@color/player_history_more_label"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>
 </layout>

@@ -77,4 +77,12 @@
     -->
     <color name="collection_empty_disc_outer">#FFCCFF</color>
     <color name="collection_empty_disc_inner">#E29AE2</color>
+
+    <!--
+      PLAYER Broadcast History, "Показать ещё" (Phase C). Both are pairs - the
+      container matches no dark surface role and the label is `primary` here but
+      `text_heading` in light - see values/colors.xml.
+    -->
+    <color name="player_history_more_container">#1C3F5F</color>
+    <color name="player_history_more_label">#5FD9B4</color>
 </resources>

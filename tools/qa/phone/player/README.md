@@ -1,4 +1,4 @@
-# PLAYER evidence (Phase B)
+# PLAYER evidence (Phase B, extended by Phase C)
 
 Produced by [`../capture-player.mjs`](../capture-player.mjs) against the running
 app.
@@ -26,13 +26,19 @@ themes on API 24 are covered by `PlayerLayoutTest`.
 
 ```
 01-player-idle       02-playing          03-favourited
-04-gold              05-xtra             06-history-sheet
-07-paused            08-after-background
+04-gold              05-xtra             06-history-inline
+07-history-revealed  08-paused           09-after-background
 ```
 
 Steps 4 and 5 swipe the pager, so they check that switching stream still works and
-that playback follows. Step 6 checks only that the History entry still opens its
-bottom sheet - Phase C owns the redesign, and Phase B is not allowed to touch it.
+that playback follows.
+
+Steps 6 and 7 are Phase C's. `Broadcast History Section` is on the page now, so
+the entry in the frozen `dislike` slot scrolls to it instead of opening a dialog
+over it, and there is no sheet to dismiss. Step 7 taps "Показать ещё" and records
+the row count either side: `rowsBefore` and `rowsAfter` are what is *on screen*,
+which uiautomator is the limit of, so the reveal shows as 3 -> 5 rather than
+3 -> 13. A control that did nothing would leave them equal.
 
 `play="Подключение"` at a step is the control's connecting face: the 80x80 surface
 stays on screen and the progress indicator replaces the glyph inside it. It shows
@@ -40,9 +46,11 @@ up more on API 24, whose image cannot reach the stream host.
 
 Connecting used to read `play="null"` instead, meaning `btn_play` was not in the
 hierarchy at all: the button was hidden and only a bare, invisible spinner was
-left. That is the defect the play/pause follow-up fixed, so a `null` at any step
-but `06-history-sheet` would mean it had come back. At that step the sheet is over
-the screen and there is genuinely no control to read.
+left. That is the defect the play/pause follow-up fixed, so a `null` at **any**
+step now means it has come back. Phase B had to except `06-history-sheet`, where
+the bottom sheet covered the screen and there was genuinely no control to read;
+the inline section that replaced it leaves the controls on the page, so the
+exception is gone.
 
 ## Re-running
 

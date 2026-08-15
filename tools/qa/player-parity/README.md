@@ -7,9 +7,18 @@ Bounds and unit tests say the app hits the frozen numbers. They cannot say it
 node tools/qa/player-parity/render-final.mjs
 ```
 
-writes `final-light.svg` and `final-dark.svg`: the frozen PLAYER upper section
-drawn from `tools/figma-export/canonical/figma-canonical-{light,dark}-final.json`,
-node for node. Two placeholders are left in the SVG for whoever rasterises it -
+writes four files from
+`tools/figma-export/canonical/figma-canonical-{light,dark}-final.json`, node for
+node: `final-{light,dark}.svg`, the frozen PLAYER **upper section**, and
+`final-{light,dark}-full.svg`, the whole of `Main` — 390x926, upper section plus
+`Broadcast History Section` at y=552. The full pair is the same walk over the
+parent node, so the history section costs no drawing code of its own. It stops at
+`Main`: `BottomNavBar` sits below it at 946 and belongs to no phase of this
+migration.
+
+The history rows' `Album Art` nodes carry IMAGE fills, which the snapshot does not
+export, so the full render shows the frozen #E1E3E4 plate under them - which is
+also what the app shows until ArtworkRepository resolves a cover. Two placeholders are left in the SVG for whoever rasterises it -
 `__ARTWORK__` for the album art and `__OUTLINE__` for its 1px stroke - so the file
 stays small and carries no image bytes.
 

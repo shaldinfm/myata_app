@@ -294,4 +294,80 @@
     <dimen name="player_action_icon_height">23.33dp</dimen>
     <dimen name="player_action_icon_inset">12dp</dimen>
     <dimen name="player_action_icon_inset_bottom">19dp</dimen>
+
+    <!--
+      `Broadcast History Section`, frozen 3.6.6 canonical (Phase C).
+      Light node 2396:30784, dark 2444:18288 - identical geometry on both pages.
+
+      The frozen section is 358x374 at (16, 552) of a 1022-tall frame. The page
+      starts at 79, so its top is 552 - 79 = 473 in page coordinates, the same
+      convention the blocks above use. 30 below where `Controls` ends.
+
+      Its own height is HUG and adds up exactly, which is what lets every number
+      below be quoted rather than derived:
+
+        17   padding      32   heading      16   gap
+        74   row x3                         16   gap
+        54   button       17   padding      = 374
+
+      Unlike the blocks above this one, the section is NOT anchored absolutely:
+      it is the last thing on the page and everything inside it stacks, because
+      its content is real and its height is a function of that content. See the
+      row note below.
+    -->
+    <dimen name="player_history_top">473dp</dimen>
+    <dimen name="player_history_padding">17dp</dimen>
+    <dimen name="player_history_corner">20dp</dimen>
+    <dimen name="player_history_stroke">1dp</dimen>
+    <!-- `Margin > Container`, 324x32, and the 16 between it and `List`. -->
+    <dimen name="player_history_heading_height">32dp</dimen>
+    <dimen name="player_history_heading_gap">16dp</dimen>
+
+    <!--
+      `History Item N`, 324x74 r8 - the r8 and the 1px stroke are both there, but
+      the stroke is #000000 at opacity 0 and there is no fill, so the row paints
+      nothing of its own and the radius has no edge to round. It is recorded here
+      and deliberately has no dimen: a corner on a surface that is never drawn is
+      not reproducible, and declaring it would only be an unused resource
+      claiming otherwise. 13 of padding around a 48-tall content row:
+
+        38.98  time, RIGHT aligned    12   40x40 r6 artwork    12   title/artist
+
+      74 is 13 + 48 + 13, and the 48 is the frozen mock's title (28) over its
+      artist (20). That is the height of ONE line of each. Real metadata does not
+      fit on one line of a ~100dp column, so these are minima and the row grows -
+      forcing 74 would mean truncating a real track name to preserve the height of
+      a mock one. See item_player_history_track.xml for the line caps.
+    -->
+    <dimen name="player_history_row_height">74dp</dimen>
+    <dimen name="player_history_row_padding">13dp</dimen>
+    <dimen name="player_history_row_gap">12dp</dimen>
+    <dimen name="player_history_time_width">38.98dp</dimen>
+    <dimen name="player_history_time_height">20dp</dimen>
+    <dimen name="player_history_artwork_size">40dp</dimen>
+    <dimen name="player_history_artwork_corner">6dp</dimen>
+    <dimen name="player_history_title_height">28dp</dimen>
+    <dimen name="player_history_artist_height">20dp</dimen>
+
+    <!--
+      The row's trailing controls. The frozen slot is 51.17x34 holding two
+      buttons explicitly named "Mock platform icons using generic material
+      symbols for layout" - placeholders, self-declared. The app's three real
+      service links go here instead, each in a button box of the frozen 22x34, so
+      the group is 22x3 + 8x2 = 82 rather than 51.17.
+
+      That the frozen slot cannot be taken literally is visible in the frame
+      itself: on `History Item 1` (2399:31072) the text column HUGs to 169 and
+      pushes this container to x=284.98, which puts its right edge at 336.15
+      inside a row whose content ends at 311. The mock overflows its own row. In a
+      real row the text column FILLs and the trailing group is what it measures.
+    -->
+    <dimen name="player_history_service_width">22dp</dimen>
+    <dimen name="player_history_service_height">34dp</dimen>
+    <dimen name="player_history_service_gap">8dp</dimen>
+
+    <!-- `Button:margin > Button`, 324x54 r12, 16 above it. -->
+    <dimen name="player_history_more_gap">16dp</dimen>
+    <dimen name="player_history_more_height">54dp</dimen>
+    <dimen name="player_history_more_corner">12dp</dimen>
 </resources>

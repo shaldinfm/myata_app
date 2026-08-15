@@ -250,4 +250,46 @@
       art loads, instead of a hole.
     -->
     <color name="brand_player_artwork_backdrop">#1C4771</color>
+
+    <!--
+      PLAYER Broadcast History, "Показать ещё" (Phase C).
+
+      Provenance: canonical `Broadcast History Section > Button:margin > Button` -
+      light node 2396:30867, dark 2444:18353.
+
+      Both of these are PAIRS, not roles, and neither could be folded into an
+      existing token without being wrong in one theme:
+
+        container  #F8F9FA / #1C3F5F   light is exactly background and
+                                       surface_container; dark is neither -
+                                       surface_container is #1C4771 there, four
+                                       steps away, and surface is #142D47.
+
+        label      #003056 / #5FD9B4   light is exactly text_heading; dark is
+                                       exactly primary. text_heading is #F5F7FA
+                                       in dark and primary is #1C4771 in light,
+                                       so each role is right in one theme and
+                                       wrong in the other.
+
+      The button's stroke is not here: it is #E1E3E4 / #466D8F, which is the
+      `outline` role on both pages exactly, so it takes the token.
+    -->
+    <color name="player_history_more_container">#F8F9FA</color>
+    <color name="player_history_more_label">#003056</color>
+
+    <!--
+      PLAYER Broadcast History, the 40x40 r6 behind a row's album art.
+
+      Provenance: `History Item N > Container > Background` - light node
+      2396:30798, dark 2444:18302. #E1E3E4 on both canonical pages, so it belongs
+      with the fixed brand colours above and gets NO night variant.
+
+      It reads as `outline` in light only by coincidence of the palette - dark
+      `outline` is #466D8F while this stays #E1E3E4 - which is exactly why it is a
+      literal here and not that token. Same job as
+      brand_playlist_card_placeholder: the frozen `Album Art` child carries an
+      IMAGE fill set to CROP, so this is what shows while the cover loads, and it
+      is all that shows when ArtworkRepository finds nothing.
+    -->
+    <color name="brand_player_history_artwork_placeholder">#E1E3E4</color>
 </resources>

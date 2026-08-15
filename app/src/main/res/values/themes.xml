@@ -238,13 +238,26 @@
 
     <!--
       Mini Player artwork corner, frozen 3.6.6 canonical: the 48x48 `Container`
-      inside the pill has cornerRadius 8 and clips its image fill. The same 48x48
-      r8 thumbnail is what the Broadcast History row reuses, so this shape
-      appearance is deliberately not named after the mini player alone.
+      inside the pill has cornerRadius 8 and clips its image fill.
+
+      B2 expected the Broadcast History row to reuse this and left the name
+      general for that reason. The frozen section says otherwise: its thumbnail is
+      40x40 at r6 (`History Item N > Container > Background`, light 2396:30798),
+      not 48x48 at r8, so Phase C declares its own shape below instead of bending
+      this one. Only the mini player uses this now.
     -->
     <style name="ShapeAppearance.Myata.Artwork48" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">@dimen/mini_player_artwork_corner</item>
+    </style>
+
+    <!--
+      Broadcast History row artwork corner: the frozen 40x40 plate is r6 and its
+      `Album Art` child clips an IMAGE fill set to CROP.
+    -->
+    <style name="ShapeAppearance.Myata.PlayerHistoryArtwork" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/player_history_artwork_corner</item>
     </style>
 
     <!--
@@ -359,6 +372,47 @@
         <item name="android:scaleType">fitCenter</item>
         <item name="android:padding">12dp</item>
         <item name="tint">@color/player_control_action</item>
+    </style>
+
+    <!--
+      PLAYER Broadcast History section, frozen 3.6.6 canonical (Phase C).
+
+      `Broadcast History Section` - light node 2396:30784, dark 2444:18288:
+      358 wide, r20, on `surface` with a 1px INSIDE stroke on `outline`. Both
+      colours are exact matches to those roles on both canonical pages, so the
+      card needs no colour of its own.
+
+      Elevation 0. The frozen node does carry a DROP_SHADOW, but it is
+      `visible: false` - authored and switched off - so drawing one would be
+      reproducing a disabled property.
+    -->
+    <style name="PlayerHistoryCard">
+        <item name="android:layout_width">match_parent</item>
+        <item name="cardCornerRadius">@dimen/player_history_corner</item>
+        <item name="cardElevation">0dp</item>
+        <item name="cardBackgroundColor">@color/surface</item>
+        <item name="strokeColor">@color/outline</item>
+        <item name="strokeWidth">@dimen/player_history_stroke</item>
+    </style>
+
+    <!--
+      One service link in a Broadcast History row: the frozen button box, 22x34
+      with a fully round corner, holding the brand mark at its own aspect.
+
+      The frozen pair of these are self-declared placeholders - "Mock platform
+      icons using generic material symbols for layout" - so what goes in the box
+      is the app's real Spotify / Apple Music / Yandex marks, unchanged from the
+      History bottom sheet and the Collection row, and the box is what the design
+      states. Three of them, not two: dropping a working service link to match a
+      mock's count would lose function for nothing.
+
+      No tint: these are multi-colour brand marks and must not follow the theme.
+    -->
+    <style name="PlayerHistoryServiceButton">
+        <item name="android:layout_width">@dimen/player_history_service_width</item>
+        <item name="android:layout_height">@dimen/player_history_service_height</item>
+        <item name="android:background">?attr/selectableItemBackgroundBorderless</item>
+        <item name="android:scaleType">fitCenter</item>
     </style>
 
     <!--

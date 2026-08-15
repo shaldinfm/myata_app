@@ -557,19 +557,42 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
      */
     fun loadHistory() {
         val stream = currentStreamLive.value ?: "myata"
-        
+
         if (lastHistoryStream != stream) {
             _historyTracks.value = emptyList()
             lastHistoryStream = stream
         }
-        
+
         viewModelScope.launch {
             _historyLoading.value = true
-            val history = historyRepository.getHistory(stream)
-            _historyTracks.postValue(history.take(30))
+            val history = historyRepository.getHistory(stream, HISTORY_LIMIT)
+            _historyTracks.postValue(history.take(HISTORY_LIMIT))
             _historyLoading.value = false
         }
     }
+
+    /**
+     * A cover for one Broadcast History row, or null if none can be found.
+     *
+     * [HistoryTrack] carries artist, track and a timestamp and has nowhere to put
+     * artwork, while the frozen inline section draws a cover per row, so it is
+     * derived from the artist and track by [ArtworkRepository] - the app's single
+     * source of truth for artwork, which the now-playing metadata above already
+     * goes through and whose in-memory cache both therefore share. This adds a
+     * view of the existing history, not a second store beside it.
+     *
+     * The IO dispatch is here rather than in the repository on purpose.
+     * `fetchArtwork` performs blocking OkHttp calls without switching dispatcher
+     * and its two existing callers pass it whatever context they are on;
+     * repairing that is a change to a shared path with a foreground service on
+     * the other end of it, not something to fold into a screen migration. This
+     * call site states the context it needs.
+     */
+    suspend fun historyArtworkUrl(track: HistoryTrack): String? =
+        withContext(Dispatchers.IO) {
+            runCatching { artworkRepository.fetchArtwork(track.artist, track.title).coverUrl }
+                .getOrNull()
+        }
 
     fun formUrl(songArtist: List<String>): String{
         return "https://last.fm/music/${songArtist.get(0)
@@ -584,6 +607,18 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         const val CONTROLLER_MAX_ATTEMPTS = 5
         const val CONTROLLER_RETRY_BASE_MS = 500L
         const val CONTROLLER_RETRY_MAX_MS = 4_000L
+
+        /**
+         * How much Broadcast History the app holds, for every view of it.
+         *
+         * This used to disagree with itself: the fetch took
+         * `HistoryRepository.getHistory`'s default limit of 20 and the result was
+         * then trimmed with `take(30)`, so the 30 could never be reached and the
+         * real ceiling was the default nobody had written down here. Both ends
+         * now read this, so the number the app asks the API for and the number it
+         * keeps are the same number.
+         */
+        const val HISTORY_LIMIT = 30
 
         /** Hard ceiling on the whole retry sequence for one playlist load attempt. */
         const val PLAYLISTS_LOAD_BUDGET_MS = 12_000L

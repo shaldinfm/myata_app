@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PLAYER Broadcast History row - the NARROW adaptation, under 390dp.
+
+  Same source and same parts as layout-w390dp/item_player_history_track.xml,
+  which carries the frozen composition and the full provenance. The only
+  difference is where the three service links sit, and it is forced by
+  arithmetic rather than chosen:
+
+    row width      screen - 32 section margin - 34 section padding
+    text column    row - 26 row padding - 38.98 time - 40 artwork
+                       - 3x12 gaps - 82 trailing group
+
+      412dp  ->  346 row  ->  135 of text    the frozen composition
+      390dp  ->  324 row  ->  113 of text    the width it was frozen at
+      360dp  ->  294 row  ->   83 of text    ~9 characters to a line
+      320dp  ->  254 row  ->   43 of text    "CRYOGEN" breaks over three lines
+
+  Everything competing for that column is fixed by the design or by the brief -
+  the 40 artwork is specified, the 38.98 time box is the frozen one, and the
+  three service links are the app's own function - so the only thing that can
+  move is where the links go, and below 390 they go under the text. Measured, a
+  42-character Russian title sets over 7 lines in the 83dp column at 360 and over
+  4 in the 177dp this file gives it there.
+
+  390 rather than some rounder number because 390 is the width the section was
+  frozen at: the frozen composition is reproduced exactly wherever there is room
+  for it and adapted only where there is not.
+
+  Nothing else changes. Same paddings, same 40dp artwork, same time box, same
+  type, same colours, same ids, same no-ellipsis rule. The row is 116 tall on
+  one-line content here against the frozen 74, which is the cost of the reflow
+  and is why it is confined to widths that cannot do it any other way. This file
+  is the default because resource qualifiers only add: -w390dp catches 390 and
+  wider, and everything narrower falls here.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/history_row"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="@dimen/player_history_row_padding">
+
+    <TextView
+        android:id="@+id/tv_time"
+        android:layout_width="@dimen/player_history_time_width"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:maxLines="1"
+        android:minHeight="@dimen/player_history_time_height"
+        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+        android:textColor="@color/text_secondary"
+        app:layout_constraintBottom_toBottomOf="@id/artwork"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/artwork"
+        tools:text="10:45" />
+
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/artwork"
+        android:layout_width="@dimen/player_history_artwork_size"
+        android:layout_height="@dimen/player_history_artwork_size"
+        android:layout_marginStart="@dimen/player_history_row_gap"
+        android:background="@drawable/bg_player_history_artwork"
+        android:contentDescription="@string/player_history_artwork"
+        android:scaleType="centerCrop"
+        app:layout_constraintStart_toEndOf="@id/tv_time"
+        app:layout_constraintTop_toTopOf="parent"
+        app:shapeAppearanceOverlay="@style/ShapeAppearance.Myata.PlayerHistoryArtwork" />
+
+    <!-- The text runs to the row's own edge here: nothing is beside it. -->
+    <TextView
+        android:id="@+id/tv_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/player_history_row_gap"
+        android:minHeight="@dimen/player_history_title_height"
+        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.17_28"
+        android:textColor="@color/text_primary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/artwork"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="MEET ME IN LOVE" />
+
+    <TextView
+        android:id="@+id/tv_artist"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:minHeight="@dimen/player_history_artist_height"
+        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+        android:textColor="@color/text_secondary"
+        app:layout_constraintEnd_toEndOf="@id/tv_title"
+        app:layout_constraintStart_toStartOf="@id/tv_title"
+        app:layout_constraintTop_toBottomOf="@id/tv_title"
+        tools:text="BLOSSOMS" />
+
+    <!--
+      Under both the artwork and the text, whichever is taller, and right-aligned
+      so the group keeps the frozen row's trailing edge.
+    -->
+    <androidx.constraintlayout.widget.Barrier
+        android:id="@+id/content_bottom"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:barrierDirection="bottom"
+        app:constraint_referenced_ids="artwork,tv_artist" />
+
+    <LinearLayout
+        android:id="@+id/music_services"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/player_history_service_gap"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/content_bottom">
+
+        <ImageView
+            android:id="@+id/btn_spotify"
+            style="@style/PlayerHistoryServiceButton"
+            android:contentDescription="@string/history_open_spotify"
+            android:src="@drawable/ic_spotify" />
+
+        <ImageView
+            android:id="@+id/btn_apple_music"
+            style="@style/PlayerHistoryServiceButton"
+            android:layout_marginStart="@dimen/player_history_service_gap"
+            android:contentDescription="@string/history_open_apple_music"
+            android:src="@drawable/ic_apple_music" />
+
+        <ImageView
+            android:id="@+id/btn_yandex"
+            style="@style/PlayerHistoryServiceButton"
+            android:layout_marginStart="@dimen/player_history_service_gap"
+            android:contentDescription="@string/history_open_yandex_music"
+            android:src="@drawable/ic_yandex" />
+    </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

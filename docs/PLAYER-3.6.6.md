@@ -13,6 +13,13 @@ its existing bottom sheet and its existing entry point, and neither
 lower half is therefore not reproduced yet; the space is simply empty. That is a
 deliberate, temporary deviation, agreed before the work started.
 
+> **Phase C has since landed the lower half** — see
+> [PLAYER-HISTORY-3.6.6.md](PLAYER-HISTORY-3.6.6.md). The space below the controls
+> is no longer empty, and the entry in the `dislike` slot scrolls to the inline
+> section rather than opening the bottom sheet. Everything this document records
+> about the upper section still holds and is asserted unchanged by
+> `PlayerHistoryLayoutTest`.
+
 Two more owner decisions, both because the frozen source describes a later phase:
 
 - **No overflow menu.** The canonical `Menu / Плеер` is four rows all reading

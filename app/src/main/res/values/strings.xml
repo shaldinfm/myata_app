@@ -74,6 +74,33 @@
     <string name="player_artwork">Обложка трека</string>
 
     <!--
+      PLAYER Broadcast History (Phase C). The heading and the button label are
+      verbatim from the frozen section - light nodes 2396:30788 and 2396:30868.
+      `player_history` above already carries the heading's characters and is
+      reused rather than duplicated: it is the same words naming the same thing,
+      and it is what the control in the `dislike` slot announces.
+
+      The empty line is not in the frozen frame - FINAL has no empty Broadcast
+      History state - so it keeps the words the History bottom sheet has always
+      shown, which is also what HistoryRepository's error path lands on: it
+      returns an empty list rather than raising, so "no history" and "could not
+      reach the API" are one state to the UI and the wording has to be true of
+      both.
+    -->
+    <string name="player_history_show_more">Показать ещё</string>
+    <string name="player_history_empty">История пуста</string>
+    <string name="player_history_artwork">Обложка трека из истории</string>
+
+    <!--
+      The row's service links. The service names themselves are brand names and
+      are not translated; what these announce is the action, which is why they
+      are strings rather than the bare labels the older rows hardcode.
+    -->
+    <string name="history_open_spotify">Найти в Spotify</string>
+    <string name="history_open_apple_music">Найти в Apple Music</string>
+    <string name="history_open_yandex_music">Найти в Яндекс Музыке</string>
+
+    <!--
       COLLECTION, frozen 3.6.6 canonical. Verbatim from `COLLECTION` and
       `COLLECTION pusto`, with one deliberate correction.
 

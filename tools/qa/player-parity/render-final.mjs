@@ -205,15 +205,28 @@ function renderSection(section, height) {
   return { body: out.join("\n"), derived: [...new Set(derived)] };
 }
 
-export function renderFinal(theme) {
+/**
+ * One frozen PLAYER page.
+ *
+ * `scope: "upper"` draws `Player Section` alone, 390x542 - what B2 and #42
+ * compared against, unchanged.
+ *
+ * `scope: "full"` draws `Main`, 390x926, which is the same walk over the parent
+ * node and so adds `Broadcast History Section` at y=552 without a line of
+ * drawing code of its own. It stops at `Main`: `BottomNavBar` sits below it at
+ * 946 and belongs to no phase of the PLAYER migration.
+ */
+export function renderFinal(theme, scope = "upper") {
   const file = path.join(canonical, `figma-canonical-${theme}-final.json`);
   const doc = JSON.parse(fs.readFileSync(file, "utf8"));
   const frame = findFrame(doc, theme === "light" ? "PLAYER" : "PLAYER_dark");
   const main = findByName(frame, "Main");
-  const section = findByName(main, "Player Section");
   const bg = solid(frame) || solid(main) || { color: theme === "light" ? "#F8F9FA" : "#0F253E" };
-  const height = 542; // frozen controls bottom is 522
-  const { body, derived } = renderSection(section, height);
+  // The upper page stops just past the frozen controls bottom of 522; the full
+  // one is `Main`'s own height, which ends on the history section's last pixel.
+  const height = scope === "full" ? Math.round(main.height) : 542;
+  const root = scope === "full" ? main : findByName(main, "Player Section");
+  const { body, derived } = renderSection(root, height);
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="390" height="${height}" viewBox="0 0 390 ${height}">` +
     `<rect width="390" height="${height}" fill="${bg.color}"/>` +
@@ -224,10 +237,12 @@ export function renderFinal(theme) {
 
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1] === fileURLToPath(import.meta.url)) {
   for (const theme of ["light", "dark"]) {
-    const { svg, derived } = renderFinal(theme);
-    const dest = path.join(here, `final-${theme}.svg`);
-    fs.writeFileSync(dest, svg + "\n");
-    console.log(`  ${path.relative(repo, dest)}  (${derived.length} icon outline(s), all exact)`);
-    derived.forEach((d) => console.log(`      ${d}`));
+    for (const scope of ["upper", "full"]) {
+      const { svg, derived } = renderFinal(theme, scope);
+      const dest = path.join(here, `final-${theme}${scope === "full" ? "-full" : ""}.svg`);
+      fs.writeFileSync(dest, svg + "\n");
+      console.log(`  ${path.relative(repo, dest)}  (${derived.length} icon outline(s), all exact)`);
+      if (scope === "upper") derived.forEach((d) => console.log(`      ${d}`));
+    }
   }
 }

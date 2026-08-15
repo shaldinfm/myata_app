@@ -2,6 +2,8 @@ package com.example.musicplayerapp.data
 
 import android.util.Log
 import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.ConcurrentHashMap
@@ -32,6 +34,11 @@ class ArtworkRepository(private val httpClient: OkHttpClient) {
     /**
      * Main entry point: fetches artwork for a given artist and track.
      * Uses cache if available. Returns null URLs if nothing found.
+     *
+     * Every stage below blocks on OkHttp, so the dispatcher switch lives here
+     * rather than at each call site: callers pass whatever context they are on,
+     * and on Dispatchers.Main every stage threw NetworkOnMainThreadException
+     * into its own catch, so the result was an empty one that then got cached.
      */
     suspend fun fetchArtwork(artist: String, track: String): ArtworkResult {
         val cleanArtist = getCleanArtistName(artist)
@@ -41,51 +48,54 @@ class ArtworkRepository(private val httpClient: OkHttpClient) {
             .trim()
 
         val cacheKey = "$cleanArtist|$cleanTrack"
-        
-        // Return cached result if available
+
+        // Return cached result if available. Deliberately ahead of the switch, so
+        // a hit costs the caller no dispatch at all.
         cache[cacheKey]?.let { return it }
 
-        var resultUrl: String? = null
+        return withContext(Dispatchers.IO) {
+            var resultUrl: String? = null
 
-        try {
-            // Stage 1: iTunes search with clean artist + track
-            val queryArtist = cleanArtist.replace("&", " ")
-            val query1 = "$queryArtist $cleanTrack"
-            Log.d("ArtworkRepo", "Stage 1: $query1")
-            resultUrl = executeItunesSearch(query1, cleanArtist, cleanTrack)
+            try {
+                // Stage 1: iTunes search with clean artist + track
+                val queryArtist = cleanArtist.replace("&", " ")
+                val query1 = "$queryArtist $cleanTrack"
+                Log.d("ArtworkRepo", "Stage 1: $query1")
+                resultUrl = executeItunesSearch(query1, cleanArtist, cleanTrack)
 
-            // Stage 2: Full artist + clean track
-            if (resultUrl == null && artist != cleanArtist) {
-                val query2 = "$artist $cleanTrack"
-                Log.d("ArtworkRepo", "Stage 2: $query2")
-                resultUrl = executeItunesSearch(query2, artist, cleanTrack)
+                // Stage 2: Full artist + clean track
+                if (resultUrl == null && artist != cleanArtist) {
+                    val query2 = "$artist $cleanTrack"
+                    Log.d("ArtworkRepo", "Stage 2: $query2")
+                    resultUrl = executeItunesSearch(query2, artist, cleanTrack)
+                }
+
+                // Stage 3: Track only (fallback for compilations)
+                if (resultUrl == null && cleanTrack.length >= 4) {
+                    Log.d("ArtworkRepo", "Stage 3 (Track only): $cleanTrack")
+                    resultUrl = executeItunesSearch(cleanTrack, artist, cleanTrack)
+                }
+
+            } catch (e: Exception) {
+                Log.e("ArtworkRepo", "iTunes search error", e)
             }
 
-            // Stage 3: Track only (fallback for compilations)
-            if (resultUrl == null && cleanTrack.length >= 4) {
-                Log.d("ArtworkRepo", "Stage 3 (Track only): $cleanTrack")
-                resultUrl = executeItunesSearch(cleanTrack, artist, cleanTrack)
+            // Deezer fallback (artist image)
+            if (resultUrl == null) {
+                Log.d("ArtworkRepo", "Trying Deezer for artist image...")
+                resultUrl = fetchArtistImageFromDeezer(cleanArtist)
             }
 
-        } catch (e: Exception) {
-            Log.e("ArtworkRepo", "iTunes search error", e)
-        }
+            // Last.fm fallback (scrape)
+            if (resultUrl == null) {
+                Log.d("ArtworkRepo", "Trying Last.fm scrape...")
+                resultUrl = fetchArtistImageFromLastFm(cleanArtist, cleanTrack)
+            }
 
-        // Deezer fallback (artist image)
-        if (resultUrl == null) {
-            Log.d("ArtworkRepo", "Trying Deezer for artist image...")
-            resultUrl = fetchArtistImageFromDeezer(cleanArtist)
+            val result = ArtworkResult(coverUrl = resultUrl)
+            cache[cacheKey] = result
+            result
         }
-
-        // Last.fm fallback (scrape)
-        if (resultUrl == null) {
-            Log.d("ArtworkRepo", "Trying Last.fm scrape...")
-            resultUrl = fetchArtistImageFromLastFm(cleanArtist, cleanTrack)
-        }
-
-        val result = ArtworkResult(coverUrl = resultUrl)
-        cache[cacheKey] = result
-        return result
     }
 
     // ==================== iTunes ====================

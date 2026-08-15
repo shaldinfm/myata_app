@@ -135,15 +135,24 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent">
 
+                <!--
+                  The frozen `like`: a filled thumbs-up, 24.5x23.33, 12 from the
+                  top of its 49x54 slot. It replaces the heart the app drew here,
+                  which had no counterpart in the design at all. The frozen frame
+                  records one visual and no states, so the collection toggle is
+                  carried by the tint - `text_primary` off, `primary` on - and the
+                  geometry never changes.
+                -->
                 <ImageView
                     android:id="@+id/btn_favorite"
-                    style="@style/PlayerActionSlot"
+                    style="@style/PlayerLikeSlot"
                     android:layout_marginStart="@dimen/player_controls_inset"
                     android:contentDescription="@string/player_favorite_add"
-                    android:src="@drawable/ic_heart_outline"
+                    android:src="@drawable/ic_player_like"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:tint="@color/player_like" />
 
                 <ImageView
                     android:id="@+id/btn_play"
@@ -169,7 +178,19 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
-                <!-- Buffering: replaces the play glyph in place, as it does today. -->
+                <!--
+                  Connecting and re-buffering. It replaces the glyph, not the
+                  control: `btn_play` keeps drawing its 80x80 primary surface
+                  underneath, this is constrained to that surface's four edges so
+                  it is centred inside it, and it takes the frozen glyph box so
+                  nothing moves or changes size between Play, connecting and
+                  Pause. Declared after `btn_play`, so it draws on top of it.
+
+                  `on_primary` is legible here only because the fill is behind it:
+                  the tint is #FFFFFF on a #1C4771 surface in Light and #0F253E on
+                  a #5FD9B4 one in Dark. See PlayerControl for what hiding the
+                  surface used to do to it.
+                -->
                 <ProgressBar
                     android:id="@+id/loading_spinner"
                     android:layout_width="@dimen/player_play_icon"

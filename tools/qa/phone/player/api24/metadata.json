@@ -20,8 +20,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "WEAPON OF CHOICE",
-      "artist": "FATBOY SLIM",
+      "title": "SUNSHINE",
+      "artist": "BALANCING ACT",
       "play": {
         "x": 120,
         "y": 466,
@@ -60,8 +60,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "WEAPON OF CHOICE",
-      "artist": "FATBOY SLIM",
+      "title": "SUNSHINE",
+      "artist": "BALANCING ACT",
       "play": {
         "x": 140,
         "y": 466,
@@ -100,8 +100,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "WEAPON OF CHOICE",
-      "artist": "FATBOY SLIM",
+      "title": "SUNSHINE",
+      "artist": "BALANCING ACT",
       "play": {
         "x": 155,
         "y": 466,
@@ -140,8 +140,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "WEAPON OF CHOICE",
-      "artist": "FATBOY SLIM",
+      "title": "SUNSHINE",
+      "artist": "BALANCING ACT",
       "play": {
         "x": 166,
         "y": 466,
@@ -170,48 +170,48 @@
       "step": "01-player-idle",
       "play": "Воспроизвести",
       "favourite": "Добавить в коллекцию",
-      "title": "WEAPON OF CHOICE",
-      "artist": "FATBOY SLIM",
+      "title": "SUNSHINE",
+      "artist": "BALANCING ACT",
       "miniPlayer": "none",
       "sheetOpen": false
     },
     {
       "theme": "light",
       "step": "02-playing",
-      "play": null,
+      "play": "Подключение",
       "favourite": "Добавить в коллекцию",
-      "title": "SPACE BETWEEN US",
-      "artist": "FRANC MOODY",
+      "title": "SUNSHINE",
+      "artist": "BALANCING ACT",
       "miniPlayer": "none",
       "sheetOpen": false
     },
     {
       "theme": "light",
       "step": "03-favourited",
-      "play": "Воспроизвести",
+      "play": "Подключение",
       "favourite": "Убрать из коллекции",
-      "title": "SPACE BETWEEN US",
-      "artist": "FRANC MOODY",
+      "title": "SUNSHINE",
+      "artist": "BALANCING ACT",
       "miniPlayer": "none",
       "sheetOpen": false
     },
     {
       "theme": "light",
       "step": "04-gold",
-      "play": null,
+      "play": "Подключение",
       "favourite": "Добавить в коллекцию",
-      "title": "DO IT 2 NITE",
-      "artist": "ROCKEFELLER",
+      "title": "E SAMBA",
+      "artist": "JUNIOR JACK",
       "miniPlayer": "none",
       "sheetOpen": false
     },
     {
       "theme": "light",
       "step": "05-xtra",
-      "play": null,
+      "play": "Подключение",
       "favourite": "Добавить в коллекцию",
-      "title": "НАМ ОСТАЕТСЯ ЛИШЬ ЖДАТЬ",
-      "artist": "УВУЛА",
+      "title": "ТРИП",
+      "artist": "IAMUHA",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -230,8 +230,8 @@
       "step": "07-paused",
       "play": "Воспроизвести",
       "favourite": "Добавить в коллекцию",
-      "title": "НАМ ОСТАЕТСЯ ЛИШЬ ЖДАТЬ",
-      "artist": "УВУЛА",
+      "title": "ТРИП",
+      "artist": "IAMUHA",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -240,8 +240,8 @@
       "step": "08-after-background",
       "play": "Воспроизвести",
       "favourite": "Добавить в коллекцию",
-      "title": "НАМ ОСТАЕТСЯ ЛИШЬ ЖДАТЬ",
-      "artist": "УВУЛА",
+      "title": "ТРИП",
+      "artist": "IAMUHA",
       "miniPlayer": "none",
       "sheetOpen": false
     }

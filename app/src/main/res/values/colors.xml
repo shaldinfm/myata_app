@@ -134,6 +134,57 @@
     <color name="player_header_label">#42474E</color>
 
     <!--
+      PLAYER swipe indicator, the two inactive pages.
+
+      Provenance: canonical PLAYER, `Player Section > swipe`. The active marker is
+      `primary` at full opacity in both themes - #1C4771 light, #5FD9B4 dark - and
+      needs no resource of its own. The inactive ones do, because the two pages
+      express them differently: light draws `primary` at 50% opacity, dark a solid
+      #6F899F.
+
+      So this is a pair, and the light half keeps the frozen expression rather
+      than the composited result: #801C4771 is what the design says, and over the
+      #F8F9FA background it lands on the #8AA0B6 it is meant to look like.
+    -->
+    <color name="player_swipe_inactive">#801C4771</color>
+
+    <!--
+      PLAYER `like` glyph, at rest.
+
+      Provenance: canonical PLAYER, `Controls > like > Container > Icon`. #3F4A3C
+      light, #F5F7FA dark. (Read off the *visible* `Controls` row - each frozen
+      page carries a second, hidden copy of that row with stale values in it.)
+
+      Same shape of pair as player_header_label: #F5F7FA is exactly text_primary
+      in dark, and the light value is a near neighbour of text_secondary - the
+      neighbouring `dislike` glyph is exactly #42474E, and this one carries a
+      green cast of the same weight. So the light value is kept verbatim rather
+      than bound to a role, which is what the frozen frame draws.
+
+      Not text_primary, which is what the app used for both action slots: #191C1D
+      is markedly darker than either frozen glyph in light.
+    -->
+    <color name="player_like">#3F4A3C</color>
+
+    <!--
+      PLAYER control row, the trailing action.
+
+      Provenance: canonical PLAYER, `Controls > dislike > Container > Icon`.
+      #42474E light, #F5F7FA dark, read off the visible `Controls` row.
+
+      The frozen row defines that slot unambiguously and identically on both
+      pages, so the History entry that occupies it until its own phase takes the
+      colour even though its glyph and its behaviour are still the app's. It was
+      text_primary, which is markedly darker in light than either frozen glyph and
+      read as a mismatch beside `like`.
+
+      A separate resource from player_header_label and collection_header_action
+      rather than a reuse of them: the three carry the same values today by
+      coincidence of the palette, not because one is defined as another.
+    -->
+    <color name="player_control_action">#42474E</color>
+
+    <!--
       COLLECTION header trailing action - the frozen 3-dot overflow glyph.
 
       Provenance: canonical `COLLECTION` / `COLLECTION_dark`, `Header - TopAppBar

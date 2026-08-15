@@ -1,23 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  PLAYER play glyph.
+  PLAYER play glyph - the literal Figma vector.
 
-  Same derivation as the Mini Player's, and deliberately the same glyph: the
-  canonical exporter records no vector geometry, but the box identifies the icon.
-  `Controls > play/pause > Container > Icon` is 23x23 - a full icon canvas rather
-  than the Mini Player's glyph-tight box - so this keeps Material's 24 canvas and
-  is rendered at 23.
+    node 2484:59, 23.33 x 29.6927299, one path, fill-rule nonzero
 
-    Material Symbols `play_arrow` at 24dp, "M8 5v14l11-7z"
+  Extracted from `Дизайн Приложения ФИНАЛ.fig` and copied verbatim: this is not
+  Material's `play_arrow` and not the triangle this file held before, which was a
+  reading of a bounding box. Two things it settles that no box could:
 
-  Untinted: the colour is `on_primary`, applied from the layout.
+    - the glyph is an OUTLINE, not a solid. Two contours wound against each
+      other, so the default non-zero fill leaves the middle open.
+    - it is 29.69 tall against the pause glyph's 23.33, sharing its 23.33 width.
+      The frozen `Controls > play/pause > Container` HUGs its child, so the box
+      the canonical snapshot records - 23.33 square - is the *pause* glyph's.
+      That is which state the frozen frame shows.
+
+  Only the fill is changed, to the repo's #FFFFFF placeholder: the colour is
+  `on_primary`, applied from the layout.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="@dimen/player_play_icon"
-    android:height="@dimen/player_play_icon"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M8,5 L8,19 L19,12 Z" />
+    android:width="@dimen/player_play_glyph_width"
+    android:height="@dimen/player_play_glyph_height"
+    android:viewportWidth="23.329998"
+    android:viewportHeight="29.6927299">
+    <path android:fillColor="#FFFFFF" android:pathData="M 0 29.6927299 L 0 0 L 23.329998 14.846365 L 0 29.6927299 M 4.241818 21.9514103 L 15.3765898 14.846365 L 4.241818 7.7413187 L 4.241818 21.9514103" />
 </vector>

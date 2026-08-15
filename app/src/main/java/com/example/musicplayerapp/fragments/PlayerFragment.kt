@@ -98,23 +98,19 @@ class PlayerFragment : Fragment() {
 
         return binding.root
     }
+    /**
+     * The frozen `swipe` row. The active page is a different *shape* - the
+     * nine-lobed cookie against the others' circles - as well as a different
+     * colour, so both move together: the drawable carries the shape and
+     * `isSelected` carries the tint through `player_swipe_tint`.
+     */
     private fun updateIndicators(position: Int) {
-        when(position){
-            0->{
-                binding.dot1.setImageResource(R.drawable.dot_active)
-                binding.dot2.setImageResource(R.drawable.dot_inactive)
-                binding.dot3.setImageResource(R.drawable.dot_inactive)
-            }
-            1->{
-                binding.dot1.setImageResource(R.drawable.dot_inactive)
-                binding.dot2.setImageResource(R.drawable.dot_active)
-                binding.dot3.setImageResource(R.drawable.dot_inactive)
-            }
-            2->{
-                binding.dot1.setImageResource(R.drawable.dot_inactive)
-                binding.dot2.setImageResource(R.drawable.dot_inactive)
-                binding.dot3.setImageResource(R.drawable.dot_active)
-            }
+        listOf(binding.dot1, binding.dot2, binding.dot3).forEachIndexed { index, dot ->
+            val active = index == position
+            dot.isSelected = active
+            dot.setImageResource(
+                if (active) R.drawable.ic_player_swipe_active else R.drawable.ic_player_swipe_inactive
+            )
         }
     }
 }

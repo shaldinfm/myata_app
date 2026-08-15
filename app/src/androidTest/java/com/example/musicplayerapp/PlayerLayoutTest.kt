@@ -88,6 +88,61 @@ class PlayerLayoutTest {
             expect(where, "swipe height", dots.height, dp(10))
             expect(where, "page top", topIn(pager, shell), dp(79))
 
+            // The frozen label is textCase UPPER, so what is drawn is not what the
+            // string says. Read the laid-out text, not the TextView's.
+            val drawn = label.layout?.text?.toString().orEmpty()
+            if (drawn.isNotEmpty() && drawn != drawn.uppercase()) {
+                findings += "$where: header label is drawn as \"$drawn\"; the frozen frame upper-cases it"
+            }
+
+            /*
+             * `swipe`: three 10 slots edge to edge, and the active page is a
+             * different shape - a 8.53x8.42 nine-lobed cookie against 8.42 circles
+             * - not just a different colour. The app drew three identical white
+             * ovals filling the whole slot before the play/pause follow-up.
+             */
+            val markers = listOf(R.id.dot_1, R.id.dot_2, R.id.dot_3).map { shell.findViewById<View>(it) }
+            markers.forEachIndexed { i, dot ->
+                expect(where, "swipe slot ${i + 1} width", dot.width, dp(10))
+                expect(where, "swipe slot ${i + 1} height", dot.height, dp(10))
+            }
+            for (i in 1 until markers.size) {
+                expect(
+                    where, "swipe slot ${i + 1} abuts the one before it",
+                    leftIn(markers[i], shell), leftIn(markers[i - 1], shell) + dp(10),
+                )
+            }
+            val active = (markers[0] as android.widget.ImageView).drawable
+            val inactive = (markers[1] as android.widget.ImageView).drawable
+
+            // Both drawables are the 10 component slot; the ink inside it is what
+            // the frozen frame records, so the ink is what is measured. Rendered
+            // at 400, one frozen unit is 40.
+            val slot = 400
+            val unit = slot / 10f
+            val activeInk = paintedInk(active, slot)
+            val inactiveInk = paintedInk(inactive, slot)
+            expect(where, "active marker slot", active.intrinsicWidth, dp(10))
+            expect(where, "inactive marker slot", inactive.intrinsicWidth, dp(10))
+            expect(where, "active marker ink width", activeInk.width(), 8.53f * unit, tolerance = unit / 2)
+            expect(where, "active marker ink height", activeInk.height(), 8.42f * unit, tolerance = unit / 2)
+            expect(where, "inactive marker ink width", inactiveInk.width(), 8.42f * unit, tolerance = unit / 2)
+            expect(where, "inactive marker ink height", inactiveInk.height(), 8.42f * unit, tolerance = unit / 2)
+
+            // Ink size alone cannot tell them apart either - 8.53 against 8.42 -
+            // so the shapes are compared as painted. A circle's radius does not
+            // vary; the nine-lobed cookie's swings by about 16% of it.
+            val activeSwing = radialSwing(active)
+            val inactiveSwing = radialSwing(inactive)
+            if (activeSwing < 0.10f) {
+                findings += "$where: the active swipe marker is a plain disc (radius varies by " +
+                    "${(activeSwing * 100).roundToInt()}%); the frozen one is a 9-sided cookie"
+            }
+            if (inactiveSwing > 0.05f) {
+                findings += "$where: the inactive swipe marker is not a circle (radius varies by " +
+                    "${(inactiveSwing * 100).roundToInt()}%)"
+            }
+
             // The trailing slot is reserved, not a control: it must take up the
             // frozen space and must not be clickable.
             expect(where, "reserved trailing slot width", reserved.width, dp(32))
@@ -135,6 +190,25 @@ class PlayerLayoutTest {
             expect(where, "favourite slot width", favorite.width, dp(49))
             expect(where, "favourite slot height", favorite.height, dp(54))
             expect(where, "favourite x", leftIn(favorite, page), dp(48))
+
+            /*
+             * The frozen `like` glyph: 24.5x23.33 of ink, 12 below the top of its
+             * own slot rather than centred in it - 12 above and 19 below, so it
+             * sits 3.5 higher than the middle of the row. The app drew a 24dp
+             * heart, fitCenter'd and centred, before this.
+             */
+            val likeIcon = (favorite as android.widget.ImageView).drawable
+            expect(where, "like glyph width", likeIcon.intrinsicWidth, dp(24.5f))
+            expect(where, "like glyph height", likeIcon.intrinsicHeight, dp(23.33f))
+            // The frozen glyph is an outline, not a solid: it must leave a hole.
+            if (!hasHole(likeIcon)) {
+                findings += "$where: the like glyph paints solid; the frozen one is an outlined thumbs-up"
+            }
+            // scaleType=center draws it at its own size inside the padded box.
+            val likeBoxTop = favorite.paddingTop
+            val likeBoxHeight = favorite.height - favorite.paddingTop - favorite.paddingBottom
+            val likeTop = likeBoxTop + (likeBoxHeight - likeIcon.intrinsicHeight) / 2f
+            expect(where, "like glyph y in its slot", likeTop, dp(12), tolerance = dp(0.5f))
             expect(where, "history slot width", history.width, dp(49))
             expect(where, "history x", widthPx - leftIn(history, page) - history.width, dp(48))
 
@@ -207,8 +281,12 @@ class PlayerLayoutTest {
     private fun topIn(v: View, ancestor: View) = rectIn(v, ancestor).top
     private fun leftIn(v: View, ancestor: View) = rectIn(v, ancestor).left
 
-    private fun expect(where: String, what: String, actual: Int, expected: Float) {
-        if (abs(actual - expected) > 1f) {
+    private fun expect(where: String, what: String, actual: Int, expected: Float, tolerance: Float = 1f) {
+        expect(where, what, actual.toFloat(), expected, tolerance)
+    }
+
+    private fun expect(where: String, what: String, actual: Float, expected: Float, tolerance: Float = 1f) {
+        if (abs(actual - expected) > tolerance) {
             findings += "$where: $what is ${actual}px, frozen design says ${expected.roundToInt()}px"
         }
     }
@@ -217,6 +295,101 @@ class PlayerLayoutTest {
         if (actual < floor - 1f) {
             findings += "$where: $what is ${actual}px, under the frozen ${floor.roundToInt()}px line"
         }
+    }
+
+    /** The drawable rendered on its own, at [size] square. */
+    private fun render(drawable: android.graphics.drawable.Drawable, size: Int): android.graphics.Bitmap {
+        val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val copy = drawable.constantState?.newDrawable()?.mutate() ?: drawable
+        copy.setBounds(0, 0, size, size)
+        copy.draw(android.graphics.Canvas(bitmap))
+        return bitmap
+    }
+
+    /** The bounding box of what a drawable actually paints, rendered at [size]. */
+    private fun paintedInk(drawable: android.graphics.drawable.Drawable, size: Int): Rect {
+        val bitmap = render(drawable, size)
+        val pixels = IntArray(size * size)
+        bitmap.getPixels(pixels, 0, size, 0, 0, size, size)
+        bitmap.recycle()
+        var left = size; var top = size; var right = -1; var bottom = -1
+        for (i in pixels.indices) {
+            if (android.graphics.Color.alpha(pixels[i]) < 128) continue
+            val x = i % size
+            val y = i / size
+            if (x < left) left = x
+            if (x > right) right = x
+            if (y < top) top = y
+            if (y > bottom) bottom = y
+        }
+        return if (right < 0) Rect() else Rect(left, top, right + 1, bottom + 1)
+    }
+
+    /**
+     * Whether a drawable paints a hole - transparent pixels enclosed by ink on
+     * every side. That is what separates the frozen outlined glyphs from the
+     * solid shapes that stood in for them.
+     */
+    private fun hasHole(drawable: android.graphics.drawable.Drawable): Boolean {
+        val size = 256
+        val bitmap = render(drawable, size)
+        val pixels = IntArray(size * size)
+        bitmap.getPixels(pixels, 0, size, 0, 0, size, size)
+        bitmap.recycle()
+        val ink = { x: Int, y: Int -> android.graphics.Color.alpha(pixels[y * size + x]) >= 128 }
+
+        for (y in 0 until size) {
+            var x = 0
+            // walk to the first ink on this row, then look for a gap that has ink
+            // on both sides of it horizontally and vertically
+            while (x < size && !ink(x, y)) x++
+            while (x < size) {
+                while (x < size && ink(x, y)) x++
+                val gap = x
+                while (x < size && !ink(x, y)) x++
+                if (x >= size) break
+                val mid = (gap + x) / 2
+                var above = false
+                var below = false
+                for (yy in 0 until y) if (ink(mid, yy)) { above = true; break }
+                for (yy in y + 1 until size) if (ink(mid, yy)) { below = true; break }
+                if (above && below && x - gap > 2) return true
+            }
+        }
+        return false
+    }
+
+    /**
+     * How much a drawable's painted outline varies from a disc: it renders the
+     * drawable large, walks out from the centre at 360 angles until the ink ends,
+     * and returns (max - min) / mean of those radii. A circle gives ~0; the frozen
+     * nine-lobed cookie gives about 0.16.
+     *
+     * The walk stops at the first gap, so an outlined glyph would measure its
+     * stroke rather than its silhouette - fine here, where both markers are solid.
+     */
+    private fun radialSwing(drawable: android.graphics.drawable.Drawable): Float {
+        val size = 256
+        val bitmap = render(drawable, size)
+
+        val cx = size / 2f
+        val cy = size / 2f
+        val radii = mutableListOf<Float>()
+        for (deg in 0 until 360) {
+            val a = Math.toRadians(deg.toDouble())
+            var r = 0f
+            while (r < size / 2f) {
+                val x = (cx + r * kotlin.math.cos(a)).toInt()
+                val y = (cy + r * kotlin.math.sin(a)).toInt()
+                if (x !in 0 until size || y !in 0 until size) break
+                if (android.graphics.Color.alpha(bitmap.getPixel(x, y)) < 128) break
+                r += 0.5f
+            }
+            radii += r
+        }
+        bitmap.recycle()
+        val mean = radii.average().toFloat()
+        return if (mean <= 0f) 0f else (radii.max() - radii.min()) / mean
     }
 
     private fun requireOneLine(tv: TextView, where: String) {

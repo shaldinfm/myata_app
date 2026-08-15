@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PLAYER `like` glyph - the literal Figma vector.
+
+    node 2399:31217, 24.5 x 23.3333334, one path, fill-rule nonzero
+
+  An OUTLINED thumbs-up. The box matches what the canonical snapshot records to
+  the decimal - 24.5 x 23.33 - which is what the reconstruction this replaces was
+  built to fill; what it could not know is that the glyph is hollow.
+
+  It still sits 12 below the top of its 49x54 slot rather than centred in it,
+  which is the layout's business - see PlayerLikeSlot.
+
+  Only the fill is changed, to the repo's #FFFFFF placeholder: the colour is
+  `player_like` at rest and `primary` when the track is in the collection,
+  applied from the fragment.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="@dimen/player_action_icon_width"
+    android:height="@dimen/player_action_icon_height"
+    android:viewportWidth="24.5"
+    android:viewportHeight="23.333334">
+    <path android:fillColor="#FFFFFF" android:pathData="M 18.666666 23.333334 L 5.8333335 23.333334 L 5.8333335 8.166667 L 14 0 L 15.458333 1.4583334 C 15.5944443 1.5944445 15.7062502 1.7791667 15.7937498 2.0125 C 15.8812494 2.2458334 15.9250002 2.4694445 15.9250002 2.6833334 L 15.9250002 3.0916667 L 14.6416664 8.166667 L 22.166666 8.166667 C 22.7888889 8.166667 23.3333321 8.4000006 23.7999992 8.8666668 C 24.2666664 9.333333 24.5 9.8777781 24.5 10.5 L 24.5 12.833333 C 24.5 12.9694443 24.4805565 13.1152773 24.4416676 13.270833 C 24.4027786 13.4263887 24.3638897 13.5722218 24.3250008 13.708333 L 20.8250008 21.9333324 C 20.6500015 22.3222218 20.3583336 22.6527767 19.9500008 22.9249992 C 19.5416679 23.1972218 19.1138878 23.333334 18.666666 23.333334 L 18.666666 23.333334 M 8.166667 21 L 18.666666 21 L 18.666666 21 L 18.666666 21 L 22.166666 12.833333 L 22.166666 10.5 L 22.166666 10.5 L 22.166666 10.5 L 11.666667 10.5 L 13.2416668 4.0833335 L 8.166667 9.1583338 L 8.166667 21 L 8.166667 21 M 8.166667 9.1583338 L 8.166667 9.1583338 L 8.166667 10.5 L 8.166667 10.5 L 8.166667 10.5 L 8.166667 10.5 L 8.166667 12.833333 L 8.166667 21 L 8.166667 21 L 8.166667 21 L 8.166667 21 L 8.166667 9.1583338 L 8.166667 9.1583338 M 5.8333335 8.166667 L 5.8333335 10.5 L 2.3333333 10.5 L 2.3333333 21 L 5.8333335 21 L 5.8333335 23.333334 L 0 23.333334 L 0 8.166667 L 5.8333335 8.166667 L 5.8333335 8.166667" />
+</vector>

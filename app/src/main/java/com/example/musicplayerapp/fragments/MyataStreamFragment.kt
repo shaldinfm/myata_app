@@ -1,12 +1,15 @@
 package com.example.musicplayerapp.fragments
 
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
+import androidx.core.widget.ImageViewCompat
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
@@ -20,6 +23,8 @@ import com.example.musicplayerapp.StreamsViewModel
 import com.example.musicplayerapp.data.PlayerState
 import com.example.musicplayerapp.databinding.FragmentMyataStreamBinding
 import com.example.musicplayerapp.service.MediaPlayerService
+import com.example.musicplayerapp.ui.PlayerControl
+import com.example.musicplayerapp.ui.PlayerControlState
 import com.example.musicplayerapp.utils.ServiceUtils
 import com.squareup.picasso.Picasso
 import android.content.ClipboardManager
@@ -37,6 +42,7 @@ class MyataStreamFragment() : Fragment() {
 
     lateinit var vm: StreamsViewModel
     lateinit var binding: FragmentMyataStreamBinding
+    private lateinit var playerControl: PlayerControl
     var stream: String = "myata"
     private var currentImageUrl: String? = null  // Track currently displayed image
 
@@ -71,26 +77,26 @@ class MyataStreamFragment() : Fragment() {
         binding.mainAuthor.setOnClickListener { copyTrackInfoToClipboard() }
         binding.mainSong.setOnClickListener { copyTrackInfoToClipboard() }
 
-        // One control for all three streams. The frozen design tints play/pause by
-        // role - `primary` on the surface, `on_primary` on the glyph - not by
-        // station, so the six per-stream drawables this replaces have no canonical
-        // counterpart. Only the image changes here; isBuffering still owns
-        // visibility.
-        vm.isPlaying.observe(viewLifecycleOwner, Observer { updatePlayPauseIcon(it == true) })
-        
-        vm.isBuffering.observe(viewLifecycleOwner, Observer {
-            if(it == true){
-                // Show loading spinner, hide button
-                binding.btnPlay.visibility = View.INVISIBLE
-                binding.loadingSpinner.visibility = View.VISIBLE
-            }
-            else{
-                // Hide loading spinner, show button
-                binding.loadingSpinner.visibility = View.GONE
-                binding.btnPlay.visibility = View.VISIBLE
-            }
-        })
-        
+        // One control for all three streams, with three faces. The frozen design
+        // tints play/pause by role - `primary` on the surface, `on_primary` on the
+        // glyph - not by station, so the six per-stream drawables this replaces
+        // have no canonical counterpart.
+        //
+        // Both inputs feed one projection instead of one observer owning the glyph
+        // and the other owning visibility. That is what the two used to do, and it
+        // is how connecting ended up hiding the whole control: the surface belongs
+        // to no single input, so neither observer could be responsible for keeping
+        // it on screen. PlayerControlState decides the face, PlayerControl paints
+        // it, and the 80x80 surface is simply never taken away.
+        //
+        // The tap goes on first: setOnClickListener makes a view clickable, and
+        // the observers below fire on registration, so attaching it afterwards
+        // would undo a CONNECTING render that had just made the control inert.
+        binding.btnPlay.setOnClickListener { vm.togglePlayPause() }
+        playerControl = PlayerControl(binding.btnPlay, binding.loadingSpinner)
+        vm.isPlaying.observe(viewLifecycleOwner, Observer { renderPlayerControl() })
+        vm.isBuffering.observe(viewLifecycleOwner, Observer { renderPlayerControl() })
+
         // Sync state logic removed - handled by improved observer
 
         // The frozen PLAYER has no full-bleed stream artwork and no per-stream
@@ -120,10 +126,6 @@ class MyataStreamFragment() : Fragment() {
             }
         }
 
-        binding.btnPlay.setOnClickListener {
-            vm.togglePlayPause()
-        }
-
         vm.isInSplitMode.observe(viewLifecycleOwner, Observer {
             if (vm.isInSplitMode.value!!){
                 binding.photo.visibility = View.GONE
@@ -142,8 +144,8 @@ class MyataStreamFragment() : Fragment() {
             vm.lastObservedStream = it
 
             // Nothing to re-skin per stream any more - the controls are semantic -
-            // but the icon still has to follow the player across a switch.
-            updatePlayPauseIcon(vm.isPlaying.value == true)
+            // but the control still has to follow the player across a switch.
+            renderPlayerControl()
         })
 
 
@@ -170,22 +172,37 @@ class MyataStreamFragment() : Fragment() {
     }
     
     
+    /**
+     * The frozen `like`. One glyph, always the same 24.5x23.33 thumbs-up in the
+     * same place: the frozen frame records a single visual and no states, so the
+     * collection toggle is the tint. Nothing here changes geometry.
+     */
     private fun updateHeartIcon(isFavorite: Boolean) {
-        binding.btnFavorite.setImageResource(
-            if (isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
+        ImageViewCompat.setImageTintList(
+            binding.btnFavorite,
+            ColorStateList.valueOf(
+                ContextCompat.getColor(
+                    requireContext(),
+                    if (isFavorite) R.color.primary else R.color.player_like,
+                )
+            )
         )
         binding.btnFavorite.contentDescription = getString(
             if (isFavorite) R.string.player_favorite_remove else R.string.player_favorite_add
         )
     }
 
-    /** The frozen play/pause: one control, one glyph, the state carried by the icon. */
-    private fun updatePlayPauseIcon(isPlaying: Boolean) {
-        binding.btnPlay.setImageResource(
-            if (isPlaying) R.drawable.ic_player_pause else R.drawable.ic_player_play
-        )
-        binding.btnPlay.contentDescription = getString(
-            if (isPlaying) R.string.player_pause else R.string.player_play
+    /**
+     * The frozen play/pause: one 80x80 surface that stays put, and one of three
+     * faces inside it. Both inputs are the service's own, read through the
+     * MediaController that [StreamsViewModel] already holds.
+     */
+    private fun renderPlayerControl() {
+        playerControl.render(
+            PlayerControlState.of(
+                isPlaying = vm.isPlaying.value == true,
+                isBuffering = vm.isBuffering.value == true,
+            )
         )
     }
 

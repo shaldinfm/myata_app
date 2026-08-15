@@ -45,6 +45,25 @@
     <color name="player_header_label">#F5F7FA</color>
 
     <!--
+      PLAYER swipe indicator, inactive pages. Dark states a solid #6F899F where
+      light states `primary` at 50% - see values/colors.xml for why that forces a
+      pair. The active marker is `primary` in both and has no resource here.
+    -->
+    <color name="player_swipe_inactive">#FF6F899F</color>
+
+    <!--
+      PLAYER `like` glyph at rest. Exactly text_primary in dark, while its light
+      value is a green-cast neighbour of text_secondary - see values/colors.xml.
+    -->
+    <color name="player_like">#F5F7FA</color>
+
+    <!--
+      PLAYER control row, trailing action. The frozen `dislike` glyph, which the
+      History entry occupies until its own phase - see values/colors.xml.
+    -->
+    <color name="player_control_action">#F5F7FA</color>
+
+    <!--
       COLLECTION header trailing action. Exactly text_primary in dark while its
       light value is exactly text_secondary - see values/colors.xml for why that
       forces a pair rather than a role.

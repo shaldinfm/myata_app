@@ -195,14 +195,36 @@ class PlayerControlRenderTest {
                     // than the frozen 23.33 box - a glyph that outgrows it or
                     // wanders out of it fails these checks rather than escaping
                     // them.
-                    val glyph = ink(raster, onPrimary, Rect(fill).apply { inset(dp(20).roundToInt(), dp(20).roundToInt()) })
+                    val glyph = ink(
+                        raster, onPrimary,
+                        Rect(fill).apply { inset(dp(20).roundToInt(), dp(20).roundToInt()) },
+                        tolerance = 48,
+                    )
                     if (glyph == null) {
                         findings += "$where: no `on_primary` glyph is painted inside the control"
                     } else {
-                        expect(where, "glyph width", glyph.width(), dp(23), tolerance = dp(1))
-                        expect(where, "glyph height", glyph.height(), dp(23), tolerance = dp(1))
+                        // The two frozen glyphs are not the same size. Pause is the
+                        // 23.33 square the canonical snapshot records for
+                        // `play/pause > Container`; play is its own node, the same
+                        // width and 29.69 tall.
+                        val glyphHeight = if (state == PlayerControlState.PLAY) 29.69f else 23.33f
+                        // 1.5dp, because a pointed outline cannot be measured to
+                        // the pixel by colour. The play glyph's corners are wedges
+                        // that taper to nothing, so their outermost pixels are
+                        // mostly surface and read as surface: 28.6 against 29.69
+                        // on API 24, 29.0 on API 36. The error this check exists
+                        // to catch was 13.4 against 29.69.
+                        expect(where, "glyph width", glyph.width(), dp(23.33f), tolerance = dp(1.5f))
+                        expect(where, "glyph height", glyph.height(), dp(glyphHeight), tolerance = dp(1.5f))
                         expect(where, "glyph centred in x", glyph.centerX(), fill.centerX().toFloat(), dp(1))
                         expect(where, "glyph centred in y", glyph.centerY(), fill.centerY().toFloat(), dp(1))
+                        // Both frozen glyphs are outlines: the surface shows
+                        // through the middle. A solid glyph - which is what stood
+                        // in for them before the exact assets arrived - would fill
+                        // its own centre with `on_primary`.
+                        if (raster.getPixel(glyph.centerX(), glyph.centerY()) != primary) {
+                            findings += "$where: the glyph is solid at its centre; the frozen one is an outline"
+                        }
                         log += "$where: control ${toDp(fill.width())}x${toDp(fill.height())}dp at " +
                             "(${fill.left},${fill.top}), glyph ${toDp(glyph.width())}x${toDp(glyph.height())}dp"
                     }
@@ -240,23 +262,38 @@ class PlayerControlRenderTest {
     }
 
     /**
-     * The bounding box of every pixel of exactly [colour], optionally restricted
-     * to [within]. Exact match, so anti-aliased edges are excluded - which is
-     * harmless for a box whose straight edges are a full pixel wide, and is what
-     * lets the corner checks below see the rounding.
+     * The bounding box of every pixel matching [colour], optionally restricted to
+     * [within].
+     *
+     * [tolerance] is 0 for the surface: an exact match excludes anti-aliased
+     * edges, which is harmless for a rectangle whose straight edges are a full
+     * pixel wide, and is what lets the corner checks see the rounding. The glyphs
+     * need a tolerance instead. The frozen play glyph is an outlined triangle
+     * whose apexes taper to nothing, so its extreme rows are never exactly
+     * `on_primary` and an exact match reads it a pixel or two short - by 3px on
+     * API 24 and 2 on API 36, from anti-aliasing alone.
      */
-    private fun ink(bitmap: Bitmap, colour: Int, within: Rect?): Rect? {
+    private fun ink(bitmap: Bitmap, colour: Int, within: Rect?, tolerance: Int = 0): Rect? {
         val area = within ?: Rect(0, 0, bitmap.width, bitmap.height)
         val w = area.width()
         val pixels = IntArray(w * area.height())
         bitmap.getPixels(pixels, 0, w, area.left, area.top, w, area.height())
+
+        fun matches(p: Int): Boolean {
+            if (tolerance == 0) return p == colour
+            return maxOf(
+                kotlin.math.abs(android.graphics.Color.red(p) - android.graphics.Color.red(colour)),
+                kotlin.math.abs(android.graphics.Color.green(p) - android.graphics.Color.green(colour)),
+                kotlin.math.abs(android.graphics.Color.blue(p) - android.graphics.Color.blue(colour)),
+            ) <= tolerance
+        }
 
         var left = Int.MAX_VALUE
         var top = Int.MAX_VALUE
         var right = -1
         var bottom = -1
         for (i in pixels.indices) {
-            if (pixels[i] != colour) continue
+            if (!matches(pixels[i])) continue
             val x = area.left + i % w
             val y = area.top + i / w
             if (x < left) left = x

@@ -1,26 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  PLAYER swipe indicator, inactive page.
+  PLAYER swipe indicator, inactive pages - the literal Figma vector.
 
-    `swipe > Shape Set`   INSTANCE, variant Shape = "Circle"
-    `Shape Set > shape`   VECTOR 8.42 x 8.42 at (0.79, 0.79) of the 10x10 slot
+    instance 2402:31378 -> component master 2400:31363 "Shape=Circle"
+    vector 2400:31364, master viewport 380x380, child at (30, 30), circle 320
 
-  A plain circle, 8.42 across, centred in its slot - unlike the active marker,
-  which is a nine-lobed cookie. Two arcs rather than one: a single 360 arc is
-  degenerate.
+  The same 10dp component slot as the active marker, holding a plain circle:
+  320 of a 380 viewport drawn at 10dp is 8.42, which is what the snapshot
+  records. The bundle also carries the third dot's own detached vector
+  (2402:31396, 8.4210529 square) - the same circle, expressed as ink rather than
+  as the component slot.
 
-  The colour is the one thing the two frozen pages disagree on. Light draws it as
-  `primary` at 50% opacity, Dark as a solid `#6F899F`, so it is a declared pair
-  (`player_swipe_inactive`) rather than one role - see docs/PLAYER-3.6.6.md.
-
-  Untinted: the colour is applied from the layout.
+  Only the fill is changed, to the repo's #FFFFFF placeholder: the colour is
+  `player_swipe_inactive`, applied through player_swipe_tint.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="@dimen/player_swipe_shape_size"
-    android:height="@dimen/player_swipe_shape_size"
-    android:viewportWidth="8.42"
-    android:viewportHeight="8.42">
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M0,4.21 A4.21,4.21 0 1 0 8.42,4.21 A4.21,4.21 0 1 0 0,4.21 Z" />
+    android:width="@dimen/player_swipe_size"
+    android:height="@dimen/player_swipe_size"
+    android:viewportWidth="380"
+    android:viewportHeight="380">
+    <group android:translateX="30" android:translateY="30">
+        <path android:fillColor="#FFFFFF" android:pathData="M 320 160.0000153 C 320 248.3655701 248.3655396 320 159.9999847 320 C 71.6344299 320 -0.0000077 248.3655396 0 159.9999847 C 0.0000077 71.6344299 71.6344604 -0.0000077 160.0000153 0 C 248.3655701 0.0000077 320 71.6344604 320 160.0000153" />
+    </group>
 </vector>

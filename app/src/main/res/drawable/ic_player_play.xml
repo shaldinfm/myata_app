@@ -1,36 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  PLAYER play glyph.
+  PLAYER play glyph - the literal Figma vector.
 
-  The canonical exporter records a vector's box, position and fills but never its
-  geometry, so the box is what identifies the glyph - the same derivation the Mini
-  Player's icons use. Here the box is:
+    node 2484:59, 23.33 x 29.6927299, one path, fill-rule nonzero
 
-    `Controls > play/pause > Container > Icon`   23.33 x 23.33, at (28.33, 28.33)
+  Extracted from `Дизайн Приложения ФИНАЛ.fig` and copied verbatim: this is not
+  Material's `play_arrow` and not the triangle this file held before, which was a
+  reading of a bounding box. Two things it settles that no box could:
 
-  `Container` is layoutSizing HUG, so it hugs its child and 23.33 x 23.33 is the
-  ink rather than a canvas: the frozen glyph is exactly square, and centred at
-  (40, 40) of the 80x80 control.
+    - the glyph is an OUTLINE, not a solid. Two contours wound against each
+      other, so the default non-zero fill leaves the middle open.
+    - it is 29.69 tall against the pause glyph's 23.33, sharing its 23.33 width.
+      The frozen `Controls > play/pause > Container` HUGs its child, so the box
+      the canonical snapshot records - 23.33 square - is the *pause* glyph's.
+      That is which state the frozen frame shows.
 
-  #40 read that box as "a full icon canvas" and kept Material `play_arrow`
-  ("M8 5v14l11-7z") on a 24 canvas rendered at 23. That paints 10.5 x 13.4dp of
-  ink - 46% of the frozen box - and `play_arrow` is not centred in its own canvas,
-  so it also landed 1.6dp right of centre. That is what made the control read as
-  smaller than the frozen 80x80 even though the fill was the right size.
-
-  So the glyph is written glyph-tight, as the Mini Player's are: the viewport IS
-  the frozen box, the ink runs edge to edge, and the drawable's intrinsic size is
-  the glyph itself. Centring it in the control then puts it exactly where the
-  frozen design puts it, with no canvas padding to absorb.
-
-  Untinted: the colour is `on_primary`, applied from the layout.
+  Only the fill is changed, to the repo's #FFFFFF placeholder: the colour is
+  `on_primary`, applied from the layout.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="@dimen/player_play_icon"
-    android:height="@dimen/player_play_icon"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M0,0 L0,24 L24,12 Z" />
+    android:width="@dimen/player_play_glyph_width"
+    android:height="@dimen/player_play_glyph_height"
+    android:viewportWidth="23.329998"
+    android:viewportHeight="29.6927299">
+    <path android:fillColor="#FFFFFF" android:pathData="M 0 29.6927299 L 0 0 L 23.329998 14.846365 L 0 29.6927299 M 4.241818 21.9514103 L 15.3765898 14.846365 L 4.241818 7.7413187 L 4.241818 21.9514103" />
 </vector>

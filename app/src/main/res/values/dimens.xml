@@ -226,14 +226,14 @@
     <dimen name="player_header_action_height">39dp</dimen>
     <!-- The swipe dots abut the header row: it ends at 63 and they start at 63.
          They end at 73 and the page starts at 79, so 6 between. -->
-    <dimen name="player_swipe_size">10dp</dimen>
     <!--
-      The marker inside each 10 slot. `Shape Set > shape` is 8.42 square for the
-      circles and 8.53x8.42 for the active nine-lobed cookie, both centred at
-      (5, 5) of their slot - a cookie's bounding box cannot be square.
+      Each slot is 10, and so is each marker drawable: both come from their Figma
+      component master, whose 380 viewport carries the shape's own offset. The ink
+      inside works out at 8.53x8.42 for the active nine-lobed cookie and 8.42
+      square for the circles - a cookie's bounding box cannot be square - which is
+      what the canonical snapshot records for them.
     -->
-    <dimen name="player_swipe_shape_size">8.42dp</dimen>
-    <dimen name="player_swipe_active_width">8.53dp</dimen>
+    <dimen name="player_swipe_size">10dp</dimen>
     <dimen name="player_page_gap">6dp</dimen>
 
     <!-- `Album Art (Organic Shape)`, 239x239 r20, image FILL, 1px stroke. -->
@@ -268,7 +268,21 @@
     <dimen name="player_controls_inset">32dp</dimen>
     <dimen name="player_play_size">80dp</dimen>
     <dimen name="player_play_corner">20dp</dimen>
-    <dimen name="player_play_icon">23dp</dimen>
+    <!--
+      The two glyphs are not the same size, and only one of them is in the frozen
+      PLAYER frame. `Controls > play/pause > Container` HUGs its child and is
+      23.33 square, which is the pause glyph; the play glyph lives on its own node
+      (2484:59) and is 23.33 wide by 29.69 tall - the same width, taller. Both are
+      drawn at their own size and centred, so the control does not move between
+      them.
+
+      The progress indicator takes the pause box: it stands in for the glyph, and
+      the design has nothing to say about a connecting state.
+    -->
+    <dimen name="player_pause_glyph_size">23.33dp</dimen>
+    <dimen name="player_play_glyph_width">23.33dp</dimen>
+    <dimen name="player_play_glyph_height">29.69dp</dimen>
+    <dimen name="player_play_icon">23.33dp</dimen>
     <dimen name="player_action_width">49dp</dimen>
     <dimen name="player_action_height">54dp</dimen>
     <!--

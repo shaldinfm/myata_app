@@ -109,7 +109,7 @@ re-skin never appeared on a real device. One implementation now.
 | play/pause | `primary` / `on_primary` | `#1C4771` / `#FFFFFF` | `#5FD9B4` / `#0F253E` |
 | like | `player_like` | `#3F4A3C` | `#F5F7FA` |
 | like, in the collection | `primary` | | |
-| history (deferred slot) | `text_primary` | | |
+| history (the deferred `dislike` slot) | `player_control_action` | `#42474E` | `#F5F7FA` |
 | swipe, active | `primary` | | |
 | swipe, inactive | `player_swipe_inactive` | `#801C4771` | `#6F899F` |
 
@@ -182,21 +182,64 @@ bounding box only when `a = 0`; the frozen 8.53 × 8.42 fixes the ratio at
 1.01306, and `a = 0.081` reproduces it to six decimal places. Sampled as 27
 cubics, which holds the analytic curve to 0.014dp.
 
+## The icons, exact
+
+The canonical snapshot records a vector's box but never its geometry, so for a
+while every icon on this screen was an exact box around a reconstructed outline.
+That is over: the owner extracted the literal paths from
+`Дизайн Приложения ФИНАЛ.fig` offline, and the bundle is committed at
+[tools/figma-export/player-icons/exact](../tools/figma-export/player-icons/exact/)
+— SVGs, VectorDrawables, and a manifest carrying the node ids, blob ids,
+dimensions, transforms and pathData behind each one.
+
+Five of them are installed. **All five are outlines, not solids** — which no
+bounding box could have revealed, and which every reconstruction got wrong:
+
+| drawable | replaced | now |
+|---|---|---|
+| `ic_player_play` | a solid triangle filling a 23.33 square, read off a box | node `2484:59`, **23.33 × 29.6927299**, hollow triangle |
+| `ic_player_pause` | solid bars, Material's 1:1:1 split taken to a 23.33 square | node `2399:31221`, 23.3333334 square, **two hollow bars** |
+| `ic_player_like` | a thumbs-up drawn to fill the 24.5 × 23.33 box | node `2399:31217`, same box, **outlined** |
+| `ic_player_swipe_active` | a cosine-lobed disc, amplitude solved from the box | master `2401:38`, the **54-segment vector network** |
+| `ic_player_swipe_inactive` | a circle drawn to the box | master `2400:31363`, the component's own circle |
+
+**The play and pause glyphs are not the same size.** Pause is 23.33 square; play
+is the same width and 29.69 tall. That settles what the canonical snapshot could
+not: `Controls > play/pause > Container` HUGs its child and measures 23.33 square,
+so the glyph the frozen frame shows is **Pause**. Play is its own node and is not
+on this screen at all. Both are drawn at their own size, centred, so the control
+does not move between them.
+
+The swipe drawables are the 10 component slot rather than the ink: their group
+transform is the component master's, so the marker lands where the component puts
+it. The ink works out at 8.53 × 8.42 and 8.42 square — exactly what the snapshot
+records for those nodes, which is the two sources agreeing.
+
+Dislike and overflow are in the bundle and deliberately not installed: their
+phases own them.
+
+Two things carried knowingly:
+
+- the supplied cookie path contains 18 degenerate segments that return to their
+  own start point, an artefact of converting a vector network to a single path.
+  Seventeen are sub-pixel; the first has control points at y=-3.46 and paints a
+  faint spike above the top lobe — **3 pixels at the 26px this renders at** on a
+  420dpi screen. Dropping that one no-op segment would remove it. It is left in
+  rather than editing geometry supplied as exact.
+- lint's `VectorPath` warns that the cookie's 3854-character path is long. That
+  is what a literal 54-segment network costs, and it is drawn once per page.
+
 ## The icons the export cannot give us
 
 The canonical exporter records a vector's box, position and fills but never its
 geometry — `canonical/code.js` reads no `vectorPaths` and calls no `exportAsync`.
 So every icon on this screen has an **exact box and a reconstructed outline**.
 
-**[tools/figma-export/player-icons](../tools/figma-export/player-icons/) is built
-and waiting to be run.** It is `nav-icons`' machinery — `exportAsync(SVG)`, ids
-with a structural fallback, VectorDrawable XML out — pointed at these nodes. It
-needs Figma Desktop and the file open, which is an owner action; nothing in the
-repository can reach the document.
-
-There is **no separate Pause node** to export: `Controls > play/pause` holds one
-glyph per page, whichever state the frozen frame shows. The other glyph stays
-derived until one exists.
+**Superseded by the section above** — the geometry arrived by offline extraction
+from the `.fig` instead. [tools/figma-export/player-icons](../tools/figma-export/player-icons/)
+stays as the in-Figma route: `nav-icons`' machinery — `exportAsync(SVG)`, ids with
+a structural fallback, VectorDrawable XML out — pointed at these nodes, for
+whenever the design moves and the paths need refreshing from the live document.
 
 The nodes, all read off the visible `Controls` row:
 
@@ -209,30 +252,23 @@ The nodes, all read off the visible `Controls` row:
 | dislike *(deferred)* | `2399:31224` | `2444:18277` | 24.5 × 23.33 |
 | header overflow *(deferred)* | `2396:30741` | `2444:18239` | 4 × 16 |
 
-## Icons
+## Icons: the box, and what the box could not say
 
 `Controls > play/pause > Container > Icon` is 23.33×23.33, and `Container` is
-`layoutSizing: HUG` — it hugs its child. So that box is **ink, not a canvas**: the
-frozen glyph is exactly square and centred at (40, 40) of the 80×80 control. The
-two side slots read the same way (`like`/`dislike > Container > Icon`, 24.5×23.33).
+`layoutSizing: HUG` — it hugs its child. So that box is **ink, not a canvas**, and
+the glyph inside it is centred at (40, 40) of the 80×80 control. The two side
+slots read the same way (`like`/`dislike > Container > Icon`, 24.5×23.33).
 
-`ic_player_play` and `ic_player_pause` are therefore written glyph-tight, as the
-Mini Player's are: the viewport is the frozen box, the ink runs edge to edge, and
-the drawable's intrinsic size is the glyph. `pause` keeps Material's 1:1:1
-bar/gap/bar split, taken to the full box; `play` is the triangle that fills it.
-Both paint the same 23×23dp of ink, so the control does not change size when the
-state changes.
+#40 read the box as a canvas and kept Material `play_arrow`/`pause` on a 24 canvas
+rendered at 23. That paints 10.5×13.4dp of ink — 46% of the frozen box — and
+`play_arrow` is not centred in its own canvas, so it also landed 1.6dp right of
+centre. The fill was always the right size; the glyph inside it is what made the
+control read as smaller than the frozen 80×80.
 
-> The canonical exporter records no vector geometry, so the box is all the source
-> gives and the play triangle's proportions are a reading of it rather than a
-> path copied across. It is the reading that matches the recorded ink exactly.
-
-**This is the correction in [the play/pause follow-up](#the-central-control-three-faces).**
-The first Phase B pass read the 23.33 box as a canvas and kept Material
-`play_arrow`/`pause` on a 24 canvas rendered at 23. That paints 10.5×13.4dp of ink
-— 46% of the frozen box — and `play_arrow` is not centred in its own canvas, so it
-also landed 1.6dp right of centre. The fill was always the right size; the glyph
-inside it is what made the control read as smaller than the frozen 80×80.
+The correction after that filled the box exactly, which was as far as a bounding
+box can take you. What a box cannot say is that the glyph is **hollow**, or that
+the play glyph is 29.69 tall rather than 23.33. Both came from the exact bundle —
+see [the section above](#the-icons-exact).
 
 ## The central control: three faces
 
@@ -286,11 +322,11 @@ B2 is not modified.
 | | |
 |---|---|
 | `./gradlew assembleDebug` | pass |
-| `./gradlew lintDebug` | 0 errors, 389 warnings — 0 findings on any PLAYER file (Phase B took this from 409 to 394; COLLECTION took it to 389, and the follow-up added none) |
+| `./gradlew lintDebug` | 0 errors, 385 warnings. One is on a PLAYER file: `VectorPath` on the exact cookie's 3854-character path, which is what a literal 54-segment network costs |
 | `./gradlew testDebugUnitTest` | pass |
 | `PlayerLayoutTest` | instrumented — the frozen anchors at 320/360/390/412dp in both themes, the reserved header slot proven non-clickable, worst-case long Russian metadata on one line with no clipping or overlap. **API 24 and API 36, byte-identical.** |
 | `PlayerControlStateTest` | unit — the three faces, and buffering winning over playing |
-| `PlayerControlRenderTest` | instrumented — the control **as painted**, in all three states and both themes. **API 24 and API 36, byte-identical.** |
+| `PlayerControlRenderTest` | instrumented — the control **as painted**, in all three states and both themes: the surface, its radius, the glyph's size and centring, that the glyph is an **outline** and not a solid, and that the surface rectangle never moves. **API 24 and API 36.** |
 | regression | `MiniPlayerContractTest` on both images; `HomeLayoutTest` on API 24 |
 | live | `tools/qa/phone/capture-player.mjs` on both APIs — [tools/qa/phone/player/](../tools/qa/phone/player/) |
 | TV | smoke: renders unchanged, `DPAD_CENTER` reaches `STATE_CHANGED state=READY playWhenReady=true`, no crash |

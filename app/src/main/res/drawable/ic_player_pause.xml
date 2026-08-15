@@ -1,25 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  PLAYER pause glyph. Same derivation as ic_player_play: glyph-tight, the viewport
-  is the frozen 23.33 x 23.33 box, and the ink fills it.
+  PLAYER pause glyph - the literal Figma vector.
 
-  Material `pause` ("M6 19h4V5H6v14zm8-14v14h4V5h-4z") is two 4-wide bars with a
-  4-wide gap - the 1:1:1 split kept here - and 14 tall on a 24 canvas. Filling the
-  frozen square keeps that split and takes the bars to the full box, so play and
-  pause paint the same 23 x 23dp of ink and the control does not change size when
-  the state changes.
+    node 2399:31221, 23.3333334 square, one path, fill-rule nonzero
 
-  Two disjoint rectangles wound the same way, so the default non-zero fill is
-  correct and no android:fillType is needed.
+  This is the node the canonical snapshot records as `Controls > play/pause >
+  Container > Icon`, so the glyph the frozen frame shows is Pause. Two hollow
+  bars: four contours, the inner pair wound against the outer pair, so non-zero
+  leaves each bar open. Not the solid bars this file held before.
 
-  Untinted: the colour is `on_primary`, applied from the layout.
+  Only the fill is changed, to the repo's #FFFFFF placeholder.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="@dimen/player_play_icon"
-    android:height="@dimen/player_play_icon"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M0,0 L8,0 L8,24 L0,24 Z M16,0 L24,0 L24,24 L16,24 Z" />
+    android:width="@dimen/player_pause_glyph_size"
+    android:height="@dimen/player_pause_glyph_size"
+    android:viewportWidth="23.333334"
+    android:viewportHeight="23.333334">
+    <path android:fillColor="#FFFFFF" android:pathData="M 13.333333 23.333334 L 13.333333 0 L 23.333334 0 L 23.333334 23.333334 L 13.333333 23.333334 L 13.333333 23.333334 M 0 23.333334 L 0 0 L 10 0 L 10 23.333334 L 0 23.333334 L 0 23.333334 M 16.666666 20 L 20 20 L 20 3.3333333 L 16.666666 3.3333333 L 16.666666 20 L 16.666666 20 M 3.3333333 20 L 6.6666665 20 L 6.6666665 3.3333333 L 3.3333333 3.3333333 L 3.3333333 20 L 3.3333333 20 M 3.3333333 3.3333333 L 3.3333333 3.3333333 L 3.3333333 20 L 3.3333333 20 L 3.3333333 3.3333333 L 3.3333333 3.3333333 M 16.666666 3.3333333 L 16.666666 3.3333333 L 16.666666 20 L 16.666666 20 L 16.666666 3.3333333 L 16.666666 3.3333333" />
 </vector>

@@ -114,14 +114,24 @@ class PlayerLayoutTest {
             }
             val active = (markers[0] as android.widget.ImageView).drawable
             val inactive = (markers[1] as android.widget.ImageView).drawable
-            expect(where, "active marker width", active.intrinsicWidth, dp(8.53f))
-            expect(where, "active marker height", active.intrinsicHeight, dp(8.42f))
-            expect(where, "inactive marker width", inactive.intrinsicWidth, dp(8.42f))
-            expect(where, "inactive marker height", inactive.intrinsicHeight, dp(8.42f))
-            // Size alone cannot tell them apart - 8.53 and 8.42dp are the same
-            // 22px at this density - so the shapes are compared as painted. A
-            // circle's radius does not vary; the nine-lobed cookie's swings by
-            // 2a = 16% of it.
+
+            // Both drawables are the 10 component slot; the ink inside it is what
+            // the frozen frame records, so the ink is what is measured. Rendered
+            // at 400, one frozen unit is 40.
+            val slot = 400
+            val unit = slot / 10f
+            val activeInk = paintedInk(active, slot)
+            val inactiveInk = paintedInk(inactive, slot)
+            expect(where, "active marker slot", active.intrinsicWidth, dp(10))
+            expect(where, "inactive marker slot", inactive.intrinsicWidth, dp(10))
+            expect(where, "active marker ink width", activeInk.width(), 8.53f * unit, tolerance = unit / 2)
+            expect(where, "active marker ink height", activeInk.height(), 8.42f * unit, tolerance = unit / 2)
+            expect(where, "inactive marker ink width", inactiveInk.width(), 8.42f * unit, tolerance = unit / 2)
+            expect(where, "inactive marker ink height", inactiveInk.height(), 8.42f * unit, tolerance = unit / 2)
+
+            // Ink size alone cannot tell them apart either - 8.53 against 8.42 -
+            // so the shapes are compared as painted. A circle's radius does not
+            // vary; the nine-lobed cookie's swings by about 16% of it.
             val activeSwing = radialSwing(active)
             val inactiveSwing = radialSwing(inactive)
             if (activeSwing < 0.10f) {
@@ -190,6 +200,10 @@ class PlayerLayoutTest {
             val likeIcon = (favorite as android.widget.ImageView).drawable
             expect(where, "like glyph width", likeIcon.intrinsicWidth, dp(24.5f))
             expect(where, "like glyph height", likeIcon.intrinsicHeight, dp(23.33f))
+            // The frozen glyph is an outline, not a solid: it must leave a hole.
+            if (!hasHole(likeIcon)) {
+                findings += "$where: the like glyph paints solid; the frozen one is an outlined thumbs-up"
+            }
             // scaleType=center draws it at its own size inside the padded box.
             val likeBoxTop = favorite.paddingTop
             val likeBoxHeight = favorite.height - favorite.paddingTop - favorite.paddingBottom
@@ -283,18 +297,80 @@ class PlayerLayoutTest {
         }
     }
 
+    /** The drawable rendered on its own, at [size] square. */
+    private fun render(drawable: android.graphics.drawable.Drawable, size: Int): android.graphics.Bitmap {
+        val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val copy = drawable.constantState?.newDrawable()?.mutate() ?: drawable
+        copy.setBounds(0, 0, size, size)
+        copy.draw(android.graphics.Canvas(bitmap))
+        return bitmap
+    }
+
+    /** The bounding box of what a drawable actually paints, rendered at [size]. */
+    private fun paintedInk(drawable: android.graphics.drawable.Drawable, size: Int): Rect {
+        val bitmap = render(drawable, size)
+        val pixels = IntArray(size * size)
+        bitmap.getPixels(pixels, 0, size, 0, 0, size, size)
+        bitmap.recycle()
+        var left = size; var top = size; var right = -1; var bottom = -1
+        for (i in pixels.indices) {
+            if (android.graphics.Color.alpha(pixels[i]) < 128) continue
+            val x = i % size
+            val y = i / size
+            if (x < left) left = x
+            if (x > right) right = x
+            if (y < top) top = y
+            if (y > bottom) bottom = y
+        }
+        return if (right < 0) Rect() else Rect(left, top, right + 1, bottom + 1)
+    }
+
+    /**
+     * Whether a drawable paints a hole - transparent pixels enclosed by ink on
+     * every side. That is what separates the frozen outlined glyphs from the
+     * solid shapes that stood in for them.
+     */
+    private fun hasHole(drawable: android.graphics.drawable.Drawable): Boolean {
+        val size = 256
+        val bitmap = render(drawable, size)
+        val pixels = IntArray(size * size)
+        bitmap.getPixels(pixels, 0, size, 0, 0, size, size)
+        bitmap.recycle()
+        val ink = { x: Int, y: Int -> android.graphics.Color.alpha(pixels[y * size + x]) >= 128 }
+
+        for (y in 0 until size) {
+            var x = 0
+            // walk to the first ink on this row, then look for a gap that has ink
+            // on both sides of it horizontally and vertically
+            while (x < size && !ink(x, y)) x++
+            while (x < size) {
+                while (x < size && ink(x, y)) x++
+                val gap = x
+                while (x < size && !ink(x, y)) x++
+                if (x >= size) break
+                val mid = (gap + x) / 2
+                var above = false
+                var below = false
+                for (yy in 0 until y) if (ink(mid, yy)) { above = true; break }
+                for (yy in y + 1 until size) if (ink(mid, yy)) { below = true; break }
+                if (above && below && x - gap > 2) return true
+            }
+        }
+        return false
+    }
+
     /**
      * How much a drawable's painted outline varies from a disc: it renders the
      * drawable large, walks out from the centre at 360 angles until the ink ends,
      * and returns (max - min) / mean of those radii. A circle gives ~0; the frozen
      * nine-lobed cookie gives about 0.16.
+     *
+     * The walk stops at the first gap, so an outlined glyph would measure its
+     * stroke rather than its silhouette - fine here, where both markers are solid.
      */
     private fun radialSwing(drawable: android.graphics.drawable.Drawable): Float {
         val size = 256
-        val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
-        val copy = drawable.constantState?.newDrawable()?.mutate() ?: return 0f
-        copy.setBounds(0, 0, size, size)
-        copy.draw(android.graphics.Canvas(bitmap))
+        val bitmap = render(drawable, size)
 
         val cx = size / 2f
         val cy = size / 2f

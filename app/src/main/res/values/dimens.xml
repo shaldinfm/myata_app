@@ -466,12 +466,13 @@
       rather than fixed - at 390dp the weights reproduce 76dp on the nose, and
       below it they shrink instead of overflowing.
 
-      The 14dp padding is what makes the glyph 48dp at 390dp (76 - 2x14), and it
-      is the tile's own padding rather than a glyph size so the mark scales with
-      the tile on narrower screens instead of clipping.
+      The tiles carry no padding. The FINAL glyph assets are transparent 76x76
+      drawables that already hold the mark at its exact offset inside the tile,
+      so the viewport maps 1:1 onto the tile and any padding here would inset an
+      already-inset glyph. An earlier revision used 14dp to make a 48dp glyph out
+      of a 48dp asset; that asset shape is gone.
     -->
     <dimen name="about_social_heading_gap">16dp</dimen>
     <dimen name="about_social_tile_gap_horizontal">18dp</dimen>
     <dimen name="about_social_tile_gap_vertical">16dp</dimen>
-    <dimen name="about_social_tile_padding">14dp</dimen>
 </resources>

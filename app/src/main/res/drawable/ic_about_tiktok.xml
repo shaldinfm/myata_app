@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="76dp"
+    android:height="76dp"
+    android:viewportWidth="76"
+    android:viewportHeight="76">
+    <!-- Exact FINAL Figma social glyph. Theme=light; source nodes=2444:18814 -->
+    <group android:translateX="18" android:translateY="14">
+        <path
+                android:pathData="M30.1450539 0 L22.0556221 0 L22.0556221 32.6956024 C22.0556221 36.5913353 18.9443817 39.7913361 15.0725269 39.7913361 C11.2006721 39.7913361 8.08938026 36.5913353 8.08938026 32.6956024 C8.08938026 28.8696003 11.1315403 25.739069 14.8651457 25.6000023 L14.8651457 17.3913345 C6.63743734 17.5304012 0 24.2782669 0 32.6956024 C0 41.1826668 6.77571297 48 15.1416969 48 C23.5075493 48 30.2832623 41.1130676 30.2832623 32.6956024 L30.2832623 15.9303999 C33.3254623 18.1565342 37.0589752 19.4782677 41 19.5478668 L41 11.3391333 C34.9157333 11.1304398 30.1450539 6.12173367 30.1450539 0 Z"
+                android:fillColor="#1C4771" />
+    </group>
+</vector>

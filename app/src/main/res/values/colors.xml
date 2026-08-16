@@ -403,17 +403,4 @@
     <color name="about_onetime_chip_outline">#452149</color>
     <color name="about_onetime_chip_label">#1C4771</color>
 
-    <!--
-      Social glyph tint. #1C4771 is exactly `primary` in light, but dark draws a
-      near-white where `primary` is the mint #5FD9B4 - so it cannot be the role.
-
-      Dark is normalised to #F5F7FA. Figma carries #FEFEFE on the Telegram,
-      Spotify and YouTube glyphs and #F5F7FA on Instagram and Threads; the split
-      follows no rule, the two are indistinguishable on the tile, and one tint
-      is what lets all eight share a single ImageView attribute.
-
-      Provenance: the `Vector` children of `Section 3: Social Media` 2411:31674 /
-      2444:18620.
-    -->
-    <color name="about_social_icon">#1C4771</color>
 </resources>

@@ -32,6 +32,7 @@ import javax.net.ssl.HttpsURLConnection
 
 
 
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.media3.session.MediaController
@@ -45,6 +46,7 @@ import com.example.musicplayerapp.data.FavoriteDao
 import com.example.musicplayerapp.data.FavoriteTrack
 import com.example.musicplayerapp.data.FeedbackRepository
 import com.example.musicplayerapp.data.*
+import com.google.common.util.concurrent.ListenableFuture
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
@@ -116,6 +118,28 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
 
     private var mediaController: MediaController? = null
 
+    /**
+     * The connection this ViewModel asked for, kept until it is handed back.
+     *
+     * A controller is not owned by the object that holds the reference, it is a
+     * binder connection to the session service, and it lives until somebody
+     * releases it. The future - not the controller - is what [onCleared] releases,
+     * because a UI can be torn down while the connection is still being made and
+     * only the future covers that case as well as the connected one.
+     */
+    private var controllerFuture: ListenableFuture<MediaController>? = null
+
+    /**
+     * Set by [onCleared]. Nothing that connects, reconnects or registers a listener
+     * may run after it: the connection callback below can still arrive after the UI
+     * that owned this ViewModel is gone.
+     *
+     * Written and read on the application (main) thread - `onCleared` runs there,
+     * and so does the controller callback, which Media3 delivers on the looper the
+     * controller was built with.
+     */
+    private var isCleared = false
+
     /** A Play pressed before the controller connected, to be run once it does. */
     private var pendingPlayRequest = false
     private var controllerRetryAttempt = 0
@@ -157,11 +181,22 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     }
 
     private fun setupMediaController(attempt: Int = 0) {
+        if (isCleared) return
         // Use context.packageName (applicationId) since it may differ from the source package
         val sessionToken = SessionToken(context, ComponentName(context.packageName, MediaPlayerService::class.java.name))
         val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+        this.controllerFuture = controllerFuture
         PlaybackLog.event("CONTROLLER_CONNECT_REQUESTED", "attempt" to (attempt + 1))
         controllerFuture.addListener({
+            // The UI can go away while this connection is in flight. onCleared has
+            // already released the future by then, and the controller it produces
+            // with it - so this callback must not adopt one, must not register a
+            // listener on it, and must not treat the cancellation as a failure
+            // worth retrying.
+            if (isCleared) {
+                PlaybackLog.event("CONTROLLER_CONNECT_ABANDONED", "reason" to "viewmodel_cleared")
+                return@addListener
+            }
             try {
                 mediaController = controllerFuture.get()
                 mediaController?.addListener(playerListener)
@@ -215,6 +250,65 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
             setupMediaController(next)
         }
     }
+
+    /**
+     * Hands the session connection back when the UI that owned it is gone.
+     *
+     * A [MediaController] is a binder connection to [MediaPlayerService], not a
+     * plain object: holding one keeps the service bound and keeps this ViewModel -
+     * and everything it references - alive for as long as the process lives.
+     * Nothing released it before, so every ViewModel that was ever built left one
+     * behind, and a UI rebuilt often enough (each finish-and-relaunch, each
+     * `ActivityScenario` in a test run) piled up one more connected controller and
+     * one more registered [playerListener] on the same session.
+     *
+     * What is given back here is exactly what this ViewModel took out:
+     *
+     *  - [playerListener], the listener this ViewModel registered;
+     *  - the controller connection, through [MediaController.releaseFuture] rather
+     *    than `release()`, because the connection may still be in flight. That call
+     *    covers both states: a completed future's controller is released, and an
+     *    incomplete one is cancelled, after which Media3 releases the controller as
+     *    soon as it finishes being built. Either way nothing escapes.
+     *
+     * The polling and artwork coroutines need no line here: they run in
+     * [viewModelScope], which `ViewModel.clear()` cancels before calling this.
+     *
+     * What is deliberately *not* touched is the service and its session. They are
+     * not this ViewModel's to end - the service is started, holds the playback
+     * session and the media notification, and outlives any UI on purpose. Releasing
+     * a controller unbinds this client from it; it does not stop it, so playback
+     * carries on across a recreation and the next controller reconnects to the
+     * session that is still there.
+     */
+    override fun onCleared() {
+        isCleared = true
+
+        // Off the controller before it goes, so a listener registered by a dead
+        // ViewModel cannot be called back while the release is being completed.
+        mediaController?.removeListener(playerListener)
+        mediaController = null
+        pendingPlayRequest = false
+
+        controllerFuture?.let { MediaController.releaseFuture(it) }
+        controllerFuture = null
+
+        PlaybackLog.event("CONTROLLER_RELEASED", "reason" to "viewmodel_cleared")
+
+        super.onCleared()
+    }
+
+    /**
+     * The controller this ViewModel currently holds, or null if it has none.
+     *
+     * Exists for `MediaControllerLifecycleTest`, which asserts the release above
+     * actually happened. That can only be seen on the controller object itself -
+     * `isConnected` goes false when it is released - so the test needs the same
+     * instance the ViewModel had. Nothing in the app reads this.
+     */
+    @VisibleForTesting
+    internal val controllerForTest: MediaController?
+        get() = mediaController
 
     /**
      * Runs a Play that arrived before the controller was ready. Guarded so a burst

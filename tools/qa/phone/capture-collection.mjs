@@ -14,6 +14,11 @@
  *                       rows, and reach the system file picker;
  *   the overflow gate   it is hidden while the collection is empty, which is what
  *                       the frozen empty frame does;
+ *   the per-track sheet the FINAL row has one control, and the four service
+ *                       actions and the removal it replaced are rows on the sheet
+ *                       it opens - so the sheet has to open and carry all five;
+ *   remove and undo     removal is the sheet's last row, and Отменить has to put
+ *                       the same row back, not a fresh copy at the top;
  *   the Mini Player     COLLECTION is one of the screens the pill floats over, so
  *                       "hidden until a stream is started, visible afterwards and
  *                       while paused" is observable here;
@@ -84,6 +89,7 @@ function hierarchy() {
         if (bb) {
           out._bounds.push({
             text: a.text,
+            cx: (Number(bb[1]) + Number(bb[3])) >> 1,
             cy: (Number(bb[2]) + Number(bb[4])) >> 1,
             top: { h: Number(bb[4]) - Number(bb[2]) },
           });
@@ -129,6 +135,53 @@ function tapText(label, { last = false } = {}) {
     sh(["shell", "input", "tap", String((+m[1] + +m[3]) >> 1), String((+m[2] + +m[4]) >> 1)]);
     return true;
   } catch { return false; }
+}
+
+/** Taps a point already known, with no dump of its own. See step 09. */
+function tapAt(x, y) { sh(["shell", "input", "tap", String(x), String(y)]); }
+
+/**
+ * One-call hierarchy dump, for the steps that are racing something.
+ *
+ * `hierarchy()` writes /sdcard/ui.xml and then cats it back - two adb round
+ * trips, which measured about two seconds on a busy emulator. That is most of a
+ * Snackbar's 2750ms LENGTH_LONG before anything has been tapped. Dumping to
+ * /dev/tty through exec-out is one trip. Not every image supports it, so this
+ * falls back rather than failing.
+ */
+function fastDumpXml() {
+  try {
+    const out = sh(["exec-out", "uiautomator", "dump", "/dev/tty"]);
+    if (/<hierarchy/.test(out)) return out;
+  } catch {}
+  sh(["shell", "uiautomator", "dump", "/sdcard/ui.xml"]);
+  return sh(["shell", "cat", "/sdcard/ui.xml"]);
+}
+
+/** The centre of the first node carrying [label], case-insensitively. */
+function centreOfText(xml, label) {
+  for (const m of xml.matchAll(/text="([^"]*)"[^>]*bounds="\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]"/g)) {
+    if (m[1].toLowerCase() === label.toLowerCase()) {
+      return { text: m[1], cx: (+m[2] + +m[4]) >> 1, cy: (+m[3] + +m[5]) >> 1 };
+    }
+  }
+  return null;
+}
+
+/**
+ * The favorites table, straight out of Room. The app is debuggable, so `run-as`
+ * reaches its private databases directory without root. Used by the undo step,
+ * where "the row came back" is a weaker claim than "the same row came back".
+ */
+function readFavorites() {
+  try {
+    const out = sh(["shell",
+      `run-as ${PKG} sqlite3 databases/myata_database "SELECT id||'|'||artist||'|'||track||'|'||stream||'|'||addedAt FROM favorites ORDER BY addedAt DESC;"`]);
+    return out.split(/\r?\n/).filter(Boolean).map((l) => {
+      const [id, artist, track, stream, addedAt] = l.split("|");
+      return { id: Number(id), artist, track, stream, addedAt: Number(addedAt) };
+    });
+  } catch { return []; }
 }
 
 function tapDesc(desc) {
@@ -415,11 +468,99 @@ try {
     sleep(1500);
     step("07-scrolled-to-end");
 
-    // Delete takes it back to the empty state, and the overflow goes with it.
-    const withRow = hierarchy();
-    tap(withRow, "btn_delete");
-    sleep(2000);
-    step("08-empty-again-after-delete");
+    // The FINAL row has one control and it opens the per-track sheet, which is
+    // where the four service actions and the removal live now. The sheet has to
+    // carry all five rows, in the owner-confirmed order.
+    tap(hierarchy(), "btn_row_action");
+    sleep(1800);
+    const sheet = hierarchy();
+    shot(`390dp-${theme}-08-track-sheet`);
+    const SHEET_ROWS = ["Spotify", "Apple Music", "YouTube", "Яндекс Музыка", "Удалить из коллекции"];
+    results.flow.push({
+      theme, step: "08-track-sheet",
+      rows: SHEET_ROWS.filter((r) => sheet._texts.includes(r)),
+      missing: SHEET_ROWS.filter((r) => !sheet._texts.includes(r)),
+    });
+    console.log(`  390dp ${theme.padEnd(5)} ${"08-track-sheet".padEnd(28)} ` +
+      `rows=${results.flow.at(-1).rows.length}/5 ` +
+      `missing=${JSON.stringify(results.flow.at(-1).missing)}`);
+
+    // Removal is the sheet's last row. It takes the screen back to the empty
+    // state, the overflow goes with it, and the Snackbar offers Отменить.
+    //
+    // Everything this step needs comes out of ONE dump, and the tap is made
+    // straight from that dump's bounds. A uiautomator dump costs about a second
+    // and a half and a screencap about one, while LENGTH_LONG is 2750ms - so a
+    // step that dumps, photographs and then dumps again to find the button is
+    // reaching for the Snackbar a good two seconds after it has gone. The first
+    // run of this did exactly that and reported the undo as broken when it was
+    // the harness that was late. The picture is taken at step 11 instead, where
+    // nothing has to be tapped in the window.
+    // What the row is before it is removed, so the undo step can say whether the
+    // SAME row came back rather than merely a row.
+    const savedRow = readFavorites()[0];
+
+    // One fast dump, then tap straight from its bounds. The elapsed time from
+    // the removal to the tap is recorded next to the result: LENGTH_LONG is
+    // 2750ms, so a miss has to be attributable to the harness being late rather
+    // than left looking like a broken undo. The label is matched
+    // case-insensitively - a Material button style can render it uppercased -
+    // and the casing actually found is recorded, so a text transform cannot
+    // pass silently either.
+    tapText("Удалить из коллекции");
+    // Timed from the removal itself, not from before it: tapText does its own
+    // dump first, and counting that would overstate the elapsed time by seconds
+    // and label a tap that landed comfortably inside the window as late.
+    const t0 = Date.now();
+    const xml = fastDumpXml();
+    const undoNode = centreOfText(xml, "Отменить");
+    if (undoNode) tapAt(undoNode.cx, undoNode.cy);
+    const tapAtMs = Date.now() - t0;
+
+    results.flow.push({
+      theme, step: "09-removed-with-undo",
+      sawSnackbar: /text="Трек удалён из коллекции"/.test(xml),
+      sawUndo: Boolean(undoNode),
+      undoCasing: undoNode && undoNode.text,
+      emptyCard: /empty_card/.test(xml),
+      overflowHidden: !/collection_overflow/.test(xml),
+      tapAtMs, insideWindow: tapAtMs < 2750,
+    });
+    console.log(`  390dp ${theme.padEnd(5)} ${"09-removed-with-undo".padEnd(28)} ` +
+      `snackbar=${results.flow.at(-1).sawSnackbar} undo=${JSON.stringify(results.flow.at(-1).undoCasing)} ` +
+      `empty=${results.flow.at(-1).emptyCard} overflowHidden=${results.flow.at(-1).overflowHidden} ` +
+      `tappedAt=${tapAtMs}ms ${results.flow.at(-1).insideWindow ? "(in window)" : "(LATE)"}`);
+
+    sleep(2500);
+    const undone = step("10-undone");
+    // Read the restored row straight out of Room. The screen coming back is not
+    // the claim being made - the claim is that it is the SAME row, and the field
+    // that carries that is addedAt, because the list is ORDER BY addedAt DESC.
+    // The autogenerated id is reassigned on re-insert and is recorded here so
+    // that stays a measurement rather than a surprise.
+    const restored = readFavorites();
+    results.flow.push({
+      theme, step: "10-undone-check",
+      rowIsBack: Boolean(undone.collection_row || undone.tv_track),
+      overflowBack: Boolean(undone.collection_overflow),
+      addedAtPreserved: Boolean(savedRow && restored[0] && restored[0].addedAt === savedRow.addedAt),
+      idBefore: savedRow && savedRow.id, idAfter: restored[0] && restored[0].id,
+    });
+    console.log(`  390dp ${theme.padEnd(5)} ${"10-undone-check".padEnd(28)} ` +
+      `rowIsBack=${results.flow.at(-1).rowIsBack} overflowBack=${results.flow.at(-1).overflowBack} ` +
+      `addedAtPreserved=${results.flow.at(-1).addedAtPreserved} ` +
+      `id ${results.flow.at(-1).idBefore}->${results.flow.at(-1).idAfter}`);
+
+    // Remove once more: this is where the Snackbar is photographed, because
+    // nothing has to be tapped inside its window here. Then let it expire, so
+    // the run ends on the empty state the next theme's pass expects.
+    tap(hierarchy(), "btn_row_action");
+    sleep(1500);
+    tapText("Удалить из коллекции");
+    sleep(500);
+    shot(`390dp-${theme}-11-removed-with-undo`);
+    sleep(6000);
+    step("12-empty-again-after-remove");
 
     sh(["shell", "am", "force-stop", PKG]);
     sleep(1000);

@@ -248,9 +248,20 @@ class TypographyWidthSweepTest {
                 inspect(root, "item_favorite_track", w)
                 val track = root.findViewById<TextView>(R.id.tv_track)
                 val artist = root.findViewById<TextView>(R.id.tv_artist)
-                val badge = root.findViewById<TextView>(R.id.badge_stream)
+                // The stream badge is gone with the FINAL row (F3); the text
+                // column's neighbours are the cover and the single trailing
+                // action now, and both are what long metadata can run into.
+                //
+                // The column is what is compared against them, not the two
+                // TextViews inside it: assertNoOverlap reads raw view bounds, so
+                // both sides have to be children of the same parent, and since
+                // F3 the title and artist sit one level down inside the column.
+                val column = root.findViewById<View>(R.id.text_column)
+                val cover = root.findViewById<View>(R.id.artwork)
+                val action = root.findViewById<View>(R.id.btn_row_action)
                 assertNoOverlap(track, artist, "collection", w)
-                assertNoOverlap(track, badge, "collection", w)
+                assertNoOverlap(cover, column, "collection", w)
+                assertNoOverlap(column, action, "collection", w)
                 if (track.top >= artist.top) {
                     findings += Finding("collection@${w}px", "title is not above artist")
                 }

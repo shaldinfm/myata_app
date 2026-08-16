@@ -417,29 +417,14 @@
       },
       "emptyCard": null,
       "firstRow": {
-        "x": 33,
-        "y": 194,
-        "w": 259,
+        "x": 113,
+        "y": 202,
+        "w": 188,
         "h": 28
       },
-      "badge": {
-        "x": 304,
-        "y": 194,
-        "w": 53,
-        "h": 19
-      },
-      "services": {
-        "x": 33,
-        "y": 265,
-        "w": 306,
-        "h": 32
-      },
-      "delete": {
-        "x": 339,
-        "y": 272,
-        "w": 18,
-        "h": 18
-      }
+      "badge": null,
+      "services": null,
+      "delete": null
     },
     {
       "theme": "light",
@@ -469,7 +454,7 @@
       "bom": true,
       "crlf": false,
       "rows": 1,
-      "first": "DAYGLOW - CAN I CALL YOU TONIGHT?"
+      "first": "LIME GARDEN - CROSS MY HEART"
     },
     {
       "theme": "light",
@@ -499,33 +484,76 @@
       },
       "emptyCard": null,
       "firstRow": {
-        "x": 33,
-        "y": 194,
-        "w": 259,
+        "x": 113,
+        "y": 202,
+        "w": 188,
         "h": 28
       },
-      "badge": {
-        "x": 304,
-        "y": 194,
-        "w": 53,
-        "h": 19
-      },
-      "services": {
-        "x": 33,
-        "y": 265,
-        "w": 306,
-        "h": 32
-      },
-      "delete": {
-        "x": 339,
-        "y": 272,
-        "w": 18,
-        "h": 18
-      }
+      "badge": null,
+      "services": null,
+      "delete": null
     },
     {
       "theme": "light",
-      "step": "08-empty-again-after-delete",
+      "step": "08-track-sheet",
+      "rows": [
+        "Spotify",
+        "Apple Music",
+        "YouTube",
+        "Яндекс Музыка",
+        "Удалить из коллекции"
+      ],
+      "missing": []
+    },
+    {
+      "theme": "light",
+      "step": "09-removed-with-undo",
+      "sawSnackbar": true,
+      "sawUndo": true,
+      "undoCasing": "Отменить",
+      "emptyCard": true,
+      "overflowHidden": true,
+      "tapAtMs": 5415,
+      "insideWindow": false
+    },
+    {
+      "theme": "light",
+      "step": "10-undone",
+      "miniPlayer": {
+        "x": 16,
+        "y": 602,
+        "w": 358,
+        "h": 74
+      },
+      "overflow": {
+        "x": 326,
+        "y": 52,
+        "w": 48,
+        "h": 48
+      },
+      "emptyCard": null,
+      "firstRow": {
+        "x": 113,
+        "y": 202,
+        "w": 188,
+        "h": 28
+      },
+      "badge": null,
+      "services": null,
+      "delete": null
+    },
+    {
+      "theme": "light",
+      "step": "10-undone-check",
+      "rowIsBack": true,
+      "overflowBack": true,
+      "addedAtPreserved": true,
+      "idBefore": 1,
+      "idAfter": 1
+    },
+    {
+      "theme": "light",
+      "step": "12-empty-again-after-remove",
       "miniPlayer": {
         "x": 16,
         "y": 602,
@@ -619,29 +647,14 @@
       },
       "emptyCard": null,
       "firstRow": {
-        "x": 33,
-        "y": 194,
-        "w": 259,
+        "x": 113,
+        "y": 202,
+        "w": 188,
         "h": 28
       },
-      "badge": {
-        "x": 304,
-        "y": 194,
-        "w": 53,
-        "h": 19
-      },
-      "services": {
-        "x": 33,
-        "y": 265,
-        "w": 306,
-        "h": 32
-      },
-      "delete": {
-        "x": 339,
-        "y": 272,
-        "w": 18,
-        "h": 18
-      }
+      "badge": null,
+      "services": null,
+      "delete": null
     },
     {
       "theme": "dark",
@@ -671,7 +684,7 @@
       "bom": true,
       "crlf": false,
       "rows": 1,
-      "first": "MUSE - NIGHTSHIFT SUPERSTAR"
+      "first": "DNA FT. SUZANNE VEGA - TOM'S DINNER"
     },
     {
       "theme": "dark",
@@ -701,33 +714,76 @@
       },
       "emptyCard": null,
       "firstRow": {
-        "x": 33,
-        "y": 194,
-        "w": 259,
+        "x": 113,
+        "y": 202,
+        "w": 188,
         "h": 28
       },
-      "badge": {
-        "x": 304,
-        "y": 194,
-        "w": 53,
-        "h": 19
-      },
-      "services": {
-        "x": 33,
-        "y": 265,
-        "w": 306,
-        "h": 32
-      },
-      "delete": {
-        "x": 339,
-        "y": 272,
-        "w": 18,
-        "h": 18
-      }
+      "badge": null,
+      "services": null,
+      "delete": null
     },
     {
       "theme": "dark",
-      "step": "08-empty-again-after-delete",
+      "step": "08-track-sheet",
+      "rows": [
+        "Spotify",
+        "Apple Music",
+        "YouTube",
+        "Яндекс Музыка",
+        "Удалить из коллекции"
+      ],
+      "missing": []
+    },
+    {
+      "theme": "dark",
+      "step": "09-removed-with-undo",
+      "sawSnackbar": true,
+      "sawUndo": true,
+      "undoCasing": "Отменить",
+      "emptyCard": true,
+      "overflowHidden": true,
+      "tapAtMs": 5075,
+      "insideWindow": false
+    },
+    {
+      "theme": "dark",
+      "step": "10-undone",
+      "miniPlayer": {
+        "x": 16,
+        "y": 602,
+        "w": 358,
+        "h": 74
+      },
+      "overflow": {
+        "x": 326,
+        "y": 52,
+        "w": 48,
+        "h": 48
+      },
+      "emptyCard": null,
+      "firstRow": {
+        "x": 113,
+        "y": 202,
+        "w": 188,
+        "h": 28
+      },
+      "badge": null,
+      "services": null,
+      "delete": null
+    },
+    {
+      "theme": "dark",
+      "step": "10-undone-check",
+      "rowIsBack": true,
+      "overflowBack": true,
+      "addedAtPreserved": true,
+      "idBefore": 1,
+      "idAfter": 1
+    },
+    {
+      "theme": "dark",
+      "step": "12-empty-again-after-remove",
       "miniPlayer": {
         "x": 16,
         "y": 602,

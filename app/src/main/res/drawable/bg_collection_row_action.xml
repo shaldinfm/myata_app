@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  COLLECTION track row, the ring around the trailing action.
+
+  Frozen canonical: `Track Item N` > `Container` > `Button`, light node
+  2409:31570, dark 2444:18184 - 40x40, cornerRadius 9999, NO fill, and a 2px
+  INSIDE stroke on `primary` (#1C4771 light / #5FD9B4 dark). The glyph inside
+  takes the same role, so the whole control is one colour.
+
+  An oval with a stroke is what "r=9999 on a square" means; the ring is drawn
+  inside the 40 because the canonical strokeAlign is INSIDE, which is also how
+  the row card's own 1px stroke is handled.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <size
+        android:width="@dimen/collection_row_action_size"
+        android:height="@dimen/collection_row_action_size" />
+    <stroke
+        android:width="@dimen/collection_row_action_stroke"
+        android:color="@color/primary" />
+</shape>

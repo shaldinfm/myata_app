@@ -1,48 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  COLLECTION track row - PARTIALLY migrated to the frozen 3.6.6 design (Phase B).
+  COLLECTION track row - the FINAL 3.6.6 design (F3).
 
-  What lands here is the card and the type: the frozen `Track Item N` is 358x98,
-  r24, on `surface` with a 1px INSIDE stroke on `outline`, 16 padding and 16
-  between rows, its title Onest Regular 16/28 on `text_primary` and its artist
-  Onest Regular 12/20 on `text_secondary`. All of that is reproduced, in both
-  themes, and every hardcoded hex the row used to carry is gone.
+  Frozen `Track Item N`, light node 2409:31563 / dark 2444:18177, reproduced in
+  full for the first time: 358x98, r24, on `surface` with a 1px INSIDE stroke on
+  `outline`, and three columns.
 
-  What does NOT land here, and why, in full - the same list is in
+      0    17          81   97              285  301        341  358
+      |    | 64x64 r20 |    | title         |    | 40x40 O  |    |
+      |    |  cover    | 16 | artist        | 16 |  ring    | 17 |
+
+  What CHANGED from the Phase B row, and why - the long version is in
   docs/COLLECTION-3.6.6.md:
 
-  **No 64x64 cover.** FavoriteTrack stores id, artist, track, stream and addedAt
-  and has nowhere to put an artwork URL. Adding one is a Room migration plus a
-  per-row network fetch through ArtworkRepository - data work, not a re-skin.
+  **The 64x64 cover is here, and with it the frozen 98dp row.** Phase B recorded
+  that this needed "a Room migration plus a per-row fetch". Only the second half
+  was ever true: ArtworkRepository keys on artist and track, which FavoriteTrack
+  already stores, so nothing about the schema changes. The fetch follows
+  PlayerHistoryAdapter exactly - the same repository, the same cancel-on-recycle,
+  the same bare plate while it resolves and if it finds nothing.
 
-  **So no 98dp row.** The frozen 98 is 17 + a 64 cover + 17. Without the cover
-  there is nothing to hold the row open, and forcing 98 would reserve a 64dp
-  hole to imitate a frame rather than to draw anything. The row keeps its own
-  content height until the cover has data behind it.
+  **The four inline service buttons and the delete cross are gone from the row.**
+  They are not deleted: they are the first five rows of the per-track sheet the
+  circular action opens - see CollectionTrackSheet and sheet_collection_track.xml.
+  Every destination is the same MusicSearchHelper call it was, and removal is the
+  same FavoritesViewModel.removeFavorite it was. The frozen row has exactly one
+  control and this is what is behind it.
 
-  **One action, not five.** The frozen row has a single circular `arrow_forward`
-  opening the per-track service sheet. That sheet is F1 and does not exist; the
-  four inline service buttons and the delete control below are what the app ships
-  today and they are kept, unchanged, so no function is lost in the interval.
-  Removing them is F3 and explicitly gated.
+  **The stream badge is gone.** It was retained through Phase B as an accepted
+  deviation, to be settled by this migration; the frozen row has no counterpart
+  for it and neither does the frozen sheet, whose two text lines are the track
+  and the artist. The station it carried is still written by the CSV export,
+  which is where the value was always duplicated. Owner decision.
 
-  **The stream badge stays.** The frozen row has no counterpart for it, but it
-  carries real information - which station the track came from, the same value
-  the CSV export writes - and its disposition is settled with the F3 row
-  migration, not here.
+  **The separator is gone** with the control strip it separated.
 
-  **Truncation is unchanged.** The frozen row specifies neither ellipsis nor
-  maxLines, only fixed 18 and 16 boxes against 28 and 20 line heights - the same
-  authoring pathology B2 refused to reproduce on the Mini Player title. Here the
-  boxes are applied as minima, so the tokens' real line boxes are honoured and no
-  glyph is clipped, while the one-line title and two-line artist ellipsis the
-  screen has always had is left exactly as it was.
+  **Truncation is unchanged**, deliberately: one line for the title, two for the
+  artist. The frozen row specifies neither ellipsis nor maxLines, only fixed 18
+  and 16 boxes against 28 and 20 line heights - the authoring pathology B2
+  refused to reproduce on the Mini Player title. The boxes are applied as minima
+  so the tokens' real line boxes are honoured and no glyph is clipped. Whether
+  Collection adopts History's variable-height, never-truncate rule is still a
+  separate decision, and CollectionLayoutTest asserts F3 did not take it either.
 
-  Title above artist, matching the FINAL canonical row where the track is the
-  Heading 3 and the artist the secondary line below it.
+  The row height is a MINIMUM, so a wrapped artist grows the row rather than
+  clipping; one-line content measures the frozen 17 + 64 + 17 = 98.
 -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/collection_row"
     style="@style/CollectionCard"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -51,132 +57,97 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:minHeight="@dimen/collection_row_min_height"
         android:padding="@dimen/collection_card_padding">
 
-        <TextView
-            android:id="@+id/tv_track"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="12dp"
-            android:ellipsize="end"
-            android:gravity="center_vertical"
-            android:maxLines="1"
-            android:minHeight="28dp"
-            android:text="Track Title"
-            android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.16_28"
-            android:textColor="@color/text_primary"
-            app:layout_constraintEnd_toStartOf="@id/badge_stream"
+        <!--
+          `Container` at (17,17), 64x64 r20, holding an IMAGE fill. Pinned to the
+          top rather than centred: the frozen cover's top edge is the row's own
+          17 padding, and on a row that has grown for a second artist line the
+          cover must stay on that padding rather than drift down with the text.
+        -->
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/artwork"
+            android:layout_width="@dimen/collection_row_artwork_size"
+            android:layout_height="@dimen/collection_row_artwork_size"
+            android:background="@drawable/bg_collection_row_artwork"
+            android:contentDescription="@string/collection_row_artwork"
+            android:scaleType="centerCrop"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <TextView
-            android:id="@+id/tv_artist"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:layout_marginEnd="12dp"
-            android:ellipsize="end"
-            android:maxLines="2"
-            android:minHeight="20dp"
-            android:text="ARTIST NAME"
-            android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.12_20"
-            android:textColor="@color/text_secondary"
-            app:layout_constraintEnd_toStartOf="@id/badge_stream"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tv_track" />
+            app:layout_constraintTop_toTopOf="parent"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Myata.CollectionRowArtwork" />
 
         <!--
-          Retained, and an accepted temporary deviation from FINAL - see the
-          block at the top of this file. Its background is tinted per stream by
-          FavoritesAdapter, so the label colour is fixed against those tints
-          rather than following the theme.
+          `Container` at (97,32), 188x34, holding `Heading 3` over the artist.
+          Centred as a block against the cover, which is what the frozen 32 is:
+          the 34 text block on a 98 row inside 17 padding sits 15 below the
+          cover's top and 15 above its bottom.
+
+          The 188 width is not pinned. It is what is left between the cover and
+          the action, which resolves to exactly 188 at 390dp and to the right
+          answer at 320, 360 and 412 - a fixed 188 would be wrong at all four.
         -->
-        <TextView
-            android:id="@+id/badge_stream"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/rounded_banner_bg"
-            android:fontFamily="@font/onest_black"
-            android:paddingHorizontal="10dp"
-            android:paddingVertical="3dp"
-            android:text="MYATA"
-            android:textColor="#000000"
-            android:textSize="9sp"
-            android:textStyle="bold"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <View
-            android:id="@+id/separator"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/collection_card_stroke"
-            android:layout_marginTop="10dp"
-            android:background="@color/outline"
-            app:layout_constraintTop_toBottomOf="@id/tv_artist" />
-
         <LinearLayout
-            android:id="@+id/music_services"
+            android:id="@+id/text_column"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:orientation="horizontal"
+            android:layout_marginStart="@dimen/collection_row_gutter"
+            android:layout_marginEnd="@dimen/collection_row_gutter"
+            android:orientation="vertical"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/btn_delete"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/separator">
+            app:layout_constraintEnd_toStartOf="@id/btn_row_action"
+            app:layout_constraintStart_toEndOf="@id/artwork"
+            app:layout_constraintTop_toTopOf="parent">
 
-            <ImageView
-                android:id="@+id/btn_spotify"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:layout_marginEnd="8dp"
-                android:background="@android:color/transparent"
-                android:contentDescription="Spotify"
-                android:src="@drawable/ic_spotify" />
+            <TextView
+                android:id="@+id/tv_track"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:gravity="center_vertical"
+                android:maxLines="1"
+                android:minHeight="@dimen/collection_row_title_min_height"
+                android:text="Track Title"
+                android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.16_28"
+                android:textColor="@color/text_primary" />
 
-            <ImageView
-                android:id="@+id/btn_apple_music"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:layout_marginEnd="8dp"
-                android:background="@android:color/transparent"
-                android:contentDescription="Apple Music"
-                android:src="@drawable/ic_apple_music" />
-
-            <ImageView
-                android:id="@+id/btn_yandex"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:layout_marginEnd="8dp"
-                android:background="@android:color/transparent"
-                android:contentDescription="Yandex Music"
-                android:src="@drawable/ic_yandex" />
-
-            <ImageView
-                android:id="@+id/btn_youtube"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="@android:color/transparent"
-                android:contentDescription="YouTube"
-                android:src="@drawable/ic_youtube" />
+            <TextView
+                android:id="@+id/tv_artist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:minHeight="@dimen/collection_row_artist_min_height"
+                android:text="ARTIST NAME"
+                android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.12_20"
+                android:textColor="@color/text_secondary" />
         </LinearLayout>
 
         <!--
-          The cross used to be white at 40% alpha, which only ever read on the
-          navy the row no longer has. It follows text_secondary now, so it is
-          legible on `surface` in both themes.
+          `Container > Button` at (301,29), 40x40, r=9999, no fill, 2px INSIDE
+          stroke on `primary`, holding `arrow_forward` rotated 45 degrees.
+
+          Centred against the cover rather than against the row: the frozen 29 on
+          a 98 row puts its centre at 49, which is the cover's centre (17 + 32),
+          and that is the alignment that survives the row growing.
+
+          40 is below the 48dp touch minimum. The ring keeps its drawn 40 and
+          FavoritesAdapter expands the target to 48 with a TouchDelegate - the
+          same answer docs/COLLECTION-3.6.6.md reached for the header overflow,
+          where a 4x16 glyph lives inside a 48dp slot.
         -->
         <ImageView
-            android:id="@+id/btn_delete"
-            android:layout_width="18dp"
-            android:layout_height="18dp"
-            android:background="@android:color/transparent"
-            android:contentDescription="Delete"
-            android:src="@drawable/dismiss_cross"
-            app:layout_constraintBottom_toBottomOf="@id/music_services"
+            android:id="@+id/btn_row_action"
+            android:layout_width="@dimen/collection_row_action_size"
+            android:layout_height="@dimen/collection_row_action_size"
+            android:background="@drawable/bg_collection_row_action"
+            android:contentDescription="@string/collection_row_action"
+            android:scaleType="center"
+            android:src="@drawable/ic_collection_row_action"
+            app:layout_constraintBottom_toBottomOf="@id/artwork"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/music_services"
-            app:tint="@color/text_secondary" />
+            app:layout_constraintTop_toTopOf="@id/artwork"
+            app:tint="@color/primary" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  COLLECTION per-track sheet - the FINAL `Bottom Sheet / Действия с треком` (F1).
+
+  Source: the FINAL proposal `collection-track-sheet` / `collection-track-sheet_dark`
+  in tools/figma-export/screens-3.6.6/baselines/proposals-{light,dark}-normalized.json,
+  authored at spec/screens.mjs:374 on the sheet primitives at spec/primitives.mjs:150.
+
+      sheet          358 wide, r28, `menu_surface`, 1px `menu_outline`
+      drag handle  (159,16)  40x4  r2   `outline`
+      title         (24,40) 300x32       Medium 24/32 `text_heading`  - the TRACK
+      subtitle      (24,78) 310x20       Regular 14/20 `text_secondary` - the ARTIST
+      rows          y = 112, 170, 228, 286    358x56, pitch 58
+      divider      (16,354) 326x1        `outline`
+      remove row    y = 367              `error` icon and label
+      height                447
+
+  This is the container the frozen track row's single circular action opens, and
+  it is where the four inline service buttons and the delete cross that Phase B
+  kept in the row have gone. The spec's own note says it plainly: "Replaces the
+  per-track inline button. Four services, a divider, then the destructive action
+  last and separated."
+
+  **The icons are the canonical generic disc, not brand marks.** All four service
+  rows on both canonical pages carry the same `Vector / disc`; the rows are told
+  apart by their labels. Owner-selected.
+
+  **The sheet floats.** 358 on a 390 frame with r28 on all four corners is not an
+  edge-to-edge sheet - it sits on the same 16 margins the rest of the screen
+  uses, which is why the dialog window is transparent and the margins are here.
+
+  **The header stacks as gaps, not absolute tops.** See the dimens: 16+4 then 20
+  lands the title on its frozen 40, and so on down to the first row's 112. Every
+  frozen anchor is reproduced on one-line content, and a long title grows the
+  sheet instead of overlapping the row below it. The title ellipsises at two
+  lines and the subtitle at one, which is the same truncation the row it was
+  opened from has always had.
+-->
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@android:color/transparent">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/sheet_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/sheet_margin"
+        app:cardBackgroundColor="@color/menu_surface"
+        app:cardCornerRadius="@dimen/sheet_corner"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/menu_outline"
+        app:strokeWidth="@dimen/sheet_stroke">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="@dimen/sheet_pad_bottom">
+
+            <!-- `Bottom Sheet / drag handle`, 40x4 r2 on `outline`. -->
+            <View
+                android:layout_width="@dimen/sheet_handle_width"
+                android:layout_height="@dimen/sheet_handle_height"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="@dimen/sheet_handle_top"
+                android:background="@drawable/bg_sheet_handle" />
+
+            <TextView
+                android:id="@+id/sheet_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/sheet_title_gap"
+                android:layout_marginHorizontal="@dimen/sheet_text_inset"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:minHeight="@dimen/sheet_title_min_height"
+                android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.24_32"
+                android:textColor="@color/text_heading" />
+
+            <TextView
+                android:id="@+id/sheet_subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/sheet_subtitle_gap"
+                android:layout_marginHorizontal="@dimen/sheet_text_inset"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:minHeight="@dimen/sheet_subtitle_min_height"
+                android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                android:textColor="@color/text_secondary" />
+
+            <!-- `Sheet row / Spotify`, y=112 -> the first row's gap is 14. -->
+            <LinearLayout
+                android:id="@+id/row_spotify"
+                style="@style/CollectionSheetRow"
+                android:layout_marginTop="@dimen/sheet_rows_top">
+
+                <ImageView
+                    style="@style/CollectionSheetRowIcon"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_sheet_disc"
+                    app:tint="@color/primary" />
+
+                <TextView
+                    style="@style/CollectionSheetRowLabel"
+                    android:text="@string/collection_sheet_spotify"
+                    android:textColor="@color/text_primary" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/row_apple_music"
+                style="@style/CollectionSheetRow">
+
+                <ImageView
+                    style="@style/CollectionSheetRowIcon"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_sheet_disc"
+                    app:tint="@color/primary" />
+
+                <TextView
+                    style="@style/CollectionSheetRowLabel"
+                    android:text="@string/collection_sheet_apple_music"
+                    android:textColor="@color/text_primary" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/row_youtube"
+                style="@style/CollectionSheetRow">
+
+                <ImageView
+                    style="@style/CollectionSheetRowIcon"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_sheet_disc"
+                    app:tint="@color/primary" />
+
+                <TextView
+                    style="@style/CollectionSheetRowLabel"
+                    android:text="@string/collection_sheet_youtube"
+                    android:textColor="@color/text_primary" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/row_yandex"
+                style="@style/CollectionSheetRow">
+
+                <ImageView
+                    style="@style/CollectionSheetRowIcon"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_sheet_disc"
+                    app:tint="@color/primary" />
+
+                <TextView
+                    style="@style/CollectionSheetRowLabel"
+                    android:text="@string/collection_sheet_yandex"
+                    android:textColor="@color/text_primary" />
+            </LinearLayout>
+
+            <!-- `Divider` (16,354) 326x1 on `outline`. -->
+            <View
+                android:id="@+id/sheet_divider"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/sheet_stroke"
+                android:layout_marginTop="@dimen/sheet_divider_gap_above"
+                android:layout_marginHorizontal="@dimen/sheet_divider_inset"
+                android:background="@color/outline" />
+
+            <!--
+              `Sheet row / Удалить из коллекции`, y=367 - the destructive action
+              last and separated, icon and label both on `error`.
+            -->
+            <LinearLayout
+                android:id="@+id/row_remove"
+                style="@style/CollectionSheetRow"
+                android:layout_marginTop="@dimen/sheet_divider_gap_below">
+
+                <ImageView
+                    style="@style/CollectionSheetRowIcon"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_sheet_trash"
+                    app:tint="@color/error" />
+
+                <TextView
+                    style="@style/CollectionSheetRowLabel"
+                    android:text="@string/collection_sheet_remove"
+                    android:textColor="@color/error" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</androidx.core.widget.NestedScrollView>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Bottom-sheet drag handle.
+
+  Frozen canonical `Bottom Sheet / drag handle`, light node 2444:18769, dark
+  2444:18658: 40x4 at (159,16) - centred on a 358 sheet - r2, on `outline`.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="2dp" />
+    <solid android:color="@color/outline" />
+</shape>

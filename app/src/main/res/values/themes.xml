@@ -421,7 +421,80 @@
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">24dp</item>
     </style>
-    
+
+    <!--
+      COLLECTION track row cover, frozen `Track Item N > Container`: 64x64, r20.
+    -->
+    <style name="ShapeAppearance.Myata.CollectionRowArtwork" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/collection_row_artwork_corner</item>
+    </style>
+
+    <!--
+      The per-track sheet, FINAL `Bottom Sheet / Действия с треком` (F1).
+
+      The row is the frozen `Sheet row / …`: 56 tall, 16 padding either side, a
+      48x48 icon slot holding a 24 glyph, then 12, then the label at 76. Pitch is
+      58, so the 2dp margin here is the gap between rows; the first row and the
+      destructive row override it with the gaps their own anchors need.
+
+      Rows are `selectableItemBackground` rather than a drawn press state: the
+      frozen sheet specifies no pressed fill, and the platform ripple is what
+      every other list surface in the app uses.
+    -->
+    <style name="CollectionSheetRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">@dimen/sheet_row_height</item>
+        <item name="android:layout_marginTop">@dimen/sheet_row_gap</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <!--
+          Start/end rather than paddingHorizontal: AAPT expands the shorthand in
+          a layout, but in a style it is a plain API 26 attribute and minSdk is 24.
+        -->
+        <item name="android:paddingStart">@dimen/sheet_row_icon_inset</item>
+        <item name="android:paddingEnd">@dimen/sheet_row_icon_inset</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <style name="CollectionSheetRowIcon">
+        <item name="android:layout_width">@dimen/sheet_row_icon_slot</item>
+        <item name="android:layout_height">@dimen/sheet_row_icon_slot</item>
+        <item name="android:scaleType">center</item>
+    </style>
+
+    <!--
+      Label at x=76 on a 358 row: 16 padding + the 48 slot + the frozen 12 gap.
+    -->
+    <style name="CollectionSheetRowLabel">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_marginStart">12dp</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textAppearance">@style/TextAppearance.Myata.Onest.Medium.16_22</item>
+    </style>
+
+    <!--
+      The sheet floats on the screen's own 16 margins with r28 on all four
+      corners, so the Material sheet background is cleared to transparent and the
+      card in sheet_collection_track.xml draws the whole surface itself.
+    -->
+    <style name="Theme.Myata.CollectionTrackSheet" parent="Theme.MaterialComponents.DayNight.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.Myata.CollectionTrackSheet</item>
+        <item name="android:backgroundDimAmount">0.6</item>
+    </style>
+
+    <style name="Widget.Myata.CollectionTrackSheet" parent="Widget.MaterialComponents.BottomSheet.Modal">
+        <item name="android:background">@android:color/transparent</item>
+        <item name="backgroundTint">@android:color/transparent</item>
+        <item name="shapeAppearance">@null</item>
+        <item name="shapeAppearanceOverlay">@null</item>
+    </style>
+
     <!-- BottomSheet style for History dialog -->
     <style name="Theme.MusicPlayerApp.BottomSheet" parent="Theme.MaterialComponents.Light.BottomSheetDialog">
         <item name="android:windowIsFloating">false</item>

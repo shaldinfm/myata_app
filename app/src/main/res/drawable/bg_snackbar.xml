@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Snackbar surface.
+
+  From the design system's own snackbar primitive,
+  tools/figma-export/screens-3.6.6/spec/primitives.mjs:286 - 358x56, r12, on
+  `surfaceContainer` with a `menuOutline` stroke. The two frames that use it are
+  sleep-timer proposals, so no COLLECTION frame draws a snackbar; taking the
+  established pattern is what stops the first one that ships being a shape of its
+  own. Material's default is an opaque grey slab that belongs to neither theme.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="@dimen/snackbar_corner" />
+    <solid android:color="@color/surface_container" />
+    <stroke
+        android:width="@dimen/sheet_stroke"
+        android:color="@color/menu_outline" />
+</shape>

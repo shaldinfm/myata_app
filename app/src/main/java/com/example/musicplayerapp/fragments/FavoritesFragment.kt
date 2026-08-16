@@ -6,9 +6,11 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -20,6 +22,8 @@ import com.example.musicplayerapp.adapters.FavoritesAdapter
 import com.example.musicplayerapp.data.FavoriteTrack
 import com.example.musicplayerapp.databinding.FragmentFavoritesBinding
 import com.example.musicplayerapp.viewmodel.FavoritesViewModel
+import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -32,6 +36,9 @@ class FavoritesFragment : Fragment() {
     private lateinit var viewModel: FavoritesViewModel
     private lateinit var adapter: FavoritesAdapter
     private var currentFavorites: List<FavoriteTrack> = emptyList()
+
+    /** One in-flight cover lookup per row, cancelled when its row is recycled. */
+    private val artworkJobs = mutableMapOf<FavoriteTrack, Job>()
 
     // File create launchers
     private val createTxtFile = registerForActivityResult(
@@ -123,9 +130,16 @@ class FavoritesFragment : Fragment() {
 
         viewModel = ViewModelProvider(this)[FavoritesViewModel::class.java]
 
-        adapter = FavoritesAdapter { track ->
-            viewModel.removeFavorite(track)
-        }
+        // The FINAL row has one control, and it opens the per-track sheet. The
+        // four service actions and the removal that used to sit inline are rows
+        // on that sheet now - see CollectionTrackSheet.
+        adapter = FavoritesAdapter(
+            artworkFor = ::requestArtwork,
+            cancelArtwork = ::cancelArtwork,
+            onActionClick = { track ->
+                CollectionTrackSheet.show(childFragmentManager, track.artist, track.track)
+            },
+        )
 
         binding.rvFavorites.layoutManager = LinearLayoutManager(context)
         binding.rvFavorites.adapter = adapter
@@ -185,6 +199,103 @@ class FavoritesFragment : Fragment() {
         }
 
         return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        // `Удалить из коллекции` on the sheet does not delete anything itself: it
+        // reports the request here, so the removal and its undo stay next to the
+        // list that has to show both. The sheet identifies the row by artist and
+        // track - the pair the favorites table is uniquely indexed on.
+        childFragmentManager.setFragmentResultListener(
+            CollectionTrackSheet.RESULT_REMOVE,
+            viewLifecycleOwner,
+        ) { _, bundle ->
+            val artist = bundle.getString(CollectionTrackSheet.ARG_ARTIST)
+            val track = bundle.getString(CollectionTrackSheet.ARG_TRACK)
+            currentFavorites
+                .firstOrNull { it.artist == artist && it.track == track }
+                ?.let(::removeWithUndo)
+        }
+    }
+
+    /**
+     * Removes a track and offers `Отменить` for as long as the Snackbar is up.
+     *
+     * Undo needs no store of its own: the entity that came out of the list is
+     * the undo record, and putting it back keeps its id and its addedAt, so the
+     * row returns to the position it was removed from. See
+     * FavoritesViewModel.restoreFavorite.
+     *
+     * The Snackbar is anchored on the chrome rather than on the window, so it
+     * clears the Mini Player when there is one and the navigation bar when there
+     * is not - the same 154 of clearance the list itself reserves.
+     */
+    private fun removeWithUndo(track: FavoriteTrack) {
+        viewModel.removeFavorite(track)
+        Snackbar.make(binding.root, R.string.collection_removed, Snackbar.LENGTH_LONG)
+            .setAnchorView(snackbarAnchor())
+            .setAction(R.string.collection_removed_undo) { viewModel.restoreFavorite(track) }
+            .also(::styleSnackbar)
+            .show()
+    }
+
+    /**
+     * The design system's own snackbar, spec/primitives.mjs:286 - r12 on
+     * `surface_container` with a `menu_outline` stroke, the message on
+     * `text_primary` and the action on `primary`, inset on the screen's 16
+     * margins. No COLLECTION frame draws a snackbar, so this takes the
+     * established pattern rather than shipping Material's default grey slab,
+     * which belongs to neither theme.
+     *
+     * `isAllCaps` is turned off because the Material button style would render
+     * the owner's `Отменить` as `ОТМЕНИТЬ`, and nothing else in the app shouts.
+     */
+    private fun styleSnackbar(bar: Snackbar) {
+        val ctx = requireContext()
+        bar.view.background = ContextCompat.getDrawable(ctx, R.drawable.bg_snackbar)
+        bar.view.setBackgroundTintList(null)
+        (bar.view.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp ->
+            val m = resources.getDimensionPixelSize(R.dimen.snackbar_margin)
+            lp.setMargins(m, m, m, m)
+            bar.view.layoutParams = lp
+        }
+        bar.setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
+        bar.setActionTextColor(ContextCompat.getColor(ctx, R.color.primary))
+        bar.view.findViewById<Button>(com.google.android.material.R.id.snackbar_action)
+            ?.isAllCaps = false
+    }
+
+    private fun snackbarAnchor(): View? {
+        val main = activity as? MainActivity ?: return null
+        val mini = main.binding.miniPlayer.root
+        return if (mini.visibility == View.VISIBLE) mini else main.binding.bottomNavView
+    }
+
+    /**
+     * A cover for one row. [FavoriteTrack] has no artwork of its own, so this
+     * goes through the ViewModel to ArtworkRepository, which derives one from the
+     * row's artist and track.
+     */
+    private fun requestArtwork(track: FavoriteTrack, onResult: (String?) -> Unit) {
+        artworkJobs.remove(track)?.cancel()
+        artworkJobs[track] = viewLifecycleOwner.lifecycleScope.launch {
+            val url = viewModel.artworkUrl(track)
+            artworkJobs.remove(track)
+            onResult(url)
+        }
+    }
+
+    private fun cancelArtwork(track: FavoriteTrack) {
+        artworkJobs.remove(track)?.cancel()
+    }
+
+    override fun onDestroyView() {
+        // viewLifecycleOwner's scope cancels the jobs themselves; this drops the
+        // entries, which outlive the view because the map does not belong to it.
+        artworkJobs.clear()
+        super.onDestroyView()
     }
 
     private fun exportTxt() {

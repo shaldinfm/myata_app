@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Bottom-sheet leading glyph for a streaming service.
+
+  Frozen canonical: `Bottom Sheet / Найти трек на стриминге` > `Sheet row / …` >
+  `Sheet / leading icon` > `Vector / disc`, light node 2444:18771, dark
+  2444:18660. All four service rows carry the SAME disc on both canonical pages -
+  the rows are told apart by their labels, not by their icons - which is the
+  owner-selected treatment for the Collection per-track sheet.
+
+  Two vectors, and both boxes are verbatim from the export:
+
+    ring   16x16 at (4,4)    -> r 8 at (12,12), stroked
+    hub     4x4  at (10,10)  -> r 2 at (12,12), filled
+
+  The geometry matches ICON.disc in tools/figma-export/screens-3.6.6/spec/
+  primitives.mjs - "M12 4 A8 8 0 1 0 12.01 4 M12 10.5 A1.5 1.5 0 1 0 12.01 10.5"
+  - and 1.8 is the stroke width every authored icon in that file uses.
+
+  Tint comes from the view; the colours here are only what an untinted preview
+  shows.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- ring -->
+    <path
+        android:pathData="M12,4 a8,8 0 1,0 0.01,0 Z"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.8" />
+    <!-- hub -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M10,12 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0 Z" />
+</vector>

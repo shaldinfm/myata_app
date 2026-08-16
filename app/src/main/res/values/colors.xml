@@ -47,6 +47,29 @@
     <color name="on_primary">#FFFFFF</color>
 
     <!--
+      TWO ROLES ADDED BY THE COLLECTION F1/F3 MIGRATION.
+
+      `menu_outline` is the stroke of every menu and bottom-sheet surface. It is
+      NOT `outline`: the canonical `Bottom Sheet / Найти трек на стриминге` and
+      `Menu / Плеер` both draw #1C3F5F here in light, a navy border, where
+      `outline` is the neutral #E1E3E4 - and they do it consistently across both
+      nodes, so this is a real role and not a light-page slip. In dark the two
+      coincide at #466D8F, which is exactly why the role has to be named: they
+      are equal there by coincidence of the palette, not by definition.
+      Provenance: canonical light 2444:18768, dark 2444:18657 (frame strokes).
+
+      `error` is the destructive action, and today it has exactly one user: the
+      `Удалить из коллекции` row on the per-track sheet. It is graded v2
+      PROPOSED / confidence WEAK in tools/figma-export/screens-3.6.6/spec/
+      tokens.mjs - the dark value is the 'Token / error' swatch from the dark UI
+      KIT, the light value is proposed, and NO canonical screen shows an error
+      state. It is recorded here with that grading so the next reader knows the
+      light value is the one to re-confirm when a canonical error state exists.
+    -->
+    <color name="menu_outline">#1C3F5F</color>
+    <color name="error">#B3261E</color>
+
+    <!--
       FIXED BRAND COLOURS - not semantic roles.
 
       These are identical on the canonical Light and Dark pages, deliberately, so

@@ -180,4 +180,32 @@
     <string name="collection_empty_title">Здесь пока пусто</string>
     <string name="collection_empty_body">Сохраняйте понравившиеся треки\nв плеере, и они появятся здесь.</string>
     <string name="collection_empty_illustration">Коллекция пуста</string>
+
+    <!--
+      The FINAL track row and the per-track sheet it opens (F1/F3).
+
+      The four service labels and the destructive one are the FINAL
+      `collection-track-sheet` rows verbatim, in the owner-confirmed order:
+      Spotify, Apple Music, YouTube, Яндекс Музыка, divider, Удалить из
+      коллекции. The third reads "YouTube" and not "YouTube Music" because that
+      is what MusicSearchHelper.openYouTube actually searches - the sheet must
+      name the destination the user lands on, and the helper is untouched here.
+
+      The sheet has no title of its own: `Bottom Sheet / title` carries the TRACK
+      and `Bottom Sheet / subtitle` the ARTIST, so both come from the row.
+
+      The undo copy is the owner's. `Отменить` re-inserts the same entity, so
+      the row keeps its original addedAt and returns to the position it was
+      removed from - see FavoritesViewModel.restoreFavorite, including the one
+      field that does not survive.
+    -->
+    <string name="collection_row_artwork">Обложка сохранённого трека</string>
+    <string name="collection_row_action">Действия с треком</string>
+    <string name="collection_sheet_spotify">Spotify</string>
+    <string name="collection_sheet_apple_music">Apple Music</string>
+    <string name="collection_sheet_youtube">YouTube</string>
+    <string name="collection_sheet_yandex">Яндекс Музыка</string>
+    <string name="collection_sheet_remove">Удалить из коллекции</string>
+    <string name="collection_removed">Трек удалён из коллекции</string>
+    <string name="collection_removed_undo">Отменить</string>
 </resources>

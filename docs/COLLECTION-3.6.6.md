@@ -305,14 +305,20 @@ the light value is the one to re-confirm when a canonical error state exists.
 ### Two drawables the row left behind
 
 `rounded_banner_bg` (the stream badge's pill) and `ic_youtube` (its inline
-service button) now have no user anywhere in the app. They are **not deleted
-here**: AGENTS.md keeps cleanup deletion behind an explicit GO, and a re-skin is
-not the place to take it. They are recorded here so the next reader knows they
-are dead rather than merely quiet.
+service button) lost their last user with the FINAL row and have been **deleted**
+— owner GO, taken as a follow-up to this migration rather than inside it, because
+AGENTS.md keeps cleanup deletion behind an explicit approval.
 
-`dismiss_cross`, which the row's delete control used, is **still live** — it is
-`exo_notification_stop` in `strings.xml`, i.e. the playback notification's stop
-glyph. It stays.
+Three neighbours were deliberately kept. `ic_spotify`, `ic_apple_music` and
+`ic_yandex` are still drawn by `item_history_track.xml`, the History bottom
+sheet's row. And `dismiss_cross`, which this row's delete control used, is still
+`exo_notification_stop` in `strings.xml` — the playback notification's stop
+glyph — so it stays.
+
+`app/src_backup_best_version/` also names `ic_youtube`. That reference is
+untouched and unaffected: the folder is not a source set — `app/build.gradle`
+declares none, and it sits beside `app/src` rather than inside it — and it
+carries its own copy of the drawable, so it resolves within its own tree.
 
 ## What is still deliberately not migrated
 

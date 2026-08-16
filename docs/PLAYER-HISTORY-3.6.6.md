@@ -122,13 +122,13 @@ if nothing is found.
 Only **bound** rows ask, so the reveal step is what bounds the fan-out: three
 lookups on open, at most ten per tap.
 
-The `withContext(Dispatchers.IO)` is at the call site rather than in the
-repository on purpose. `ArtworkRepository.fetchArtwork` is `suspend` but performs
-blocking OkHttp calls **without switching dispatcher**, and its two existing
-callers pass it whatever context they are on. Repairing that is a change to a
-shared path with a foreground service on the other end of it, not something to
-fold into a screen migration; this call site states the context it needs and the
-pre-existing issue is left where it is.
+`historyArtworkUrl` states no dispatcher of its own. `ArtworkRepository.fetchArtwork`
+switches to IO around its blocking body (#45), so a wrapper here would dispatch to
+the dispatcher the callee is about to move to regardless — and it would cost a cache
+hit the round trip the repository avoids by reading its cache ahead of its own
+switch. An earlier revision of this branch did wrap the call site, back when
+`fetchArtwork` blocked on whatever thread its callers happened to be on; that is
+fixed at the source now.
 
 ## Deviations from FINAL, and why
 

@@ -581,18 +581,15 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
      * goes through and whose in-memory cache both therefore share. This adds a
      * view of the existing history, not a second store beside it.
      *
-     * The IO dispatch is here rather than in the repository on purpose.
-     * `fetchArtwork` performs blocking OkHttp calls without switching dispatcher
-     * and its two existing callers pass it whatever context they are on;
-     * repairing that is a change to a shared path with a foreground service on
-     * the other end of it, not something to fold into a screen migration. This
-     * call site states the context it needs.
+     * No dispatcher is stated here: `fetchArtwork` switches to IO itself around
+     * its blocking body (#45), so a wrapper at this call site would only dispatch
+     * to the dispatcher the callee is about to move to anyway. It would also cost
+     * a cache hit a round trip the repository deliberately keeps it clear of, by
+     * reading the cache ahead of its own switch.
      */
     suspend fun historyArtworkUrl(track: HistoryTrack): String? =
-        withContext(Dispatchers.IO) {
-            runCatching { artworkRepository.fetchArtwork(track.artist, track.title).coverUrl }
-                .getOrNull()
-        }
+        runCatching { artworkRepository.fetchArtwork(track.artist, track.title).coverUrl }
+            .getOrNull()
 
     fun formUrl(songArtist: List<String>): String{
         return "https://last.fm/music/${songArtist.get(0)

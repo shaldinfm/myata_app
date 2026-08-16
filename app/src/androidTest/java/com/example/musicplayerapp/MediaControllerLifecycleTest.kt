@@ -1,11 +1,13 @@
 package com.example.musicplayerapp
 
 import android.os.Build
+import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import androidx.media3.session.MediaController
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Before
 import org.junit.FixMethodOrder
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -36,8 +38,31 @@ import org.junit.Assert.fail
 class MediaControllerLifecycleTest {
 
     /**
+     * MainActivity asks for POST_NOTIFICATIONS on API 33+, and the system dialog
+     * that puts in front of it leaves the Activity PAUSED - `recreate()` then times
+     * out waiting for RESUMED and the test never reaches its subject. Granting it
+     * up front is simply what a device that has been through that dialog once looks
+     * like, which is the device this test is about.
+     */
+    @Before
+    fun grantNotificationPermission() {
+        if (Build.VERSION.SDK_INT < 33) return
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val command = "pm grant ${instrumentation.targetContext.packageName} " +
+            "android.permission.POST_NOTIFICATIONS"
+        // Read to EOF: that is what waits for the grant to have happened.
+        ParcelFileDescriptor.AutoCloseInputStream(
+            instrumentation.uiAutomation.executeShellCommand(command),
+        ).use { it.readBytes() }
+    }
+
+    /**
      * A configuration change keeps the ViewModel, so it must keep its one
      * controller: not release it, and not connect a second one beside it.
+     *
+     * This one passes without the fix as well - it is here to hold the other side
+     * of it, that releasing on clear never turns into releasing while the UI is
+     * coming straight back.
      */
     @Test
     fun t1_aConfigurationChangeKeepsTheSameControllerConnected() {

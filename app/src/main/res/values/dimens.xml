@@ -378,6 +378,11 @@
       artwork is constrained to the end of this view, so a self-sizing time
       column would start each row's artwork at a different x - trading a clipped
       digit for a ragged artwork edge down the section.
+
+      The text inside it is START aligned, by owner correction, so every
+      timestamp begins on the same vertical line. That is the whole reason the
+      box is fixed rather than hugging: a fixed box holds both alignments at
+      once, the timestamps' left edge and the artwork's.
     -->
     <dimen name="player_history_time_width">42dp</dimen>
     <dimen name="player_history_time_height">20dp</dimen>
@@ -385,28 +390,6 @@
     <dimen name="player_history_artwork_corner">6dp</dimen>
     <dimen name="player_history_title_height">28dp</dimen>
     <dimen name="player_history_artist_height">20dp</dimen>
-
-    <!--
-      The row's service links. The frozen slot is 51.17x34 holding two buttons
-      explicitly named "Mock platform icons using generic material symbols for
-      layout" - placeholders, self-declared. The app's three real service links
-      go in the frozen 22x34 button box, 8 apart, which is the gap the frozen
-      pair itself uses (its second button starts at x=30 against a 22 first).
-      Three of them measure 82 rather than 51.17.
-
-      They sit UNDER the title and artist rather than in the trailing slot. At 82
-      beside the text the title column came out at 113 at the frozen width, and
-      real names wrapped hard - LOADED WITH PEARLS over three lines on live
-      history. Under it the column is 195 and the same names fit on one line.
-
-      That the frozen slot cannot be taken literally is visible in the frame
-      itself: on `History Item 1` (2399:31072) the text column HUGs to 169 and
-      pushes this container to x=284.98, which puts its right edge at 336.15
-      inside a row whose content ends at 311. The mock overflows its own row.
-    -->
-    <dimen name="player_history_service_width">22dp</dimen>
-    <dimen name="player_history_service_height">34dp</dimen>
-    <dimen name="player_history_service_gap">8dp</dimen>
 
     <!-- `Button:margin > Button`, 324x54 r12, 16 above it. -->
     <dimen name="player_history_more_gap">16dp</dimen>

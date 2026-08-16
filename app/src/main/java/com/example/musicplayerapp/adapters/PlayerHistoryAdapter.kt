@@ -3,14 +3,12 @@ package com.example.musicplayerapp.adapters
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.data.HistoryTrack
-import com.example.musicplayerapp.utils.MusicSearchHelper
 import com.google.android.material.imageview.ShapeableImageView
 import com.squareup.picasso.Picasso
 
@@ -46,9 +44,6 @@ class PlayerHistoryAdapter(
         val tvTitle: TextView = itemView.findViewById(R.id.tv_title)
         val tvArtist: TextView = itemView.findViewById(R.id.tv_artist)
         val artwork: ShapeableImageView = itemView.findViewById(R.id.artwork)
-        val btnSpotify: ImageView = itemView.findViewById(R.id.btn_spotify)
-        val btnAppleMusic: ImageView = itemView.findViewById(R.id.btn_apple_music)
-        val btnYandex: ImageView = itemView.findViewById(R.id.btn_yandex)
 
         /** The track this holder is currently bound to, for late artwork. */
         var boundTo: HistoryTrack? = null
@@ -67,17 +62,6 @@ class PlayerHistoryAdapter(
         holder.tvTime.text = track.getFormattedTime()
         holder.tvTitle.text = track.title
         holder.tvArtist.text = track.artist
-
-        val context = holder.itemView.context
-        holder.btnSpotify.setOnClickListener {
-            MusicSearchHelper.openSpotify(context, track.artist, track.title)
-        }
-        holder.btnAppleMusic.setOnClickListener {
-            MusicSearchHelper.openAppleMusic(context, track.artist, track.title)
-        }
-        holder.btnYandex.setOnClickListener {
-            MusicSearchHelper.openYandexMusic(context, track.artist, track.title)
-        }
 
         // Back to the bare plate first: a recycled holder still carries the
         // previous row's cover, and a lookup that finds nothing never paints.

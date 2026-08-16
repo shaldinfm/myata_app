@@ -40,23 +40,25 @@ it use — and 30 below where `Controls` ends. Geometry is identical on both pag
       17  padding
       32  heading      "История эфира"
       16  gap
-     120  History Item 1..3        (the frozen mock's row is 74 - see below)
+      74  History Item 1..3        (a minimum; real content grows it)
       16  gap
       54  "Показать ещё"
       17  padding
    ------
-     512  with three one-line rows and a fourth entry behind the button
+     374  with three one-line rows and a fourth entry behind the button
 ```
 
-A row, 13 of padding around a 48-tall content row with the service links under
-it:
+A row, 13 of padding around a 48-tall content row:
 
 ```
-   0   13        51.98      63.98          102.98             311
-   |   | 38.98   |  12      | 40×40 r6     |  12   title 28   |
-   |   | time R  |          | artwork      |       artist 20  |
-   |                                    12   service links 34 |
+   0   13        55         67             119                311
+   |   | 42      |  12      | 40×40 r6     |  12   title 28   |
+   |   | time S  |          | artwork      |       artist 20  |
 ```
+
+The time column is 42 rather than the frozen 38.98, and START rather than RIGHT;
+both are covered below. Everything after it sits 3.02 further in than the frozen
+frame, and nothing sits under the text.
 
 The row *has* `cornerRadius 8` and a 1px `INSIDE` stroke, and paints neither: the
 stroke is `#000000` at opacity 0 and there is no fill. It is 13 of padding and
@@ -98,7 +100,7 @@ History explicitly.
 | | frozen | app |
 |---|---|---|
 | heading | 24/32 Bold | `Montserrat.Bold.24_32` — section headings are Montserrat at the frozen weight |
-| time | 14/20 Regular, RIGHT | `Onest.Regular.14_20` |
+| time | 14/20 Regular | `Onest.Regular.14_20`, START aligned — see below |
 | title | 17/28 Regular | `Onest.Regular.17_28` |
 | artist | 14/20 Regular | `Onest.Regular.14_20` |
 | button | 22/28 Regular | `Montserrat.Medium.22_28` |
@@ -165,8 +167,13 @@ frozen number into a minimum: the artwork is constrained to the end of the time
 view, so a `wrap_content` column would start each row's artwork at a different x
 and trade a clipped digit for a ragged artwork edge down the whole section.
 Everything after the time therefore sits 3.02 further in than the frozen frame,
-which takes the title column from 195 to 192 at the design width — affordable at
-60 above its floor, where the time column had no room at all.
+which takes the title column to 192 at the design width.
+
+**START, not RIGHT**, by owner correction. Every timestamp begins on the same
+vertical line at 13, so the column reads as a column. This is the other half of
+why the box is fixed rather than hugging: a fixed box holds both alignments at
+once — the timestamps' left edge and the artwork's — where a self-sizing one has
+to give up whichever it is not anchored to.
 
 Bound worth knowing: 42 is dp and the text is sp, so this holds at the default
 font scale. A large accessibility font scale will overrun it — as it will every
@@ -181,41 +188,41 @@ standing owner decision recorded on `item_history_track.xml`: History rows are
 variable height with **no ellipsis**, so a long Russian title adds a line rather
 than losing its end. There is no `maxLines` and no `ellipsize` on either line.
 
-### The service links are under the text, not in the trailing slot
+## The row carries no service actions
 
-The frozen slot holds two buttons named *"Button - Mock platform icons using
-generic material symbols for layout"* — placeholders, self-declared. The app has
-three real ones, each in the frozen 22×34 button box, 8 apart, which is the gap
-the frozen pair itself uses: its second button starts at x=30 against a 22-wide
-first. Three of them measure 82.
+The owner-confirmed FINAL PLAYER reference for these rows is
 
-**Beside the text, 82 did not fit.** The title column came out at:
+```
+time  →  40dp artwork  →  title / artist
+```
 
-| width | row | text column, links beside it |
-|---|---|---|
-| 412dp | 346 | 135 |
-| 390dp | 324 | **113** |
-| 360dp | 294 | 83 — about nine characters to a line |
-| 320dp | 254 | 43 — `CRYOGEN` breaks over three lines |
+and nothing else. Spotify, Apple Music and Yandex Music are **not** part of the
+inline section.
 
-At 113 real names wrapped hard on live history — `LOADED WITH PEARLS` over three
-lines, `SOMEDAY, SOMEWHERE` over two — and truncating them was ruled out by the
-no-ellipsis decision above. So by owner decision the links moved **under** the
-text at every width, real content taking precedence over the mock's two-icon slot.
-The column is **195** at the frozen width and the same names fit on one line;
-measured live, all three rows come out at exactly 120.
+An earlier revision of this branch did put all three here, on their own line under
+the text, and reasoned at length about which of the mock's numbers to keep while
+doing it. That reasoning is withdrawn: it was solving where to fit buttons the
+reference does not contain. Removed with them are the three `history_open_*`
+strings, the `PlayerHistoryServiceButton` style and the three
+`player_history_service_*` dimens — all added by this branch for this purpose, so
+none of it outlives the change.
 
-What that costs is the frozen 74: the row is `13 + 48 + 12 + 34 + 13` = 120 on
-one-line content, and the section 512 rather than 374 with three rows in it. What
-it keeps is every other frozen number, all three working service links, the frozen
-trailing edge they align to, and **one layout at every width** — the
-`layout-w390dp/` variant an earlier revision of this PR needed is gone.
+**Nothing stands in for them.** No hidden or `GONE` views, no substitute icons, no
+reserved width beside the text and no reserved line beneath it. The layout test
+asserts the absence directly, looking up `music_services`, `btn_spotify`,
+`btn_apple_music` and `btn_yandex` in the row and requiring all four to be null —
+a real check rather than a vacuous one, since those ids still resolve for the
+surfaces that do use them.
 
-The frozen slot could not have been taken literally in any case. On `History
-Item 1` (`2399:31072`) the text column HUGs to 169, which pushes the trailing
-container's right edge to **336.15** inside a row whose content ends at **311**.
-That row overflows itself in the frozen frame, which is what a mock does and a
-real row cannot.
+**The other surfaces are untouched.** `MusicSearchHelper` is unchanged, and the
+History bottom sheet (`item_history_track.xml` / `HistoryAdapter`) and Collection
+(`item_favorite_track.xml` / `FavoritesAdapter`) keep their service links exactly
+as they were. What changed is one surface's row, not the feature.
+
+**What it gives back is the frozen geometry.** With nothing under the text the row
+is `13 + 48 + 13` = **74** on one-line content, and the section is
+`17 + 32 + 16 + 3×74 + 16 + 54 + 17` = **374** — the frozen figure itself, where
+the service line had made it 512. `Показать ещё` stays below the rows.
 
 ### The hidden `Ещё` button is not drawn
 
@@ -270,15 +277,21 @@ asserted present and wired by `PlayerHistoryLayoutTest`.
 themes. Byte-identical on API 24 and API 36 for every anchor:
 
 ```
-  section@1242px (473dp)   heading 84px (32dp)   row 316px (120dp) at every width
+  section@1242px (473dp)   heading 84px (32dp)   row 195px (74dp) at every width
 ```
 
-It asserts 512 on the page the frozen frame draws — three rows with the button
-under them, meaning a fourth entry behind it — and 442 for a history of exactly
-three, where the button is correctly gone. It asserts the links sit below the text
-and 12 clear of it, and that the title column is 195 at the frozen width. It also
-asserts `controls y` at 363, so a regression in the section cannot move the upper
-section #42 froze.
+It asserts 374 on the page the frozen frame draws — three rows with the button
+under them, meaning a fourth entry behind it — and 304 for a history of exactly
+three, where the button is correctly gone. It asserts that the row holds none of
+`music_services`, `btn_spotify`, `btn_apple_music` or `btn_yandex`, that the row
+ends 13 below the artist with no reserved line under the text, and that the title
+column is 192 at the frozen width. It also asserts `controls y` at 363, so a
+regression in the section cannot move the upper section #42 froze.
+
+On the timestamp column it asserts the fixed 42, START alignment with the text
+beginning at the box's own left edge, that all 1440 `HH:MM` values fit when
+measured through the view's own paint, and that `00:00`, `08:08`, `10:45` and
+`23:59` render unclipped on one line and share a left edge.
 
 On the running app, both themes, real history from the live API:
 

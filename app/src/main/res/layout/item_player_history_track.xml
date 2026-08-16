@@ -10,49 +10,32 @@
   paints neither: it has no fill and its stroke is #000000 at opacity 0. So there
   is no card here, only 13 of padding around its content.
 
-     0    13         55           67               107                 311
+     0    13         55           67               119                 311
      |    | time     |  gap 12    | 40x40 r6 art   | gap 12  title     |
-          | 42 R     |            |                |         artist    |
-          |                                    gap 12  service links   |
+          | 42 START |            |                |         artist    |
 
-  The time column is 42 rather than the frozen 38.98: see the dimen, which
-  carries the measurement. Everything after it therefore sits 3.02 further in
-  than the frozen frame - the row gives, as it does for height.
-
-  **The service links are under the text, not beside it.**
-
-  The frozen row puts two buttons in a trailing slot and names them "Button -
-  Mock platform icons using generic material symbols for layout" - placeholders,
-  self-declared. The app has three real ones, and three in the frozen 22x34 box
-  measure 82 wide. Beside the text that left the title column 113 at the frozen
-  width, where a real track name wraps hard: LOADED WITH PEARLS set over three
-  lines and SOMEDAY, SOMEWHERE over two, measured on live history. Under the text
-  the column is 195 and both fit on one line.
-
-  The frozen slot could not be reproduced literally in any case. On `History
-  Item 1` (2399:31072) the hugging text column pushes the trailing container's
-  right edge to 336.15 inside a row whose content ends at 311 - the mock overflows
-  its own row, which is what a mock does and a real row cannot.
-
-  So real content wins over the mock's two-icon slot, by owner decision, at every
-  width. What that costs is the frozen 74: the row is 120 on one-line content -
-  13 + 48 + 12 + 34 + 13 - and the section is 512 rather than 374 with three rows
-  in it. What it keeps is every other frozen number, all three working service
-  links, and one layout instead of a width-qualified pair.
+  **There are no service actions in this row.** The owner-confirmed FINAL PLAYER
+  reference is time -> artwork -> title/artist and nothing else. Spotify, Apple
+  Music and Yandex Music stay on the surfaces that do carry them - the History
+  bottom sheet (`item_history_track.xml`) and Collection
+  (`item_favorite_track.xml`), both unchanged - and `MusicSearchHelper` is
+  untouched. Nothing is left behind here in their place: no hidden views, no
+  reserved width beside the text, no reserved line beneath it.
 
   **Height.** 74 is 13 + 48 + 13, and the 48 is one line of the title's 28 over
-  one line of the artist's 20 - the height of the mock's content, not of real
-  content. Every vertical number here is therefore a MINIMUM: the row grows when
-  a track name needs a second line and shrinks back when it does not.
+  one line of the artist's 20. Every vertical number here is a MINIMUM: the row
+  grows when a track name needs a second line and shrinks back when it does not.
+  With the service line gone, one-line content measures the frozen 74 again, and
+  three rows and a button make the frozen 374.
 
   No maxLines and no ellipsis, which is the standing owner decision for History
   rows recorded on item_history_track.xml: a long Russian title adds a line
   rather than losing its end. The row is the thing that gives.
 
-  **Alignment.** Time and artwork are centred against each other - the frozen
-  time box sits at y=14 in a 48 content row with height 20, and the artwork at
-  y=4 with height 40, both exactly centred - so they stay centred as the row
-  grows.
+  **Alignment.** Time and artwork are centred against each other, and the artwork
+  is centred against the text block - the frozen time box sits at y=14 in a 48
+  content row with height 20, and the artwork at y=4 with height 40, both exactly
+  centred - so they stay centred as the row grows.
 -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -63,19 +46,22 @@
     android:padding="@dimen/player_history_row_padding">
 
     <!--
-      `Container > Container > NN:NN`, with the text RIGHT aligned inside it.
-      Onest Regular 14/20 on `text_secondary` - Broadcast History's timestamp is
-      Onest by the typography contract, and #42474E / #B3C4D1 is exactly that
-      role on both pages.
+      `Container > Container > NN:NN`. Onest Regular 14/20 on `text_secondary` -
+      Broadcast History's timestamp is Onest by the typography contract, and
+      #42474E / #B3C4D1 is exactly that role on both pages.
 
-      The width is the frozen 38.98 widened to 41 so that no real timestamp
-      clips; the reasoning and the measurements are on the dimen.
+      START aligned, by owner correction: every timestamp begins on the same
+      vertical line at 13, so the column reads as a column. The width stays fixed
+      at `player_history_time_width` - see the dimen, which carries the
+      measurement - so the gap to the artwork is fixed too and the artwork starts
+      at the same x on every row. A right-aligned or self-sizing column gives up
+      one of those two alignments; a fixed box with START gives up neither.
     -->
     <TextView
         android:id="@+id/tv_time"
         android:layout_width="@dimen/player_history_time_width"
         android:layout_height="wrap_content"
-        android:gravity="end"
+        android:gravity="start"
         android:maxLines="1"
         android:minHeight="@dimen/player_history_time_height"
         android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
@@ -91,6 +77,9 @@
       resolved from the row's artist and track through ArtworkRepository - the
       app's single source of truth for artwork, and already the ViewModel's - and
       the plate is what shows until it arrives, or for good if nothing is found.
+
+      Centred against the text block rather than pinned to the top, which puts it
+      at the frozen y=4 of a 48 content row and keeps it centred as the row grows.
     -->
     <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/artwork"
@@ -100,8 +89,9 @@
         android:background="@drawable/bg_player_history_artwork"
         android:contentDescription="@string/player_history_artwork"
         android:scaleType="centerCrop"
+        app:layout_constraintBottom_toBottomOf="@id/tv_artist"
         app:layout_constraintStart_toEndOf="@id/tv_time"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toTopOf="@id/tv_title"
         app:shapeAppearanceOverlay="@style/ShapeAppearance.Myata.PlayerHistoryArtwork" />
 
     <!--
@@ -110,7 +100,7 @@
       contract's Broadcast History entry; 17/28 on `text_primary` over 14/20 on
       `text_secondary`, each an exact role match on both pages.
 
-      The column runs to the row's own edge: nothing is beside it any more.
+      The column runs to the row's own edge: nothing is beside it.
 
       The frozen mock uppercases nothing - "CRYOGEN", "MUSE" and the rest are
       stored that way in the design - so no textAllCaps here. The History bottom
@@ -141,46 +131,4 @@
         app:layout_constraintStart_toStartOf="@id/tv_title"
         app:layout_constraintTop_toBottomOf="@id/tv_title"
         tools:text="BLOSSOMS" />
-
-    <!--
-      Under whichever of the artwork and the text runs deeper, and right-aligned
-      so the group keeps the frozen row's trailing edge. The 12 above it is the
-      row's own gap, the same one between time, artwork and text.
-    -->
-    <androidx.constraintlayout.widget.Barrier
-        android:id="@+id/content_bottom"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:barrierDirection="bottom"
-        app:constraint_referenced_ids="artwork,tv_artist" />
-
-    <LinearLayout
-        android:id="@+id/music_services"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/player_history_row_gap"
-        android:orientation="horizontal"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/content_bottom">
-
-        <ImageView
-            android:id="@+id/btn_spotify"
-            style="@style/PlayerHistoryServiceButton"
-            android:contentDescription="@string/history_open_spotify"
-            android:src="@drawable/ic_spotify" />
-
-        <ImageView
-            android:id="@+id/btn_apple_music"
-            style="@style/PlayerHistoryServiceButton"
-            android:layout_marginStart="@dimen/player_history_service_gap"
-            android:contentDescription="@string/history_open_apple_music"
-            android:src="@drawable/ic_apple_music" />
-
-        <ImageView
-            android:id="@+id/btn_yandex"
-            style="@style/PlayerHistoryServiceButton"
-            android:layout_marginStart="@dimen/player_history_service_gap"
-            android:contentDescription="@string/history_open_yandex_music"
-            android:src="@drawable/ic_yandex" />
-    </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

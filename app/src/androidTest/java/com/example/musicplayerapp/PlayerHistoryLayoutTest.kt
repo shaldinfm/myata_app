@@ -32,11 +32,13 @@ import kotlin.math.roundToInt
  *
  *   17  padding   32  heading   16  gap   row x3   16  gap   54  button   17
  *
- *      13  row padding   41  time (RIGHT)   12   40x40 r6 art   12   text
- *                        12   service links, on their own line
+ *      13  row padding   42  time (START)   12   40x40 r6 art   12   text
  *
- * The row is the one part that is not the frozen figure, so the section adds up
- * to 512 rather than 374 with three one-line rows in it.
+ * The row carries no service actions: the owner-confirmed FINAL reference is
+ * time -> artwork -> title/artist and nothing else. With nothing under the text,
+ * one-line content measures the frozen 74 - 13 + 48 + 13 - and three rows and a
+ * button make the frozen 374. That the row holds no hidden or reserved space for
+ * the removed actions is asserted, not assumed.
  *
  * Two things here are deliberately NOT the frozen numbers, and both are asserted
  * as such rather than skipped:
@@ -46,15 +48,10 @@ import kotlin.math.roundToInt
  *    to grow when it does - truncating a real track name to hold a mock's height
  *    is the defect this checks for.
  *
- *  - **The service links are under the text, at every width.** The frozen slot
- *    holds two buttons named "Mock platform icons using generic material symbols
- *    for layout"; the app's three real ones go in the frozen 22x34 box and measure
- *    82. Beside the text that left the title column 113 at the frozen width and
- *    real names wrapped hard, so by owner decision real content wins over the
- *    mock's slot. The row is 120 on one-line content - 13 + 48 + 12 + 34 + 13 -
- *    and the section 512 with three rows in it. The frozen slot could not be taken
- *    literally anyway: on `History Item 1` (2399:31072) the hugging text column
- *    pushes it to a right edge of 336.15 inside a row whose content ends at 311.
+ *  - **The time column is 42, not the frozen 38.98.** Onest has no tabular
+ *    figures and its digits are proportional, so the frozen box fitted some
+ *    clock times and clipped others; 42 holds all 1440, measured through the
+ *    view's own paint. Everything after the time therefore sits 3.02 further in.
  */
 @RunWith(AndroidJUnit4::class)
 class PlayerHistoryLayoutTest {
@@ -143,16 +140,31 @@ class PlayerHistoryLayoutTest {
             val art = row.findViewById<View>(R.id.artwork)
             val title = row.findViewById<TextView>(R.id.tv_title)
             val artist = row.findViewById<TextView>(R.id.tv_artist)
-            val services = row.findViewById<ViewGroup>(R.id.music_services)
 
-            // 120, not the frozen 74: 13 + 48 + 12 + 34 + 13, the links having
-            // moved below the text. Stated, not a floor being quietly missed.
-            expect(where, "row height (one-line content)", row.height, dp(120), tolerance = dp(1.5f))
+            // The service actions are gone from this surface, and gone means
+            // absent: not GONE, not INVISIBLE, not a zero-width placeholder. The
+            // ids still resolve - the bottom sheet and Collection rows use them -
+            // so finding nothing here is a real check, not a vacuous one.
+            for (id in listOf(R.id.music_services, R.id.btn_spotify, R.id.btn_apple_music, R.id.btn_yandex)) {
+                val leftover = row.findViewById<View>(id)
+                if (leftover != null) {
+                    findings += "$where: the row still holds ${resName(inflater.context, id)} " +
+                        "(${leftover.width}x${leftover.height}, visibility=${leftover.visibility})"
+                }
+            }
+
+            // The frozen 74: 13 + 48 + 13, with nothing under the text.
+            expect(where, "row height (one-line content)", row.height, dp(74), tolerance = dp(1.5f))
             expect(where, "time x in row", leftIn(time, row), dp(13))
             expect(where, "time width", time.width, dp(42f))
-            // The time box is RIGHT aligned inside its fixed 42.
-            if (time.layout != null && time.layout.getParagraphAlignment(0) != android.text.Layout.Alignment.ALIGN_OPPOSITE) {
-                findings += "$where: the row's time is not right-aligned in its 42 box"
+            // START aligned inside its fixed 42, by owner correction: the text
+            // begins at the box's own left edge, so every row's timestamp starts
+            // on the same vertical line.
+            if (time.layout != null && time.layout.getParagraphAlignment(0) != android.text.Layout.Alignment.ALIGN_NORMAL) {
+                findings += "$where: the row's time is not start-aligned in its 42 box"
+            }
+            if (time.layout != null && time.layout.getLineLeft(0) != 0f) {
+                findings += "$where: the row's time starts ${time.layout.getLineLeft(0)}px into its box, not at 0"
             }
             everyClockTimeFits(where, time)
 
@@ -173,39 +185,20 @@ class PlayerHistoryLayoutTest {
             atLeast(where, "title box", title.height, dp(28))
             atLeast(where, "artist box", artist.height, dp(20))
 
-            // Three service links in the frozen 22x34 button box, keeping the
-            // frozen row's trailing edge on their own line.
-            expect(where, "service group width", services.width, dp(22 * 3 + 8 * 2))
-            expect(where, "service group right edge", leftIn(services, row) + services.width, row.width - dp(13))
-            for (id in listOf(R.id.btn_spotify, R.id.btn_apple_music, R.id.btn_yandex)) {
-                val button = row.findViewById<View>(id)
-                expect(where, "service button width", button.width, dp(22))
-                expect(where, "service button height", button.height, dp(34))
-            }
-
-            // Under the text, at every width - that is the whole point of the
-            // change, so it is asserted rather than inferred.
-            if (rectIn(services, row).top < rectIn(artist, row).bottom) {
-                findings += "$where: the service links are still beside a ${
-                    (title.width / dm.density).roundToInt()
-                }dp text column"
-            }
+            // Nothing is reserved below the text where the service line used to
+            // be: the row ends at the artist's own bottom plus the row's padding.
             expect(
-                where, "gap between text and service links",
-                rectIn(services, row).top - rectIn(artist, row).bottom, dp(12), tolerance = dp(1.5f),
+                where, "row ends at the text, no reserved line below it",
+                row.height - rectIn(artist, row).bottom, dp(13), tolerance = dp(1.5f),
             )
 
             noOverlap(where, "time", time, "artwork", art, row)
             noOverlap(where, "artwork", art, "title", title, row)
-            noOverlap(where, "title", title, "services", services, row)
-            noOverlap(where, "artist", artist, "services", services, row)
 
             // The column has to be wide enough to set a real name on a line. At
-            // the frozen width it is 192 with the links moved off it, against the
-            // 113 they left when they were beside it. 192 and not the 195 this
-            // measured before: the time column took 3.02 of it to stop clipping
-            // real timestamps, which is a trade the title column can afford at
-            // 60dp above its floor and the time column could not.
+            // the frozen width it is 192: the row's 324 less 13 padding, the 42
+            // time column, two 12 gaps, the 40 artwork and 13 padding. Nothing
+            // sits beside it, so this is the whole of the row's trailing space.
             atLeast(where, "title column", title.width, dp(120))
             if (widthDp == 390) {
                 expect(where, "title column at the frozen width", title.width, dp(192), tolerance = dp(1.5f))
@@ -265,16 +258,17 @@ class PlayerHistoryLayoutTest {
              * This is the page the frozen frame draws and not the three-entry
              * one: it shows three rows with "Показать ещё" under them, which
              * means there is a fourth entry behind it. A history of exactly three
-             * hides the button and the section is 442 - the same numbers, one
+             * hides the button and the section is 304 - the same numbers, one
              * part fewer.
              *
-             * Nothing is pinned. It is 17 + 32 + 16 + 3x120 + 16 + 54 + 17, every
-             * term the frozen one except the row, which carries the service links
-             * on their own line and so measures 120 against the mock's 74.
+             * Nothing is pinned. It is 17 + 32 + 16 + 3x74 + 16 + 54 + 17 = 374,
+             * every term the frozen one including the row: with the service
+             * actions gone the row is the mock's 74 again, so the section is the
+             * frozen figure rather than the 512 the extra line cost.
              */
             if (widthDp == 390) {
-                expect(where, "section height, 3 rows + button", manySection.height, dp(512), tolerance = dp(2f))
-                expect(where, "section height with all of a 3-entry history up", section.height, dp(442), tolerance = dp(2f))
+                expect(where, "section height, 3 rows + button", manySection.height, dp(374), tolerance = dp(2f))
+                expect(where, "section height with all of a 3-entry history up", section.height, dp(304), tolerance = dp(2f))
             }
             if (manyMore.visibility != View.VISIBLE) {
                 findings += "$where: \"Показать ещё\" is hidden over a history of 30 with only " +
@@ -315,11 +309,14 @@ class PlayerHistoryLayoutTest {
             val longArt = longRow.findViewById<View>(R.id.artwork)
 
             if (longTitleView.lineCount <= 1) {
-                findings += "$where: a 42-character title is on one line in a ~101dp column - it is being cut"
+                findings += "$where: a 42-character title is on one line in a ~192dp column - it is being cut"
             }
-            if (longRow.height <= dp(120) + 1) {
-                findings += "$where: the row stayed at ${longRow.height}px under long metadata; " +
-                    "rows must grow rather than truncate"
+            // Measured against the one-line row rather than a constant: the point
+            // is that real content makes it grow past the frozen 74, and pinning
+            // the comparison to the row above keeps that true if 74 ever moves.
+            if (longRow.height <= row.height + 1) {
+                findings += "$where: the row stayed at ${longRow.height}px under long metadata " +
+                    "against ${row.height}px for one line; rows must grow rather than truncate"
             }
             // The owner decision on History rows is no ellipsis at all: a long
             // title adds a line and keeps its end.
@@ -335,9 +332,44 @@ class PlayerHistoryLayoutTest {
             noClipping(longTitleView, "$where/long title")
             noClipping(longArtistView, "$where/long artist")
             noOverlap(where, "long title", longTitleView, "long artist", longArtistView, longRow)
-            noOverlap(where, "long artist", longArtistView, "services", longRow.findViewById(R.id.music_services), longRow)
             // The artwork stays the frozen 40 however tall the row gets.
             expect(where, "artwork size under long metadata", longArt.width, dp(40))
+
+            /* ---- the named clock times, actually drawn ---- */
+
+            // everyClockTimeFits measures all 1440 through the paint; this draws
+            // the four the owner called out and reads back what the row rendered,
+            // so the check covers binding and layout, not just measurement.
+            val named = listOf("00:00", "08:08", "10:45", "23:59")
+            val timesPage = pageWith(
+                inflater, widthPx,
+                named.mapIndexed { i, t ->
+                    HistoryTrack(artist = "MUSE", track = "CRYOGEN", playedAt = i.toLong(), playedAtFormatted = t)
+                },
+                revealed = named.size,
+            )
+            val timesList = timesPage.findViewById<RecyclerView>(R.id.history_list)
+            var firstLeft: Int? = null
+            for (i in named.indices) {
+                val r = timesList.getChildAt(i) as? ViewGroup ?: continue
+                val tv = r.findViewById<TextView>(R.id.tv_time)
+                if (tv.text.toString() != named[i]) {
+                    findings += "$where: row $i shows \"${tv.text}\", expected \"${named[i]}\""
+                }
+                val drawn = tv.paint.measureText(tv.text.toString())
+                if (drawn > tv.width - tv.paddingStart - tv.paddingEnd) {
+                    findings += "$where: \"${named[i]}\" is clipped - draws ${"%.1f".format(drawn)}px " +
+                        "in a ${tv.width - tv.paddingStart - tv.paddingEnd}px box"
+                }
+                requireOneLine(tv, "$where/time ${named[i]}")
+                // All four begin on the same vertical line.
+                val left = leftIn(tv, r) + (tv.layout?.getLineLeft(0)?.toInt() ?: 0)
+                if (firstLeft == null) firstLeft = left
+                else if (left != firstLeft) {
+                    findings += "$where: \"${named[i]}\" starts at ${left}px, \"${named[0]}\" at ${firstLeft}px - " +
+                        "timestamps do not share a left edge"
+                }
+            }
 
             log += "$where: section@${topIn(section, page)} ${section.width}x${section.height}, " +
                 "heading ${heading.height}, row ${row.height} (long ${longRow.height}, " +
@@ -459,6 +491,10 @@ class PlayerHistoryLayoutTest {
     private fun requireOneLine(t: TextView, what: String) {
         if (t.lineCount > 1) findings += "$what wrapped onto ${t.lineCount} lines"
     }
+
+    /** A readable name for an id, so a leftover view names itself. */
+    private fun resName(ctx: android.content.Context, id: Int): String =
+        runCatching { ctx.resources.getResourceEntryName(id) }.getOrDefault("id/$id")
 
     /**
      * The time box holds every clock time there is, not just the one on screen.

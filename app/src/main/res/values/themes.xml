@@ -396,26 +396,6 @@
     </style>
 
     <!--
-      One service link in a Broadcast History row: the frozen button box, 22x34
-      with a fully round corner, holding the brand mark at its own aspect.
-
-      The frozen pair of these are self-declared placeholders - "Mock platform
-      icons using generic material symbols for layout" - so what goes in the box
-      is the app's real Spotify / Apple Music / Yandex marks, unchanged from the
-      History bottom sheet and the Collection row, and the box is what the design
-      states. Three of them, not two: dropping a working service link to match a
-      mock's count would lose function for nothing.
-
-      No tint: these are multi-colour brand marks and must not follow the theme.
-    -->
-    <style name="PlayerHistoryServiceButton">
-        <item name="android:layout_width">@dimen/player_history_service_width</item>
-        <item name="android:layout_height">@dimen/player_history_service_height</item>
-        <item name="android:background">?attr/selectableItemBackgroundBorderless</item>
-        <item name="android:scaleType">fitCenter</item>
-    </style>
-
-    <!--
       COLLECTION card, frozen 3.6.6 canonical.
 
       One style for both surfaces the screen draws, because the frozen design

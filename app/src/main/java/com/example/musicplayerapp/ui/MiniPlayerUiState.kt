@@ -21,6 +21,17 @@ data class MiniPlayerUiState(
     /** Cover art URL, or null when there is none to load and the logo stands in. */
     val artworkUrl: String?,
     val playing: Boolean,
+    /**
+     * Which face the pill's play/pause slot is showing.
+     *
+     * The PLAYER's own projection, reused rather than reproduced: the pill and
+     * the central control are one tap apart and are reading the same two
+     * LiveDatas off the same MediaController, so "connecting" has to mean the
+     * same thing on both or the pair contradicts itself mid-connect. Reusing
+     * [PlayerControlState] is also what keeps this from becoming a second
+     * playback state machine - it holds nothing and decides nothing.
+     */
+    val control: PlayerControlState = PlayerControlState.of(playing, isBuffering = false),
 ) {
 
     companion object {
@@ -49,6 +60,12 @@ data class MiniPlayerUiState(
             isPlaying: Boolean,
             fallbackTitle: String,
             fallbackArtist: String,
+            /**
+             * Media3's own `STATE_BUFFERING`, forwarded by `StreamsViewModel`.
+             * Defaulted so a caller that does not care about the connecting face
+             * - the existing projection tests - reads exactly as it did.
+             */
+            isBuffering: Boolean = false,
         ): MiniPlayerUiState {
             val state = when (Streams.normalise(stream) ?: Streams.DEFAULT) {
                 Streams.GOLD -> gold
@@ -56,15 +73,17 @@ data class MiniPlayerUiState(
                 else -> myata
             }
 
+            val control = PlayerControlState.of(isPlaying = isPlaying, isBuffering = isBuffering)
+
             val artist = state?.artist?.takeUnless { it.isBlank() }
             val title = state?.song?.takeUnless { it.isBlank() }
 
             if (artist == null || title == null) {
-                return MiniPlayerUiState(fallbackTitle, fallbackArtist, null, isPlaying)
+                return MiniPlayerUiState(fallbackTitle, fallbackArtist, null, isPlaying, control)
             }
 
             val artwork = state.img?.takeUnless { it.isBlank() || it == NO_IMAGE }
-            return MiniPlayerUiState(title, artist, artwork, isPlaying)
+            return MiniPlayerUiState(title, artist, artwork, isPlaying, control)
         }
     }
 }

@@ -102,6 +102,15 @@ class MiniPlayerLayoutTest {
             expect(where, "artwork height", artwork.height, dp(48))
             expect(where, "button width", button.width, dp(27))
 
+            // The slot the button and the connecting spinner share. It is what
+            // holds the frozen 27x48 now, so the button filling it is what keeps
+            // the row's widths and the pill's 74 where they were.
+            val slot = shell.findViewById<View>(R.id.mini_player_control)
+            expect(where, "control slot width", slot.width, dp(27))
+            expect(where, "control slot height", slot.height, dp(48))
+            expect(where, "button fills the slot horizontally", button.width, slot.width.toFloat())
+            expect(where, "button fills the slot vertically", button.height, slot.height.toFloat())
+
             // Canonical anchors, which only hold at the width they were drawn at.
             // Measured in pill space: the text column is a child of a child, so
             // its own `left` is 0 and says nothing.
@@ -193,6 +202,101 @@ class MiniPlayerLayoutTest {
             expectDesc("playing", button, pause)
             activity.viewModel.isPlaying.value = false
             expectDesc("paused", button, play)
+        }
+        assertTrue(findings.joinToString("\n"), findings.isEmpty())
+    }
+
+    /**
+     * The press state stays inside the control.
+     *
+     * `selectableItemBackgroundBorderless` - what this used to be - is unbounded
+     * *and* projecting: its radius comes from the control's larger dimension, so
+     * the circle is ~48 across on a 27-wide control, and being borderless it is
+     * drawn onto the nearest ancestor with a background, which is the pill. The
+     * result was a circle far too big for the button, painted across the pill and
+     * cut by the pill's own rounded outline.
+     *
+     * The mask is the whole assertion. A `RippleDrawable` that has one is bounded
+     * by definition - it cannot project past its own view and is clipped to the
+     * mask rather than to whatever is behind it - and one that has none is the
+     * borderless drawable coming back. There is no public API for "is projected",
+     * so the mask is both the fix and the thing that can be seen.
+     */
+    @Test
+    fun theControlsPressStateIsBoundedToTheControl() {
+        onMainActivity { activity ->
+            val button = activity.findViewById<ImageView>(R.id.mini_player_play_pause)
+            val background = button.background
+
+            if (background !is android.graphics.drawable.RippleDrawable) {
+                findings += "the control's background is ${background?.javaClass?.simpleName}, " +
+                    "not a ripple - press feedback would be gone entirely"
+                return@onMainActivity
+            }
+            if (background.findDrawableByLayerId(android.R.id.mask) == null) {
+                findings += "the control's ripple has no mask, so it is borderless: it will " +
+                    "project onto the pill and be cropped by the pill's outline"
+            }
+        }
+        assertTrue(findings.joinToString("\n"), findings.isEmpty())
+    }
+
+    /**
+     * Connecting replaces the glyph in place: same slot, same size, nothing moves.
+     *
+     * Driven through `isBuffering`, the LiveData the MediaController listener
+     * posts `STATE_BUFFERING` to, for the same reason the play/pause test is
+     * driven through `isPlaying` - a real connect would make this a network test.
+     */
+    @Test
+    fun connectingSwapsTheGlyphForASpinnerInTheSameSlot() {
+        onMainActivity { activity ->
+            val button = activity.findViewById<ImageView>(R.id.mini_player_play_pause)
+            val spinner = activity.findViewById<View>(R.id.mini_player_spinner)
+
+            // Behaviour only. The live pill is GONE until the service holds a
+            // session, so it has no measured size here; the slot's 27x48 is
+            // asserted in the measured sweep above, where the pill is laid out.
+            activity.viewModel.isBuffering.value = false
+            activity.viewModel.isPlaying.value = false
+            if (spinner.visibility == View.VISIBLE) {
+                findings += "the spinner is up while the player is idle"
+            }
+
+            activity.viewModel.isBuffering.value = true
+            if (spinner.visibility != View.VISIBLE) {
+                findings += "connecting does not show the spinner"
+            }
+            if (button.drawable != null) {
+                findings += "connecting still draws the static play/pause glyph behind the spinner"
+            }
+            if (button.isEnabled) {
+                findings += "the control still fires while connecting; repeated taps would " +
+                    "re-prepare a player that is already connecting"
+            }
+            if (!button.isClickable) {
+                findings += "the control stopped being clickable while connecting, so its taps " +
+                    "would fall through to the pill and open PLAYER"
+            }
+            activity.viewModel.isBuffering.value = false
+            activity.viewModel.isPlaying.value = true
+            if (spinner.visibility == View.VISIBLE) {
+                findings += "the spinner survived into the playing state"
+            }
+            if (button.drawable == null) {
+                findings += "playing draws no glyph at all"
+            }
+            if (!button.isEnabled) {
+                findings += "the control is still inert once playback started"
+            }
+
+            // Failure: not playing, not buffering. The same PLAY face as idle,
+            // which is what "remove the spinner when it fails" means here - there
+            // is no third state to get stuck in.
+            activity.viewModel.isPlaying.value = false
+            if (spinner.visibility == View.VISIBLE) {
+                findings += "a failed start leaves the spinner up"
+            }
         }
         assertTrue(findings.joinToString("\n"), findings.isEmpty())
     }

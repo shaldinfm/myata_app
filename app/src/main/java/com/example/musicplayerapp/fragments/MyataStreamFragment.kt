@@ -9,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
+import androidx.core.view.doOnPreDraw
 import androidx.core.view.isVisible
 import androidx.core.widget.ImageViewCompat
 import androidx.databinding.DataBindingUtil
@@ -64,6 +65,34 @@ class MyataStreamFragment() : Fragment() {
 
     /** In-flight cover lookups, one per bound row, so a recycled row can cancel. */
     private val artworkJobs = mutableMapOf<HistoryTrack, Job>()
+
+    /**
+     * Keeps the page clear of the bottom navigation bar.
+     *
+     * The bar is the shell's, drawn over this page rather than beside it: the
+     * pager is constrained to the bottom of the screen and the bar floats on top
+     * of it. So the last ~76dp of the scrolled page has always been underneath the
+     * bar, and the page's own 16dp bottom padding was never going to reach past
+     * it. Nothing above the history noticed, because nothing above the history
+     * ever scrolled to the end - but "Показать ещё" is the last thing on the page,
+     * and it sits in exactly that band. See [applyBottomChromeInset].
+     *
+     * Held as a field so it can come off the bar again: the bar outlives this
+     * fragment's view, and a listener left on it would hold the view forever.
+     */
+    private val bottomChromeListener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+        applyBottomChromeInset()
+    }
+
+    /**
+     * A row the reader is looking at, and where on screen it was.
+     *
+     * Captured before the history list changes and restored after it has laid out
+     * again, so a track finishing while the reader is down among the older
+     * entries does not shove them out from under the eye. See
+     * [captureHistoryAnchor].
+     */
+    private data class HistoryAnchor(val identity: String, val offsetOnScreen: Int)
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -181,6 +210,13 @@ class MyataStreamFragment() : Fragment() {
 
         setUpBroadcastHistory()
 
+        // The bar is the Activity's and outlives this view, so the listener is
+        // added here and taken off in onDestroyView.
+        (activity as? MainActivity)?.binding?.bottomNavView?.let { nav ->
+            nav.addOnLayoutChangeListener(bottomChromeListener)
+            applyBottomChromeInset()
+        }
+
         // Navigation listeners are now handled in MainActivity
 
         // Favorite button handler
@@ -254,6 +290,30 @@ class MyataStreamFragment() : Fragment() {
     }
 
     /**
+     * Reserves the bottom navigation bar's height at the end of the page.
+     *
+     * Read off the bar itself rather than written down as a dimen, because its
+     * height is content-sized: it grows with the font scale and with whatever
+     * bottom inset the device applies, and a constant would be wrong on exactly
+     * the configurations where being wrong hides the button again.
+     *
+     * `clipToPadding=false` is already on the scroll view, so this only extends
+     * how far the page can scroll - it draws nothing and moves nothing.
+     */
+    private fun applyBottomChromeInset() {
+        val nav = (activity as? MainActivity)?.binding?.bottomNavView ?: return
+        val inset = if (nav.isVisible) nav.height else 0
+        if (binding.streamScroll.paddingBottom != inset) {
+            binding.streamScroll.setPadding(
+                binding.streamScroll.paddingLeft,
+                binding.streamScroll.paddingTop,
+                binding.streamScroll.paddingRight,
+                inset,
+            )
+        }
+    }
+
+    /**
      * Draws whatever [BroadcastHistoryState] says, from the ViewModel's history
      * and this page's reveal count. The rows themselves are the real list cut to
      * the revealed length, so "Показать ещё" moves real history and nothing else.
@@ -271,7 +331,78 @@ class MyataStreamFragment() : Fragment() {
         binding.historyLoading.isVisible = state.mode == BroadcastHistoryState.Mode.LOADING
         binding.historyShowMore.isVisible = state.isShowMoreVisible
 
-        historyAdapter.submitList(tracks.take(state.visibleCount))
+        // The list is a ListAdapter over a stable identity, so a track change is
+        // an insert at 0 and a drop off the tail, not a rebuild - the rows that
+        // stay are the same views and nothing flashes. What DiffUtil cannot do is
+        // keep them under the reader's eye: this list does not scroll, the page
+        // does, so an inserted row moves everything below it down the page. The
+        // anchor gives the page back the scroll the insert cost it.
+        val anchor = captureHistoryAnchor()
+        historyAdapter.submitList(tracks.take(state.visibleCount)) {
+            if (anchor != null && view != null) {
+                binding.historyList.doOnPreDraw { restoreHistoryAnchor(anchor) }
+            }
+        }
+    }
+
+    /**
+     * Where the topmost row the reader can actually see is, or null if there is
+     * nothing to hold still.
+     *
+     * Null when the reader is at or above the top of the list, which is the case
+     * the brief calls out: from there a newly finished track is *supposed* to
+     * arrive at row 1 and push the rest down, because the reader is watching the
+     * head of the history and that is the event they are watching for.
+     */
+    private fun captureHistoryAnchor(): HistoryAnchor? {
+        val list = binding.historyList
+        if (!list.isVisible || list.childCount == 0) return null
+
+        val listTop = topInScroll(list) - binding.streamScroll.scrollY
+        if (listTop >= 0) return null
+
+        for (index in 0 until list.childCount) {
+            val child = list.getChildAt(index)
+            val childTop = listTop + child.top
+            if (childTop + child.height <= 0) continue
+            val position = list.getChildAdapterPosition(child)
+            val identity = historyAdapter.currentList.getOrNull(position)
+                ?.let(::historyIdentity)
+                ?: return null
+            return HistoryAnchor(identity, childTop)
+        }
+        return null
+    }
+
+    /** Scrolls the page by whatever the update moved [anchor]'s row by. */
+    private fun restoreHistoryAnchor(anchor: HistoryAnchor) {
+        val list = binding.historyList
+        val position = historyAdapter.currentList
+            .indexOfFirst { historyIdentity(it) == anchor.identity }
+        if (position < 0) return
+        val row = list.findViewHolderForAdapterPosition(position)?.itemView ?: return
+
+        val nowOnScreen = topInScroll(list) + row.top - binding.streamScroll.scrollY
+        val delta = nowOnScreen - anchor.offsetOnScreen
+        // Appending below the reader ("Показать ещё") moves nothing above it, so
+        // the delta is zero and this does nothing - which is the point of
+        // anchoring on a row rather than on the list's height.
+        if (delta != 0) binding.streamScroll.scrollBy(0, delta)
+    }
+
+    /** [PlayerHistoryAdapter]'s own row identity, as a value this can compare. */
+    private fun historyIdentity(track: HistoryTrack): String =
+        "${track.playedAt} ${track.artist}"
+
+    /** [view]'s top in the scrolling content's coordinates. */
+    private fun topInScroll(view: View): Int {
+        var top = 0
+        var current: View = view
+        while (current !== binding.streamScroll) {
+            top += current.top
+            current = current.parent as? View ?: return top
+        }
+        return top
     }
 
     /**
@@ -334,8 +465,18 @@ class MyataStreamFragment() : Fragment() {
             (activity as MainActivity).binding.bottomNavView.visibility = View.VISIBLE
         }
 
+        // The line above can have just turned the bar back on, and split mode can
+        // have turned it off while this page was away.
+        applyBottomChromeInset()
+
         Log.d("PLAYER", "resume")
         super.onResume()
+    }
+
+    override fun onDestroyView() {
+        (activity as? MainActivity)?.binding?.bottomNavView
+            ?.removeOnLayoutChangeListener(bottomChromeListener)
+        super.onDestroyView()
     }
 
     fun updatePlayer(){

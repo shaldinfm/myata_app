@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Mini Player play/pause press feedback.
+
+  It replaces `?attr/selectableItemBackgroundBorderless`, which is what produced
+  the oversized, cropped circle the brief describes. Two things go wrong with a
+  borderless ripple here and they compound:
+
+    1. It is unbounded, so its radius comes from the view's larger dimension -
+       the control's box is 27x48, so the circle is drawn about 48 across on a
+       27-wide control and immediately spills out of it.
+    2. Being borderless it projects onto the nearest ancestor that has a
+       background, and that ancestor is the pill itself (`bg_mini_player`). So
+       the spill is not drawn against the button at all - it is drawn across the
+       pill and then cut by the pill's own rounded outline, which is the crop.
+
+  A ripple with a mask is bounded: it cannot project past the view it is on, and
+  it is clipped to the mask rather than to whatever is behind it. The mask here
+  is the control's full 27x48 hit area with its corners taken to half the width,
+  so the pressed state fills exactly the target that receives the touch and stops
+  at its edge. Nothing about the control's size, position or hit target changes -
+  this file only decides where the ink is allowed to go.
+
+  `colorControlHighlight` is the theme's own press colour, so Light and Dark are
+  both the platform's and neither needs a value here.
+-->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="?attr/colorControlHighlight">
+
+    <item android:id="@android:id/mask">
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/white" />
+            <corners android:radius="@dimen/mini_player_control_corner" />
+        </shape>
+    </item>
+</ripple>

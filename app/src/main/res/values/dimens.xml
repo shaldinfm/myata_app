@@ -44,6 +44,18 @@
     <!-- Button slot: 27 wide in the frozen row. Full row height for the target. -->
     <dimen name="mini_player_button_width">27dp</dimen>
     <dimen name="mini_player_button_height">48dp</dimen>
+    <!--
+      The press state's mask, half of mini_player_button_width, so the ripple
+      fills the 27x48 target and ends in a semicircle at each end instead of a
+      corner. See bg_mini_player_control.xml for why it is masked at all.
+    -->
+    <dimen name="mini_player_control_corner">13.5dp</dimen>
+    <!--
+      The connecting indicator, inside the 27 slot with a little air around it.
+      The glyphs it stands in for are 11x14 and 12x14, so it reads as the same
+      class of mark rather than as something that arrived from elsewhere.
+    -->
+    <dimen name="mini_player_control_spinner">20dp</dimen>
 
     <!--
       HOME, frozen 3.6.6 canonical.

@@ -113,20 +113,57 @@
         </LinearLayout>
 
         <!--
-          Play / pause. The frozen slot is 27 wide, which is what fixes the text
-          column at 233; the height is taken to the full 48 of the row so the
-          target is not 25 tall. The glyph drawables are glyph-tight, so
-          scaleType=center reproduces the canonical x for both states.
+          Play / pause / connecting.
+
+          The frozen slot is 27 wide, which is what fixes the text column at 233;
+          the height is taken to the full 48 of the row so the target is not 25
+          tall. Those two numbers are on this frame now, and the button fills it -
+          the slot is unchanged, it has simply grown a second occupant.
+
+          The frame exists because connecting has to be drawn *in the control's
+          own place*, not beside it: the glyph goes and an indeterminate spinner
+          takes the same 27x48, so the row does not reflow and the button does not
+          move when a stream starts. Same decision as the PLAYER's central
+          control, and driven by the same state - see PlayerControlState.
         -->
-        <ImageButton
-            android:id="@+id/mini_player_play_pause"
+        <FrameLayout
+            android:id="@+id/mini_player_control"
             android:layout_width="@dimen/mini_player_button_width"
             android:layout_height="@dimen/mini_player_button_height"
-            android:layout_marginStart="@dimen/mini_player_gap"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/mini_player_play"
-            android:scaleType="center"
-            android:src="@drawable/ic_mini_player_play"
-            app:tint="@color/brand_mini_player_icon" />
+            android:layout_marginStart="@dimen/mini_player_gap">
+
+            <!--
+              The glyph drawables are glyph-tight, so scaleType=center reproduces
+              the canonical x for both states.
+
+              The background is a masked ripple rather than
+              `selectableItemBackgroundBorderless`: borderless is what drew the
+              oversized circle across the pill and let its own outline crop it.
+              See bg_mini_player_control.xml.
+            -->
+            <ImageButton
+                android:id="@+id/mini_player_play_pause"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_mini_player_control"
+                android:contentDescription="@string/mini_player_play"
+                android:scaleType="center"
+                android:src="@drawable/ic_mini_player_play"
+                app:tint="@color/brand_mini_player_icon" />
+
+            <!--
+              Connecting / re-buffering. Centred in the same slot, on top of the
+              button so it stands where the glyph stood. It takes the glyph's own
+              colour because it stands in for the glyph.
+            -->
+            <ProgressBar
+                android:id="@+id/mini_player_spinner"
+                android:layout_width="@dimen/mini_player_control_spinner"
+                android:layout_height="@dimen/mini_player_control_spinner"
+                android:layout_gravity="center"
+                android:indeterminateTint="@color/brand_mini_player_icon"
+                android:visibility="gone"
+                tools:visibility="gone" />
+        </FrameLayout>
     </LinearLayout>
 </layout>

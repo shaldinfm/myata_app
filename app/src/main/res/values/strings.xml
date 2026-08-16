@@ -194,8 +194,10 @@
       The sheet has no title of its own: `Bottom Sheet / title` carries the TRACK
       and `Bottom Sheet / subtitle` the ARTIST, so both come from the row.
 
-      The undo copy is the owner's, and `Отменить` restores the row exactly -
-      same id, same addedAt, so it returns to the position it was removed from.
+      The undo copy is the owner's. `Отменить` re-inserts the same entity, so
+      the row keeps its original addedAt and returns to the position it was
+      removed from - see FavoritesViewModel.restoreFavorite, including the one
+      field that does not survive.
     -->
     <string name="collection_row_artwork">Обложка сохранённого трека</string>
     <string name="collection_row_action">Действия с треком</string>

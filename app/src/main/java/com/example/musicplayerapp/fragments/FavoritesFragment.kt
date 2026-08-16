@@ -291,6 +291,13 @@ class FavoritesFragment : Fragment() {
         artworkJobs.remove(track)?.cancel()
     }
 
+    override fun onDestroyView() {
+        // viewLifecycleOwner's scope cancels the jobs themselves; this drops the
+        // entries, which outlive the view because the map does not belong to it.
+        artworkJobs.clear()
+        super.onDestroyView()
+    }
+
     private fun exportTxt() {
         if (currentFavorites.isNotEmpty()) {
             val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {

@@ -310,4 +310,97 @@
       #1C4771 and #5FD9B4 the same files fill their 80x80 rect with.
     -->
     <color name="player_play_glyph">#F8F9FA</color>
+
+    <!--
+      ABOUT US (Phase B), frozen 3.6.6 canonical.
+
+      Provenance: `ABOUT US` 2411:31594 on CURRENT ANDROID UI - LIGHT and
+      `ABOUT US_dark` 2444:18567 on CURRENT ANDROID UI - DARK.
+
+      Most of the screen needed nothing new. The header title, the "О нас" and
+      "Ещё Радио Мята" headings and the "Читать подробнее" label are
+      `text_heading` on both pages exactly; the paragraphs are `text_secondary`
+      exactly; every card and button stroke on Section 2 is `outline` exactly;
+      and the social tiles land on `surface_container` in BOTH themes (#F8F9FA /
+      #1C4771), which is the cleanest role match on the screen. The donate button
+      already had brand_donate_cta_* from the earlier CTA migration and reuses
+      them unchanged.
+
+      What follows is only what those roles cannot express.
+    -->
+
+    <!--
+      The two donation cards are FIXED BRAND COLOURS in the sense the nav pill
+      block above defines: the light and the dark page carry identical values, so
+      a light/dark pair cannot express them and the ABSENCE of a values-night
+      entry is what keeps them identical.
+
+      The mint reads as `primary` on the Dark page (#5FD9B4 is the dark primary)
+      and as nothing at all on the Light page; the navy is the mirror case. That
+      is the same trap brand_mini_player_container documents - one hex legible in
+      both themes, and neither semantic role able to carry it alone.
+
+      Provenance: `Boosty Subscription Card` 2411:31635 / 2444:18582 and
+      `One-time Donation Card` 2411:31649 / 2444:18594.
+    -->
+    <color name="brand_about_boosty_container">#5FD9B4</color>
+    <color name="brand_about_onetime_container">#1C4771</color>
+    <!-- Boosty card heading and body, #1C4771 on both pages -->
+    <color name="brand_about_boosty_content">#1C4771</color>
+    <!-- Boosty card "Подписаться" button, 2411:31645 / 2444:18592 -->
+    <color name="brand_about_boosty_button_container">#1C4771</color>
+    <!-- Social tile 1px stroke, #1C3F5F on both pages - 2411:31678 / 2444:18624 -->
+    <color name="brand_about_social_outline">#1C3F5F</color>
+
+    <!--
+      The genuine pairs. Each of these lands on a different role in each theme,
+      or on no role at all, which is what forces a values-night counterpart
+      rather than a token reference.
+    -->
+
+    <!--
+      Section 2 card fill. #142D47 is exactly `surface` in dark, but light
+      `surface` is #FFFFFF against this card's #F3F4F5 - a visible step on a
+      #F8F9FA background - so the role is right in one theme only.
+      Provenance: `Section 2: About Us` 2411:31663 / 2444:18606.
+    -->
+    <color name="about_section_container">#F3F4F5</color>
+
+    <!--
+      "Читать подробнее" fill. Same shape of problem, opposite corner: #142D47 is
+      `surface` in dark while light draws #F8F9FA, which is `background` and
+      `surface_container` but not `surface`. Its stroke and label are `outline`
+      and `text_heading` and take those tokens.
+      Provenance: `Button` 2424:758 / 2444:18618.
+    -->
+    <color name="about_read_more_container">#F8F9FA</color>
+
+    <!--
+      One-time card heading and body. #F5F7FA is exactly `text_primary` in dark;
+      light draws #FFFFFF on the navy card, where `text_primary` (#191C1D) would
+      be unreadable.
+      Provenance: 2411:31655 / 2444:18600 and 2411:31657 / 2444:18602.
+    -->
+    <color name="about_onetime_content">#FFFFFF</color>
+
+    <!--
+      The two card chips. Their fills, strokes and labels all invert between the
+      pages and none of them tracks a role in both.
+
+      The one deliberate normalisation on this screen: the light one-time chip
+      stroke is #452149 in Figma - a plum that appears nowhere else in the
+      design and reads as residue from an earlier palette beside its own
+      #1C4771 label. It is kept verbatim rather than "corrected", because
+      Figma wins on any disagreement and a drive-by colour change is exactly
+      what the parity validator exists to catch.
+
+      Provenance: `Background+Border` 2411:31638 / 2444:18585 (Boosty) and
+      2411:31652 / 2444:18597 (one-time).
+    -->
+    <color name="about_boosty_chip_outline">#006D3A</color>
+    <color name="about_boosty_chip_label">#003056</color>
+    <color name="about_onetime_chip_container">#F8F9FA</color>
+    <color name="about_onetime_chip_outline">#452149</color>
+    <color name="about_onetime_chip_label">#1C4771</color>
+
 </resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ABOUT US, "Читать подробнее". Frozen 2424:758 / 2444:18618: fills the card's
+  content width, radius 12, 12dp vertical padding, 1px stroke on `outline`
+  exactly. Only the fill needs a pair - see about_read_more_container.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/about_read_more_container" />
+    <stroke android:width="1dp" android:color="@color/outline" />
+    <corners android:radius="@dimen/about_button_corner" />
+</shape>

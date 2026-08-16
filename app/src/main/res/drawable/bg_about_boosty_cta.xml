@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ABOUT US, "Подписаться". Frozen 2411:31645 / 2444:18592: 200x52 hug, radius
+  12, padding 12/24, fill #1C4771 on both canonical pages.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/brand_about_boosty_button_container" />
+    <corners android:radius="@dimen/about_button_corner" />
+</shape>

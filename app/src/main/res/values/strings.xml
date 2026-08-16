@@ -28,6 +28,74 @@
     <string name="about_donate_cta">Поддержать эфир</string>
 
     <!--
+      ABOUT US (Phase B). All copy is verbatim from the frozen ABOUT US frames
+      2411:31594 (light) / 2444:18567 (dark), with two owner-approved exceptions
+      noted at their strings.
+
+      The paragraphs keep the frozen line breaks out of the copy: Figma hard-wraps
+      them to its own 292 and 310 text boxes, which is the wrong shape for a view
+      that has to reflow between 320dp and 412dp.
+    -->
+
+    <!--
+      Header title. The frozen frame reads "Поддержать радио" - the donation
+      section's title, on a screen whose own nav item is "О нас" and which the
+      design names ABOUT US. Owner GO: title the screen "О нас" so the header
+      agrees with the bottom bar, and drop the frozen 40dp header icon button
+      entirely rather than ship a control with no destination.
+    -->
+    <string name="about_title">О нас</string>
+
+    <string name="about_section_support_heading">Помочь проекту</string>
+
+    <!-- Boosty subscription card, 2411:31635 -->
+    <string name="about_boosty_badge">Ежемесячно</string>
+    <string name="about_boosty_heading">Подпишитесь на Boosty</string>
+    <string name="about_boosty_body">Полный архив эфиров и подкастов, эксклюзивные плейлисты и ранний доступ к новому контенту. Плюс – ваше имя появится в титрах наших видеороликов на YouTube.</string>
+    <string name="about_boosty_cta">Подписаться</string>
+
+    <!-- One-time donation card, 2411:31649. Its button is about_donate_cta above. -->
+    <string name="about_onetime_badge">Разово</string>
+    <string name="about_onetime_heading">Помочь эфиру звучать</string>
+    <string name="about_onetime_body">Разовый вклад помогает оплачивать серверы, приложение и развитие Радио Мята. Любая сумма поддерживает станцию на плаву.</string>
+
+    <!--
+      Section 2. The frozen frame draws paragraph 1 only and hides the other two
+      behind "Читать подробнее"; the shipping screen has always shown all three.
+      Owner GO: keep every paragraph and make the frozen button expand them in
+      place, so the collapsed default matches the design and no copy is lost.
+    -->
+    <string name="about_heading">О нас</string>
+    <string name="about_paragraph_1">Радио Мята — интернет-радиостанция, ориентированная на инди-музыку и альтернативный рок.</string>
+    <string name="about_paragraph_2">Это «инди-эклектичное» медиа, предлагающее ироничный взгляд на массовую культуру и оригинальный подход к современной музыке. Станция начала вещание в ночь с 27 на 28 сентября 2017 года.</string>
+    <!--
+      The two streams each start their own line rather than running on after the
+      colon, per the owner. Same copy and same meaning; the trailing semicolons
+      become full stops now that neither clause is a continuation. GOLD and XTRA
+      keep the Onest Black emphasis InfoFragment applies by index, which the line
+      breaks do not disturb.
+
+      The break spacing is deliberate and asymmetric: a blank line separates the
+      colon from the list, and a single break separates the two streams, so they
+      read as one block of two entries rather than as two unrelated paragraphs.
+    -->
+    <string name="about_paragraph_3">Дополнительно доступны тематические потоки:\n\nGOLD — «золотые» танцевальные хиты.\nXTRA — новая локальная инди-музыка.</string>
+    <string name="about_read_more">Читать подробнее</string>
+    <!-- The same button once expanded. Not in Figma, which draws only the collapsed state. -->
+    <string name="about_read_less">Свернуть</string>
+
+    <!-- Section 3, 2411:31674. Labels are TalkBack-only - the frozen tiles are glyphs. -->
+    <string name="about_social_heading">Ещё Радио Мята</string>
+    <string name="about_social_telegram">Telegram</string>
+    <string name="about_social_spotify">Spotify</string>
+    <string name="about_social_instagram">Instagram</string>
+    <string name="about_social_tiktok">TikTok</string>
+    <string name="about_social_youtube">YouTube</string>
+    <string name="about_social_threads">Threads</string>
+    <string name="about_social_boosty">Boosty</string>
+    <string name="about_social_yandex">Яндекс Музыка</string>
+
+    <!--
       Mini Player (B2). The frozen design carries no labels here - the pill shows
       live metadata - so these exist only for TalkBack.
     -->

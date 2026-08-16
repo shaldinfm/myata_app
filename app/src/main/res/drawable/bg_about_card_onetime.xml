@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ABOUT US, one-time donation card. Frozen 2411:31649 / 2444:18594: radius 24,
+  fill #1C4771 on both canonical pages. Same fixed-brand reasoning as the Boosty
+  card above, mirrored - this navy is `primary` in light and `surface_container`
+  in dark, so no single role carries it.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/brand_about_onetime_container" />
+    <corners android:radius="@dimen/about_card_corner" />
+</shape>

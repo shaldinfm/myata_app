@@ -34,11 +34,30 @@ class InfoFragment : Fragment() {
             inflater, R.layout.fragment_info, container, false
         )
 
-        // Handle window insets for safe area
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.title) { v, insets ->
+        // Handle window insets for safe area.
+        //
+        // The inset goes on the ROOT, not on the header, which is what HOME
+        // (main_content_container) and COLLECTION (collection_root) already do.
+        // Putting it on the title spent the inset out of the header's own 64dp
+        // band and left "О нас" sitting ~12dp above the other sections' titles;
+        // below the root's padding the band is a full 64 and all three land on
+        // the same baseline.
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.aboutRoot) { v, insets ->
             val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            // Add status bar height to existing top padding/margin
             v.setPadding(v.paddingLeft, bars.top, v.paddingRight, v.paddingBottom)
+
+            // The frozen clearance covers the chrome the design draws - navigation
+            // bar, gap, mini player - but the navigation bar also takes the system
+            // inset as padding (see MainActivity), so the content has to clear that
+            // too or the last tile row ends up under the pill on a gesture-nav
+            // device. Same addition HOME and COLLECTION make.
+            val scroll = binding.aboutScroll
+            scroll.setPadding(
+                scroll.paddingLeft,
+                scroll.paddingTop,
+                scroll.paddingRight,
+                resources.getDimensionPixelSize(R.dimen.content_bottom_clearance) + bars.bottom,
+            )
             insets
         }
 

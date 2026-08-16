@@ -31,6 +31,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <LinearLayout
+        android:id="@+id/about_root"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@color/background"
@@ -40,18 +41,20 @@
           `Header - TopAppBar` 2413:55 / 2444:18568: 64 tall, 16 horizontal
           padding, title centred vertically.
 
-          Keeps the id `title`, and with it two existing behaviours: the split
-          mode observer hides this view, and the status bar inset is applied to
-          it as top padding. minHeight rather than a fixed height so that inset
-          grows the bar instead of pushing the label out of it.
+          A FIXED 64dp band below the status bar inset, which `about_root`
+          carries - the same shape HOME (`main_content_container` +
+          `home_greeting`) and COLLECTION (`collection_root` + its title) already
+          use, so all three titles land on one baseline. Applying the inset to
+          this view instead, as ABOUT used to, eats it out of the band's own 64
+          and lifts the title ~12dp above the other sections.
+
+          Keeps the id `title`: the split-mode observer hides this view.
         -->
         <TextView
             android:id="@+id/title"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/background"
+            android:layout_height="@dimen/about_header_height"
             android:gravity="center_vertical"
-            android:minHeight="@dimen/about_header_height"
             android:paddingStart="@dimen/about_content_margin_horizontal"
             android:paddingEnd="@dimen/about_content_margin_horizontal"
             android:text="@string/about_title"
@@ -65,6 +68,7 @@
           the Mini Player floats over reserves.
         -->
         <ScrollView
+            android:id="@+id/about_scroll"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"

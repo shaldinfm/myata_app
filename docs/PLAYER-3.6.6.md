@@ -25,6 +25,20 @@ deliberate, temporary deviation, agreed before the work started.
 > the buffering face and every offset on this screen are unchanged. `exact/`
 > remains the source for `like` and the two swipe markers.
 >
+> **…and the FINAL pair has since been superseded in turn.** By an owner decision
+> taken after an on-device comparison, `ic_player_play` and `ic_player_pause` are
+> now **official Google Material Symbols Rounded** `play_arrow` and `pause`,
+> FILL 0, wght 400, GRAD 0, opsz 24, nominal 48dp, taken verbatim from
+> [google/material-design-icons](https://github.com/google/material-design-icons)
+> (Apache 2.0). The FINAL pair measured play 24% taller than pause and put the
+> play triangle's visual mass 4.386dp left of the control centre; Material's pair
+> draws play slightly smaller than pause and carries Google's own optical
+> correction, so the app applies **no offset and no scale** to either glyph. Both
+> are still hollow — wall 3.97dp against the superseded 4.00dp stroke — and both
+> still take `player_play_glyph`. The 80×80 surface, the r20, `PlayerControlState`
+> and the buffering face are once again unchanged. The `owner-final/` files stay
+> in place as the record of what they replaced; nothing reads them any more.
+>
 > **Phase C has since landed the lower half** — see
 > [PLAYER-HISTORY-3.6.6.md](PLAYER-HISTORY-3.6.6.md). The space below the controls
 > is no longer empty, and the entry in the `dislike` slot scrolls to the inline

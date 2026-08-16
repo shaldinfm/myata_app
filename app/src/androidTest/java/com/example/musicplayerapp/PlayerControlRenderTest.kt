@@ -36,17 +36,22 @@ import kotlin.math.roundToInt
  *
  *   play/pause             80 x 80, cornerRadius 20, fill `primary`
  *
- * The glyph inside it is no longer the canonical snapshot's: the owner-supplied
- * FINAL assets in tools/figma-export/player-icons/owner-final supersede it, and
- * they are 4-wide round-joined STROKES rather than filled outlines. Painted, with
- * the stroke reaching 2 past the centreline on every side:
+ * The glyph inside it is official Google Material - Material Symbols Rounded
+ * `play_arrow` and `pause`, FILL 0, nominal 48dp - by an owner decision that
+ * supersedes the owner-final Figma pair this used to measure. Drawn by
+ * scaleType=center in the 80 box, with no offset and no scale, they paint:
  *
- *   play    27.33 x 33.9957   centred at (39.665, 40.0001) in the 80 box
- *   pause   27.33 x 27.33     centred at (40, 40)
+ *   play    20.25 x 24.70   box centred at (42.125, 40) in the 80 box
+ *   pause   28.00 x 28.00   box centred at (40, 40)
  *
- * Play sits a third of a unit left of the box centre and the supplied file says
- * so; the drawables take the 80 box as their viewport so it lands where the file
- * puts it rather than being centred for tidiness.
+ * Play's box sits +2.125 right of centre and that is Google's, not ours: it is
+ * the optical correction that puts a triangle's visual mass on the centre, and
+ * it is the reason no translation is applied anywhere. The pair it replaced was
+ * the reverse - box centred, mass 4.386 left - and was also 24% taller than its
+ * own pause, where Material's play is slightly smaller than its pause.
+ *
+ * Both are hollow, as the superseded strokes were, so the surface still shows
+ * through the middle of each; [hasOpenInterior] is what holds that.
  *
  * All three faces are checked in both themes, and the fill has to be the same
  * rectangle in all three: Play -> connecting -> Pause must not move or resize
@@ -201,8 +206,8 @@ class PlayerControlRenderTest {
                     // the window is entirely surface: in Dark, the glyph colour
                     // and `background` are both #0F253E, so the page showing
                     // through the rounded corners would otherwise read as glyph.
-                    // The window is 40x40 around the centre, still larger than the
-                    // taller of the two glyphs at 27.33 x 33.9957 - one that
+                    // The window is 40x40 around the centre, comfortably larger
+                    // than the larger of the two glyphs at 28.00 square - one that
                     // outgrows it or wanders out of it fails these checks rather
                     // than escaping them.
                     val glyph = ink(
@@ -213,34 +218,41 @@ class PlayerControlRenderTest {
                     if (glyph == null) {
                         findings += "$where: no glyph is painted inside the control"
                     } else {
-                        // The two supplied glyphs share a width and differ in
-                        // height: play's path is 29.9957 tall against pause's
-                        // 23.33, and the 4-wide stroke adds 2 to every side of
-                        // both. Neither reads as a size change in use - the 80x80
-                        // surface is what is seen, and it belongs to the button.
-                        val glyphHeight = if (state == PlayerControlState.PLAY) 33.9957f else 27.33f
+                        // Material Symbols Rounded FILL 0, nominal 48dp. Both
+                        // numbers are the official path's own share of its 960
+                        // box, taken to 48: play spans 405 x 494 and pause 560
+                        // square. Play being the smaller of the two is the point -
+                        // it is the relationship that reads as equal weight, and
+                        // the reverse is what the superseded pair had.
+                        val isPlay = state == PlayerControlState.PLAY
+                        val glyphWidth = if (isPlay) 20.25f else 28.00f
+                        val glyphHeight = if (isPlay) 24.70f else 28.00f
                         // 1.5dp, because a pointed outline cannot be measured to
                         // the pixel by colour: the play glyph's apex is a round
                         // join whose outermost pixels are mostly surface and read
-                        // as surface. The error this check exists to catch was
-                        // 13.4 against 29.69.
-                        expect(where, "glyph width", glyph.width(), dp(27.33f), tolerance = dp(1.5f))
+                        // as surface.
+                        expect(where, "glyph width", glyph.width(), dp(glyphWidth), tolerance = dp(1.5f))
                         expect(where, "glyph height", glyph.height(), dp(glyphHeight), tolerance = dp(1.5f))
-                        // Pause is centred in the box; play is 0.335 left of it,
-                        // which is what play_light.svg and play_dark.svg state -
-                        // their path spans x 28..51.33, whose centre is 39.665.
-                        val centreOffsetX = if (state == PlayerControlState.PLAY) dp(-0.335f) else 0f
+                        // Pause is centred. Play's box is +2.125 right, which is
+                        // Google's optical correction inside the official path -
+                        // its ink spans x 320..725 of the 960 box, centre 522.5
+                        // against the box's 480 - and NOT anything applied here.
+                        // If this ever reads 0, someone has "fixed" the asset.
+                        val centreOffsetX = if (isPlay) dp(2.125f) else 0f
                         expect(
                             where, "glyph x against the box centre",
                             glyph.centerX(), fill.centerX() + centreOffsetX, dp(1),
                         )
                         expect(where, "glyph centred in y", glyph.centerY(), fill.centerY().toFloat(), dp(1))
-                        // Both supplied glyphs are strokes, so the surface shows
-                        // through the middle of each. A solid glyph - which is what
-                        // stood in for them before any exact asset arrived - would
-                        // fill its own centre with the glyph colour.
-                        if (raster.getPixel(glyph.centerX(), glyph.centerY()) != primary) {
-                            findings += "$where: the glyph is solid at its centre; the frozen one is an outline"
+                        // Both glyphs are hollow, as the strokes they replaced
+                        // were: FILL 0 winds an inner contour against the outer
+                        // one so the surface shows through. Asserted as an open
+                        // run rather than by sampling the box centre, because the
+                        // play triangle's interior is not centred on its own box -
+                        // the centre pixel lands about 1px inside the hollow tip,
+                        // which anti-aliasing alone could decide either way.
+                        if (!hasOpenInterior(raster, glyph, primary, glyphColour)) {
+                            findings += "$where: the glyph has no open interior; FILL 0 should be hollow"
                         }
                         log += "$where: control ${toDp(fill.width())}x${toDp(fill.height())}dp at " +
                             "(${fill.left},${fill.top}), glyph ${toDp(glyph.width())}x${toDp(glyph.height())}dp"
@@ -319,6 +331,54 @@ class PlayerControlRenderTest {
             if (y > bottom) bottom = y
         }
         return if (right < 0) null else Rect(left, top, right + 1, bottom + 1)
+    }
+
+    /**
+     * Whether the glyph is an outline rather than a solid shape.
+     *
+     * True when some row inside [glyph] runs glyph ... surface ... glyph, i.e.
+     * there is a stretch of the control's own fill enclosed on both sides by ink.
+     * A solid triangle or a solid bar has no such row; a FILL 0 triangle and a
+     * pair of FILL 0 bars both do.
+     *
+     * Written as a scan rather than by sampling the glyph box's centre, which is
+     * what this used to do. That worked for the superseded stroked pair because
+     * their interiors were centred on their boxes, and it is unsafe for
+     * Material's play_arrow, whose hollow interior is offset from its own
+     * bounding box: the centre pixel lands about one pixel inside the tip, close
+     * enough that anti-aliasing decides the result.
+     *
+     * Three pixels of clear surface, so a single anti-aliased pixel between two
+     * strokes cannot be mistaken for an interior.
+     */
+    private fun hasOpenInterior(bitmap: Bitmap, glyph: Rect, surface: Int, glyphColour: Int): Boolean {
+        fun isGlyph(p: Int) = maxOf(
+            abs(android.graphics.Color.red(p) - android.graphics.Color.red(glyphColour)),
+            abs(android.graphics.Color.green(p) - android.graphics.Color.green(glyphColour)),
+            abs(android.graphics.Color.blue(p) - android.graphics.Color.blue(glyphColour)),
+        ) <= 48
+
+        for (y in glyph.top until glyph.bottom) {
+            var first = -1
+            var last = -1
+            for (x in glyph.left until glyph.right) {
+                if (isGlyph(bitmap.getPixel(x, y))) {
+                    if (first < 0) first = x
+                    last = x
+                }
+            }
+            if (first < 0 || last - first < 4) continue
+            var run = 0
+            for (x in first..last) {
+                if (bitmap.getPixel(x, y) == surface) {
+                    run++
+                    if (run >= 3) return true
+                } else {
+                    run = 0
+                }
+            }
+        }
+        return false
     }
 
     /**

@@ -234,6 +234,20 @@ tinted `primary`; the rows are told apart by their labels. That is what both
 canonical pages draw, and it is the owner's selection over the brand marks the
 proposal references.
 
+The sheet opens **expanded and never collapses**. A bottom sheet's default is
+`STATE_COLLAPSED` at a peek height of 9/16 of the window, which on the API 24
+device's 1080×1794 app window left the destructive row below the fold, reachable
+only by dragging the sheet up. That default is right for a sheet whose content is
+a long list and wrong for five fixed actions — the point of the surface is that
+the row's one control shows everything it offers.
+
+Two wrong diagnoses were tried on the device before that one, and are recorded so
+they are not tried again. It is **not** a missing window inset: `dumpsys` reports
+`app=1080x1794` on a 1080×1920 display, so the app window already excludes the
+navigation bar and the bottom inset is zero. And adding bottom margin to the card
+does nothing, because that margin lives inside the scrolling content and simply
+extends it further below the fold.
+
 ### Removal, and undo
 
 The row's permanent cross is gone; removal is the sheet's last row, on `error`.

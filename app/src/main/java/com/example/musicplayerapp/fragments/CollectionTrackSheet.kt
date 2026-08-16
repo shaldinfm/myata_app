@@ -59,9 +59,10 @@ class CollectionTrackSheet : BottomSheetDialogFragment() {
         // and the wrong one for five fixed actions: the whole point of this
         // surface is that the user can see what the row's single control offers.
         //
-        // The 447 always fits. It is 61% of the shortest window this app runs on,
-        // and the NestedScrollView underneath is what covers a display smaller
-        // than any currently shipping - it is not load-bearing here.
+        // The frozen 447 fits with room to spare on both QA devices - the API 24
+        // window measured 683dp tall and the API 36 one more - and the
+        // NestedScrollView underneath is what covers anything shorter, so
+        // expanding cannot push content off the top.
         (dialog as? BottomSheetDialog)?.behavior?.apply {
             skipCollapsed = true
             state = BottomSheetBehavior.STATE_EXPANDED

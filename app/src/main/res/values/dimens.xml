@@ -395,4 +395,83 @@
     <dimen name="player_history_more_gap">16dp</dimen>
     <dimen name="player_history_more_height">54dp</dimen>
     <dimen name="player_history_more_corner">12dp</dimen>
+
+    <!--
+      ABOUT US (Phase B), frozen 3.6.6 canonical.
+
+      Provenance: `ABOUT US` 2411:31594 (light) and `ABOUT US_dark` 2444:18567
+      (dark). The two pages are geometrically identical - every box below was
+      read off both and matched - so there is one set of numbers, not a pair.
+
+      The 390dp composition these describe:
+
+         0    header top            64   header bottom, Main top
+        79    Section 1 top        647   Section 1 bottom   (568 tall)
+       695    Section 2 top        971   Section 2 bottom   (276 tall)
+      1019    Section 3 top       1235   Section 3 bottom   (216 real)
+
+      Section 3's frame declares 231 while its heading, gap and 2x76 grid come
+      to 216. The 15 is slack inside a FIXED box, not a gap anything sits in, so
+      the layout hugs the real content and the difference lands in the scroll.
+    -->
+    <dimen name="about_header_height">64dp</dimen>
+    <dimen name="about_content_margin_horizontal">16dp</dimen>
+    <dimen name="about_content_padding_top">15dp</dimen>
+    <!-- `Main` paddingBottom. Sits on top of content_bottom_clearance, which is
+         what actually reserves the Mini Player / BottomNav band. -->
+    <dimen name="about_content_padding_bottom">32dp</dimen>
+    <!-- `Main` itemSpacing between the three sections. -->
+    <dimen name="about_section_spacing">48dp</dimen>
+
+    <!-- Section 1, the two donation cards. -->
+    <dimen name="about_card_corner">24dp</dimen>
+    <!-- 24dp from 360dp up - see values-w360dp/dimens.xml. -->
+    <dimen name="about_card_padding">16dp</dimen>
+    <!-- Gap between the Boosty and one-time cards, and heading-to-body inside them. -->
+    <dimen name="about_card_spacing">16dp</dimen>
+    <dimen name="about_card_item_spacing">8dp</dimen>
+    <!-- `Container` paddingBottom - the gap above each card's button. -->
+    <dimen name="about_card_button_spacing">24dp</dimen>
+
+    <!-- The "Ежемесячно" / "Разово" chips, r=9999 in Figma. -->
+    <dimen name="about_chip_corner">999dp</dimen>
+    <dimen name="about_chip_padding_horizontal">12dp</dimen>
+    <dimen name="about_chip_padding_vertical">4dp</dimen>
+
+    <!--
+      Card buttons: 200x52 (Подписаться) and 260x52 (Поддержать эфир), both hug
+      with 12/24 padding and r12. Height and radius are frozen; the width is
+      whatever the label needs, which is why only the padding is a dimen.
+    -->
+    <dimen name="about_button_corner">12dp</dimen>
+    <dimen name="about_button_height">52dp</dimen>
+    <dimen name="about_button_padding_horizontal">12dp</dimen>
+
+    <!-- Section 2, the About card. -->
+    <!-- 32dp from 360dp up - see values-w360dp/dimens.xml. -->
+    <dimen name="about_section_card_padding">24dp</dimen>
+    <!-- `Container` itemSpacing between paragraphs. -->
+    <dimen name="about_paragraph_spacing">24dp</dimen>
+    <!--
+      Gap above "Читать подробнее": the card's own 16 itemSpacing plus the
+      `Button:margin` wrapper's 16 paddingTop. Figma expresses it as two boxes;
+      there is nothing between them, so it is one margin here.
+    -->
+    <dimen name="about_read_more_gap">32dp</dimen>
+    <dimen name="about_read_more_padding_vertical">12dp</dimen>
+
+    <!--
+      Section 3, the social grid. Four 76dp tiles across 358dp of content with
+      18dp gaps: 4x76 + 3x18 = 358 exactly, which is why the tiles are weighted
+      rather than fixed - at 390dp the weights reproduce 76dp on the nose, and
+      below it they shrink instead of overflowing.
+
+      The 14dp padding is what makes the glyph 48dp at 390dp (76 - 2x14), and it
+      is the tile's own padding rather than a glyph size so the mark scales with
+      the tile on narrower screens instead of clipping.
+    -->
+    <dimen name="about_social_heading_gap">16dp</dimen>
+    <dimen name="about_social_tile_gap_horizontal">18dp</dimen>
+    <dimen name="about_social_tile_gap_vertical">16dp</dimen>
+    <dimen name="about_social_tile_padding">14dp</dimen>
 </resources>

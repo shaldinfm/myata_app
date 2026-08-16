@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ABOUT US, Section 2 card. Frozen 2411:31663 / 2444:18606: radius 24, 1px
+  stroke on `outline` exactly in both themes, over a fill that needs its own
+  pair - see about_section_container in values/colors.xml.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/about_section_container" />
+    <stroke android:width="1dp" android:color="@color/outline" />
+    <corners android:radius="@dimen/about_card_corner" />
+</shape>

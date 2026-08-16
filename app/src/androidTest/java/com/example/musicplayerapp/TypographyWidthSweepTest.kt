@@ -74,7 +74,24 @@ class TypographyWidthSweepTest {
             }
 
             // Horizontal overflow of the widest line beyond the view's own box.
-            val widest = (0 until layout.lineCount).maxOf { layout.getLineWidth(it) }
+            //
+            // Trailing whitespace counts toward getLineWidth but cannot ink, and
+            // on a line that wraps exactly on the box edge that alone is enough
+            // to report an overflow nothing can see - ABOUT US hits it on the
+            // frozen 310dp card at 390dp, where the break lands on a space and
+            // API 24 and API 36 disagree by a couple of dp about where. So the
+            // run of trailing spaces comes back off, which is the same thing the
+            // ascender check above already does: measure what actually draws.
+            //
+            // getLineWidth stays the basis rather than re-measuring the whole
+            // line, because it is the only one of the two that honours spans.
+            val widest = (0 until layout.lineCount).maxOf { i ->
+                val visibleEnd = layout.getLineVisibleEnd(i)
+                val end = layout.getLineEnd(i)
+                layout.getLineWidth(i) - if (end > visibleEnd) {
+                    tv.paint.measureText(tv.text, visibleEnd, end)
+                } else 0f
+            }
             val avail = tv.width - tv.paddingStart - tv.paddingEnd
             if (avail > 0 && widest > avail + 1f) {
                 findings += Finding("$surface@${widthPx}px/$name",
@@ -136,6 +153,27 @@ class TypographyWidthSweepTest {
                 findings.joinToString("\n") { "  ${it.where}: ${it.what}" },
             findings.isEmpty(),
         )
+    }
+
+    /**
+     * An inflater whose *configuration* really is [dp] wide.
+     *
+     * [measured] inflates at a pixel width, but resources still resolve against
+     * the device's own configuration. For a layout that adapts through a width
+     * qualifier that is a false reading: ABOUT US keeps its frozen 24dp card and
+     * 32dp section padding in `values-w360dp` because at 320dp they leave the
+     * one-time heading and "Поддержать эфир" without the room they need, and
+     * measuring the wide values at 320dp reports exactly the overflow the
+     * qualifier exists to prevent.
+     *
+     * Used only for the surface that has such a qualifier, so no other screen's
+     * measurements move.
+     */
+    private fun inflaterAt(base: LayoutInflater, dp: Int): LayoutInflater {
+        val config = android.content.res.Configuration(base.context.resources.configuration)
+        config.screenWidthDp = dp
+        config.smallestScreenWidthDp = minOf(config.smallestScreenWidthDp, dp)
+        return LayoutInflater.from(base.context.createConfigurationContext(config))
     }
 
     private fun sweep(inflater: LayoutInflater) {
@@ -221,7 +259,7 @@ class TypographyWidthSweepTest {
             }
 
             // --- ABOUT US: paragraph, hero and the donate CTA ---
-            measured(inflater, R.layout.fragment_info, w).let { root ->
+            measured(inflaterAt(inflater, dp), R.layout.fragment_info, w).let { root ->
                 inspect(root, "fragment_info", w)
                 val cta = root.findViewById<TextView>(R.id.donate_cta)
                 val desc = root.findViewById<TextView>(R.id.description)

@@ -30,8 +30,6 @@ class InfoFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
 
-
-
         val binding: FragmentInfoBinding = DataBindingUtil.inflate(
             inflater, R.layout.fragment_info, container, false
         )
@@ -48,55 +46,30 @@ class InfoFragment : Fragment() {
 
         vm.currentFragmentLiveData.value = "info"
 
-        binding.yandex.setOnClickListener {
-            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://band.link/myata_yandex"))
-            startActivity(browserIntent)
-        }
-        binding.instagram.setOnClickListener{
-            val intent = Intent(Intent.ACTION_VIEW)
-            intent.addCategory(Intent.CATEGORY_BROWSABLE)
-            intent.setData(Uri.parse("https://www.instagram.com/radiomyata/"))
-            startActivity(intent)
-        }
-        binding.boosty.setOnClickListener{
-            val intent = Intent(Intent.ACTION_VIEW)
-            intent.addCategory(Intent.CATEGORY_BROWSABLE)
-            intent.setData(Uri.parse("https://boosty.to/myata"))
-            startActivity(intent)
-        }
-        binding.tiktok.setOnClickListener{
-            val intent = Intent(Intent.ACTION_VIEW)
-            intent.addCategory(Intent.CATEGORY_BROWSABLE)
-            intent.setData(Uri.parse("https://www.tiktok.com/@radio_myata"))
-            startActivity(intent)
-        }
-        binding.youtube.setOnClickListener{
-            val intent = Intent(Intent.ACTION_VIEW)
-            intent.addCategory(Intent.CATEGORY_BROWSABLE)
-            intent.setData(Uri.parse("https://www.youtube.com/channel/UC30ExLCP-enuCrHH2qRRlCw"))
-            startActivity(intent)
-        }
-        binding.twitter.setOnClickListener{
-            val intent = Intent(Intent.ACTION_VIEW)
-            intent.addCategory(Intent.CATEGORY_BROWSABLE)
-            intent.setData(Uri.parse("https://twitter.com/radiomyata"))
-            startActivity(intent)
-        }
-        binding.telegram.setOnClickListener{
-            val intent = Intent(Intent.ACTION_VIEW)
-            intent.addCategory(Intent.CATEGORY_BROWSABLE)
-            intent.setData(Uri.parse("https://t.me/radiomyata"))
-            startActivity(intent)
-        }
-        binding.spotify.setOnClickListener{
-            val intent = Intent(Intent.ACTION_VIEW)
-            intent.addCategory(Intent.CATEGORY_BROWSABLE)
-            intent.setData(Uri.parse("https://open.spotify.com/user/31b7rfatuqf7lc76thiudm5bxxuy"))
-            startActivity(intent)
-        }
+        // The eight tiles of the frozen `Section 3: Social Media`, in its order:
+        // Telegram, Spotify, Instagram, TikTok / YouTube, Threads, Boosty,
+        // ЯМузыка. Every URL below is the one this screen already opened, except
+        // Threads - the frozen grid has eight slots and puts Threads in the one
+        // Twitter held, so Twitter is dropped on the owner's instruction rather
+        // than kept as a ninth tile the design has no room for.
+        binding.telegram.opensLink("https://t.me/radiomyata")
+        binding.spotify.opensLink("https://open.spotify.com/user/31b7rfatuqf7lc76thiudm5bxxuy")
+        binding.instagram.opensLink("https://www.instagram.com/radiomyata/")
+        binding.tiktok.opensLink("https://www.tiktok.com/@radio_myata")
+        binding.youtube.opensLink("https://www.youtube.com/channel/UC30ExLCP-enuCrHH2qRRlCw")
+        binding.threads.opensLink("https://www.threads.com/@radiomyata")
+        binding.boosty.opensLink("https://boosty.to/myata")
+        // The one link that never carried CATEGORY_BROWSABLE. Kept that way: the
+        // category narrows which activities can match, and this is a band.link
+        // redirector, so adding it would be a real change to what can open it.
+        binding.yandex.opensLink("https://band.link/myata_yandex", browsable = false)
 
         // Highlight GOLD and XTRA in description
-        val descriptionText = binding.description.text.toString()
+        //
+        // They live in the third paragraph, which the frozen card starts
+        // collapsed - the spans are applied here all the same, so the text is
+        // already correct the first time "Читать подробнее" reveals it.
+        val descriptionText = binding.description3.text.toString()
         val spannable = SpannableStringBuilder(descriptionText)
         // The paragraph around this span is Onest Regular, from
         // TextAppearance.Myata.Onest.Regular.15_24. GOLD and XTRA are emphasised
@@ -115,7 +88,7 @@ class InfoFragment : Fragment() {
                     Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
                 )
             }
-            
+
             // Highlight XTRA
             val xtraIndex = descriptionText.indexOf("XTRA")
             if (xtraIndex != -1) {
@@ -127,14 +100,35 @@ class InfoFragment : Fragment() {
                 )
             }
         }
-        binding.description.text = spannable
+        binding.description3.text = spannable
 
+        // "Читать подробнее", `Button` 2424:758.
+        //
+        // The frozen card draws paragraph 1 and marks the other two
+        // visible:false, with no destination anywhere in the app for this
+        // button. Rather than ship it dead or drop two paragraphs the screen has
+        // always shown, it expands them in place: the collapsed default is the
+        // design's, and no copy is lost.
+        binding.readMore.setOnClickListener {
+            val expanded = binding.description2.visibility == View.VISIBLE
+            val next = if (expanded) View.GONE else View.VISIBLE
+            binding.description2.visibility = next
+            binding.description3.visibility = next
+            binding.readMore.setText(
+                if (expanded) R.string.about_read_more else R.string.about_read_less
+            )
+        }
+
+        // `Boosty Subscription Card` > Button 2411:31645. The frozen design adds
+        // this second donation entry point; it opens the same Boosty page the
+        // Boosty tile below already opens, so it introduces no new destination.
+        binding.boostyCta.opensLink("https://boosty.to/myata")
 
         // The frozen 3.6.6 bar has no Donate destination: donation lives inside
-        // "О нас". This is the entry point into the existing DonateFragment -
-        // payment form, YooMoney WebView and Boosty subscriptions unchanged.
-        // Navigating without popUpTo leaves info on the back stack, so Back
-        // returns here rather than jumping to Home.
+        // "О нас". This is that entry point, and it is the only one into the app's
+        // own payment flow: DonateFragment - payment form, YooMoney WebView and
+        // Boosty subscriptions - unchanged. Navigating without popUpTo leaves info
+        // on the back stack, so Back returns here rather than jumping to Home.
         binding.donateCta.setOnClickListener {
             if (findNavController().currentDestination?.id != R.id.donate) {
                 findNavController().navigate(R.id.donate)
@@ -154,14 +148,27 @@ class InfoFragment : Fragment() {
             }
         })
 
-
-
         return binding.root
     }
 
     override fun onResume() {
         vm.currentFragmentLiveData.value = "info"
         super.onResume()
+    }
+
+    /**
+     * Opens [url] in whatever handles it, the way this screen always has.
+     *
+     * `browsable` exists only to preserve the one asymmetry the original code
+     * had - see the Yandex call site.
+     */
+    private fun View.opensLink(url: String, browsable: Boolean = true) {
+        setOnClickListener {
+            val intent = Intent(Intent.ACTION_VIEW)
+            if (browsable) intent.addCategory(Intent.CATEGORY_BROWSABLE)
+            intent.data = Uri.parse(url)
+            startActivity(intent)
+        }
     }
 
     // Helper span for custom typefaces on older Android versions

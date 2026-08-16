@@ -92,4 +92,23 @@
       reuse of the role.
     -->
     <color name="player_play_glyph">#0F253E</color>
+
+    <!--
+      ABOUT US (Phase B). The dark halves of the pairs declared in
+      values/colors.xml, which carries the provenance and the reason each one is
+      a pair rather than a semantic role.
+
+      The two donation cards, the Boosty card's content and button, and the
+      social tile stroke are deliberately ABSENT here: they are identical on both
+      canonical pages, and that absence is what keeps them identical.
+    -->
+    <color name="about_section_container">#142D47</color>
+    <color name="about_read_more_container">#142D47</color>
+    <color name="about_onetime_content">#F5F7FA</color>
+    <color name="about_boosty_chip_outline">#003056</color>
+    <color name="about_boosty_chip_label">#5FD9B4</color>
+    <color name="about_onetime_chip_container">#003056</color>
+    <color name="about_onetime_chip_outline">#003056</color>
+    <color name="about_onetime_chip_label">#5FD9B4</color>
+    <color name="about_social_icon">#F5F7FA</color>
 </resources>

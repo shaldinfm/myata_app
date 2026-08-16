@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ABOUT US, Boosty subscription card. Frozen 2411:31635 / 2444:18582:
+  358 wide, hug height, corner radius 24, fill #5FD9B4 on BOTH canonical pages -
+  hence a fixed brand colour rather than `primary`, which is this mint in dark
+  and #1C4771 in light. The frozen DROP_SHADOW:2 #0000000D is below the
+  threshold an elevation would reproduce and is deliberately not faked here.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/brand_about_boosty_container" />
+    <corners android:radius="@dimen/about_card_corner" />
+</shape>

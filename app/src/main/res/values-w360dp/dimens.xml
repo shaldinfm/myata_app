@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ABOUT US, the frozen paddings - everything at 360dp and above.
+
+  These three are the canonical numbers from `ABOUT US` 2411:31594. They live
+  behind a w360dp qualifier because at 320dp they do not fit, and the frozen
+  composition is a 390dp target, not a promise about the narrowest device:
+
+    card padding 24 at 320dp leaves 240dp of content. The one-time card's
+    heading needs 244 and "Поддержать эфир" needs 212 plus 48 of button
+    padding, so the heading overflowed its box and the button wrapped onto a
+    second line inside a fixed 52dp box - both caught by
+    TypographyWidthSweepTest at 840px.
+
+  The narrower values in values/dimens.xml buy that space back from the padding
+  instead of from the type, which is the one thing that must not shrink. From
+  360dp up nothing is short and the frozen numbers apply unchanged, so 390dp -
+  the width the design is drawn at - is pixel-faithful.
+-->
+<resources>
+    <dimen name="about_card_padding">24dp</dimen>
+    <dimen name="about_button_padding_horizontal">24dp</dimen>
+    <dimen name="about_section_card_padding">32dp</dimen>
+</resources>

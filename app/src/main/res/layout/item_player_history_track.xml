@@ -10,10 +10,14 @@
   paints neither: it has no fill and its stroke is #000000 at opacity 0. So there
   is no card here, only 13 of padding around its content.
 
-     0    13         51.98        63.98            102.98              311
+     0    13         55           67               107                 311
      |    | time     |  gap 12    | 40x40 r6 art   | gap 12  title     |
-          | 38.98 R  |            |                |         artist    |
+          | 42 R     |            |                |         artist    |
           |                                    gap 12  service links   |
+
+  The time column is 42 rather than the frozen 38.98: see the dimen, which
+  carries the measurement. Everything after it therefore sits 3.02 further in
+  than the frozen frame - the row gives, as it does for height.
 
   **The service links are under the text, not beside it.**
 
@@ -59,10 +63,13 @@
     android:padding="@dimen/player_history_row_padding">
 
     <!--
-      `Container > Container > NN:NN`, 38.98 wide with the text RIGHT aligned
-      inside it. Onest Regular 14/20 on `text_secondary` - Broadcast History's
-      timestamp is Onest by the typography contract, and #42474E / #B3C4D1 is
-      exactly that role on both pages.
+      `Container > Container > NN:NN`, with the text RIGHT aligned inside it.
+      Onest Regular 14/20 on `text_secondary` - Broadcast History's timestamp is
+      Onest by the typography contract, and #42474E / #B3C4D1 is exactly that
+      role on both pages.
+
+      The width is the frozen 38.98 widened to 41 so that no real timestamp
+      clips; the reasoning and the measurements are on the dimen.
     -->
     <TextView
         android:id="@+id/tv_time"

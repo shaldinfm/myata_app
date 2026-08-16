@@ -359,7 +359,27 @@
     <dimen name="player_history_row_height">74dp</dimen>
     <dimen name="player_history_row_padding">13dp</dimen>
     <dimen name="player_history_row_gap">12dp</dimen>
-    <dimen name="player_history_time_width">38.98dp</dimen>
+    <!--
+      42, not the frozen 38.98, because the frozen box cannot hold a real
+      timestamp. Onest has no tabular figures - its GSUB carries only calt, ccmp
+      and locl, so fontFeatureSettings="tnum" is a no-op here - and its digits
+      are proportional to a degree that matters: '1' advances 363 units where
+      '0' advances 665, nearly double. At 14sp that makes "08:11" 31.72dp and
+      "00:00" 40.78dp, so the widest HH:MM overflowed 38.98 and lost its last
+      digit while narrower ones fitted.
+
+      42 rather than 41, because the advances are not the whole width: Paint
+      measures "00:00" at 41.38dp once this font's kerning is applied, so a box
+      sized to the 40.78 the advances add up to still clipped. The number to
+      trust is the one PlayerHistoryLayoutTest takes from the view's own paint.
+
+      It stays a fixed width rather than becoming wrap_content with a minWidth,
+      which is how every other frozen number in this row was relaxed. The
+      artwork is constrained to the end of this view, so a self-sizing time
+      column would start each row's artwork at a different x - trading a clipped
+      digit for a ragged artwork edge down the section.
+    -->
+    <dimen name="player_history_time_width">42dp</dimen>
     <dimen name="player_history_time_height">20dp</dimen>
     <dimen name="player_history_artwork_size">40dp</dimen>
     <dimen name="player_history_artwork_corner">6dp</dimen>

@@ -32,7 +32,7 @@ import kotlin.math.roundToInt
  *
  *   17  padding   32  heading   16  gap   row x3   16  gap   54  button   17
  *
- *      13  row padding   38.98  time (RIGHT)   12   40x40 r6 art   12   text
+ *      13  row padding   41  time (RIGHT)   12   40x40 r6 art   12   text
  *                        12   service links, on their own line
  *
  * The row is the one part that is not the frozen figure, so the section adds up
@@ -149,11 +149,12 @@ class PlayerHistoryLayoutTest {
             // moved below the text. Stated, not a floor being quietly missed.
             expect(where, "row height (one-line content)", row.height, dp(120), tolerance = dp(1.5f))
             expect(where, "time x in row", leftIn(time, row), dp(13))
-            expect(where, "time width", time.width, dp(38.98f))
-            // The frozen time box is RIGHT aligned inside its fixed 38.98.
+            expect(where, "time width", time.width, dp(42f))
+            // The time box is RIGHT aligned inside its fixed 42.
             if (time.layout != null && time.layout.getParagraphAlignment(0) != android.text.Layout.Alignment.ALIGN_OPPOSITE) {
-                findings += "$where: the row's time is not right-aligned in its 38.98 box"
+                findings += "$where: the row's time is not right-aligned in its 42 box"
             }
+            everyClockTimeFits(where, time)
 
             expect(where, "artwork size", art.width, dp(40))
             expect(where, "artwork height", art.height, dp(40))
@@ -200,11 +201,14 @@ class PlayerHistoryLayoutTest {
             noOverlap(where, "artist", artist, "services", services, row)
 
             // The column has to be wide enough to set a real name on a line. At
-            // the frozen width it is 195 with the links moved off it, against the
-            // 113 they left when they were beside it.
+            // the frozen width it is 192 with the links moved off it, against the
+            // 113 they left when they were beside it. 192 and not the 195 this
+            // measured before: the time column took 3.02 of it to stop clipping
+            // real timestamps, which is a trade the title column can afford at
+            // 60dp above its floor and the time column could not.
             atLeast(where, "title column", title.width, dp(120))
             if (widthDp == 390) {
-                expect(where, "title column at the frozen width", title.width, dp(195), tolerance = dp(1.5f))
+                expect(where, "title column at the frozen width", title.width, dp(192), tolerance = dp(1.5f))
             }
             requireOneLine(title, "$where/title")
             requireOneLine(artist, "$where/artist")
@@ -344,12 +348,19 @@ class PlayerHistoryLayoutTest {
 
     /* ---------------------------------------------------------------- infra -- */
 
+    /**
+     * `playedAtFormatted` is "00:00" rather than the "10:0N" this used to build.
+     * Onest's digits are proportional, so those two are not the same measurement
+     * at all - "10:01" is 32.33dp against "00:00" at 40.78dp, the widest of the
+     * 1440 - and the column was sized such that the first fitted and the second
+     * did not. The rows measure the shape that is hardest to hold.
+     */
     private fun tracks(n: Int) = (1..n).map {
         HistoryTrack(
             artist = "MUSE",
             track = "CRYOGEN",
             playedAt = it.toLong(),
-            playedAtFormatted = "10:%02d".format(it % 60),
+            playedAtFormatted = "00:00",
         )
     }
 
@@ -447,6 +458,34 @@ class PlayerHistoryLayoutTest {
 
     private fun requireOneLine(t: TextView, what: String) {
         if (t.lineCount > 1) findings += "$what wrapped onto ${t.lineCount} lines"
+    }
+
+    /**
+     * The time box holds every clock time there is, not just the one on screen.
+     *
+     * This is the check that was missing when the column was the frozen 38.98.
+     * [noClipping] only ever looked at height, and the fixture only ever fed it
+     * "10:0N" - 32.33dp, near the bottom of the range, since Onest advances '1'
+     * 363 units against '0' at 665 - so a box too small for "00:00" at 40.78dp
+     * measured fine against both. The section shows whatever the station played,
+     * so the box has to hold the widest of the 1440, and the real paint is what
+     * decides that: measureText applies this font's kerning and letter spacing,
+     * which a width computed from advances alone would miss.
+     */
+    private fun everyClockTimeFits(where: String, t: TextView) {
+        val room = t.width - t.paddingStart - t.paddingEnd
+        if (room <= 0) return
+        var worst = ""
+        var worstWidth = 0f
+        for (h in 0..23) for (m in 0..59) {
+            val s = "%02d:%02d".format(h, m)
+            val w = t.paint.measureText(s)
+            if (w > worstWidth) { worstWidth = w; worst = s }
+        }
+        if (worstWidth > room) {
+            findings += "$where: the time box cannot hold \"$worst\" - needs " +
+                "${"%.1f".format(worstWidth)}px, has ${room}px"
+        }
     }
 
     /** The box holds its own glyphs: nothing is cut off top or bottom. */

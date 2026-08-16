@@ -132,6 +132,47 @@ fixed at the source now.
 
 ## Deviations from FINAL, and why
 
+### The time column is 42, not 38.98
+
+The frozen box cannot hold a real timestamp. Onest's digits are **proportional**,
+and not marginally: `'1'` advances 363 units where `'0'` advances 665, nearly
+double. At 14sp that spreads the clock across
+
+| time | width |
+|---|---|
+| `11:11` — narrowest of the 1440 | 23.87dp |
+| `08:11` | 31.72dp |
+| `10:01` — what the layout test used to assert against | 32.33dp |
+| `08:12` | 34.57dp |
+| `08:03` | 39.26dp |
+| `00:00` — widest of the 1440 | **40.78dp** |
+
+so 38.98 held some times and cut the last digit off others. It shipped visibly:
+rows read `08:0` where the minute was wide, in both themes.
+
+Tabular figures would have been the tidier fix — same advance for every digit,
+frozen width preserved — but this font has none. Onest's GSUB carries only
+`calt`, `ccmp` and `locl`, so `fontFeatureSettings="tnum"` selects a feature that
+is not there and changes nothing.
+
+**42, not 41.** The advances above are not the finished width: `Paint.measureText`
+puts `00:00` at **41.38dp** once this font's kerning is applied, so a box sized to
+the 40.78 the advances add up to still clipped — which the layout test caught,
+because it measures through the view's own paint rather than trusting arithmetic.
+
+It stays a **fixed** width, which is the one place this row does not relax a
+frozen number into a minimum: the artwork is constrained to the end of the time
+view, so a `wrap_content` column would start each row's artwork at a different x
+and trade a clipped digit for a ragged artwork edge down the whole section.
+Everything after the time therefore sits 3.02 further in than the frozen frame,
+which takes the title column from 195 to 192 at the design width — affordable at
+60 above its floor, where the time column had no room at all.
+
+Bound worth knowing: 42 is dp and the text is sp, so this holds at the default
+font scale. A large accessibility font scale will overrun it — as it will every
+other fixed box in this frozen row, so it is a property of the design, not of
+this number.
+
 ### Rows grow; they never truncate
 
 74 is `13 + 48 + 13`, and the 48 is one line of the mock's title over one line of

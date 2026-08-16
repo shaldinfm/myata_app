@@ -186,8 +186,8 @@
                       `Button` 2411:31659, 260x52 r12. This is the app's existing
                       donation entry point - same id, same label, same fixed brand
                       colours it already had - now inside the card the frozen
-                      design puts it in. Without it the payment and Boosty flows
-                      in DonateFragment are unreachable.
+                      design puts it in. It opens YooMoney directly; the amount is
+                      typed there rather than on a screen of ours.
                     -->
                     <TextView
                         android:id="@+id/donate_cta"

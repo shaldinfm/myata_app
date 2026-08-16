@@ -103,8 +103,6 @@ class MainFragment : Fragment() {
             }
         })
 
-        // Donate button listener handled in MainActivity
-
         return binding.root
     }
 

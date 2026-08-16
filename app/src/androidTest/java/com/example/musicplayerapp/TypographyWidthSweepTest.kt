@@ -300,12 +300,6 @@ class TypographyWidthSweepTest {
                     "${emptyBody.lineCount}L"
             }
 
-            // --- Donate flow entry (the old standalone screen, family-only swap) ---
-            measured(inflater, R.layout.fragment_donate, w).let { root ->
-                inspect(root, "fragment_donate", w)
-                log += "donate @${dp}dp: measured ${root.measuredHeight}px"
-            }
-
             // --- History sheet header ---
             measured(inflater, R.layout.fragment_history_bottom_sheet, w).let { root ->
                 inspect(root, "fragment_history_bottom_sheet", w)
@@ -339,7 +333,6 @@ class TypographyWidthSweepTest {
             "player" to R.layout.fragment_myata_stream,
             "about" to R.layout.fragment_info,
             "collection" to R.layout.fragment_favorites,
-            "donate" to R.layout.fragment_donate,
             "history-sheet" to R.layout.fragment_history_bottom_sheet,
             "bottomnav" to R.layout.activity_main,
             "row-history" to R.layout.item_history_track,

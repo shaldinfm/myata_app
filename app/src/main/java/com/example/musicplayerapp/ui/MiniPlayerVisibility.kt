@@ -24,8 +24,7 @@ object MiniPlayerVisibility {
     /**
      * `currentFragmentLiveData` keys for the screens the frozen design gives a
      * mini player. PLAYER is absent because it already shows all of this full
-     * size; "donate" is absent because it is reached from inside "О нас" and has
-     * no canonical frame, so there is nothing to reproduce.
+     * size. Any other key - the app sets none today - shows no pill.
      */
     val SCREENS = setOf("main", "favorites", "info")
 

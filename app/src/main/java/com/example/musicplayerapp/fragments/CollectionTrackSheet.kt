@@ -9,6 +9,8 @@ import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.setFragmentResult
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.utils.MusicSearchHelper
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
 /**
@@ -47,6 +49,23 @@ class CollectionTrackSheet : BottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Open expanded, and never collapse.
+        //
+        // A bottom sheet's default is STATE_COLLAPSED at a peek height of 9/16 of
+        // the window, which on a 1080x1794 API 24 window left the last row - the
+        // destructive one - below the fold, reachable only by dragging the sheet
+        // up. That is the right default for a sheet whose content is a long list
+        // and the wrong one for five fixed actions: the whole point of this
+        // surface is that the user can see what the row's single control offers.
+        //
+        // The 447 always fits. It is 61% of the shortest window this app runs on,
+        // and the NestedScrollView underneath is what covers a display smaller
+        // than any currently shipping - it is not load-bearing here.
+        (dialog as? BottomSheetDialog)?.behavior?.apply {
+            skipCollapsed = true
+            state = BottomSheetBehavior.STATE_EXPANDED
+        }
 
         // `Bottom Sheet / title` is the track and `Bottom Sheet / subtitle` the
         // artist - the same order the row above draws them in, not the reverse.

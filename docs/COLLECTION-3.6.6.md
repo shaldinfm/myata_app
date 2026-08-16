@@ -285,6 +285,18 @@ UI KIT's `Token / error` swatch, the light value is *proposed*, and no canonical
 screen shows an error state. `values/colors.xml` records that grading, because
 the light value is the one to re-confirm when a canonical error state exists.
 
+### Two drawables the row left behind
+
+`rounded_banner_bg` (the stream badge's pill) and `ic_youtube` (its inline
+service button) now have no user anywhere in the app. They are **not deleted
+here**: AGENTS.md keeps cleanup deletion behind an explicit GO, and a re-skin is
+not the place to take it. They are recorded here so the next reader knows they
+are dead rather than merely quiet.
+
+`dismiss_cross`, which the row's delete control used, is **still live** — it is
+`exo_notification_stop` in `strings.xml`, i.e. the playback notification's stop
+glyph. It stays.
+
 ## What is still deliberately not migrated
 
 | | why, and who owns it |

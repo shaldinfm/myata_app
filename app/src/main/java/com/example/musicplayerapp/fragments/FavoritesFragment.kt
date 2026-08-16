@@ -6,9 +6,11 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -235,7 +237,34 @@ class FavoritesFragment : Fragment() {
         Snackbar.make(binding.root, R.string.collection_removed, Snackbar.LENGTH_LONG)
             .setAnchorView(snackbarAnchor())
             .setAction(R.string.collection_removed_undo) { viewModel.restoreFavorite(track) }
+            .also(::styleSnackbar)
             .show()
+    }
+
+    /**
+     * The design system's own snackbar, spec/primitives.mjs:286 - r12 on
+     * `surface_container` with a `menu_outline` stroke, the message on
+     * `text_primary` and the action on `primary`, inset on the screen's 16
+     * margins. No COLLECTION frame draws a snackbar, so this takes the
+     * established pattern rather than shipping Material's default grey slab,
+     * which belongs to neither theme.
+     *
+     * `isAllCaps` is turned off because the Material button style would render
+     * the owner's `Отменить` as `ОТМЕНИТЬ`, and nothing else in the app shouts.
+     */
+    private fun styleSnackbar(bar: Snackbar) {
+        val ctx = requireContext()
+        bar.view.background = ContextCompat.getDrawable(ctx, R.drawable.bg_snackbar)
+        bar.view.setBackgroundTintList(null)
+        (bar.view.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp ->
+            val m = resources.getDimensionPixelSize(R.dimen.snackbar_margin)
+            lp.setMargins(m, m, m, m)
+            bar.view.layoutParams = lp
+        }
+        bar.setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
+        bar.setActionTextColor(ContextCompat.getColor(ctx, R.color.primary))
+        bar.view.findViewById<Button>(com.google.android.material.R.id.snackbar_action)
+            ?.isAllCaps = false
     }
 
     private fun snackbarAnchor(): View? {

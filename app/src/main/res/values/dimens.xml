@@ -257,6 +257,14 @@
     <dimen name="sheet_pad_bottom">24dp</dimen>
 
     <!--
+      Snackbar, from the design system's snackbar primitive (spec/primitives.mjs:286):
+      358x56 r12 on `surfaceContainer` with a `menuOutline` stroke, on the same 16
+      margins as everything else. Used here by `Отменить` after a removal.
+    -->
+    <dimen name="snackbar_corner">12dp</dimen>
+    <dimen name="snackbar_margin">16dp</dimen>
+
+    <!--
       Empty state, frozen `COLLECTION pusto` > `Collection List` > `Track Item 1`:
       one 358x359 card carrying the same surface, radius and stroke as a track
       row, with absolutely-positioned children.

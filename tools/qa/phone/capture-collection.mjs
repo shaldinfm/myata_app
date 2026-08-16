@@ -446,17 +446,21 @@ try {
     results.flow.push({
       theme, step: "09-removed-with-undo",
       sawSnackbar: removed._texts.includes("Трек удалён из коллекции"),
-      sawUndo: removed._texts.includes("Отменить"),
+      // Case-insensitively: a Material button style can render the label
+      // uppercased, and this check is about the action being reachable, not
+      // about the transform. The exact casing is asserted separately below.
+      sawUndo: removed._texts.some((t) => t.toLowerCase() === "отменить"),
+      undoCasing: removed._texts.find((t) => t.toLowerCase() === "отменить"),
       emptyCard: box(removed.empty_card) !== undefined,
       overflowHidden: !removed.collection_overflow,
     });
     console.log(`  390dp ${theme.padEnd(5)} ${"09-removed-with-undo".padEnd(28)} ` +
-      `snackbar=${results.flow.at(-1).sawSnackbar} undo=${results.flow.at(-1).sawUndo} ` +
+      `snackbar=${results.flow.at(-1).sawSnackbar} undo=${JSON.stringify(results.flow.at(-1).undoCasing)} ` +
       `empty=${results.flow.at(-1).emptyCard} overflowHidden=${results.flow.at(-1).overflowHidden}`);
 
     // Отменить puts the row back. It is the same entity, so it returns to the
     // position it was removed from rather than to the top of the list.
-    tapText("Отменить");
+    tapText(results.flow.at(-1).undoCasing || "Отменить");
     sleep(2000);
     const undone = step("10-undone");
     results.flow.push({

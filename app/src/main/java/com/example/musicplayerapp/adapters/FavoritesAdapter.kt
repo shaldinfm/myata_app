@@ -102,14 +102,19 @@ class FavoritesAdapter(
      */
     private fun expandActionTouchTarget(holder: ViewHolder) {
         val parent = holder.action.parent as? View ?: return
-        parent.post {
-            val target = holder.action.resources
-                .getDimensionPixelSize(R.dimen.collection_row_action_touch)
-            val bounds = Rect().also { holder.action.getHitRect(it) }
+        // On layout rather than on a post: onCreateViewHolder runs before the row
+        // has been measured, so a rect read from a posted runnable can still be
+        // the empty one and would install a delegate over nothing. Recomputing on
+        // every layout also keeps the target right when the row grows for a
+        // second artist line, which moves the control.
+        holder.action.addOnLayoutChangeListener { view, _, _, _, _, _, _, _, _ ->
+            val target = view.resources.getDimensionPixelSize(R.dimen.collection_row_action_touch)
+            val bounds = Rect().also { view.getHitRect(it) }
+            if (bounds.isEmpty) return@addOnLayoutChangeListener
             val growX = ((target - bounds.width()) / 2).coerceAtLeast(0)
             val growY = ((target - bounds.height()) / 2).coerceAtLeast(0)
             bounds.inset(-growX, -growY)
-            parent.touchDelegate = TouchDelegate(bounds, holder.action)
+            parent.touchDelegate = TouchDelegate(bounds, view)
         }
     }
 

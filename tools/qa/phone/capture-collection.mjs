@@ -507,8 +507,11 @@ try {
     // case-insensitively - a Material button style can render it uppercased -
     // and the casing actually found is recorded, so a text transform cannot
     // pass silently either.
-    const t0 = Date.now();
     tapText("Удалить из коллекции");
+    // Timed from the removal itself, not from before it: tapText does its own
+    // dump first, and counting that would overstate the elapsed time by seconds
+    // and label a tap that landed comfortably inside the window as late.
+    const t0 = Date.now();
     const xml = fastDumpXml();
     const undoNode = centreOfText(xml, "Отменить");
     if (undoNode) tapAt(undoNode.cx, undoNode.cy);

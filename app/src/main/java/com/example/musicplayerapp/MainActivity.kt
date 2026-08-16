@@ -158,10 +158,7 @@ class MainActivity : AppCompatActivity() {
                 Triple("info", binding.navItemInfo, binding.infoBtn to binding.infoLabel)
             )
             for ((key, container, views) in items) {
-                // Donate is no longer a destination of its own - it is reached
-                // from inside "О нас" - so it keeps that item lit. Without this
-                // the bar would show no active item at all on the donate screen.
-                val active = key == current || (key == "info" && current == "donate")
+                val active = key == current
                 val (icon, label) = views
                 container.setBackgroundResource(if (active) R.drawable.bg_nav_active_pill else 0)
                 icon.setColorFilter(if (active) activeColor else inactiveColor)
@@ -192,11 +189,10 @@ class MainActivity : AppCompatActivity() {
             .setExitAnim(R.anim.fade_out)
             .build()
             
-        // The frozen 3.6.6 design has four destinations. Donate is not one of them:
-        // donation moves inside "О нас". Until that screen's content slice lands,
-        // "О нас" keeps routing to the existing InfoFragment, and DonateFragment
-        // stays in the graph so its logic is not lost - it simply has no entry
-        // point in the navigation bar any more.
+        // The frozen 3.6.6 design has four destinations, and Donate is not one of
+        // them: donation lives inside "О нас", which hands it to YooMoney rather
+        // than running a payment screen of its own. There is no fifth destination
+        // left to route to.
         binding.navItemHome.setOnClickListener {
             // When going home, pop everything else off the stack
             if (navController.currentDestination?.id != R.id.home) {

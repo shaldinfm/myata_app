@@ -30,12 +30,11 @@ object AboutLinks {
      *
      * YooMoney's own page for the wallet the app has always paid into
      * (receiver 410015757768507). The visitor types the amount there, which is
-     * why this replaces the in-app amount form: DonateFragment's custom-amount
-     * branch opened this exact URL, so the recipient is the verified one and
-     * nothing about the payment changes except who draws the keypad.
-     *
-     * `R.string.donate_url` holds the same URL and has never been read by any
-     * code; it is legacy and left alone pending the owner's call.
+     * why this replaced the in-app amount form: the retired DonateFragment's
+     * custom-amount branch opened this exact URL, so the recipient is the
+     * verified one and nothing about the payment changed except who draws the
+     * keypad. The page opens on "Перевод другому человеку" with a free "Сколько"
+     * field - the 1000/1500/2000 chips beside it are suggestions, not limits.
      */
     const val YOOMONEY_DONATE = "https://yoomoney.ru/to/410015757768507"
 }

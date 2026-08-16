@@ -1,48 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  PLAYER play glyph - the owner-supplied FINAL vector.
+  PLAYER play glyph - official Google Material.
 
-  Source: tools/figma-export/player-icons/owner-final/play_light.svg and
-  play_dark.svg, which carry the identical path and differ only in its stroke.
-  These supersede node 2484:59 from ../exact/, which PR #42 installed.
+  Source: Material Symbols Rounded `play_arrow`, FILL 0, wght 400, GRAD 0,
+  opsz 24, from github.com/google/material-design-icons @ master,
+  `symbols/web/play_arrow/materialsymbolsrounded/play_arrow_24px.svg`
+  (Apache License 2.0). The pathData below is that file's, verbatim.
 
-  It is a STROKE, not a filled outline. The superseded glyph was two contours
-  wound against each other so a non-zero fill left the middle open; this is one
-  open shape with a 4-wide round-capped, round-joined stroke. Different
-  construction, so the file is replaced rather than edited.
+  **This supersedes the owner-final Figma pair** in
+  tools/figma-export/player-icons/owner-final, by an explicit owner decision
+  taken after the two were compared on device. Those files stay where they are as
+  the record of what they replaced; nothing reads them any more.
 
-  **The viewport is the 80x80 control box, and the pathData is verbatim.** The
-  supplied file states where the glyph sits inside the surface, and it is not the
-  middle - the path spans x 28..51.33, whose centre is 39.665, a third of a unit
-  left of 40. Cropping the viewport to the glyph would mean either rewriting the
-  coordinates or letting scaleType=center put it somewhere the file does not. So
-  the drawable takes the control's own box: every digit below is the supplied
-  digit, and the glyph lands exactly where the SVG puts it.
+  Why the app is better off with Google's: the custom pair had two problems that
+  could only have been answered with per-glyph overrides, and this answers both
+  without any.
 
-  That makes the drawable 80x80, which is the surface's size - but the surface is
-  NOT here. It is bg_player_play_pause, the button's own background, and it stays
-  a separate drawable so that PlayerControl can swap this glyph for the buffering
-  indicator without the fill ever leaving the screen. What this file holds is one
-  path and no rectangle.
+   - **Optical centring.** A triangle's visual mass sits at its centroid, not at
+     the middle of its bounding box, so a play glyph whose box is centred reads
+     as sitting left. The custom glyph measured its mass 4.386dp left of the
+     control centre. Material's carries Google's own correction - the box is
+     +2.125dp right so the mass lands on centre, measured at -0.5dp - so no
+     translation is applied here or anywhere else.
+   - **Size against pause.** The custom play was 24% taller than the custom
+     pause; Material's play is slightly smaller than its pause, which is the
+     relationship that reads as equal weight. No scale is applied either.
 
-  Painted, the stroke reaches 2 beyond the path on every side, so the ink is
-  27.33 x 33.9957, which PlayerControlRenderTest measures off the rasterised
-  control. That is a property of the path rather than a number set anywhere, so
-  it has no dimen of its own.
+  FILL 0, so it is hollow, like the stroked pair it replaces: the subpath after
+  the outer contour is wound against it, and the default nonZero rule - which is
+  both VectorDrawable's and SVG's, i.e. the source's own - leaves the middle
+  open. Its wall measures 3.97dp against the superseded stroke's 4.00. No
+  `fillType` is declared, because declaring one would be an edit.
 
-  The stroke is the repo's #FFFFFF placeholder; the colour is
-  `player_play_glyph`, applied from the layout.
+  The source viewBox is "0 -960 960 960", the Material Symbols convention, whose
+  origin is the baseline rather than the top-left. VectorDrawable has no negative
+  viewport origin, so the path is carried into the 0..960 box by a group
+  translate of +960 in Y. That is a change of coordinates, not of shape, and it
+  is the only thing done to the file.
+
+  Nominal 48dp - an official Material size, shared with ic_player_pause.xml so
+  the pair cannot drift - drawn by `scaleType=center` inside the 80x80 control.
+  The surface is NOT here: it is bg_player_play_pause, the button's own
+  background, kept separate so PlayerControl can swap this glyph for the
+  buffering indicator without the fill ever leaving the screen.
+
+  The fill is the repo's #FFFFFF placeholder; the colour is `player_play_glyph`,
+  applied as a tint from the layout, in Light and Dark alike.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="@dimen/player_play_size"
-    android:height="@dimen/player_play_size"
-    android:viewportWidth="80"
-    android:viewportHeight="80">
-    <path
-        android:fillColor="@android:color/transparent"
-        android:pathData="M28 25.0022L51.33 40.0001L28 54.9979V25.0022Z"
-        android:strokeColor="#FFFFFF"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="4" />
+    android:width="@dimen/player_play_glyph_size"
+    android:height="@dimen/player_play_glyph_size"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <group android:translateY="960">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M320-273v-414q0-17 12-28.5t28-11.5q5 0 10.5 1.5T381-721l326 207q9 6 13.5 15t4.5 19q0 10-4.5 19T707-446L381-239q-5 3-10.5 4.5T360-233q-16 0-28-11.5T320-273Zm80-207Zm0 134 210-134-210-134v268Z" />
+    </group>
 </vector>

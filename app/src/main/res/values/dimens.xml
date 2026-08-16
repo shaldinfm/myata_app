@@ -44,6 +44,18 @@
     <!-- Button slot: 27 wide in the frozen row. Full row height for the target. -->
     <dimen name="mini_player_button_width">27dp</dimen>
     <dimen name="mini_player_button_height">48dp</dimen>
+    <!--
+      The press state's mask, half of mini_player_button_width, so the ripple
+      fills the 27x48 target and ends in a semicircle at each end instead of a
+      corner. See bg_mini_player_control.xml for why it is masked at all.
+    -->
+    <dimen name="mini_player_control_corner">13.5dp</dimen>
+    <!--
+      The connecting indicator, inside the 27 slot with a little air around it.
+      The glyphs it stands in for are 11x14 and 12x14, so it reads as the same
+      class of mark rather than as something that arrived from elsewhere.
+    -->
+    <dimen name="mini_player_control_spinner">20dp</dimen>
 
     <!--
       HOME, frozen 3.6.6 canonical.
@@ -269,30 +281,63 @@
     <dimen name="player_play_size">80dp</dimen>
     <dimen name="player_play_corner">20dp</dimen>
     <!--
-      The painted ink of the two glyphs, from the owner-supplied FINAL assets in
-      tools/figma-export/player-icons/owner-final.
+      The nominal size of the two play/pause glyphs.
 
-      The glyphs themselves have no dimen. Both drawables take the 80x80 control
-      box as their viewport so the supplied pathData can be verbatim - see
-      ic_player_play.xml - so their size is player_play_size, and what they paint
-      inside that box is a property of the path, not a number anything sets. The
-      supplied paths are 4-wide strokes with round joins, so the ink runs 2 beyond
-      the centreline on every side:
+      One dimen for both, by the owner's requirement that the pair share a size,
+      and because a pair that can drift apart eventually does. 48 is an official
+      Material size, and it is the size at which Material's pause ink (28.0dp)
+      lands within 2% of what the superseded owner-final pause painted (27.33dp),
+      so the control kept its weight across the swap.
 
-        play    28..51.33 x 25.0022..54.9979   ->  27.33 x 33.9957
-        pause   28.335..51.665, both axes      ->  27.33 x 27.33
+      The glyphs are drawn by scaleType=center inside the 80x80 button, so this
+      is the whole of their placement: no offset, no scale, nothing per-glyph.
+      What each one paints inside its 48 box is a property of the official path
+      and is not set anywhere - see ic_player_play.xml. Measured at this size:
 
-      Same width, play taller - the relationship the superseded 23.33x29.69
-      against 23.33-square also had. It is invisible in use either way: the 80x80
-      surface is what is seen and it belongs to the button, so the control cannot
-      change size between faces. PlayerControlRenderTest rasterises the control
-      and measures those two boxes against those two literals.
+        play    405/960 x 494/960 of 48  ->  20.25 x 24.70,  box +2.125 right
+        pause   560/960, both axes       ->  28.00 x 28.00,  box centred
 
-      The progress indicator does need one, because it is a real view: it takes
-      the pause ink's box, standing in for the glyph, the design having nothing to
-      say about a connecting state.
+      Play's +2.125 is Google's own optical correction, not something applied
+      here: it is what puts the triangle's visual mass on the control centre.
+      PlayerControlRenderTest rasterises the control and measures both boxes.
+    -->
+    <dimen name="player_play_glyph_size">48dp</dimen>
+    <!--
+      The connecting indicator, which does need a dimen of its own because it is
+      a real view rather than a path.
+
+      It is deliberately unchanged by the glyph swap. It stands in for the glyph
+      rather than copying it, the design has nothing to say about a connecting
+      state, and 27.33 sits between the new pair's 20.25 and 28.00 - so the
+      control reads the same size through play -> connecting -> pause, which is
+      the only thing this number has ever had to do.
     -->
     <dimen name="player_play_icon">27.33dp</dimen>
+    <!--
+      The connecting indicator's own geometry.
+
+      Thickness is the point of these: the Material FILL 0 glyphs paint a 3.97dp
+      wall, the platform's indeterminate drawable painted 2.17dp, and the
+      indicator stands in for the glyph so it has to carry the glyph's weight. 4
+      is that wall, to the nearest whole dp.
+
+      Diameter is what must NOT change, so it is the diameter the platform
+      drawable painted, kept: its vector is a radius-18 circle with a 4-wide
+      stroke in a 48 viewport, drawn into player_play_icon's 27.33 box, so the
+      outer diameter was 2 x (18 + 2) x 27.33/48 = 22.78. Measured off the
+      screen before the swap: 22.75.
+
+      The inset exists to stop the drawable being rescaled. CircularDrawingDelegate
+      scales its canvas by bounds/preferred size, so the two have to agree or the
+      thickness above is not the thickness painted: inset is therefore whatever
+      makes the indicator's preferred size come to player_play_icon exactly.
+      PlayerControlRenderTest measures the painted stroke, so a Material release
+      that redefines how preferred size is composed fails there rather than
+      silently re-scaling this.
+    -->
+    <dimen name="player_play_spinner_diameter">22.78dp</dimen>
+    <dimen name="player_play_spinner_thickness">4dp</dimen>
+    <dimen name="player_play_spinner_inset">2.275dp</dimen>
     <dimen name="player_action_width">49dp</dimen>
     <dimen name="player_action_height">54dp</dimen>
     <!--

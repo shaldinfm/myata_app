@@ -144,11 +144,32 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     private var pendingPlayRequest = false
     private var controllerRetryAttempt = 0
     
+    /**
+     * The payload as the API returned it, before [BroadcastHistoryFeed] has had
+     * anything to say about it.
+     *
+     * Held separately from [historyTracks] because the two answer different
+     * questions: this is what the station broadcast, that is what the reader is
+     * allowed to see given what is playing *now*. Keeping the raw list is what
+     * makes a track change cost nothing - see [republishHistory].
+     */
+    private var historyRaw: List<HistoryTrack> = emptyList()
+
     private val _historyTracks = MutableLiveData<List<HistoryTrack>>()
     val historyTracks: LiveData<List<HistoryTrack>> = _historyTracks
     private val _historyLoading = MutableLiveData<Boolean>(false)
     val historyLoading: LiveData<Boolean> = _historyLoading
     private var lastHistoryStream: String? = null
+    private var historyJob: Job? = null
+    private var historyRefreshJob: Job? = null
+
+    /**
+     * The current track the published history was last projected against, so a
+     * metadata tick that repeats the same track does no work. Both writers of the
+     * now-playing state - the HTTP poll and the Media3 metadata callback - land
+     * here, and they routinely report the same track one after the other.
+     */
+    private var lastHistoryTrackIdentity: String? = null
 
     //problem why we need this is service cannot launch fragment, it can only recreate activity
     var ifNeedToNavigateStraightToPlayer = false
@@ -392,13 +413,32 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         }
     }
 
+    /**
+     * The one place the app notices that the current track has changed.
+     *
+     * It already existed for the collection heart; Broadcast History now hangs
+     * off the same four observers rather than growing a set of its own. That is
+     * the point - there is one current-track signal, and both the heart and the
+     * history are readers of it.
+     */
     private fun observeTrackForFavorites() {
         currentStreamLive.observeForever { stream ->
             updateFavoriteObservation()
+            // A stream switch reloads the history from scratch (the page observer
+            // asks for it), so this only re-seeds the identity the next track
+            // change will be compared against - it must not schedule a second
+            // request for the same switch.
+            lastHistoryTrackIdentity = currentTrackIdentity()
+            republishHistory()
         }
-        currentMyataState.observeForever { if (currentStreamLive.value == "myata") updateFavoriteObservation() }
-        currentGoldState.observeForever { if (currentStreamLive.value == "gold") updateFavoriteObservation() }
-        currentXtraState.observeForever { if (currentStreamLive.value == "myata_hits") updateFavoriteObservation() }
+        currentMyataState.observeForever { if (currentStreamLive.value == "myata") onCurrentTrack() }
+        currentGoldState.observeForever { if (currentStreamLive.value == "gold") onCurrentTrack() }
+        currentXtraState.observeForever { if (currentStreamLive.value == "myata_hits") onCurrentTrack() }
+    }
+
+    private fun onCurrentTrack() {
+        updateFavoriteObservation()
+        onCurrentTrackChanged()
     }
 
     private fun updateFavoriteObservation() {
@@ -648,20 +688,120 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     
     /**
      * Loads track history for the current stream.
+     *
+     * One request at a time. A swipe back and forth used to start a fetch per
+     * page callback and let whichever finished last win, which with the
+     * track-change refresh below would have turned a busy stream into a
+     * self-inflicted poll. The in-flight job is cancelled rather than the new
+     * call dropped, because the newer request is the one that reflects the
+     * current stream.
      */
     fun loadHistory() {
         val stream = currentStreamLive.value ?: "myata"
 
         if (lastHistoryStream != stream) {
+            // A different station's history is not this one's, so it goes rather
+            // than sitting there stale under a spinner. Both halves are cleared:
+            // the raw payload is the thing everything else is derived from.
+            historyRaw = emptyList()
             _historyTracks.value = emptyList()
             lastHistoryStream = stream
         }
 
-        viewModelScope.launch {
+        historyJob?.cancel()
+        historyJob = viewModelScope.launch {
             _historyLoading.value = true
             val history = historyRepository.getHistory(stream, HISTORY_LIMIT)
-            _historyTracks.postValue(history.take(HISTORY_LIMIT))
+            // Both on the main thread, in this order, and neither posted: the
+            // observers see one consistent pair. `postValue` for the tracks with
+            // `value` for the flag used to deliver "not loading, no tracks" first
+            // and the tracks a tick later, so a finished load flashed the empty
+            // state before drawing itself.
+            historyRaw = history
+            republishHistory()
             _historyLoading.value = false
+        }
+    }
+
+    /**
+     * Re-derives the published history from the payload already held.
+     *
+     * This is the whole of "seamless": on A -> B the raw payload still describes
+     * A as its head, so projecting it against B moves A into position 0 with no
+     * request, no spinner and no list to rebuild. The network refresh that
+     * follows returns [B, A, ...], which projects to the identical list - so the
+     * catch-up is invisible and the diff is empty.
+     */
+    private fun republishHistory() {
+        val projected = BroadcastHistoryFeed.project(
+            raw = historyRaw,
+            currentIdentity = currentTrackIdentity(),
+            limit = HISTORY_LIMIT,
+        )
+        if (_historyTracks.value != projected) {
+            _historyTracks.value = projected
+        }
+    }
+
+    /**
+     * What is playing on the current stream, as a history identity, or null while
+     * the app is still on the placeholder pair.
+     *
+     * The null case is not paranoia. The placeholder is "YOUR MUSIC! YOUR
+     * STATION!" / "RADIO MYATA", and the station logs its own idents under
+     * exactly that artist and track - they are real rows in the payload. Treating
+     * the placeholder as a current track would drop a genuine ident from the head
+     * of the history before the first metadata poll has even answered.
+     */
+    private fun currentTrackIdentity(): String? {
+        val state = when (Streams.normalise(currentStreamLive.value) ?: Streams.DEFAULT) {
+            Streams.GOLD -> currentGoldState.value
+            Streams.XTRA -> currentXtraState.value
+            else -> currentMyataState.value
+        } ?: return null
+
+        val app = getApplication<Application>()
+        if (state.artist == app.getString(R.string.slogan_placeholder) &&
+            state.song == app.getString(R.string.brand_name)
+        ) {
+            return null
+        }
+        return BroadcastHistoryFeed.identityOf(state.artist, state.song)
+    }
+
+    /**
+     * The stream moved on to a new track.
+     *
+     * Called from the same two places that already write the now-playing state -
+     * the metadata poll and the Media3 metadata callback - so this adds no second
+     * source of truth and, in particular, no third poller (the duplicate-polling
+     * debt in CLAUDE.md is about pollers, and this is edge-triggered off the
+     * state those pollers already produce).
+     *
+     * Two steps, deliberately: the re-projection is immediate so the finished
+     * track appears at row 0 the instant the new one is announced, and the
+     * request is debounced so the poll and the callback reporting the same change
+     * a moment apart cost one fetch rather than two. The delay is also what gives
+     * the API time to write its own row for the new track; if it has not yet,
+     * the projection above is already showing the right list anyway.
+     */
+    private fun onCurrentTrackChanged() {
+        val identity = currentTrackIdentity()
+        if (identity == lastHistoryTrackIdentity) return
+        val hadTrack = lastHistoryTrackIdentity != null
+        lastHistoryTrackIdentity = identity
+
+        republishHistory()
+
+        // Nothing to catch up with before a history has been loaded at all: the
+        // first load is the stream observer's, and firing one here as well would
+        // just be the same request twice on every cold open.
+        if (!hadTrack || lastHistoryStream == null) return
+
+        historyRefreshJob?.cancel()
+        historyRefreshJob = viewModelScope.launch {
+            delay(HISTORY_REFRESH_DEBOUNCE_MS)
+            loadHistory()
         }
     }
 
@@ -710,6 +850,19 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
          * keeps are the same number.
          */
         const val HISTORY_LIMIT = 30
+
+        /**
+         * How long a track change waits before the history is re-fetched.
+         *
+         * Not a poll interval - nothing repeats. It is the window in which the
+         * two writers of the now-playing state (the HTTP metadata poll and
+         * Media3's `onMediaMetadataChanged`) announce the same change, so that
+         * one transition costs one request. It also lets the API write its own
+         * row for the new track; the list on screen is already correct while it
+         * does, because the projection moved the finished track up without
+         * asking anyone.
+         */
+        const val HISTORY_REFRESH_DEBOUNCE_MS = 1_500L
 
         /** Hard ceiling on the whole retry sequence for one playlist load attempt. */
         const val PLAYLISTS_LOAD_BUDGET_MS = 12_000L

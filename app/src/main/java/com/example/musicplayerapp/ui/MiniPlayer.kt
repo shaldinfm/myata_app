@@ -62,6 +62,10 @@ class MiniPlayer(
         vm.currentGoldState.observe(owner) { render() }
         vm.currentXtraState.observe(owner) { render() }
         vm.isPlaying.observe(owner) { render() }
+        // The connecting face. Media3's own STATE_BUFFERING, via the same
+        // LiveData the PLAYER's central control reads - there is no timer here
+        // and nothing that decides on its own how long "connecting" lasts.
+        vm.isBuffering.observe(owner) { render() }
 
         vm.currentFragmentLiveData.observe(owner) { updateVisibility() }
         vm.isInSplitMode.observe(owner) { updateVisibility() }
@@ -81,19 +85,60 @@ class MiniPlayer(
             isPlaying = vm.isPlaying.value == true,
             fallbackTitle = context.getString(R.string.brand_name),
             fallbackArtist = context.getString(R.string.slogan_placeholder),
+            isBuffering = vm.isBuffering.value == true,
         )
 
         views.miniPlayerTitle.text = state.title
         views.miniPlayerArtist.text = state.artist
 
-        views.miniPlayerPlayPause.setImageResource(
-            if (state.playing) R.drawable.ic_mini_player_pause else R.drawable.ic_mini_player_play
-        )
-        views.miniPlayerPlayPause.contentDescription = context.getString(
-            if (state.playing) R.string.mini_player_pause else R.string.mini_player_play
-        )
-
+        renderControl(state.control)
         loadArtwork(state.artworkUrl)
+    }
+
+    /**
+     * The play/pause slot: one of three faces, in one place.
+     *
+     * Connecting swaps the glyph for the spinner rather than adding anything
+     * beside it, so the 27x48 slot, the row's widths and the pill's height are
+     * the same in all three states.
+     *
+     * The button stops firing while connecting, which is what keeps a repeated
+     * tap from becoming a second start: `togglePlayPause` reads the controller's
+     * `isPlaying`, which is still false mid-connect, so a second tap would take
+     * the not-playing branch and `prepare()` a player that is already connecting.
+     *
+     * Disabled, and deliberately still *clickable*. A view that is disabled but
+     * clickable consumes the touch and declines to act on it; one that is merely
+     * not clickable does not consume it at all, and here the untaken touch would
+     * carry straight up to the pill - whose listener opens PLAYER. Turning the
+     * button off must not turn it into a navigation control.
+     */
+    private fun renderControl(state: PlayerControlState) {
+        val context = views.root.context
+        val connecting = state == PlayerControlState.CONNECTING
+
+        views.miniPlayerPlayPause.isClickable = true
+        views.miniPlayerPlayPause.isEnabled = !connecting
+        views.miniPlayerSpinner.visibility = if (connecting) View.VISIBLE else View.GONE
+        views.miniPlayerPlayPause.setImageDrawable(null)
+
+        if (!connecting) {
+            views.miniPlayerPlayPause.setImageResource(
+                if (state == PlayerControlState.PAUSE) {
+                    R.drawable.ic_mini_player_pause
+                } else {
+                    R.drawable.ic_mini_player_play
+                }
+            )
+        }
+
+        views.miniPlayerPlayPause.contentDescription = context.getString(
+            when (state) {
+                PlayerControlState.CONNECTING -> R.string.player_connecting
+                PlayerControlState.PAUSE -> R.string.mini_player_pause
+                PlayerControlState.PLAY -> R.string.mini_player_play
+            }
+        )
     }
 
     private fun loadArtwork(url: String?) {

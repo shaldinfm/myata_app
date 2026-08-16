@@ -154,6 +154,32 @@ class MiniPlayerContractTest {
             )
             assertShown("after tapping play/pause")
 
+            /* Connecting: the control declines the tap and still does not
+             * navigate.
+             *
+             * Worth its own step because the obvious way to stop a control
+             * firing - clearing `clickable` - would have made this worse rather
+             * than better here: a view that is not clickable does not consume its
+             * touch, so the tap would travel up to the pill, whose listener opens
+             * PLAYER. A control that is disabled while a stream connects must be
+             * inert, not a shortcut. */
+            runOnUi { it.viewModel.isBuffering.value = true }
+            settle()
+            val beforeConnecting = destination()
+            runOnUi { activity ->
+                val pill = activity.findViewById<View>(R.id.mini_player)
+                val button = activity.findViewById<View>(R.id.mini_player_play_pause)
+                tap(pill, centreOf(button, pill))
+            }
+            settle()
+            assertEquals(
+                "tapping the control while connecting opened PLAYER",
+                beforeConnecting,
+                destination(),
+            )
+            runOnUi { it.viewModel.isBuffering.value = false }
+            settle()
+
             /* The body: opens PLAYER. */
             runOnUi { it.findViewById<View>(R.id.mini_player).performClick() }
             settle()

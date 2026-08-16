@@ -10,6 +10,14 @@ play_light.svg    play_dark.svg    pause_light.svg    pause_dark.svg
 
 ## What is in them, and what the app takes
 
+> **Superseded — these are no longer installed.** By a later owner decision,
+> `ic_player_play.xml` and `ic_player_pause.xml` now carry official Google
+> Material Symbols Rounded `play_arrow` / `pause`, FILL 0, nominal 48dp. These
+> four files stay here as the record of what that replaced, and nothing in the
+> app reads them. Everything below describes them as they were installed at the
+> time and is left unedited for that reason — see `docs/PLAYER-3.6.6.md` for the
+> reasoning behind the swap.
+
 Each file carries the whole control: an 80×80 `rx=20` background rect **and** the
 glyph over it.
 

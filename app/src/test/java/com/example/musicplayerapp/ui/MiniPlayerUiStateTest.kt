@@ -111,4 +111,45 @@ class MiniPlayerUiStateTest {
         assertEquals(brand, ui.title)
         assertTrue(ui.playing)
     }
+
+    /* ------------------------------------------------- the connecting face -- */
+
+    /**
+     * The pill's play/pause slot and the PLAYER's central control read the same
+     * two inputs and must reach the same answer - they are one tap apart, and a
+     * pill still showing Play while the player shows a spinner is the pair
+     * contradicting itself mid-connect.
+     */
+    private fun control(isPlaying: Boolean, isBuffering: Boolean) =
+        MiniPlayerUiState.from(
+            "myata", track("A", "a"), null, null, isPlaying, brand, slogan, isBuffering,
+        ).control
+
+    @Test
+    fun `the control face is the players own projection`() {
+        assertEquals(PlayerControlState.PLAY, control(isPlaying = false, isBuffering = false))
+        assertEquals(PlayerControlState.PAUSE, control(isPlaying = true, isBuffering = false))
+        assertEquals(PlayerControlState.CONNECTING, control(isPlaying = false, isBuffering = true))
+    }
+
+    @Test
+    fun `buffering wins over playing, as it does on the player screen`() {
+        assertEquals(PlayerControlState.CONNECTING, control(isPlaying = true, isBuffering = true))
+    }
+
+    @Test
+    fun `the connecting face survives the placeholder pair`() {
+        val ui = MiniPlayerUiState.from(
+            "myata", null, null, null, false, brand, slogan, isBuffering = true,
+        )
+
+        assertEquals(brand, ui.title)
+        assertEquals(PlayerControlState.CONNECTING, ui.control)
+    }
+
+    @Test
+    fun `a caller that says nothing about buffering gets the playing face`() {
+        assertEquals(PlayerControlState.PAUSE, project("myata", myata = track("A", "a"), isPlaying = true).control)
+        assertEquals(PlayerControlState.PLAY, project("myata", myata = track("A", "a")).control)
+    }
 }

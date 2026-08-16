@@ -192,12 +192,33 @@
                   and #0F253E on a #5FD9B4 one in Dark. Legible only because the
                   fill is behind it - see PlayerControl for what hiding the
                   surface used to do to it.
+
+                  Material's CircularProgressIndicator rather than a plain
+                  ProgressBar, for one reason: stroke weight. The platform's
+                  indeterminate drawable is a VectorDrawable whose strokeWidth is
+                  fixed against a fixed viewport, so its stroke is a constant
+                  fraction of its diameter and cannot be set - it painted 2.17dp
+                  against the Material glyphs' 3.97dp wall, and read visibly
+                  thinner than the control it stands in for. `trackThickness` is
+                  the only way to state that number, and this is the Material 3
+                  component for it, which is what the glyphs are now too.
+
+                  Diameter and box are deliberately unchanged: the drawn circle
+                  keeps the 22.78dp the platform drawable painted and the view
+                  keeps its 27.33dp box - see dimens.xml for how the two are held
+                  together. The track is transparent so this stays an arc on the
+                  surface rather than a full ring, which is what it was.
                 -->
-                <ProgressBar
+                <com.google.android.material.progressindicator.CircularProgressIndicator
                     android:id="@+id/loading_spinner"
                     android:layout_width="@dimen/player_play_icon"
                     android:layout_height="@dimen/player_play_icon"
-                    android:indeterminateTint="@color/player_play_glyph"
+                    android:indeterminate="true"
+                    app:indicatorColor="@color/player_play_glyph"
+                    app:indicatorInset="@dimen/player_play_spinner_inset"
+                    app:indicatorSize="@dimen/player_play_spinner_diameter"
+                    app:trackColor="@android:color/transparent"
+                    app:trackThickness="@dimen/player_play_spinner_thickness"
                     android:visibility="gone"
                     app:layout_constraintBottom_toBottomOf="@id/btn_play"
                     app:layout_constraintEnd_toEndOf="@id/btn_play"

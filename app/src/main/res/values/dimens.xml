@@ -313,6 +313,31 @@
       the only thing this number has ever had to do.
     -->
     <dimen name="player_play_icon">27.33dp</dimen>
+    <!--
+      The connecting indicator's own geometry.
+
+      Thickness is the point of these: the Material FILL 0 glyphs paint a 3.97dp
+      wall, the platform's indeterminate drawable painted 2.17dp, and the
+      indicator stands in for the glyph so it has to carry the glyph's weight. 4
+      is that wall, to the nearest whole dp.
+
+      Diameter is what must NOT change, so it is the diameter the platform
+      drawable painted, kept: its vector is a radius-18 circle with a 4-wide
+      stroke in a 48 viewport, drawn into player_play_icon's 27.33 box, so the
+      outer diameter was 2 x (18 + 2) x 27.33/48 = 22.78. Measured off the
+      screen before the swap: 22.75.
+
+      The inset exists to stop the drawable being rescaled. CircularDrawingDelegate
+      scales its canvas by bounds/preferred size, so the two have to agree or the
+      thickness above is not the thickness painted: inset is therefore whatever
+      makes the indicator's preferred size come to player_play_icon exactly.
+      PlayerControlRenderTest measures the painted stroke, so a Material release
+      that redefines how preferred size is composed fails there rather than
+      silently re-scaling this.
+    -->
+    <dimen name="player_play_spinner_diameter">22.78dp</dimen>
+    <dimen name="player_play_spinner_thickness">4dp</dimen>
+    <dimen name="player_play_spinner_inset">2.275dp</dimen>
     <dimen name="player_action_width">49dp</dimen>
     <dimen name="player_action_height">54dp</dimen>
     <!--

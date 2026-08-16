@@ -9,7 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.ProgressBar
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import androidx.core.content.ContextCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -98,7 +98,7 @@ class PlayerControlRenderTest {
         val widthPx = dp(widthDp).roundToInt()
         val page = inflater.inflate(R.layout.fragment_myata_stream, null) as ViewGroup
         val button = page.findViewById<ImageView>(R.id.btn_play)
-        val spinner = page.findViewById<ProgressBar>(R.id.loading_spinner)
+        val spinner = page.findViewById<CircularProgressIndicator>(R.id.loading_spinner)
         val controls = page.findViewById<ViewGroup>(R.id.player_controls)
         val favourite = page.findViewById<View>(R.id.btn_favorite)
         val history = page.findViewById<View>(R.id.btn_history)
@@ -177,12 +177,36 @@ class PlayerControlRenderTest {
                     // one in Dark - so an indicator drawn off the control is
                     // invisible in both themes, which is what it was. Against
                     // `primary` it reads in both.
-                    val tint = spinner.indeterminateTintList?.defaultColor
+                    val tint = spinner.indicatorColor.firstOrNull()
                     if (tint != glyphColour) {
                         findings += "$where: the progress indicator is tinted $tint, not player_play_glyph $glyphColour"
                     }
                     if (tint == primary) {
                         findings += "$where: the progress indicator is the same colour as the surface it sits on"
+                    }
+
+                    // It stands in for the glyph, so it has to weigh what the
+                    // glyph weighs. The Material FILL 0 pair paints a 3.97dp wall;
+                    // the platform's own indeterminate drawable painted 2.17dp,
+                    // which is what a fixed strokeWidth against a fixed viewport
+                    // gives you and the reason this is a Material indicator at
+                    // all - `trackThickness` is the only way to state the number.
+                    expect(where, "indicator stroke", spinner.trackThickness, dp(4))
+                    // ...at the diameter the platform drawable already painted,
+                    // which is the half of this that must NOT change.
+                    expect(
+                        where, "indicator diameter", spinner.indicatorSize, dp(22.78f),
+                        tolerance = dp(0.5f),
+                    )
+                    // The delegate scales its canvas by bounds/preferred size, so
+                    // the two numbers above are only the painted ones while the
+                    // indicator's preferred size matches its box. Assert the
+                    // agreement rather than trusting it: a Material release that
+                    // recomposes preferred size would silently rescale both.
+                    if (spinner.indicatorSize + 2 * spinner.indicatorInset != ring.width()) {
+                        findings += "$where: the indicator's own size " +
+                            "(${spinner.indicatorSize} + 2x${spinner.indicatorInset}) does not fill its " +
+                            "${ring.width()}px box, so the painted stroke is not trackThickness"
                     }
                     // ...and the surface really is under it: sample just outside
                     // the indicator's own box, where a round indicator paints

@@ -180,19 +180,96 @@ frozen empty frame does — its `Button:margin` is `visible: false`, because the
 is nothing to export. That is the same condition the two pills used to express by
 going disabled.
 
-## What is deliberately not migrated
+## The populated row is now FINAL — F1 and F3
 
-These are accepted, temporary deviations from FINAL. They are listed here so that
-a later reader does not mistake any of them for an oversight.
+Everything in the table below was an accepted, temporary deviation through Phase
+B. **F1 and F3 close all but two of them.** What the row was, and what it is:
+
+| | Phase B | now |
+|---|---|---|
+| cover | none | the frozen 64×64 r20 at (17,17) |
+| row height | content | the frozen 98, as a minimum |
+| stream badge | «МЯТА» / GOLD / XTRA pill | gone |
+| service actions | four inline 32dp buttons | four rows on the per-track sheet |
+| removal | a permanent 18dp cross | `Удалить из коллекции` on the same sheet |
+| trailing control | none | the frozen 40×40 `arrow_forward` ring |
+
+### The cover did not need a Room migration
+
+Phase B recorded that it did. Only half of that was ever true. `FavoriteTrack`
+stores `id, artist, track, stream, addedAt` and has nowhere to put an artwork
+URL — but `ArtworkRepository.fetchArtwork` is keyed on **artist and track**,
+which the entity does store, so the cover is a *view* of what the collection
+already holds rather than a second store beside it. Nothing about the schema
+changes.
+
+The fetch is `PlayerHistoryAdapter`'s, unchanged: the request is the caller's,
+passed in as `artworkFor`; the answer is dropped if the holder has been rebound;
+the request is cancelled when the row is recycled; the bare plate shows while it
+resolves and stays if nothing is found. The one real consequence is that
+COLLECTION now touches the network per row, where before it was wholly offline —
+**owner decision**, taken with that stated.
+
+With something to draw, the frozen 98 is a measurement again, and
+`CollectionLayoutTest` asserts it. It is a *minimum*: a second artist line grows
+the row, and the cover and the action stay on the row's own 17 padding rather
+than drifting with the text.
+
+### The sheet is where the five actions went
+
+`Bottom Sheet / Действия с треком`, the FINAL `collection-track-sheet`, 358×447
+r28 on `menu_surface` with a 1px `menu_outline` stroke. Its own spec note says
+what it is for: *"Replaces the per-track inline button. Four services, a divider,
+then the destructive action last and separated."* The owner-confirmed order is
+Spotify, Apple Music, YouTube, Яндекс Музыка, divider, `Удалить из коллекции`.
+
+Nothing behind any of them moved. The four services call exactly the
+`MusicSearchHelper` functions the inline buttons called, with the same artist and
+track; `MusicSearchHelper` is untouched. The third row reads **YouTube** and not
+"YouTube Music" because `openYouTube` searches youtube.com — the sheet names the
+destination the user actually lands on.
+
+The icons are the **canonical generic disc**, the same glyph on all four rows,
+tinted `primary`; the rows are told apart by their labels. That is what both
+canonical pages draw, and it is the owner's selection over the brand marks the
+proposal references.
+
+### Removal, and undo
+
+The row's permanent cross is gone; removal is the sheet's last row, on `error`.
+After it, a Snackbar offers `Отменить` — owner's copy.
+
+**Undo needed no new persistence.** The entity that came out of the list is the
+undo record: `FavoriteTrack` is complete, so re-inserting the same instance
+restores its `id` and its original `addedAt`, and `ORDER BY addedAt DESC` puts it
+back where it was rather than at the top as a fresh save would. No undo table, no
+schema change, no new DAO method — `FavoritesViewModel.restoreFavorite` is one
+`insert`. The feedback report mirrors the removal's: DISLIKE out, LIKE back.
+
+The Snackbar is anchored on the Mini Player when there is one and on the
+navigation bar when there is not, so it clears the same chrome stack the list
+reserves its 154 for.
+
+### Two new colour roles
+
+`menu_outline` is the stroke of every menu and sheet surface. It is **not**
+`outline`: light draws #1C3F5F here against `outline`'s #E1E3E4, consistently on
+both the canonical sheet and `Menu / Плеер`. In dark the two coincide at #466D8F,
+which is exactly why the role has to be named — they are equal there by
+coincidence of the palette, not by definition.
+
+`error` (#B3261E / #FF8A80) has one user, the destructive sheet row. It is graded
+**v2 PROPOSED, confidence WEAK** in `spec/tokens.mjs`: the dark value is the dark
+UI KIT's `Token / error` swatch, the light value is *proposed*, and no canonical
+screen shows an error state. `values/colors.xml` records that grading, because
+the light value is the one to re-confirm when a canonical error state exists.
+
+## What is still deliberately not migrated
 
 | | why, and who owns it |
 |---|---|
-| **no 64×64 row cover** | `FavoriteTrack` stores `id, artist, track, stream, addedAt` and has nowhere to put an artwork URL. Adding one is a Room migration plus a per-row fetch through `ArtworkRepository` — data work, not a re-skin. Not scheduled. |
-| **no 98dp row** | the frozen 98 is 17 + a 64 cover + 17. Without the cover there is nothing to hold the row open, and forcing 98 would reserve a 64dp hole to imitate a frame rather than to draw anything. The row keeps its own content height. |
-| **stream badge retained** | the frozen row has no counterpart for it, but it carries real information — which station the track came from, the same value the CSV export writes. Owner decision: keep through Phase B, settle with the F3 row migration. |
-| **inline service and delete controls retained** | the frozen row has one circular `arrow_forward` opening the per-track sheet. That sheet is **F1** and does not exist. The four service buttons and the delete control are what the app ships today; removing them is **F3** and explicitly gated. Keeping them is what stops a function being lost in the interval. |
-| **truncation retained** | the frozen row specifies neither ellipsis nor `maxLines`, only fixed boxes. The screen has always ellipsised at one line for the title and two for the artist. Changing that is behaviour, and whether Collection adopts History's variable-height, never-truncate rule is a Phase F decision. `CollectionLayoutTest` asserts Phase B did not take it by accident. |
-| **PopupMenu styling** | temporary. **F2** replaces it with the frozen 260×160 r20 `Menu / Коллекция` surface on `menu_surface`. The wording and the actions are already the frozen ones. |
+| **truncation retained** | the frozen row specifies neither ellipsis nor `maxLines`, only fixed boxes. The screen has always ellipsised at one line for the title and two for the artist. Changing that is behaviour, and whether Collection adopts History's variable-height, never-truncate rule is still a separate decision. `CollectionLayoutTest` asserts F3 did not take it by accident either. |
+| **PopupMenu styling** | unchanged by F1/F3. **F2** replaces it with the frozen 260×160 r20 `Menu / Коллекция` surface on `menu_surface`. The wording and the actions are already the frozen ones, and the export behaviour behind them is untouched here. |
 | **no profile control** | the frozen `COLLECTION pusto` header carries a 40×40 circular control in the trailing slot. It is the same node HOME and ABOUT US carry, it opens the profile, and it is **Phase G** — deferred here exactly as `fragment_main.xml` defers it. |
 
 ## The trailing action's 2dp

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  COLLECTION track row, the plate behind a track's cover.
+
+  Frozen canonical: `Track Item N` > `Container`, light node 2409:31564, dark
+  2444:18178 - 64x64, r20, and `fills: []`. The frozen frame has NO fill here
+  because its child carries an IMAGE fill that covers the box completely, so
+  unlike the PLAYER history plate (which has a canonical #E1E3E4 `Background`
+  node behind its art) there is no measured colour to take.
+
+  `surface_container` is therefore a choice, and a narrow one: it is the recessed
+  container role, it exists in both themes, and it is the only role that
+  describes "a surface a piece of content sits in" without claiming to be the
+  content. It shows while ArtworkRepository is resolving a cover from the row's
+  artist and track, and it stays if nothing is found - FavoriteTrack has no
+  artwork of its own to fall back to.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="@dimen/collection_row_artwork_corner" />
+    <solid android:color="@color/surface_container" />
+</shape>

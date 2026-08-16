@@ -166,14 +166,95 @@
       auto-layout children by an inside stroke as well as by the padding, and on
       Android the stroke is painted within the view rather than added to it.
 
-      Height is NOT among these. The frozen 98 is 17 + a 64 cover + 17, and the
-      cover needs artwork the collection does not store - see
-      docs/COLLECTION-3.6.6.md. The Phase B row keeps its own content height.
+      The frozen 98 IS carried now (F3), because the 64 cover that holds it open
+      finally has something to draw - see collection_row_artwork_size below. It
+      is a MINIMUM, not a fixed height: a long title still grows the row rather
+      than clipping, which is the same rule the Mini Player and the PLAYER
+      history rows follow. One-line content measures exactly 17 + 64 + 17 = 98.
     -->
     <dimen name="collection_card_corner">24dp</dimen>
     <dimen name="collection_card_stroke">1dp</dimen>
     <dimen name="collection_card_padding">17dp</dimen>
     <dimen name="collection_row_gap">16dp</dimen>
+    <dimen name="collection_row_min_height">98dp</dimen>
+
+    <!--
+      The row's three columns, frozen `Track Item N` (light 2409:31563, dark
+      2444:18177). Every number is verbatim from the export:
+
+        Container (cover)   (17,17)  64x64  r20
+        Container (text)    (97,32)  188x34   = 17 + 64 + 16 from the left
+        Container (action) (301,29)  40x40    = 358 - 17 - 40 from the right
+
+      So the two gaps are 16 either side of the text column, and the action is
+      centred against a 98 row at 29 + 20 = 49. The text column is NOT given the
+      frozen 188: it is what is left between the cover and the action once both
+      are placed, which is the same 188 at 390dp and the right answer at every
+      other width. See docs/COLLECTION-3.6.6.md.
+
+      The action's frozen 40 is smaller than the 48dp platform touch minimum. The
+      ring stays 40 - it is a drawn object - and the touch target is expanded to
+      48 with a TouchDelegate rather than by inflating the ring, exactly as the
+      header overflow keeps a 4x16 glyph inside a 48dp slot.
+    -->
+    <dimen name="collection_row_artwork_size">64dp</dimen>
+    <dimen name="collection_row_artwork_corner">20dp</dimen>
+    <dimen name="collection_row_gutter">16dp</dimen>
+    <dimen name="collection_row_action_size">40dp</dimen>
+    <dimen name="collection_row_action_stroke">2dp</dimen>
+    <dimen name="collection_row_action_touch">48dp</dimen>
+    <!-- Frozen text boxes, applied as minima so a glyph is never clipped. -->
+    <dimen name="collection_row_title_min_height">28dp</dimen>
+    <dimen name="collection_row_artist_min_height">20dp</dimen>
+
+    <!--
+      Per-track sheet, FINAL `collection-track-sheet` > `Bottom Sheet / Действия
+      с треком` (tools/figma-export/screens-3.6.6/baselines/proposals-*.json,
+      authored at spec/screens.mjs:374 on the primitives at spec/primitives.mjs:150).
+
+        sheet            358 wide, r28, menu_surface, 1px menu_outline
+        drag handle    (159,16)  40x4  r2   outline
+        title           (24,40) 300x32      the TRACK
+        subtitle        (24,78) 310x20      the ARTIST
+        rows        y = 112 / 170 / 190 …   358x56, pitch 58
+        divider        (16,354) 326x1       outline
+        delete row      y = 367             error
+        height                  447         = 367 + 56 + 24
+
+      The sheet is 358 on a 390 frame with r28 on all four corners, so it floats
+      on the same 16 margins the rest of the screen uses rather than sitting
+      edge-to-edge. Row pitch is 58 for a 56 row, i.e. a 2 gap, which is what the
+      2dp margin below carries.
+    -->
+    <dimen name="sheet_corner">28dp</dimen>
+    <dimen name="sheet_stroke">1dp</dimen>
+    <dimen name="sheet_margin">16dp</dimen>
+    <dimen name="sheet_handle_width">40dp</dimen>
+    <dimen name="sheet_handle_height">4dp</dimen>
+    <dimen name="sheet_handle_top">16dp</dimen>
+    <dimen name="sheet_text_inset">24dp</dimen>
+    <!--
+      The header is stacked as GAPS rather than absolute tops - 16+4 then 20 puts
+      the title on its frozen 40, 40+32 then 6 puts the subtitle on its frozen 78,
+      and 78+20 then 14 puts the first row on its frozen 112. Every frozen anchor
+      is reproduced when the text takes one line, and the sheet grows instead of
+      overlapping itself when a long title needs two.
+    -->
+    <dimen name="sheet_title_gap">20dp</dimen>
+    <dimen name="sheet_subtitle_gap">6dp</dimen>
+    <dimen name="sheet_title_min_height">32dp</dimen>
+    <dimen name="sheet_subtitle_min_height">20dp</dimen>
+    <dimen name="sheet_rows_top">14dp</dimen>
+    <dimen name="sheet_row_height">56dp</dimen>
+    <dimen name="sheet_row_gap">2dp</dimen>
+    <dimen name="sheet_row_icon_slot">48dp</dimen>
+    <dimen name="sheet_row_icon_inset">16dp</dimen>
+    <dimen name="sheet_row_icon_size">24dp</dimen>
+    <dimen name="sheet_row_label_inset">76dp</dimen>
+    <dimen name="sheet_divider_inset">16dp</dimen>
+    <dimen name="sheet_divider_gap_above">12dp</dimen>
+    <dimen name="sheet_divider_gap_below">12dp</dimen>
+    <dimen name="sheet_pad_bottom">24dp</dimen>
 
     <!--
       Empty state, frozen `COLLECTION pusto` > `Collection List` > `Track Item 1`:

@@ -143,8 +143,11 @@ class PlayerHistoryLayoutTest {
 
             // The service actions are gone from this surface, and gone means
             // absent: not GONE, not INVISIBLE, not a zero-width placeholder. The
-            // ids still resolve - the bottom sheet and Collection rows use them -
-            // so finding nothing here is a real check, not a vacuous one.
+            // ids still resolve - item_history_track.xml, the History bottom
+            // sheet's row, uses all four - so finding nothing here is a real
+            // check, not a vacuous one. Collection used to be the second holder
+            // of these ids; F3 moved its service actions onto the per-track
+            // sheet, so it no longer is.
             for (id in listOf(R.id.music_services, R.id.btn_spotify, R.id.btn_apple_music, R.id.btn_yandex)) {
                 val leftover = row.findViewById<View>(id)
                 if (leftover != null) {

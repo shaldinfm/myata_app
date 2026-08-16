@@ -32,6 +32,16 @@
     <color name="on_primary">#0F253E</color>
 
     <!--
+      Menu and bottom-sheet stroke, and the destructive action. #466D8F is also
+      exactly `outline` here, which is precisely why `menu_outline` is its own
+      resource - in light the two differ (#1C3F5F vs #E1E3E4). The error value is
+      the dark UI KIT's 'Token / error' swatch; see values/colors.xml for its
+      WEAK grading and for why the light counterpart is the proposed one.
+    -->
+    <color name="menu_outline">#466D8F</color>
+    <color name="error">#FF8A80</color>
+
+    <!--
       Mini Player (B2). The only one of its five colours that differs between the
       canonical Light and Dark pages - see the block in values/colors.xml for why
       the other four deliberately have no entry here.

@@ -14,6 +14,11 @@
  *                       rows, and reach the system file picker;
  *   the overflow gate   it is hidden while the collection is empty, which is what
  *                       the frozen empty frame does;
+ *   the per-track sheet the FINAL row has one control, and the four service
+ *                       actions and the removal it replaced are rows on the sheet
+ *                       it opens - so the sheet has to open and carry all five;
+ *   remove and undo     removal is the sheet's last row, and Отменить has to put
+ *                       the same row back, not a fresh copy at the top;
  *   the Mini Player     COLLECTION is one of the screens the pill floats over, so
  *                       "hidden until a stream is started, visible afterwards and
  *                       while paused" is observable here;
@@ -415,11 +420,60 @@ try {
     sleep(1500);
     step("07-scrolled-to-end");
 
-    // Delete takes it back to the empty state, and the overflow goes with it.
-    const withRow = hierarchy();
-    tap(withRow, "btn_delete");
+    // The FINAL row has one control and it opens the per-track sheet, which is
+    // where the four service actions and the removal live now. The sheet has to
+    // carry all five rows, in the owner-confirmed order.
+    tap(hierarchy(), "btn_row_action");
+    sleep(1800);
+    const sheet = hierarchy();
+    shot(`390dp-${theme}-08-track-sheet`);
+    const SHEET_ROWS = ["Spotify", "Apple Music", "YouTube", "Яндекс Музыка", "Удалить из коллекции"];
+    results.flow.push({
+      theme, step: "08-track-sheet",
+      rows: SHEET_ROWS.filter((r) => sheet._texts.includes(r)),
+      missing: SHEET_ROWS.filter((r) => !sheet._texts.includes(r)),
+    });
+    console.log(`  390dp ${theme.padEnd(5)} ${"08-track-sheet".padEnd(28)} ` +
+      `rows=${results.flow.at(-1).rows.length}/5 ` +
+      `missing=${JSON.stringify(results.flow.at(-1).missing)}`);
+
+    // Removal is the sheet's last row. It takes the screen back to the empty
+    // state, the overflow goes with it, and the Snackbar offers Отменить.
+    tapText("Удалить из коллекции");
+    sleep(1500);
+    const removed = hierarchy();
+    shot(`390dp-${theme}-09-removed-with-undo`);
+    results.flow.push({
+      theme, step: "09-removed-with-undo",
+      sawSnackbar: removed._texts.includes("Трек удалён из коллекции"),
+      sawUndo: removed._texts.includes("Отменить"),
+      emptyCard: box(removed.empty_card) !== undefined,
+      overflowHidden: !removed.collection_overflow,
+    });
+    console.log(`  390dp ${theme.padEnd(5)} ${"09-removed-with-undo".padEnd(28)} ` +
+      `snackbar=${results.flow.at(-1).sawSnackbar} undo=${results.flow.at(-1).sawUndo} ` +
+      `empty=${results.flow.at(-1).emptyCard} overflowHidden=${results.flow.at(-1).overflowHidden}`);
+
+    // Отменить puts the row back. It is the same entity, so it returns to the
+    // position it was removed from rather than to the top of the list.
+    tapText("Отменить");
     sleep(2000);
-    step("08-empty-again-after-delete");
+    const undone = step("10-undone");
+    results.flow.push({
+      theme, step: "10-undone-check",
+      rowIsBack: Boolean(undone.collection_row || undone.tv_track),
+      overflowBack: Boolean(undone.collection_overflow),
+    });
+    console.log(`  390dp ${theme.padEnd(5)} ${"10-undone-check".padEnd(28)} ` +
+      `rowIsBack=${results.flow.at(-1).rowIsBack} overflowBack=${results.flow.at(-1).overflowBack}`);
+
+    // Remove once more and let the Snackbar expire, so the run ends on the empty
+    // state the next theme's pass expects.
+    tap(hierarchy(), "btn_row_action");
+    sleep(1500);
+    tapText("Удалить из коллекции");
+    sleep(6000);
+    step("11-empty-again-after-remove");
 
     sh(["shell", "am", "force-stop", PKG]);
     sleep(1000);

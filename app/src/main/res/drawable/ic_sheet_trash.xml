@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Bottom-sheet leading glyph for the destructive row, `Удалить из коллекции`.
+
+  From the FINAL proposal `collection-track-sheet` - see
+  tools/figma-export/screens-3.6.6/spec/screens.mjs:379, which asks for
+  `ic: "trash"`, and spec/primitives.mjs:80, which is where the geometry is:
+
+    "M4 7 H20 M9 7 V4 H15 V7 M6 7 L7 20 H17 L18 7 M10 11 V16 M14 11 V16"
+
+  That file authors its icons as plain 24x24 stroked geometry at width 1.8, and
+  says so: the canonical icon set is artwork and is deliberately not copied.
+  This is a transcription of that path, not a redraw of it.
+
+  Tint comes from the view - `error` on this row.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <path
+        android:pathData="M4,7 H20 M9,7 V4 H15 V7 M6,7 L7,20 H17 L18,7 M10,11 V16 M14,11 V16"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

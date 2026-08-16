@@ -3,6 +3,7 @@ package com.example.musicplayerapp
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Rect
+import android.graphics.RectF
 import android.os.Build
 import android.view.LayoutInflater
 import android.view.View
@@ -12,6 +13,7 @@ import androidx.core.content.ContextCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.imageview.ShapeableImageView
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -35,9 +37,10 @@ import kotlin.math.roundToInt
  * fixed rows. The empty card's own anchors are asserted relative to the card,
  * for the same reason.
  *
- * What is deliberately NOT asserted is the frozen 98dp row height. It is 17 + a
- * 64 cover + 17, the collection stores no artwork, and Phase B does not reserve
- * a hole to imitate a frame - see docs/COLLECTION-3.6.6.md.
+ * The frozen 98dp row height IS asserted now. Phase B could not: the 98 is
+ * 17 + a 64 cover + 17, and without a cover to draw there was nothing to hold
+ * the row open. F3 draws it, so the height is a measurement again - see
+ * docs/COLLECTION-3.6.6.md.
  */
 @RunWith(AndroidJUnit4::class)
 class CollectionLayoutTest {
@@ -186,7 +189,8 @@ class CollectionLayoutTest {
             val content = card.getChildAt(0) as ViewGroup
             val title = card.findViewById<TextView>(R.id.tv_track)
             val artist = card.findViewById<TextView>(R.id.tv_artist)
-            val separator = card.findViewById<View>(R.id.separator)
+            val cover = card.findViewById<ShapeableImageView>(R.id.artwork)
+            val action = card.findViewById<View>(R.id.btn_row_action)
 
             if (widthDp == 390) expect(where, "row width", card.width, dp(358))
             expect(where, "row inter-row gap",
@@ -195,9 +199,49 @@ class CollectionLayoutTest {
 
             cardIsTheFrozenSurface(ctx, where, "row", card)
 
+            // The frozen 98 - 17 + a 64 cover + 17 - measured on one-line content.
+            expect(where, "row height", card.height, dp(98))
+
+            // `Container` (17,17) 64x64 r20.
+            val cardTop = topInRoot(card)
+            expect(where, "cover size", cover.width, dp(64))
+            expect(where, "cover square", cover.height, cover.width.toFloat())
+            expect(where, "cover x", leftInRoot(cover) - leftInRoot(card), dp(17))
+            expect(where, "cover y", topInRoot(cover) - cardTop, dp(17))
+            expect(where, "cover corner",
+                cover.shapeAppearanceModel.topLeftCornerSize.getCornerSize(
+                    RectF(0f, 0f, cover.width.toFloat(), cover.height.toFloat()),
+                ).roundToInt(),
+                dp(20),
+            )
+
+            // `Container > Button` (301,29) 40x40 on `primary`, its centre on the
+            // cover's centre, its trailing edge on the row's own 17 padding.
+            expect(where, "action size", action.width, dp(40))
+            expect(where, "action trailing inset",
+                card.width - (leftInRoot(action) - leftInRoot(card) + action.width), dp(17))
+            expect(where, "action centred on the cover",
+                centreYInRoot(action), centreYInRoot(cover).toFloat())
+            expect(where, "action tint",
+                (action as android.widget.ImageView).imageTintList?.defaultColor ?: 0,
+                colour(ctx, R.color.primary))
+
+            // `Container` (97,32) 188x34: 17 + the 64 cover + the frozen 16 gutter.
+            val column = card.findViewById<View>(R.id.text_column)
+            expect(where, "text column x", leftInRoot(title) - leftInRoot(card), dp(97))
+
+            // The block is asserted on its CENTRE - the frozen 32 + 34/2 = 49 -
+            // and not on its top, for the reason the empty state's two text
+            // blocks are: the frozen 34 is an 18 box over a 16 box against 28
+            // and 20 line heights, which Figma can draw and Android cannot. The
+            // real block is 48, so its top lands at 25 while its centre stays
+            // exactly on the frozen 49, which is also the cover's centre.
+            expect(where, "text block centre", centreYInRoot(column) - cardTop, dp(49))
+            expect(where, "text block centred on the cover",
+                centreYInRoot(column), centreYInRoot(cover).toFloat())
+
             expect(where, "title colour", title.currentTextColor, colour(ctx, R.color.text_primary))
             expect(where, "artist colour", artist.currentTextColor, colour(ctx, R.color.text_secondary))
-            expect(where, "separator colour", backgroundColour(separator), colour(ctx, R.color.outline))
 
             // The frozen 18 and 16 boxes are applied as minima, so the tokens' real
             // 28 and 20 line boxes are honoured and nothing is clipped.
@@ -206,18 +250,25 @@ class CollectionLayoutTest {
 
             noClipping(title, "$where/title")
             noClipping(artist, "$where/artist")
+            noOverlap(where, "cover", cover, "title", title)
+            noOverlap(where, "artist", artist, "action", action)
 
             log += "$where: row ${card.width}x${card.height}, padding ${content.paddingLeft}, " +
+                "cover ${cover.width}@${topInRoot(cover) - cardTop}, action ${action.width}, " +
                 "title ${title.height} ${title.lineCount}L, artist ${artist.height} ${artist.lineCount}L"
         }
     }
 
     /**
      * A long Russian title and artist must not clip, must not push the row's own
-     * controls out of it, and must keep the truncation the screen already had -
+     * control out of it, and must keep the truncation the screen already had -
      * one line for the title and two for the artist. Converting Collection to
-     * History's variable-height, never-truncate rule is a Phase F decision and
-     * this asserts that Phase B did not take it by accident.
+     * History's variable-height, never-truncate rule is a separate decision and
+     * this asserts that F3 did not take it by accident either.
+     *
+     * The cover and the action must also stay put: both are anchored on the row's
+     * own 17 padding rather than on the text, so a second artist line grows the
+     * row without moving either of them off the frozen margins.
      */
     @Test
     fun aLongRussianTrackKeepsItsTruncationAndDoesNotClip() {
@@ -237,8 +288,8 @@ class CollectionLayoutTest {
                     }
                     val title = card.findViewById<TextView>(R.id.tv_track)
                     val artist = card.findViewById<TextView>(R.id.tv_artist)
-                    val services = card.findViewById<View>(R.id.music_services)
-                    val delete = card.findViewById<View>(R.id.btn_delete)
+                    val cover = card.findViewById<View>(R.id.artwork)
+                    val action = card.findViewById<View>(R.id.btn_row_action)
 
                     if (title.lineCount != 1) {
                         findings += "$where: title took ${title.lineCount} lines, expected 1"
@@ -248,10 +299,15 @@ class CollectionLayoutTest {
                     }
                     noClipping(title, "$where/title")
                     noClipping(artist, "$where/artist")
-                    noOverlap(where, "artist", artist, "services", services)
-                    noOverlap(where, "services", services, "delete", delete)
-                    if (delete.right > card.width) {
-                        findings += "$where: the delete control is pushed outside the row"
+                    noOverlap(where, "cover", cover, "title", title)
+                    noOverlap(where, "artist", artist, "action", action)
+
+                    val cardLeft = leftInRoot(card)
+                    expect(where, "cover stays on the margin", topInRoot(cover) - topInRoot(card), dp(17))
+                    expect(where, "action stays on the margin",
+                        card.width - (leftInRoot(action) - cardLeft + action.width), dp(17))
+                    if (leftInRoot(action) - cardLeft + action.width > card.width) {
+                        findings += "$where: the row action is pushed outside the row"
                     }
 
                     log += "$where: ${title.lineCount}L/${artist.lineCount}L, row ${card.height}px"
@@ -380,9 +436,6 @@ class CollectionLayoutTest {
     }
 
     private fun colour(ctx: Context, id: Int): Float = ContextCompat.getColor(ctx, id).toFloat()
-
-    private fun backgroundColour(v: View): Int =
-        (v.background as? android.graphics.drawable.ColorDrawable)?.color ?: 0
 
     private fun offsetToRoot(v: View, r: Rect) {
         var p = v.parent

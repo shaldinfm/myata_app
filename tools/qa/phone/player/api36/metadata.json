@@ -12,7 +12,7 @@
         "w": 288,
         "h": 47
       },
-      "headerLabel": "Сейчас играет",
+      "headerLabel": "СЕЙЧАС ИГРАЕТ",
       "dots": "present",
       "artwork": {
         "x": 41,
@@ -20,8 +20,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "RODEO",
-      "artist": "IIL PEACH",
+      "title": "LOADED WITH PEARLS",
+      "artist": "BALANCING ACT",
       "play": {
         "x": 120,
         "y": 478,
@@ -41,6 +41,14 @@
         "w": 49,
         "h": 54
       },
+      "historySection": {
+        "x": 16,
+        "y": 588,
+        "w": 288,
+        "h": 52
+      },
+      "historyHeading": "История эфира",
+      "historyRows": 0,
       "miniPlayer": null
     },
     {
@@ -52,7 +60,7 @@
         "w": 288,
         "h": 47
       },
-      "headerLabel": "Сейчас играет",
+      "headerLabel": "СЕЙЧАС ИГРАЕТ",
       "dots": "present",
       "artwork": {
         "x": 41,
@@ -60,8 +68,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "OK OK OK",
-      "artist": "FITZ AND THE TANTRUMS",
+      "title": "LOADED WITH PEARLS",
+      "artist": "BALANCING ACT",
       "play": {
         "x": 120,
         "y": 478,
@@ -81,6 +89,14 @@
         "w": 49,
         "h": 54
       },
+      "historySection": {
+        "x": 16,
+        "y": 588,
+        "w": 288,
+        "h": 52
+      },
+      "historyHeading": "История эфира",
+      "historyRows": 0,
       "miniPlayer": null
     },
     {
@@ -92,7 +108,7 @@
         "w": 328,
         "h": 47
       },
-      "headerLabel": "Сейчас играет",
+      "headerLabel": "СЕЙЧАС ИГРАЕТ",
       "dots": "present",
       "artwork": {
         "x": 61,
@@ -100,8 +116,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "OK OK OK",
-      "artist": "FITZ AND THE TANTRUMS",
+      "title": "LOADED WITH PEARLS",
+      "artist": "BALANCING ACT",
       "play": {
         "x": 140,
         "y": 483,
@@ -121,6 +137,14 @@
         "w": 49,
         "h": 54
       },
+      "historySection": {
+        "x": 16,
+        "y": 593,
+        "w": 328,
+        "h": 127
+      },
+      "historyHeading": "История эфира",
+      "historyRows": 1,
       "miniPlayer": null
     },
     {
@@ -132,7 +156,7 @@
         "w": 328,
         "h": 47
       },
-      "headerLabel": "Сейчас играет",
+      "headerLabel": "СЕЙЧАС ИГРАЕТ",
       "dots": "present",
       "artwork": {
         "x": 61,
@@ -140,8 +164,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "OK OK OK",
-      "artist": "FITZ AND THE TANTRUMS",
+      "title": "LOADED WITH PEARLS",
+      "artist": "BALANCING ACT",
       "play": {
         "x": 140,
         "y": 483,
@@ -161,6 +185,14 @@
         "w": 49,
         "h": 54
       },
+      "historySection": {
+        "x": 16,
+        "y": 593,
+        "w": 328,
+        "h": 127
+      },
+      "historyHeading": "История эфира",
+      "historyRows": 1,
       "miniPlayer": null
     },
     {
@@ -172,7 +204,7 @@
         "w": 358,
         "h": 47
       },
-      "headerLabel": "Сейчас играет",
+      "headerLabel": "СЕЙЧАС ИГРАЕТ",
       "dots": "present",
       "artwork": {
         "x": 76,
@@ -180,8 +212,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "OK OK OK",
-      "artist": "FITZ AND THE TANTRUMS",
+      "title": "LOADED WITH PEARLS",
+      "artist": "BALANCING ACT",
       "play": {
         "x": 155,
         "y": 486,
@@ -201,6 +233,14 @@
         "w": 49,
         "h": 54
       },
+      "historySection": {
+        "x": 16,
+        "y": 596,
+        "w": 358,
+        "h": 184
+      },
+      "historyHeading": "История эфира",
+      "historyRows": 1,
       "miniPlayer": null
     },
     {
@@ -212,7 +252,7 @@
         "w": 358,
         "h": 47
       },
-      "headerLabel": "Сейчас играет",
+      "headerLabel": "СЕЙЧАС ИГРАЕТ",
       "dots": "present",
       "artwork": {
         "x": 76,
@@ -220,8 +260,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "UR MUM",
-      "artist": "WET LEG",
+      "title": "BORDERLINE",
+      "artist": "TAME IMPALA",
       "play": {
         "x": 155,
         "y": 486,
@@ -241,6 +281,14 @@
         "w": 49,
         "h": 54
       },
+      "historySection": {
+        "x": 16,
+        "y": 596,
+        "w": 358,
+        "h": 184
+      },
+      "historyHeading": "История эфира",
+      "historyRows": 2,
       "miniPlayer": null
     },
     {
@@ -252,7 +300,7 @@
         "w": 380,
         "h": 47
       },
-      "headerLabel": "Сейчас играет",
+      "headerLabel": "СЕЙЧАС ИГРАЕТ",
       "dots": "present",
       "artwork": {
         "x": 87,
@@ -260,8 +308,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "UR MUM",
-      "artist": "WET LEG",
+      "title": "BORDERLINE",
+      "artist": "TAME IMPALA",
       "play": {
         "x": 166,
         "y": 489,
@@ -281,6 +329,14 @@
         "w": 49,
         "h": 54
       },
+      "historySection": {
+        "x": 16,
+        "y": 599,
+        "w": 380,
+        "h": 226
+      },
+      "historyHeading": "История эфира",
+      "historyRows": 2,
       "miniPlayer": null
     },
     {
@@ -292,7 +348,7 @@
         "w": 380,
         "h": 47
       },
-      "headerLabel": "Сейчас играет",
+      "headerLabel": "СЕЙЧАС ИГРАЕТ",
       "dots": "present",
       "artwork": {
         "x": 87,
@@ -300,8 +356,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "UR MUM",
-      "artist": "WET LEG",
+      "title": "BORDERLINE",
+      "artist": "TAME IMPALA",
       "play": {
         "x": 166,
         "y": 489,
@@ -321,6 +377,14 @@
         "w": 49,
         "h": 54
       },
+      "historySection": {
+        "x": 16,
+        "y": 599,
+        "w": 380,
+        "h": 226
+      },
+      "historyHeading": "История эфира",
+      "historyRows": 2,
       "miniPlayer": null
     }
   ],
@@ -330,8 +394,8 @@
       "step": "01-player-idle",
       "play": "Воспроизвести",
       "favourite": "Добавить в коллекцию",
-      "title": "UR MUM",
-      "artist": "WET LEG",
+      "title": "BORDERLINE",
+      "artist": "TAME IMPALA",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -340,8 +404,8 @@
       "step": "02-playing",
       "play": "Пауза",
       "favourite": "Добавить в коллекцию",
-      "title": "UR MUM",
-      "artist": "WET LEG",
+      "title": "BORDERLINE",
+      "artist": "TAME IMPALA",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -350,8 +414,8 @@
       "step": "03-favourited",
       "play": "Пауза",
       "favourite": "Убрать из коллекции",
-      "title": "UR MUM",
-      "artist": "WET LEG",
+      "title": "BORDERLINE",
+      "artist": "TAME IMPALA",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -360,8 +424,8 @@
       "step": "04-gold",
       "play": "Пауза",
       "favourite": "Добавить в коллекцию",
-      "title": "UR MUM",
-      "artist": "WET LEG",
+      "title": "2 PEOPLE (RMX)",
+      "artist": "JEAN JACQUES SMOOTHIE",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -370,38 +434,48 @@
       "step": "05-xtra",
       "play": "Пауза",
       "favourite": "Добавить в коллекцию",
-      "title": "I CAN'T GET ENOUGH",
-      "artist": "FIREFLIES/ALEXANDRA PRINCE",
+      "title": "ANYTHING CAN CHANGE",
+      "artist": "XUMAN",
       "miniPlayer": "none",
       "sheetOpen": false
     },
     {
       "theme": "light",
-      "step": "06-history-sheet",
-      "play": null,
-      "favourite": null,
-      "title": null,
-      "artist": null,
-      "miniPlayer": "none",
-      "sheetOpen": true
-    },
-    {
-      "theme": "light",
-      "step": "07-paused",
-      "play": "Воспроизвести",
+      "step": "06-history-inline",
+      "play": "Пауза",
       "favourite": "Добавить в коллекцию",
-      "title": "I CAN'T GET ENOUGH",
-      "artist": "FIREFLIES/ALEXANDRA PRINCE",
+      "title": "ANYTHING CAN CHANGE",
+      "artist": "XUMAN",
       "miniPlayer": "none",
       "sheetOpen": false
     },
     {
       "theme": "light",
-      "step": "08-after-background",
+      "step": "07-history-revealed",
+      "play": "Пауза",
+      "favourite": "Добавить в коллекцию",
+      "title": "ANYTHING CAN CHANGE",
+      "artist": "XUMAN",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "light",
+      "step": "08-paused",
       "play": "Воспроизвести",
       "favourite": "Добавить в коллекцию",
-      "title": "I CAN'T GET ENOUGH",
-      "artist": "FIREFLIES/ALEXANDRA PRINCE",
+      "title": "ANYTHING CAN CHANGE",
+      "artist": "XUMAN",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "light",
+      "step": "09-after-background",
+      "play": "Воспроизвести",
+      "favourite": "Добавить в коллекцию",
+      "title": "ANYTHING CAN CHANGE",
+      "artist": "XUMAN",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -410,8 +484,8 @@
       "step": "01-player-idle",
       "play": "Воспроизвести",
       "favourite": "Добавить в коллекцию",
-      "title": "FLY AWAY",
-      "artist": "LENNY KRAVITZ",
+      "title": "BORDERLINE",
+      "artist": "TAME IMPALA",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -420,8 +494,8 @@
       "step": "02-playing",
       "play": "Пауза",
       "favourite": "Добавить в коллекцию",
-      "title": "FLY AWAY",
-      "artist": "LENNY KRAVITZ",
+      "title": "BORDERLINE",
+      "artist": "TAME IMPALA",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -430,8 +504,8 @@
       "step": "03-favourited",
       "play": "Пауза",
       "favourite": "Убрать из коллекции",
-      "title": "FLY AWAY",
-      "artist": "LENNY KRAVITZ",
+      "title": "BORDERLINE",
+      "artist": "TAME IMPALA",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -440,8 +514,8 @@
       "step": "04-gold",
       "play": "Пауза",
       "favourite": "Добавить в коллекцию",
-      "title": "I CAN'T GET ENOUGH",
-      "artist": "FIREFLIES/ALEXANDRA PRINCE",
+      "title": "2 PEOPLE (RMX)",
+      "artist": "JEAN JACQUES SMOOTHIE",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -450,40 +524,64 @@
       "step": "05-xtra",
       "play": "Пауза",
       "favourite": "Добавить в коллекцию",
-      "title": "I CAN'T GET ENOUGH",
-      "artist": "FIREFLIES/ALEXANDRA PRINCE",
+      "title": "ANYTHING CAN CHANGE",
+      "artist": "XUMAN",
       "miniPlayer": "none",
       "sheetOpen": false
     },
     {
       "theme": "dark",
-      "step": "06-history-sheet",
-      "play": null,
-      "favourite": null,
-      "title": null,
-      "artist": null,
+      "step": "06-history-inline",
+      "play": "Пауза",
+      "favourite": "Добавить в коллекцию",
+      "title": "FOLLOW YOU AROUND",
+      "artist": "HOSPITAL",
       "miniPlayer": "none",
-      "sheetOpen": true
+      "sheetOpen": false
     },
     {
       "theme": "dark",
-      "step": "07-paused",
+      "step": "07-history-revealed",
+      "play": "Пауза",
+      "favourite": "Добавить в коллекцию",
+      "title": "FOLLOW YOU AROUND",
+      "artist": "HOSPITAL",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "dark",
+      "step": "08-paused",
       "play": "Воспроизвести",
       "favourite": "Добавить в коллекцию",
-      "title": "I CAN'T GET ENOUGH",
-      "artist": "FIREFLIES/ALEXANDRA PRINCE",
+      "title": "FOLLOW YOU AROUND",
+      "artist": "HOSPITAL",
       "miniPlayer": "none",
       "sheetOpen": false
     },
     {
       "theme": "dark",
-      "step": "08-after-background",
+      "step": "09-after-background",
       "play": "Воспроизвести",
       "favourite": "Добавить в коллекцию",
-      "title": "I CAN'T GET ENOUGH",
-      "artist": "FIREFLIES/ALEXANDRA PRINCE",
+      "title": "FOLLOW YOU AROUND",
+      "artist": "HOSPITAL",
       "miniPlayer": "none",
       "sheetOpen": false
+    }
+  ],
+  "history": [
+    {
+      "theme": "light",
+      "rowsBefore": 3,
+      "rowsAfter": 5,
+      "showMoreStillOffered": false
+    },
+    {
+      "theme": "dark",
+      "rowsBefore": 3,
+      "rowsAfter": 5,
+      "showMoreStillOffered": false
     }
   ]
 }

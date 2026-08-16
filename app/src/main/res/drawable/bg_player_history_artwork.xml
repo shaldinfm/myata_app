@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PLAYER Broadcast History row, the plate behind a track's cover (Phase C).
+
+  Frozen `History Item N > Container > Background` - light node 2396:30798, dark
+  2444:18302: 40x40, r6, #E1E3E4 on both canonical pages.
+
+  Its `Album Art` child carries an IMAGE fill set to CROP, so in the frozen frame
+  this is entirely covered. Here it is what shows while ArtworkRepository is
+  resolving a cover from the row's artist and track, and what stays if it finds
+  none - HistoryTrack has no artwork of its own to fall back to.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="@dimen/player_history_artwork_corner" />
+    <solid android:color="@color/brand_player_history_artwork_placeholder" />
+</shape>

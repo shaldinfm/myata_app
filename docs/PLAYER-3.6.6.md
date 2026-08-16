@@ -13,6 +13,25 @@ its existing bottom sheet and its existing entry point, and neither
 lower half is therefore not reproduced yet; the space is simply empty. That is a
 deliberate, temporary deviation, agreed before the work started.
 
+> **The play/pause glyphs have since been superseded.** The owner supplied four
+> FINAL assets — `play_light`, `play_dark`, `pause_light`, `pause_dark`, committed
+> verbatim at
+> [tools/figma-export/player-icons/owner-final/](../tools/figma-export/player-icons/owner-final/)
+> — which replace the `exact/` geometry this document installs for that one
+> control. They are 4-wide round-joined **strokes** rather than filled outlines,
+> and they carry their own glyph colour, `player_play_glyph` (#F8F9FA / #0F253E),
+> which `on_primary` could not express in light without repainting every Material
+> component in the app. The 80×80 `primary` surface, the r20, `PlayerControlState`,
+> the buffering face and every offset on this screen are unchanged. `exact/`
+> remains the source for `like` and the two swipe markers.
+>
+> **Phase C has since landed the lower half** — see
+> [PLAYER-HISTORY-3.6.6.md](PLAYER-HISTORY-3.6.6.md). The space below the controls
+> is no longer empty, and the entry in the `dislike` slot scrolls to the inline
+> section rather than opening the bottom sheet. Everything this document records
+> about the upper section still holds and is asserted unchanged by
+> `PlayerHistoryLayoutTest`.
+
 Two more owner decisions, both because the frozen source describes a later phase:
 
 - **No overflow menu.** The canonical `Menu / Плеер` is four rows all reading

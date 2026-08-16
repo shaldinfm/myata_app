@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PLAYER Broadcast History, "Показать ещё" (Phase C).
+
+  Frozen `Broadcast History Section > Button:margin > Button` - light node
+  2396:30867, dark 2444:18353: 324x54, r12, a solid fill and a 1px INSIDE stroke.
+
+  The fill is a declared light/dark pair because no semantic role carries both of
+  its values; the stroke is the `outline` role exactly on both pages. See
+  values/colors.xml.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="@dimen/player_history_more_corner" />
+    <solid android:color="@color/player_history_more_container" />
+    <stroke
+        android:width="@dimen/player_history_stroke"
+        android:color="@color/outline" />
+</shape>

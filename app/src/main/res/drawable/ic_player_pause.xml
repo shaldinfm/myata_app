@@ -1,20 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  PLAYER pause glyph - the literal Figma vector.
+  PLAYER pause glyph - the owner-supplied FINAL vector.
 
-    node 2399:31221, 23.3333334 square, one path, fill-rule nonzero
+  Source: tools/figma-export/player-icons/owner-final/pause_light.svg and
+  pause_dark.svg, which carry the identical two paths and differ only in their
+  stroke. These supersede node 2399:31221 from ../exact/, which PR #42 installed.
 
-  This is the node the canonical snapshot records as `Controls > play/pause >
-  Container > Icon`, so the glyph the frozen frame shows is Pause. Two hollow
-  bars: four contours, the inner pair wound against the outer pair, so non-zero
-  leaves each bar open. Not the solid bars this file held before.
+  Two bars, each a STROKE rather than a filled outline: the superseded glyph was
+  four contours with the inner pair wound against the outer so non-zero left each
+  bar open, and these are two closed rectangles with a 4-wide round-joined stroke
+  and no fill. Different construction, so the file is replaced rather than edited.
 
-  Only the fill is changed, to the repo's #FFFFFF placeholder.
+  **The viewport is the 80x80 control box, and both paths are verbatim** - see
+  ic_player_play.xml for why. Pause is exactly centred in the box (28.335..51.665
+  on both axes) where play is not, and taking the control's box means neither has
+  to be treated as a special case.
+
+  The surface is not here; it is bg_player_play_pause, the button's own
+  background. This file holds two paths and no rectangle.
+
+  Painted, the stroke reaches 2 beyond the paths on every side, so the ink is
+  27.33 square - the same width as play's, which is taller. The control does not
+  change size between the two faces in any case: the 80x80 surface is what is
+  seen, and it belongs to the button.
+
+  The stroke is the repo's #FFFFFF placeholder; the colour is
+  `player_play_glyph`, applied from the layout.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="@dimen/player_pause_glyph_size"
-    android:height="@dimen/player_pause_glyph_size"
-    android:viewportWidth="23.333334"
-    android:viewportHeight="23.333334">
-    <path android:fillColor="#FFFFFF" android:pathData="M 13.333333 23.333334 L 13.333333 0 L 23.333334 0 L 23.333334 23.333334 L 13.333333 23.333334 L 13.333333 23.333334 M 0 23.333334 L 0 0 L 10 0 L 10 23.333334 L 0 23.333334 L 0 23.333334 M 16.666666 20 L 20 20 L 20 3.3333333 L 16.666666 3.3333333 L 16.666666 20 L 16.666666 20 M 3.3333333 20 L 6.6666665 20 L 6.6666665 3.3333333 L 3.3333333 3.3333333 L 3.3333333 20 L 3.3333333 20 M 3.3333333 3.3333333 L 3.3333333 3.3333333 L 3.3333333 20 L 3.3333333 20 L 3.3333333 3.3333333 L 3.3333333 3.3333333 M 16.666666 3.3333333 L 16.666666 3.3333333 L 16.666666 20 L 16.666666 20 L 16.666666 3.3333333 L 16.666666 3.3333333" />
+    android:width="@dimen/player_play_size"
+    android:height="@dimen/player_play_size"
+    android:viewportWidth="80"
+    android:viewportHeight="80">
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M36.1116 28.335H28.335V51.665H36.1116V28.335Z"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="4" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M51.665 28.335H43.8883V51.665H51.665V28.335Z"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="4" />
 </vector>

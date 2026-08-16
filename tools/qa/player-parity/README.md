@@ -7,9 +7,18 @@ Bounds and unit tests say the app hits the frozen numbers. They cannot say it
 node tools/qa/player-parity/render-final.mjs
 ```
 
-writes `final-light.svg` and `final-dark.svg`: the frozen PLAYER upper section
-drawn from `tools/figma-export/canonical/figma-canonical-{light,dark}-final.json`,
-node for node. Two placeholders are left in the SVG for whoever rasterises it -
+writes four files from
+`tools/figma-export/canonical/figma-canonical-{light,dark}-final.json`, node for
+node: `final-{light,dark}.svg`, the frozen PLAYER **upper section**, and
+`final-{light,dark}-full.svg`, the whole of `Main` — 390x926, upper section plus
+`Broadcast History Section` at y=552. The full pair is the same walk over the
+parent node, so the history section costs no drawing code of its own. It stops at
+`Main`: `BottomNavBar` sits below it at 946 and belongs to no phase of this
+migration.
+
+The history rows' `Album Art` nodes carry IMAGE fills, which the snapshot does not
+export, so the full render shows the frozen #E1E3E4 plate under them - which is
+also what the app shows until ArtworkRepository resolves a cover. Two placeholders are left in the SVG for whoever rasterises it -
 `__ARTWORK__` for the album art and `__OUTLINE__` for its 1px stroke - so the file
 stays small and carries no image bytes.
 
@@ -32,11 +41,22 @@ fills and their opacities, text content, size, weight, tracking and case.
 paths extracted from the FINAL `.fig`. The canonical exporter records no vector
 geometry - `canonical/code.js` reads no `vectorPaths` and calls no `exportAsync` -
 so the outlines used to be reconstructions drawn to fill the exact boxes. They are
-not any more. The script names each one when it runs:
+not any more.
+
+**Except play/pause**, which comes from `tools/figma-export/player-icons/owner-final`
+- the four assets the owner supplied later, superseding `exact/` for that one
+control. Those files carry the whole 80x80, so the reference strips their
+background rect and draws the glyph over the `play/pause` frame's own box: the
+surface still comes from the snapshot, as everything else on this page does, and
+the glyph lands where the supplied file puts it rather than in the snapshot's
+superseded 23.33 `Icon` box. Their strokes are kept verbatim, colour included,
+because the files are per-theme and those are the owner-approved colours.
+
+The script names each one when it runs:
 
 | | |
 |---|---|
-| pause glyph | node `2399:31221` - the glyph the frozen frame shows |
+| pause glyph | **owner-supplied FINAL**, `../../figma-export/player-icons/owner-final/pause_{theme}.svg` |
 | like | node `2399:31217`, outlined thumbs-up |
 | swipe active | component master `2401:38`, the 54-segment vector network |
 | swipe inactive | component master `2400:31363` |

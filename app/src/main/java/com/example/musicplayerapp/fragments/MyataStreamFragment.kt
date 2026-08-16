@@ -9,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.core.widget.ImageViewCompat
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
@@ -17,14 +18,19 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.StreamsViewModel
+import com.example.musicplayerapp.adapters.PlayerHistoryAdapter
+import com.example.musicplayerapp.data.HistoryTrack
 import com.example.musicplayerapp.data.PlayerState
 import com.example.musicplayerapp.databinding.FragmentMyataStreamBinding
 import com.example.musicplayerapp.service.MediaPlayerService
+import com.example.musicplayerapp.ui.BroadcastHistoryState
 import com.example.musicplayerapp.ui.PlayerControl
 import com.example.musicplayerapp.ui.PlayerControlState
+import kotlinx.coroutines.Job
 import com.example.musicplayerapp.utils.ServiceUtils
 import com.squareup.picasso.Picasso
 import android.content.ClipboardManager
@@ -45,6 +51,19 @@ class MyataStreamFragment() : Fragment() {
     private lateinit var playerControl: PlayerControl
     var stream: String = "myata"
     private var currentImageUrl: String? = null  // Track currently displayed image
+
+    /** The frozen `Broadcast History Section`'s rows (Phase C). */
+    private lateinit var historyAdapter: PlayerHistoryAdapter
+
+    /**
+     * How many history rows this page is showing. The only state the inline
+     * section adds - the history itself stays in the ViewModel - and it is view
+     * state, so it resets with the page and on a stream switch.
+     */
+    private var historyRevealed = BroadcastHistoryState.INITIAL_ROWS
+
+    /** In-flight cover lookups, one per bound row, so a recycled row can cancel. */
+    private val artworkJobs = mutableMapOf<HistoryTrack, Job>()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -78,9 +97,9 @@ class MyataStreamFragment() : Fragment() {
         binding.mainSong.setOnClickListener { copyTrackInfoToClipboard() }
 
         // One control for all three streams, with three faces. The frozen design
-        // tints play/pause by role - `primary` on the surface, `on_primary` on the
-        // glyph - not by station, so the six per-stream drawables this replaces
-        // have no canonical counterpart.
+        // tints play/pause by role - `primary` on the surface, `player_play_glyph`
+        // on the glyph - not by station, so the six per-stream drawables this
+        // replaces have no canonical counterpart.
         //
         // Both inputs feed one projection instead of one observer owning the glyph
         // and the other owning visibility. That is what the two used to do, and it
@@ -136,7 +155,7 @@ class MyataStreamFragment() : Fragment() {
         // Remove previous sync fix as it is handled by the improved observer
         
         vm.currentStreamLive.observe(viewLifecycleOwner, Observer {
-            
+
             // Show buffering indicator ONLY when switching to a DIFFERENT stream if already playing
             if (vm.isPlaying.value == true && vm.lastObservedStream != it && vm.lastObservedStream != null) {
                 vm.isBuffering.value = true
@@ -146,23 +165,37 @@ class MyataStreamFragment() : Fragment() {
             // Nothing to re-skin per stream any more - the controls are semantic -
             // but the control still has to follow the player across a switch.
             renderPlayerControl()
+
+            // Broadcast History is a single state in the ViewModel, keyed to
+            // whichever stream is current, and all three pages of the pager hold
+            // an observer on it. Only the page that IS the current stream asks
+            // for a load, so a swipe costs one request rather than three; the
+            // other two pages are off screen and will ask when their turn comes.
+            // PlayerFragment's page callback switches the stream, so this fires
+            // on every swipe as well as on the first bind.
+            if (it == stream) {
+                historyRevealed = BroadcastHistoryState.INITIAL_ROWS
+                vm.loadHistory()
+            }
         })
 
-
+        setUpBroadcastHistory()
 
         // Navigation listeners are now handled in MainActivity
-        
+
         // Favorite button handler
         binding.btnFavorite.setOnClickListener {
             vm.toggleCurrentFavorite()
         }
-        
-        // History button handler
+
+        // The frozen `dislike` slot, which History occupies. Phase C brings the
+        // history onto this screen, so the control takes the reader to it instead
+        // of opening a dialog over it: the same content in a modal on top of
+        // itself is not a second view of anything.
         binding.btnHistory.setOnClickListener {
-            val historyDialog = HistoryBottomSheet()
-            historyDialog.show(parentFragmentManager, HistoryBottomSheet.TAG)
+            binding.streamScroll.smoothScrollTo(0, binding.historySection.top)
         }
-        
+
         // Observe favorite status for current track from centralized VM
         vm.isCurrentFavorite.observe(viewLifecycleOwner) { isFavorite ->
             updateHeartIcon(isFavorite)
@@ -190,6 +223,79 @@ class MyataStreamFragment() : Fragment() {
         binding.btnFavorite.contentDescription = getString(
             if (isFavorite) R.string.player_favorite_remove else R.string.player_favorite_add
         )
+    }
+
+    /**
+     * The frozen `Broadcast History Section`, inline on the page (Phase C).
+     *
+     * It reads `StreamsViewModel.historyTracks` and `historyLoading` - the same
+     * two the History bottom sheet reads, unchanged - and adds no state of its own
+     * beyond [historyRevealed], which is how many rows this reader has asked for.
+     * There is one history in the app; this is a view of it.
+     */
+    private fun setUpBroadcastHistory() {
+        historyAdapter = PlayerHistoryAdapter(
+            artworkFor = ::requestHistoryArtwork,
+            cancelArtwork = ::cancelHistoryArtwork,
+        )
+        binding.historyList.layoutManager = LinearLayoutManager(requireContext())
+        binding.historyList.adapter = historyAdapter
+        // Every row it holds is measured - the list does not scroll, the page
+        // does - so recycling would only churn views that all stay on screen.
+        binding.historyList.setHasFixedSize(false)
+
+        binding.historyShowMore.setOnClickListener {
+            historyRevealed = BroadcastHistoryState.reveal(historyRevealed)
+            renderBroadcastHistory()
+        }
+
+        vm.historyTracks.observe(viewLifecycleOwner) { renderBroadcastHistory() }
+        vm.historyLoading.observe(viewLifecycleOwner) { renderBroadcastHistory() }
+    }
+
+    /**
+     * Draws whatever [BroadcastHistoryState] says, from the ViewModel's history
+     * and this page's reveal count. The rows themselves are the real list cut to
+     * the revealed length, so "Показать ещё" moves real history and nothing else.
+     */
+    private fun renderBroadcastHistory() {
+        val tracks = vm.historyTracks.value.orEmpty()
+        val state = BroadcastHistoryState.of(
+            total = tracks.size,
+            isLoading = vm.historyLoading.value == true,
+            revealed = historyRevealed,
+        )
+
+        binding.historyList.isVisible = state.mode == BroadcastHistoryState.Mode.POPULATED
+        binding.historyEmpty.isVisible = state.mode == BroadcastHistoryState.Mode.EMPTY
+        binding.historyLoading.isVisible = state.mode == BroadcastHistoryState.Mode.LOADING
+        binding.historyShowMore.isVisible = state.isShowMoreVisible
+
+        historyAdapter.submitList(tracks.take(state.visibleCount))
+    }
+
+    /**
+     * A cover for one history row.
+     *
+     * [com.example.musicplayerapp.data.HistoryTrack] has no artwork of its own, so
+     * this goes through the ViewModel to ArtworkRepository, which derives one from
+     * the artist and track and caches it. Only bound rows ask, so the reveal step
+     * is what bounds how many lookups a single tap can start.
+     *
+     * The job is held so a recycled row can withdraw its request, and the whole
+     * map is scoped to the view: a page that goes away takes its lookups with it.
+     */
+    private fun requestHistoryArtwork(track: HistoryTrack, onResult: (String?) -> Unit) {
+        artworkJobs.remove(track)?.cancel()
+        artworkJobs[track] = viewLifecycleOwner.lifecycleScope.launch {
+            val url = vm.historyArtworkUrl(track)
+            artworkJobs.remove(track)
+            onResult(url)
+        }
+    }
+
+    private fun cancelHistoryArtwork(track: HistoryTrack) {
+        artworkJobs.remove(track)?.cancel()
     }
 
     /**

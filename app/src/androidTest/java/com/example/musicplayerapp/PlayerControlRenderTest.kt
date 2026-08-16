@@ -35,9 +35,18 @@ import kotlin.math.roundToInt
  * The frozen source, `PLAYER`/`PLAYER_dark` > `Player Section` > `Controls`:
  *
  *   play/pause             80 x 80, cornerRadius 20, fill `primary`
- *   play/pause > Container 23.33 x 23.33 at (28.33, 28.33) - centred at (40, 40)
- *   Container   > Icon     23.33 x 23.33, fill `on_primary`, hugged by Container
- *                          and therefore ink, not canvas
+ *
+ * The glyph inside it is no longer the canonical snapshot's: the owner-supplied
+ * FINAL assets in tools/figma-export/player-icons/owner-final supersede it, and
+ * they are 4-wide round-joined STROKES rather than filled outlines. Painted, with
+ * the stroke reaching 2 past the centreline on every side:
+ *
+ *   play    27.33 x 33.9957   centred at (39.665, 40.0001) in the 80 box
+ *   pause   27.33 x 27.33     centred at (40, 40)
+ *
+ * Play sits a third of a unit left of the box centre and the supplied file says
+ * so; the drawables take the 80 box as their viewport so it lands where the file
+ * puts it rather than being centred for tidiness.
  *
  * All three faces are checked in both themes, and the fill has to be the same
  * rectangle in all three: Play -> connecting -> Pause must not move or resize
@@ -78,7 +87,7 @@ class PlayerControlRenderTest {
         val toDp = { px: Int -> "%.1f".format(px / density) }
 
         val primary = ContextCompat.getColor(context, R.color.primary)
-        val onPrimary = ContextCompat.getColor(context, R.color.on_primary)
+        val glyphColour = ContextCompat.getColor(context, R.color.player_play_glyph)
         val background = ContextCompat.getColor(context, R.color.background)
 
         val widthPx = dp(widthDp).roundToInt()
@@ -153,18 +162,19 @@ class PlayerControlRenderTest {
                     if (!fill.contains(ring)) {
                         findings += "$where: the progress indicator at $ring is not inside the painted control $fill"
                     }
-                    expect(where, "progress indicator size", ring.width(), dp(23))
+                    expect(where, "progress indicator size", ring.width(), dp(27.33f), tolerance = dp(1))
                     expect(where, "progress indicator centred in x", ring.centerX(), fill.centerX().toFloat())
                     expect(where, "progress indicator centred in y", ring.centerY(), fill.centerY().toFloat())
-                    // It is legible only because the surface is behind it. The
-                    // frozen palette gives it no contrast of its own: `on_primary`
-                    // is #FFFFFF against a #F8F9FA `background` in Light and
-                    // #0F253E against a #0F253E one in Dark, so an indicator drawn
-                    // off the control is invisible in both themes - which is what
-                    // it was. Against `primary` it reads in both.
+                    // It stands in for the glyph, so it takes the glyph's colour,
+                    // and it is legible only because the surface is behind it: the
+                    // palette gives it no contrast of its own - #F8F9FA against a
+                    // #F8F9FA `background` in Light and #0F253E against a #0F253E
+                    // one in Dark - so an indicator drawn off the control is
+                    // invisible in both themes, which is what it was. Against
+                    // `primary` it reads in both.
                     val tint = spinner.indeterminateTintList?.defaultColor
-                    if (tint != onPrimary) {
-                        findings += "$where: the progress indicator is tinted $tint, not on_primary $onPrimary"
+                    if (tint != glyphColour) {
+                        findings += "$where: the progress indicator is tinted $tint, not player_play_glyph $glyphColour"
                     }
                     if (tint == primary) {
                         findings += "$where: the progress indicator is the same colour as the surface it sits on"
@@ -188,40 +198,47 @@ class PlayerControlRenderTest {
                         findings += "$where: the progress indicator is still shown"
                     }
                     // Searched inside the fill, and inset by the corner radius so
-                    // the window is entirely surface: in Dark, `on_primary` and
-                    // `background` are both #0F253E, so the page showing through
-                    // the rounded corners would otherwise read as glyph. The
-                    // window is still 40x40 around the centre, comfortably larger
-                    // than the frozen 23.33 box - a glyph that outgrows it or
-                    // wanders out of it fails these checks rather than escaping
-                    // them.
+                    // the window is entirely surface: in Dark, the glyph colour
+                    // and `background` are both #0F253E, so the page showing
+                    // through the rounded corners would otherwise read as glyph.
+                    // The window is 40x40 around the centre, still larger than the
+                    // taller of the two glyphs at 27.33 x 33.9957 - one that
+                    // outgrows it or wanders out of it fails these checks rather
+                    // than escaping them.
                     val glyph = ink(
-                        raster, onPrimary,
+                        raster, glyphColour,
                         Rect(fill).apply { inset(dp(20).roundToInt(), dp(20).roundToInt()) },
                         tolerance = 48,
                     )
                     if (glyph == null) {
-                        findings += "$where: no `on_primary` glyph is painted inside the control"
+                        findings += "$where: no glyph is painted inside the control"
                     } else {
-                        // The two frozen glyphs are not the same size. Pause is the
-                        // 23.33 square the canonical snapshot records for
-                        // `play/pause > Container`; play is its own node, the same
-                        // width and 29.69 tall.
-                        val glyphHeight = if (state == PlayerControlState.PLAY) 29.69f else 23.33f
+                        // The two supplied glyphs share a width and differ in
+                        // height: play's path is 29.9957 tall against pause's
+                        // 23.33, and the 4-wide stroke adds 2 to every side of
+                        // both. Neither reads as a size change in use - the 80x80
+                        // surface is what is seen, and it belongs to the button.
+                        val glyphHeight = if (state == PlayerControlState.PLAY) 33.9957f else 27.33f
                         // 1.5dp, because a pointed outline cannot be measured to
-                        // the pixel by colour. The play glyph's corners are wedges
-                        // that taper to nothing, so their outermost pixels are
-                        // mostly surface and read as surface: 28.6 against 29.69
-                        // on API 24, 29.0 on API 36. The error this check exists
-                        // to catch was 13.4 against 29.69.
-                        expect(where, "glyph width", glyph.width(), dp(23.33f), tolerance = dp(1.5f))
+                        // the pixel by colour: the play glyph's apex is a round
+                        // join whose outermost pixels are mostly surface and read
+                        // as surface. The error this check exists to catch was
+                        // 13.4 against 29.69.
+                        expect(where, "glyph width", glyph.width(), dp(27.33f), tolerance = dp(1.5f))
                         expect(where, "glyph height", glyph.height(), dp(glyphHeight), tolerance = dp(1.5f))
-                        expect(where, "glyph centred in x", glyph.centerX(), fill.centerX().toFloat(), dp(1))
+                        // Pause is centred in the box; play is 0.335 left of it,
+                        // which is what play_light.svg and play_dark.svg state -
+                        // their path spans x 28..51.33, whose centre is 39.665.
+                        val centreOffsetX = if (state == PlayerControlState.PLAY) dp(-0.335f) else 0f
+                        expect(
+                            where, "glyph x against the box centre",
+                            glyph.centerX(), fill.centerX() + centreOffsetX, dp(1),
+                        )
                         expect(where, "glyph centred in y", glyph.centerY(), fill.centerY().toFloat(), dp(1))
-                        // Both frozen glyphs are outlines: the surface shows
-                        // through the middle. A solid glyph - which is what stood
-                        // in for them before the exact assets arrived - would fill
-                        // its own centre with `on_primary`.
+                        // Both supplied glyphs are strokes, so the surface shows
+                        // through the middle of each. A solid glyph - which is what
+                        // stood in for them before any exact asset arrived - would
+                        // fill its own centre with the glyph colour.
                         if (raster.getPixel(glyph.centerX(), glyph.centerY()) != primary) {
                             findings += "$where: the glyph is solid at its centre; the frozen one is an outline"
                         }
@@ -268,10 +285,10 @@ class PlayerControlRenderTest {
      * [tolerance] is 0 for the surface: an exact match excludes anti-aliased
      * edges, which is harmless for a rectangle whose straight edges are a full
      * pixel wide, and is what lets the corner checks see the rounding. The glyphs
-     * need a tolerance instead. The frozen play glyph is an outlined triangle
-     * whose apexes taper to nothing, so its extreme rows are never exactly
-     * `on_primary` and an exact match reads it a pixel or two short - by 3px on
-     * API 24 and 2 on API 36, from anti-aliasing alone.
+     * need a tolerance instead. The play glyph is a stroked triangle whose apexes
+     * are round joins, so its extreme rows are a curve's worth of partial cover
+     * and are never exactly the glyph colour; an exact match reads the box a pixel
+     * or two short from anti-aliasing alone.
      */
     private fun ink(bitmap: Bitmap, colour: Int, within: Rect?, tolerance: Int = 0): Rect? {
         val area = within ?: Rect(0, 0, bitmap.width, bitmap.height)

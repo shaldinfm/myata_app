@@ -10,8 +10,10 @@
  *   swipe + switching   MYATA / GOLD / XTRA still swipe, and the dots follow;
  *   play / pause        the one semantic control still drives the real player;
  *   favourite           still toggles;
- *   History             still opens its bottom sheet - Phase C owns the redesign,
- *                       so Phase B only has to keep the entry working;
+ *   History             Phase C draws `Broadcast History Section` on the page, so
+ *                       the entry in the frozen `dislike` slot scrolls to it
+ *                       rather than opening a dialog over it. The rows carry real
+ *                       history and "Показать ещё" has to add some;
  *   Mini Player         still absent on PLAYER.
  *
  * Facts go to metadata.json; screenshots stay local (../.gitignore drops *.png).
@@ -60,16 +62,32 @@ function hierarchy() {
   try {
     sh(["shell", "uiautomator", "dump", "/sdcard/ui.xml"]);
     const xml = sh(["shell", "cat", "/sdcard/ui.xml"]);
-    const out = { __text: [] };
+    const out = { __text: [], __all: {} };
     for (const m of xml.matchAll(/<node\b([^>]*?)\/?>/g)) {
       const a = Object.fromEntries([...m[1].matchAll(/([\w-]+)="([^"]*)"/g)].map((x) => [x[1], x[2]]));
       const id = (a["resource-id"] || "").replace(PKG + ":id/", "");
       if (a.text) out.__text.push(a.text);
-      if (id) out[id] = { bounds: a.bounds, text: a.text || "", desc: a["content-desc"] || "" };
+      // A Broadcast History row is one of many nodes sharing an id, so they are
+      // collected rather than overwritten - `out[id]` keeps the first, which is
+      // what every single-instance lookup below wants.
+      if (id) {
+        const node = { bounds: a.bounds, text: a.text || "", desc: a["content-desc"] || "" };
+        (out.__all[id] = out.__all[id] || []).push(node);
+        if (!out[id]) out[id] = node;
+      }
     }
     return out;
-  } catch { return { __text: [] }; }
+  } catch { return { __text: [], __all: {} }; }
 }
+
+/**
+ * Broadcast History rows currently on the page.
+ *
+ * Counted by the title inside each row rather than by the row container: the
+ * page scrolls, and uiautomator only dumps what is on screen, so a row is
+ * counted when its content is.
+ */
+const historyRows = (h) => (h.__all.tv_title || []).length;
 
 const box = (n) => {
   if (!n || !n.bounds) return null;
@@ -116,7 +134,7 @@ function activeDot(h) {
 
 try { sh(["shell", "pm", "grant", PKG, "android.permission.POST_NOTIFICATIONS"]); } catch {}
 
-const results = { run: RUN, density: DENSITY, themeSwitch: THEME_SWITCH ? "cmd uimode" : "unavailable", widths: [], flow: [] };
+const results = { run: RUN, density: DENSITY, themeSwitch: THEME_SWITCH ? "cmd uimode" : "unavailable", widths: [], flow: [], history: [] };
 
 try {
   /* --- 1. every width and theme: the frozen upper-section anchors --- */
@@ -140,11 +158,16 @@ try {
         playDesc: h.btn_play ? h.btn_play.desc : null,
         favourite: box(h.btn_favorite),
         history: box(h.btn_history),
+        historySection: box(h.history_section),
+        historyHeading: h.history_heading ? h.history_heading.text : null,
+        historyRows: historyRows(h),
         miniPlayer: box(h.mini_player),
       };
       results.widths.push(row);
       console.log(`  ${dp}dp ${theme.padEnd(5)} "${row.headerLabel}" art=${row.artwork ? row.artwork.w + "dp" : "?"} ` +
-        `play=${row.play ? row.play.w + "dp" : "?"} pill=${row.miniPlayer ? "PRESENT" : "none"}`);
+        `play=${row.play ? row.play.w + "dp" : "?"} ` +
+        `hist=${row.historySection ? `${row.historySection.w}dp@${row.historySection.y}` : "?"} ` +
+        `pill=${row.miniPlayer ? "PRESENT" : "none"}`);
     }
   }
 
@@ -192,23 +215,39 @@ try {
       step(name);
     }
 
-    // History: Phase B only has to keep the entry working.
+    // History. Phase C puts `Broadcast History Section` on the page itself, so
+    // the entry in the frozen `dislike` slot scrolls to it instead of opening a
+    // dialog over it. The section is real history from the same ViewModel state
+    // the bottom sheet used, so this step is where "the rows have content" is
+    // checked - and there is no sheet to dismiss any more.
     tap(hierarchy(), "btn_history");
     sleep(3000);
-    step("06-history-sheet");
-    sh(["shell", "input", "keyevent", "BACK"]);
-    sleep(2000);
+    step("06-history-inline");
+
+    // And one tap of "Показать ещё", which must add rows rather than do nothing.
+    const beforeReveal = historyRows(hierarchy());
+    tap(hierarchy(), "history_show_more");
+    sleep(2500);
+    const afterHierarchy = hierarchy();
+    results.history.push({
+      theme,
+      rowsBefore: beforeReveal,
+      rowsAfter: historyRows(afterHierarchy),
+      showMoreStillOffered: Boolean(afterHierarchy.history_show_more),
+    });
+    step("07-history-revealed");
+    console.log(`  390dp ${theme.padEnd(5)} показать ещё  ${beforeReveal} -> ${historyRows(afterHierarchy)} rows`);
 
     tap(hierarchy(), "btn_play");
     sleep(3000);
-    step("07-paused");
+    step("08-paused");
 
     // Background and foreground.
     sh(["shell", "input", "keyevent", "HOME"]);
     sleep(6000);
     sh(["shell", "am", "start", "-n", ACT]);
     sleep(4000); dismissAnr();
-    step("08-after-background");
+    step("09-after-background");
 
     sh(["shell", "am", "force-stop", PKG]);
     sleep(1000);

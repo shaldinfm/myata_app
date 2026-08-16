@@ -12,7 +12,7 @@
         "w": 288,
         "h": 47
       },
-      "headerLabel": "Сейчас играет",
+      "headerLabel": "СЕЙЧАС ИГРАЕТ",
       "dots": "present",
       "artwork": {
         "x": 41,
@@ -20,8 +20,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "SUNSHINE",
-      "artist": "BALANCING ACT",
+      "title": "THE WAVE",
+      "artist": "JUNGLE",
       "play": {
         "x": 120,
         "y": 466,
@@ -41,6 +41,14 @@
         "w": 49,
         "h": 54
       },
+      "historySection": {
+        "x": 16,
+        "y": 576,
+        "w": 288,
+        "h": 16
+      },
+      "historyHeading": null,
+      "historyRows": 0,
       "miniPlayer": null
     },
     {
@@ -52,7 +60,7 @@
         "w": 328,
         "h": 47
       },
-      "headerLabel": "Сейчас играет",
+      "headerLabel": "СЕЙЧАС ИГРАЕТ",
       "dots": "present",
       "artwork": {
         "x": 61,
@@ -60,8 +68,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "SUNSHINE",
-      "artist": "BALANCING ACT",
+      "title": "THE WAVE",
+      "artist": "JUNGLE",
       "play": {
         "x": 140,
         "y": 466,
@@ -81,6 +89,14 @@
         "w": 49,
         "h": 54
       },
+      "historySection": {
+        "x": 16,
+        "y": 576,
+        "w": 328,
+        "h": 96
+      },
+      "historyHeading": "История эфира",
+      "historyRows": 1,
       "miniPlayer": null
     },
     {
@@ -92,7 +108,7 @@
         "w": 358,
         "h": 47
       },
-      "headerLabel": "Сейчас играет",
+      "headerLabel": "СЕЙЧАС ИГРАЕТ",
       "dots": "present",
       "artwork": {
         "x": 76,
@@ -100,8 +116,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "SUNSHINE",
-      "artist": "BALANCING ACT",
+      "title": "THE WAVE",
+      "artist": "JUNGLE",
       "play": {
         "x": 155,
         "y": 466,
@@ -121,6 +137,14 @@
         "w": 49,
         "h": 54
       },
+      "historySection": {
+        "x": 16,
+        "y": 576,
+        "w": 358,
+        "h": 156
+      },
+      "historyHeading": "История эфира",
+      "historyRows": 2,
       "miniPlayer": null
     },
     {
@@ -132,7 +156,7 @@
         "w": 380,
         "h": 47
       },
-      "headerLabel": "Сейчас играет",
+      "headerLabel": "СЕЙЧАС ИГРАЕТ",
       "dots": "present",
       "artwork": {
         "x": 87,
@@ -140,8 +164,8 @@
         "w": 239,
         "h": 239
       },
-      "title": "SUNSHINE",
-      "artist": "BALANCING ACT",
+      "title": "THE WAVE",
+      "artist": "JUNGLE",
       "play": {
         "x": 166,
         "y": 466,
@@ -161,6 +185,14 @@
         "w": 49,
         "h": 54
       },
+      "historySection": {
+        "x": 16,
+        "y": 576,
+        "w": 380,
+        "h": 200
+      },
+      "historyHeading": "История эфира",
+      "historyRows": 2,
       "miniPlayer": null
     }
   ],
@@ -170,8 +202,8 @@
       "step": "01-player-idle",
       "play": "Воспроизвести",
       "favourite": "Добавить в коллекцию",
-      "title": "SUNSHINE",
-      "artist": "BALANCING ACT",
+      "title": "THE WAVE",
+      "artist": "JUNGLE",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -180,8 +212,8 @@
       "step": "02-playing",
       "play": "Подключение",
       "favourite": "Добавить в коллекцию",
-      "title": "SUNSHINE",
-      "artist": "BALANCING ACT",
+      "title": "THE WAVE",
+      "artist": "JUNGLE",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -190,8 +222,8 @@
       "step": "03-favourited",
       "play": "Подключение",
       "favourite": "Убрать из коллекции",
-      "title": "SUNSHINE",
-      "artist": "BALANCING ACT",
+      "title": "THE WAVE",
+      "artist": "JUNGLE",
       "miniPlayer": "none",
       "sheetOpen": false
     },
@@ -200,50 +232,68 @@
       "step": "04-gold",
       "play": "Подключение",
       "favourite": "Добавить в коллекцию",
-      "title": "E SAMBA",
-      "artist": "JUNIOR JACK",
+      "title": "FREE LOVE",
+      "artist": "HOUSEJACK &amp; STEFANO GAMMA",
       "miniPlayer": "none",
       "sheetOpen": false
     },
     {
       "theme": "light",
       "step": "05-xtra",
+      "play": "Воспроизвести",
+      "favourite": "Добавить в коллекцию",
+      "title": "МНОГО ОШИБОК",
+      "artist": "УВУЛА &amp; ТИМА ИЩЕТ СВЕТ",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "light",
+      "step": "06-history-inline",
+      "play": "Воспроизвести",
+      "favourite": "Добавить в коллекцию",
+      "title": "МНОГО ОШИБОК",
+      "artist": "УВУЛА &amp; ТИМА ИЩЕТ СВЕТ",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "light",
+      "step": "07-history-revealed",
+      "play": "Воспроизвести",
+      "favourite": "Добавить в коллекцию",
+      "title": "МНОГО ОШИБОК",
+      "artist": "УВУЛА &amp; ТИМА ИЩЕТ СВЕТ",
+      "miniPlayer": "none",
+      "sheetOpen": false
+    },
+    {
+      "theme": "light",
+      "step": "08-paused",
       "play": "Подключение",
       "favourite": "Добавить в коллекцию",
-      "title": "ТРИП",
-      "artist": "IAMUHA",
+      "title": "МНОГО ОШИБОК",
+      "artist": "УВУЛА &amp; ТИМА ИЩЕТ СВЕТ",
       "miniPlayer": "none",
       "sheetOpen": false
     },
     {
       "theme": "light",
-      "step": "06-history-sheet",
-      "play": null,
-      "favourite": null,
-      "title": null,
-      "artist": null,
-      "miniPlayer": "none",
-      "sheetOpen": true
-    },
-    {
-      "theme": "light",
-      "step": "07-paused",
+      "step": "09-after-background",
       "play": "Воспроизвести",
       "favourite": "Добавить в коллекцию",
-      "title": "ТРИП",
-      "artist": "IAMUHA",
+      "title": "Я ХОЧУ УМЕРЕТЬ",
+      "artist": "ДУБОВЫЙ ГААЙЪ",
       "miniPlayer": "none",
       "sheetOpen": false
-    },
+    }
+  ],
+  "history": [
     {
       "theme": "light",
-      "step": "08-after-background",
-      "play": "Воспроизвести",
-      "favourite": "Добавить в коллекцию",
-      "title": "ТРИП",
-      "artist": "IAMUHA",
-      "miniPlayer": "none",
-      "sheetOpen": false
+      "rowsBefore": 3,
+      "rowsAfter": 5,
+      "showMoreStillOffered": false
     }
   ]
 }

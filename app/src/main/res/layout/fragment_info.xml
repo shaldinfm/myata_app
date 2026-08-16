@@ -290,6 +290,49 @@
                   the chain rather than pinned to 76dp. At 390 that reproduces the
                   frozen tile on the nose; below it they shrink together and the
                   glyph shrinks with them, instead of the row overflowing.
+
+                  ===================================================================
+                  AWAITING THE FINAL GLYPHS - the tiles are deliberately empty.
+                  ===================================================================
+
+                  The tiles below carry no `android:src`. Earlier revisions filled
+                  them by recolouring the app's existing brand drawables, plus a
+                  hand-authored Threads mark; the owner rejected all of it, and
+                  approximations are not to be substituted again. They are removed
+                  rather than left in place so nothing here can be mistaken for the
+                  design.
+
+                  The exact vectors ARE exportable from Figma - `Section 3: Social
+                  Media` 2411:31674 (light) / 2444:18620 (dark) export as SVG. What
+                  this repository cannot do is produce them: its canonical exporter
+                  records vector geometry only and never calls getBytesAsync or
+                  exportAsync, and the snapshot carries no fileKey, so there is
+                  nothing here to drive an official export from.
+
+                  To finish: drop one 48x48 vector per tile and restore
+                  `android:src`. The tile itself needs no other change - geometry,
+                  radius, border and the semantic fills are approved and final, and
+                  the 14dp padding is what makes the glyph exactly 48dp at 390dp.
+                  @color/about_social_icon is kept for the same reason: a single
+                  tinted set is what the two themes want.
+
+                    tile        light node              dark node
+                    Telegram    I2424:729;318:59        I2444:18626;318:59      48x48
+                                I2424:729;318:60        I2444:18626;318:60      26x22
+                    Spotify     2424:733                2444:18629              48x48
+                    Instagram   I2424:735;17:212        I2444:18632;17:212      48x48
+                                I2424:735;17:213        I2444:18632;17:213      25x25
+                                I2424:735;17:214        I2444:18632;17:214      6x6
+                    TikTok      2444:18814              2444:18812              41x48
+                    YouTube     I2424:753;17:219        I2444:18638;17:219      48x34
+                                I2424:753;17:220        I2444:18638;17:220      13x14
+                    Threads     I2424:750;2306:144      I2444:18641;2306:144    41x48
+                    Boosty      2420:564                2444:18644              40x48
+                    Я.Музыка    2420:138                2444:18647              48x48
+
+                  Telegram, Instagram, YouTube and Threads are instances of one
+                  shared `Social Icons` component, so those suffixed ids are that
+                  component's own children - exporting it once covers both themes.
                 -->
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
@@ -304,7 +347,6 @@
                         android:contentDescription="@string/about_social_telegram"
                         android:padding="@dimen/about_social_tile_padding"
                         android:scaleType="fitCenter"
-                        android:src="@drawable/ic_about_telegram"
                         app:layout_constraintDimensionRatio="H,1:1"
                         app:layout_constraintEnd_toStartOf="@id/spotify"
                         app:layout_constraintHorizontal_chainStyle="spread_inside"
@@ -320,7 +362,6 @@
                         android:contentDescription="@string/about_social_spotify"
                         android:padding="@dimen/about_social_tile_padding"
                         android:scaleType="fitCenter"
-                        android:src="@drawable/ic_about_spotify"
                         app:layout_constraintDimensionRatio="H,1:1"
                         app:layout_constraintEnd_toStartOf="@id/instagram"
                         app:layout_constraintStart_toEndOf="@id/telegram"
@@ -335,7 +376,6 @@
                         android:contentDescription="@string/about_social_instagram"
                         android:padding="@dimen/about_social_tile_padding"
                         android:scaleType="fitCenter"
-                        android:src="@drawable/ic_about_instagram"
                         app:layout_constraintDimensionRatio="H,1:1"
                         app:layout_constraintEnd_toStartOf="@id/tiktok"
                         app:layout_constraintStart_toEndOf="@id/spotify"
@@ -350,7 +390,6 @@
                         android:contentDescription="@string/about_social_tiktok"
                         android:padding="@dimen/about_social_tile_padding"
                         android:scaleType="fitCenter"
-                        android:src="@drawable/ic_about_tiktok"
                         app:layout_constraintDimensionRatio="H,1:1"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toEndOf="@id/instagram"
@@ -365,7 +404,6 @@
                         android:contentDescription="@string/about_social_youtube"
                         android:padding="@dimen/about_social_tile_padding"
                         android:scaleType="fitCenter"
-                        android:src="@drawable/ic_about_youtube"
                         app:layout_constraintDimensionRatio="H,1:1"
                         app:layout_constraintEnd_toEndOf="@id/telegram"
                         app:layout_constraintStart_toStartOf="@id/telegram"
@@ -380,7 +418,6 @@
                         android:contentDescription="@string/about_social_threads"
                         android:padding="@dimen/about_social_tile_padding"
                         android:scaleType="fitCenter"
-                        android:src="@drawable/ic_about_threads"
                         app:layout_constraintDimensionRatio="H,1:1"
                         app:layout_constraintEnd_toEndOf="@id/spotify"
                         app:layout_constraintStart_toStartOf="@id/spotify"
@@ -395,7 +432,6 @@
                         android:contentDescription="@string/about_social_boosty"
                         android:padding="@dimen/about_social_tile_padding"
                         android:scaleType="fitCenter"
-                        android:src="@drawable/ic_about_boosty"
                         app:layout_constraintDimensionRatio="H,1:1"
                         app:layout_constraintEnd_toEndOf="@id/instagram"
                         app:layout_constraintStart_toStartOf="@id/instagram"
@@ -410,7 +446,6 @@
                         android:contentDescription="@string/about_social_yandex"
                         android:padding="@dimen/about_social_tile_padding"
                         android:scaleType="fitCenter"
-                        android:src="@drawable/ic_about_yandex_music"
                         app:layout_constraintDimensionRatio="H,1:1"
                         app:layout_constraintEnd_toEndOf="@id/tiktok"
                         app:layout_constraintStart_toStartOf="@id/tiktok"

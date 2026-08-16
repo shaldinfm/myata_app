@@ -9,11 +9,11 @@ import android.view.ViewGroup
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
-import androidx.navigation.fragment.findNavController
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.StreamsViewModel
 import com.example.musicplayerapp.databinding.FragmentInfoBinding
+import com.example.musicplayerapp.ui.AboutLinks
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.TextPaint
@@ -71,17 +71,18 @@ class InfoFragment : Fragment() {
         // Threads - the frozen grid has eight slots and puts Threads in the one
         // Twitter held, so Twitter is dropped on the owner's instruction rather
         // than kept as a ninth tile the design has no room for.
-        binding.telegram.opensLink("https://t.me/radiomyata")
-        binding.spotify.opensLink("https://open.spotify.com/user/31b7rfatuqf7lc76thiudm5bxxuy")
-        binding.instagram.opensLink("https://www.instagram.com/radiomyata/")
-        binding.tiktok.opensLink("https://www.tiktok.com/@radio_myata")
-        binding.youtube.opensLink("https://www.youtube.com/channel/UC30ExLCP-enuCrHH2qRRlCw")
-        binding.threads.opensLink("https://www.threads.com/@radiomyata")
-        binding.boosty.opensLink("https://boosty.to/myata")
-        // The one link that never carried CATEGORY_BROWSABLE. Kept that way: the
-        // category narrows which activities can match, and this is a band.link
-        // redirector, so adding it would be a real change to what can open it.
-        binding.yandex.opensLink("https://band.link/myata_yandex", browsable = false)
+        binding.telegram.opensLink(AboutLinks.TELEGRAM)
+        binding.spotify.opensLink(AboutLinks.SPOTIFY)
+        binding.instagram.opensLink(AboutLinks.INSTAGRAM)
+        binding.tiktok.opensLink(AboutLinks.TIKTOK)
+        binding.youtube.opensLink(AboutLinks.YOUTUBE)
+        binding.threads.opensLink(AboutLinks.THREADS)
+        binding.boosty.opensLink(AboutLinks.BOOSTY)
+        // The one link that never carried CATEGORY_BROWSABLE. It keeps that way
+        // across the destination change: the category narrows which activities
+        // can match, so adding it now would change what can open this tile on
+        // top of changing where it goes, and only the destination was asked for.
+        binding.yandex.opensLink(AboutLinks.YANDEX_MUSIC, browsable = false)
 
         // Highlight GOLD and XTRA in description
         //
@@ -141,18 +142,15 @@ class InfoFragment : Fragment() {
         // `Boosty Subscription Card` > Button 2411:31645. The frozen design adds
         // this second donation entry point; it opens the same Boosty page the
         // Boosty tile below already opens, so it introduces no new destination.
-        binding.boostyCta.opensLink("https://boosty.to/myata")
+        binding.boostyCta.opensLink(AboutLinks.BOOSTY)
 
-        // The frozen 3.6.6 bar has no Donate destination: donation lives inside
-        // "О нас". This is that entry point, and it is the only one into the app's
-        // own payment flow: DonateFragment - payment form, YooMoney WebView and
-        // Boosty subscriptions - unchanged. Navigating without popUpTo leaves info
-        // on the back stack, so Back returns here rather than jumping to Home.
-        binding.donateCta.setOnClickListener {
-            if (findNavController().currentDestination?.id != R.id.donate) {
-                findNavController().navigate(R.id.donate)
-            }
-        }
+        // "Поддержать эфир", the one-time donation. It used to push
+        // DonateFragment, which asked for the amount and then posted a quickpay
+        // form into a WebView; it now hands the whole payment to YooMoney, which
+        // is where the amount is typed. Same wallet either way - DonateFragment's
+        // own custom-amount branch opened this URL - so the app stops holding a
+        // payment form and stops being in the middle of one.
+        binding.donateCta.opensLink(AboutLinks.YOOMONEY_DONATE)
 
         vm.isInSplitMode.observe(viewLifecycleOwner, Observer {
             if(it){

@@ -32,6 +32,25 @@ Last updated: 2026-08-08.
 - **Playback diagnostics are in `main`**: every playback decision is logged under one tag — `adb logcat | grep MyataPlayback`. This is what #15 will be diagnosed with.
 - **Phase 2 / 3.6.6 — not implemented.** Design source lives in `tools/figma-export/` (approved dark screens, light/dark semantic tokens, plugin sources, rendered previews). No Phase 2 code exists yet: the app is still Material Components (M2), XML Views, with no `values-night/` and no `dimens.xml`.
 - **Repository hygiene, needs owner decision**: `app/release/` and `app/src_backup_best_version/` are still tracked; no CI (build/lint on PRs); no release runbook.
+- **Typography audit — RecyclerView rows never receive the typography contract. FUTURE, not fixed.**
+  `MyataTypography.Factory` is installed on the Activity's inflater in
+  `MainActivity.onCreate`. Adapters inflate their rows with
+  `LayoutInflater.from(parent.context)`, which is a **different** inflater object
+  and carries no factory, so those rows get neither the token's line height nor
+  `includeFontPadding=false` — the two halves the factory exists to add, since
+  `android:lineHeight` is unreadable below API 28 and `includeFontPadding` is not a
+  text-appearance attribute at all.
+  Measured on device while fixing the PLAYER History row (PR #54): its title had
+  `includeFontPadding=true` and `lineSpacingExtra=0`, and its height came from
+  `minHeight` dimens alone, with the font's overshoot adding 2px to the title and
+  3px to the artist. PR #54 set both explicitly in `PlayerHistoryAdapter`'s
+  ViewHolder for that one row and deliberately did **not** widen.
+  Still on the old path: `FavoritesAdapter`, `HistoryAdapter`, `PlaylistAdapter`.
+  Fixing them by routing the inflater through the factory would apply the shared
+  tokens' Figma leading, which changes row heights on COLLECTION, the History
+  bottom sheet and the HOME playlist row — so this is a measure-then-decide audit
+  per surface, not a one-line change, and it needs owner approval before any of
+  those surfaces move.
 - **Startup performance — deferring the MediaController connection. FUTURE, deliberately not done.**
   `StreamsViewModel.init` calls `setupMediaController()`, which binds to the
   in-process `MediaPlayerService`; that binding creates the service, and its

@@ -4,6 +4,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.widget.TextViewCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -47,6 +48,43 @@ class PlayerHistoryAdapter(
 
         /** The track this holder is currently bound to, for late artwork. */
         var boundTo: HistoryTrack? = null
+
+        init {
+            // History-local text metrics: the title on a 22 line and the artist on
+            // an 18, so the normal one-line-over-one-line block is 40 and reads
+            // inside the 40 cover. The dimens carry where those numbers come from.
+            //
+            // includeFontPadding is the half that actually moved the number, and
+            // finding that out is worth recording. These rows are inflated with
+            // LayoutInflater.from(parent.context) below, which is NOT the inflater
+            // MyataTypography.Factory is installed on - the factory is set on the
+            // Activity's inflater, and this one is a different object. So the row's
+            // text never received the typography contract at all: measured on
+            // device it had includeFontPadding=true and lineSpacingExtra=0, and its
+            // height came from the minHeight dimens alone. The font's own overshoot
+            // was adding 2px to the title and 3px to the artist on top of that.
+            //
+            // With padding off, Onest Regular's line is descent-ascent = 58px at
+            // 17sp and 47px at 14sp on a 2.625 device: 105px together, which is
+            // exactly 40dp. The two setLineHeight calls are therefore usually
+            // no-ops - the target equals the natural line, and TextView only
+            // touches line spacing when they differ - and they stay because they
+            // are what pins the intent if the font is ever replaced.
+            //
+            // Deliberately not fixed by routing this inflater through the factory:
+            // that would apply the shared token's 28 and 20 and put the block back
+            // to 48, which is the thing being corrected.
+            val res = itemView.resources
+            for (view in listOf(tvTitle, tvArtist)) {
+                view.includeFontPadding = false
+            }
+            TextViewCompat.setLineHeight(
+                tvTitle, res.getDimensionPixelSize(R.dimen.player_history_title_line_height)
+            )
+            TextViewCompat.setLineHeight(
+                tvArtist, res.getDimensionPixelSize(R.dimen.player_history_artist_line_height)
+            )
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {

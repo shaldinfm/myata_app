@@ -22,20 +22,43 @@
   untouched. Nothing is left behind here in their place: no hidden views, no
   reserved width beside the text, no reserved line beneath it.
 
-  **Height.** 74 is 13 + 48 + 13, and the 48 is one line of the title's 28 over
-  one line of the artist's 20. Every vertical number here is a MINIMUM: the row
-  grows when a track name needs a second line and shrinks back when it does not.
-  With the service line gone, one-line content measures the frozen 74 again, and
-  three rows and a button make the frozen 374.
+  **Height. The row is the frozen 74, spent differently: 17 + 40 + 17.**
 
-  No maxLines and no ellipsis, which is the standing owner decision for History
-  rows recorded on item_history_track.xml: a long Russian title adds a line
-  rather than losing its end. The row is the thing that gives.
+  The mock spends the same 74 as 13 + 48 + 13, where 48 is the title's 28 line over
+  the artist's 20 - a text block 8 taller than the 40 cover beside it - and hides
+  the difference by centring the cover in the text. That centring is what put the
+  cover at y=17 and the timestamp at y=27, and it is what broke as soon as a title
+  wrapped.
 
-  **Alignment.** Time and artwork are centred against each other, and the artwork
-  is centred against the text block - the frozen time box sits at y=14 in a 48
-  content row with height 20, and the artwork at y=4 with height 40, both exactly
-  centred - so they stay centred as the row grows.
+  Owner intent is that the normal one-line title over one-line artist reads INSIDE
+  the cover, artist's bottom level with the cover's. So the block is 40: the title
+  on a 22 line and the artist on an 18, both local to this surface (see the dimens
+  for where the two numbers come from and why they cannot clip).
+
+  A 40 block beside a 40 cover leaves the row's own padding to make up the 74, and
+  17 down is exactly what does it. It also puts the cover and the timestamp back on
+  the mock's own y - 17 and 27 - rather than 4 above them, which is why this is the
+  right way round: the text came down to the cover, the cover did not go up to the
+  text. Three rows and the button still make the frozen 374.
+
+  Every vertical number is still a MINIMUM. The row grows when a title needs a
+  second line and shrinks back when it does not.
+
+  **No maxLines and no ellipsis.** A long title adds a line and keeps its end; the
+  row is the thing that gives. Same rule as item_history_track.xml, which is
+  unchanged.
+
+  **Alignment.** The text block is TOP-aligned to the artwork, not centred against
+  it: the title's first line and the cover's top edge start on the same y, and the
+  artist sits directly under the title with no gap. The artwork is pinned to the
+  top of the content for the same reason, so it stays with the first title line
+  however far the title wraps.
+
+  This replaces centring the artwork against the text block. Centring was stable
+  only while the text was exactly one line taller than the cover, which is the one
+  case the frozen mock draws; the moment a title wrapped, the cover slid down by
+  half the added line - 32 at three lines, measured - and the title's first line
+  had nothing to do with the top of the cover.
 -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -43,7 +66,10 @@
     android:id="@+id/history_row"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="@dimen/player_history_row_padding">
+    android:paddingStart="@dimen/player_history_row_padding"
+    android:paddingTop="@dimen/player_history_row_padding_vertical"
+    android:paddingEnd="@dimen/player_history_row_padding"
+    android:paddingBottom="@dimen/player_history_row_padding_vertical">
 
     <!--
       `Container > Container > NN:NN`. Onest Regular 14/20 on `text_secondary` -
@@ -78,8 +104,9 @@
       app's single source of truth for artwork, and already the ViewModel's - and
       the plate is what shows until it arrives, or for good if nothing is found.
 
-      Centred against the text block rather than pinned to the top, which puts it
-      at the frozen y=4 of a 48 content row and keeps it centred as the row grows.
+      Pinned to the top of the content, so the title's first line can align to its
+      top edge. It had a bottom constraint to tv_artist, which centred it in the
+      text block and slid it down as the title wrapped.
     -->
     <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/artwork"
@@ -89,9 +116,8 @@
         android:background="@drawable/bg_player_history_artwork"
         android:contentDescription="@string/player_history_artwork"
         android:scaleType="centerCrop"
-        app:layout_constraintBottom_toBottomOf="@id/tv_artist"
         app:layout_constraintStart_toEndOf="@id/tv_time"
-        app:layout_constraintTop_toTopOf="@id/tv_title"
+        app:layout_constraintTop_toTopOf="parent"
         app:shapeAppearanceOverlay="@style/ShapeAppearance.Myata.PlayerHistoryArtwork" />
 
     <!--
@@ -117,7 +143,7 @@
         android:textColor="@color/text_primary"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@id/artwork"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toTopOf="@id/artwork"
         tools:text="MEET ME IN LOVE" />
 
     <TextView

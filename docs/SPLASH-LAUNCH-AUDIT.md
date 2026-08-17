@@ -7,6 +7,21 @@ Base: `main` @ `9ae5d93`. Built and measured with the debug APK
 (`versionName 3.6.5`, `versionCode 202611`) on `Myata_API36` (API 36, 1080x2400,
 420dpi) and `Myata_Probe_API24` (API 24).
 
+> **What the owner decided.** No new Splash design is to be invented, and the ten
+> random artworks stay as they are without being declared FINAL. The scope of the
+> work became a launch-experience **behaviour** fix: remove the dead time
+> ([§0](#0-headline), item 2) and fix the bottom bar drawing on the splash
+> (mismatch #1). Both are done on this branch; the evidence is in
+> [`tools/qa/splash/`](../tools/qa/splash/). Everything below is the audit as it
+> stood, and is left as the record of why. Two corrections to it:
+>
+> - The cold-start dead time here is quoted as ~4.7 s from a single run on a cold
+>   machine. A controlled four-run series later put it at **~3.6 s** on API 36 and
+>   **~1.3 s** on API 24; those numbers, in
+>   [`launch-timing.json`](../tools/qa/splash/launch-timing.json), supersede it.
+> - [§3](#3-final-figma-nodes-and-assets) is unchanged and still stands: there is
+>   no FINAL Splash, and nothing in the fix pretends otherwise.
+
 ---
 
 ## 0. Headline

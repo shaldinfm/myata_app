@@ -1,0 +1,62 @@
+{
+  "subject": "cold-launch timing, before vs after the launch-experience fix",
+  "before": "ff17119 (audit only)",
+  "after": "the fix on this branch",
+  "method": {
+    "totalTimeMs": "am start -W TotalTime, from am force-stop, 4 consecutive runs per build per device, back to back so both builds see the same machine state",
+    "startWindowSeconds": "tools/qa/splash/classify-launch.py over one screenrecord of the same scenario; the run of flat frames between the launcher and the app's first content",
+    "deadTimeMs": "totalTime - startWindow. On the before build there is no starting window at all, so the dead time is the whole of TotalTime - that is the finding, not a rounding.",
+    "whyDerived": "A screenrecord and an adb call cannot be aligned closely enough to time a ~300ms interval directly. The start-window duration needs no alignment because it is measured inside one video."
+  },
+  "caveat": "Emulator under software GL. The absolute numbers are much worse than a real device, and the ratio is what matters. The audit's earlier single-run figures (~4.7s cold, ~6.8s after process death) came off a colder machine; the 4-run series below is better sampled and supersedes them for the before build.",
+  "results": [
+    {
+      "device": "Myata_API36",
+      "api": 36,
+      "before": {
+        "totalTimeMs": [3574, 3652, 3772, 3631],
+        "totalTimeMedianMs": 3641,
+        "startWindowSeconds": 0,
+        "deadTimeMs": 3641,
+        "note": "no starting window and no platform splash exist; the launcher is on screen for the whole of TotalTime"
+      },
+      "after": {
+        "totalTimeMs": [3912, 3799, 4018, 3800],
+        "totalTimeMedianMs": 3856,
+        "pairedRuns": [
+          { "totalTimeMs": 4234, "startWindowSeconds": 3.967, "deadTimeMs": 267 },
+          { "totalTimeMs": 4371, "startWindowSeconds": 3.867, "deadTimeMs": 504 }
+        ],
+        "note": "platform SplashScreen, @color/background with the launcher mark; the residual includes the launcher-to-splash cross-dissolve, whose frames are not flat and so are not counted as start window"
+      },
+      "totalTimeDeltaMs": 215,
+      "deadTimeReduction": "~3641ms -> ~270-500ms"
+    },
+    {
+      "device": "Myata_Probe_API24",
+      "api": 24,
+      "before": {
+        "totalTimeMs": [1325, 1258, 1395, 1037],
+        "totalTimeMedianMs": 1291,
+        "startWindowSeconds": 0,
+        "deadTimeMs": 1291,
+        "note": "same windowDisablePreview suppression on the legacy path"
+      },
+      "after": {
+        "totalTimeMs": [1397, 1355, 1364, 1382],
+        "totalTimeMedianMs": 1370,
+        "pairedRuns": [
+          { "totalTimeMs": 1660, "startWindowSeconds": 1.067, "deadTimeMs": 593 },
+          { "totalTimeMs": 1705, "startWindowSeconds": 1.1, "deadTimeMs": 605 }
+        ],
+        "note": "core-splashscreen's back-ported starting window, same colour and same mark; the residual is dominated by the pre-12 scale-up animation"
+      },
+      "totalTimeDeltaMs": 79,
+      "deadTimeReduction": "~1291ms -> ~600ms"
+    }
+  ],
+  "interpretation": {
+    "totalTime": "Up 79ms on API 24 and 215ms on API 36 - the cost of the splash machinery. TotalTime is tap to the app's own first frame, and it is the number that would have ballooned if branding were being held in front of the user. It did not: there is no setKeepOnScreenCondition, and the network gate that decides when SplashFragment hands over is untouched.",
+    "deadTime": "This is what the fix is about, and it is the number that moved: from the whole of the launch to a fraction of it, on both API levels."
+  }
+}

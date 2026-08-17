@@ -1,146 +1,207 @@
 {
-  "audit": "splash / app launch, step 1",
+  "audit": "splash / app launch",
   "base": "9ae5d9354d0408fe97752e727e3fef35009fb754",
   "apk": { "versionName": "3.6.5", "versionCode": 202611, "variant": "debug" },
-  "note": "Emulator under software GL. Absolute durations are far worse than a real device; the sequence and the ordering defects are what these establish.",
-  "runs": [
-    {
-      "device": "Myata_API36",
-      "api": 36,
-      "resolution": "1080x2400",
-      "density": 420,
-      "scenario": "cold",
-      "method": "am force-stop, then am start from the launcher",
-      "systemSplashObserved": false,
-      "duplicateActivityLaunch": false,
-      "whiteOrBlackFlash": false,
-      "phases": [
-        {
-          "phase": "no-feedback",
-          "onScreen": "launcher, unchanged",
-          "approxMs": 4700,
-          "cause": "AppTheme sets android:windowDisablePreview=true, so there is no starting window and no platform splash"
-        },
-        {
-          "phase": "handoff",
-          "onScreen": "single-frame hard cut from launcher to the splash artwork",
-          "approxMs": 17,
-          "evidence": "60fps frame extraction; no icon frame, no windowSplashScreenBackground, no exit animation"
-        },
-        {
-          "phase": "splash",
-          "onScreen": "drawable-nodpi/screenN, centerCrop, full bleed",
-          "approxMs": 1400,
-          "gate": "PlaylistsState.READY from refreshPlaylists(); network-bound, no fixed timer"
-        },
-        {
-          "phase": "splash-with-nav-bar",
-          "onScreen": "splash artwork with the FINAL bottom navigation bar drawn on top of it",
-          "approxMs": 700,
-          "defect": "MainFragment.onResume() sets bottomNavView VISIBLE when the transaction commits, while the 250ms splash fade-out is still running and HOME has not drawn"
-        },
-        {
-          "phase": "home",
-          "onScreen": "HOME, playlist cards still empty placeholders",
-          "approxMs": 1000,
-          "note": "first usable frame is partially populated"
-        }
-      ]
-    },
-    {
-      "device": "Myata_API36",
-      "api": 36,
-      "scenario": "warm",
-      "method": "KEYCODE_HOME, then am start; process alive",
-      "splashShown": false,
-      "result": "returns directly to HOME",
-      "cause": "the navigation action pops the splash inclusively (popUpTo=splashFragment, popUpToInclusive=true)"
-    },
-    {
-      "device": "Myata_API36",
-      "api": 36,
-      "scenario": "process-recreation",
-      "method": "adb root, kill -9 pidof; pid 4624 -> 5081 confirms death; then am start",
-      "splashShown": false,
-      "systemSplashObserved": false,
-      "approxNoFeedbackMs": 6800,
-      "result": "HOME restored directly, navigation state survives past the splash",
-      "note": "am kill alone is a no-op here: the bound MediaPlayerService holds the process up"
-    },
-    {
-      "device": "Myata_API36",
-      "api": 36,
-      "scenario": "first-run-after-install",
-      "observed": "POST_NOTIFICATIONS dialog on API 33+ produces Resume -> Stop -> Restart -> Resume",
-      "duplicateActivityLaunch": false,
-      "note": "one ActivityRecord throughout; the cycle is the permission dialog, not a second launch"
-    },
-    {
-      "device": "Myata_Probe_API24",
-      "api": 24,
-      "scenario": "cold",
-      "method": "am force-stop, then am start from the launcher",
-      "startingWindowObserved": false,
-      "duplicateActivityLaunch": false,
-      "blankIntermediateFrame": false,
-      "phases": [
-        {
-          "phase": "no-feedback",
-          "onScreen": "launcher, unchanged",
-          "approxMs": 5500,
-          "cause": "same windowDisablePreview=true"
-        },
-        {
-          "phase": "launch-animation",
-          "onScreen": "pre-12 scale-up of the app window over a black surround",
-          "approxMs": 125
-        },
-        {
-          "phase": "splash",
-          "onScreen": "drawable-nodpi/screenN, centerCrop, full bleed, status bar visible",
-          "approxMs": 1600
-        },
-        {
-          "phase": "splash-with-nav-bar",
-          "onScreen": "splash artwork with the bottom navigation bar on top",
-          "approxMs": 600,
-          "defect": "same ordering defect as API 36"
-        },
-        {
-          "phase": "home",
-          "onScreen": "HOME"
-        }
-      ]
+  "note": "Emulator under software GL. Absolute durations are far worse than a real device; the sequence and the ordering defects are what these establish. Cold-launch timing, before vs after, is in launch-timing.json.",
+  "before": {
+    "commit": "ff17119",
+    "runs": [
+      {
+        "device": "Myata_API36",
+        "api": 36,
+        "resolution": "1080x2400",
+        "density": 420,
+        "scenario": "cold",
+        "systemSplashObserved": false,
+        "duplicateActivityLaunch": false,
+        "whiteOrBlackFlash": false,
+        "phases": [
+          {
+            "phase": "no-feedback",
+            "onScreen": "launcher, unchanged",
+            "cause": "AppTheme sets android:windowDisablePreview=true, so there is no starting window and no platform splash"
+          },
+          {
+            "phase": "handoff",
+            "onScreen": "single-frame hard cut from launcher to the splash artwork",
+            "evidence": "60fps frame extraction; no icon frame, no windowSplashScreenBackground, no exit animation"
+          },
+          {
+            "phase": "splash",
+            "onScreen": "drawable-nodpi/screenN, centerCrop, full bleed",
+            "approxMs": 1400,
+            "gate": "PlaylistsState.READY from refreshPlaylists(); network-bound, no fixed timer"
+          },
+          {
+            "phase": "splash-with-nav-bar",
+            "onScreen": "splash artwork with the FINAL bottom navigation bar drawn on top of it",
+            "approxMs": 700,
+            "defect": "MainFragment.onResume() sets bottomNavView VISIBLE when the transaction commits, while the 250ms splash fade-out is still running and HOME has not drawn"
+          },
+          { "phase": "home", "onScreen": "HOME, playlist cards still empty placeholders" }
+        ]
+      },
+      {
+        "device": "Myata_API36",
+        "api": 36,
+        "scenario": "warm",
+        "splashShown": false,
+        "result": "returns directly to HOME",
+        "cause": "the navigation action pops the splash inclusively (popUpTo=splashFragment, popUpToInclusive=true)"
+      },
+      {
+        "device": "Myata_API36",
+        "api": 36,
+        "scenario": "process-recreation",
+        "method": "adb root, kill -9 pidof; pid 4624 -> 5081 confirms death; then am start",
+        "splashShown": false,
+        "systemSplashObserved": false,
+        "approxNoFeedbackMs": 6800,
+        "result": "HOME restored directly, navigation state survives past the splash",
+        "note": "am kill alone is a no-op here: the bound MediaPlayerService holds the process up"
+      },
+      {
+        "device": "Myata_Probe_API24",
+        "api": 24,
+        "scenario": "cold",
+        "startingWindowObserved": false,
+        "duplicateActivityLaunch": false,
+        "blankIntermediateFrame": false,
+        "phases": [
+          { "phase": "no-feedback", "onScreen": "launcher, unchanged" },
+          { "phase": "launch-animation", "onScreen": "pre-12 scale-up of the app window over a black surround" },
+          { "phase": "splash", "onScreen": "drawable-nodpi/screenN, centerCrop, full bleed, status bar visible", "approxMs": 1600 },
+          { "phase": "splash-with-nav-bar", "onScreen": "splash artwork with the bottom navigation bar on top", "approxMs": 600 },
+          { "phase": "home", "onScreen": "HOME" }
+        ]
+      }
+    ]
+  },
+  "after": {
+    "change": "Theme.Myata.Splash as the activity's manifest theme, core-splashscreen, and the bottom bar gated on the splash fragment's view",
+    "runs": [
+      {
+        "device": "Myata_API36",
+        "api": 36,
+        "scenario": "cold",
+        "theme": "light",
+        "systemSplashObserved": true,
+        "systemSplashBackground": "@color/background #F8F9FA",
+        "systemSplashIcon": "@drawable/ic_launcher_foreground",
+        "whiteOrBlackFlash": false,
+        "duplicateActivityLaunch": false,
+        "navBarOverSplash": false,
+        "phases": [
+          { "phase": "handoff", "onScreen": "standard Android 12+ splash enter transition, launcher cross-dissolving into the splash; no black or white frame at 60fps" },
+          { "phase": "system-splash", "onScreen": "app mark centred on @color/background" },
+          { "phase": "splash-artwork", "onScreen": "drawable-nodpi/screenN, unchanged, with no bottom navigation bar on it" },
+          { "phase": "home", "onScreen": "HOME; the bottom navigation bar appears with it, not before it" }
+        ]
+      },
+      {
+        "device": "Myata_API36",
+        "api": 36,
+        "scenario": "cold",
+        "theme": "dark",
+        "systemSplashBackground": "@color/background #0F253E",
+        "note": "same mark, dark background - the semantic role resolves per configuration, so Dark needed no second resource",
+        "navBarOverSplash": false
+      },
+      {
+        "device": "Myata_API36",
+        "api": 36,
+        "scenario": "first-run-after-install",
+        "observed": "POST_NOTIFICATIONS dialog appears over the app's own artwork",
+        "duplicateActivityLaunch": false,
+        "navBarOverSplash": false
+      },
+      {
+        "device": "Myata_API36",
+        "api": 36,
+        "scenario": "warm",
+        "splashShown": false,
+        "result": "returns directly to the destination it was on"
+      },
+      {
+        "device": "Myata_API36",
+        "api": 36,
+        "scenario": "process-recreation",
+        "method": "kill -9; the task record survives",
+        "splashShown": false,
+        "systemSplashIconObserved": false,
+        "startingWindowObserved": true,
+        "result": "starting window in @color/background, then the restored destination",
+        "note": "The platform draws the splash icon for a cold start; a relaunch into a process the MediaPlayerService has already restarted gets the flat background window instead. Either way the launcher is gone immediately, which is what the ~6.8s before this was."
+      },
+      {
+        "device": "Myata_API36",
+        "api": 36,
+        "scenario": "launch-with-surviving-playback",
+        "method": "start playback, KEYCODE_HOME, relaunch",
+        "mediaSessionState": "PLAYING(3) throughout",
+        "result": "app returns to PLAYER with the control showing Pause - the session is reattached, not restarted",
+        "splashShown": false
+      },
+      {
+        "device": "Myata_Probe_API24",
+        "api": 24,
+        "scenario": "cold",
+        "startingWindowObserved": true,
+        "startingWindowBackground": "@color/background #F8F9FA",
+        "startingWindowIcon": "@drawable/ic_launcher_foreground",
+        "blankIntermediateFrame": false,
+        "whiteOrBlackFlash": false,
+        "navBarOverSplash": false,
+        "phases": [
+          { "phase": "starting-window", "onScreen": "app mark centred on @color/background, drawn before the app has run" },
+          { "phase": "splash-artwork", "onScreen": "drawable-nodpi/screenN, unchanged, with no bottom navigation bar on it" },
+          { "phase": "home", "onScreen": "HOME; the bottom navigation bar appears with it" }
+        ]
+      },
+      {
+        "device": "Myata_Probe_API24",
+        "api": 24,
+        "scenario": "warm",
+        "splashShown": false,
+        "result": "returns directly to HOME, unchanged from before the fix"
+      }
+    ],
+    "instrumentation": {
+      "classes": ["LaunchSequenceTest", "RandomWindowBackgroundTest"],
+      "api36": "5/5 passed, 0 skipped",
+      "api24": "5/5 passed, 0 skipped"
     }
-  ],
+  },
   "artworkGeometry": {
     "source": "res/drawable-nodpi/screen0..9.png",
     "sizePx": { "width": 1080, "height": 1921 },
     "aspect": 0.5622,
     "scaleType": "centerCrop",
     "cropIsAspectDriven": true,
-    "note": "Crop depends on the window aspect ratio, not on dp width, so it is identical at 320/360/390/412dp for a given aspect.",
+    "note": "Crop depends on the window aspect ratio, not on dp width, so it is identical at 320/360/390/412dp for a given aspect. Unchanged by the fix - the artwork was left alone.",
     "examples": [
       { "windowAspect": "16:9 (0.5625)", "visibleWidthFraction": 1.0 },
       { "windowAspect": "20:9 (0.45)", "visibleWidthFraction": 0.8, "lostPerSide": "10%" }
     ]
   },
   "resourceFacts": {
-    "coreSplashscreenDependency": false,
-    "windowSplashScreenAttributesInRes": 0,
-    "adaptiveLauncherIcon": false,
-    "splashArtworkNightVariant": false,
-    "launchThemeFromManifest": "AppTheme",
-    "runtimeThemeAfterOnCreate": "AppTheme0..9",
-    "launchThemeWindowFlags": {
-      "windowDisablePreview": true,
-      "windowIsTranslucent": true,
-      "windowFullscreen": true
+    "before": {
+      "coreSplashscreenDependency": false,
+      "windowSplashScreenAttributesInRes": 0,
+      "launchThemeFromManifest": "AppTheme",
+      "launchThemeWindowFlags": { "windowDisablePreview": true, "windowIsTranslucent": true, "windowFullscreen": true }
     },
-    "runtimeThemeWindowFlags": {
-      "windowDisablePreview": false,
-      "windowIsTranslucent": false,
-      "windowFullscreen": false
+    "after": {
+      "coreSplashscreenDependency": "androidx.core:core-splashscreen:1.0.1",
+      "launchThemeFromManifest": "Theme.Myata.Splash",
+      "postSplashScreenTheme": "AppTheme",
+      "runtimeThemeAfterOnCreate": "AppTheme + AppTheme0..9, unchanged",
+      "windowDisablePreviewAnywhere": false,
+      "setKeepOnScreenCondition": false,
+      "adaptiveLauncherIcon": false,
+      "splashArtworkNightVariant": false,
+      "activityIsTranslucent": false,
+      "translucencyNote": "windowIsTranslucent is left declared on AppTheme but is now inert: the system reads translucency from the manifest theme, and a setTheme() after the window exists cannot make an opaque window translucent."
     }
   }
 }

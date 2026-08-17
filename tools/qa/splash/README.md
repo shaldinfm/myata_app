@@ -1,10 +1,32 @@
-# Launch / splash evidence (audit)
+# Launch / splash evidence
 
-Measurements behind [`docs/SPLASH-LAUNCH-AUDIT.md`](../../../docs/SPLASH-LAUNCH-AUDIT.md).
+Measurements behind [`docs/SPLASH-LAUNCH-AUDIT.md`](../../../docs/SPLASH-LAUNCH-AUDIT.md)
+and the launch-experience fix that followed it.
 
-`launch-sequence.json` is what is committed and what can be checked: for each API
-level and launch scenario, the observed phases of the launch with their durations
-and what was on screen during each.
+| | |
+|---|---|
+| `launch-sequence.json` | per API level and scenario, the observed phases of the launch and what was on screen during each, before and after the fix |
+| `launch-timing.json` | cold-launch timing, before vs after: `am start -W` TotalTime, and the dead time derived from it |
+| `classify-launch.py` | turns one screenrecord into a phase table; this is what measures the starting window |
+
+## The one number that matters
+
+`am start -W` TotalTime is tap to the app's *own* first frame. It is not the dead
+time, and it is not what the fix was about - it went **up** slightly, because a
+splash screen costs something to draw.
+
+The dead time is tap to the first frame that is not the launcher, and it needs
+the video:
+
+```bash
+python tools/qa/splash/classify-launch.py launch.mp4
+# deadTime = TotalTime - startWindowTotalSeconds * 1000
+```
+
+On the pre-fix build `startWindowTotalSeconds` is **0** on both API levels - no
+such window is ever created - so the dead time is the whole of TotalTime. That
+zero is the finding, which is why the classifier reports an empty run rather than
+failing when it finds none.
 
 Screenshots and screen recordings stay local, per `../.gitignore` — and here they
 would prove even less than usual, because `MainActivity` picks one of ten window
@@ -39,6 +61,22 @@ it, confirmed by the pid changing.
 
 Default density, per the project's QA convention — 443dpi/390dp is for Figma
 parity work, not for launch timing.
+
+## Instrumentation
+
+`LaunchSequenceTest` is the repeatable half of this, and the half that belongs in
+CI: it checks that the bottom bar is not granted to HOME while the splash still
+has a view, and that the live theme does not carry `windowDisablePreview`.
+
+```bash
+ANDROID_SERIAL=emulator-5554 ./gradlew connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=com.example.musicplayerapp.LaunchSequenceTest
+```
+
+Run it on its own or with `RandomWindowBackgroundTest`, not inside a full
+`connectedDebugAndroidTest`: the splash hands over on a real playlist fetch, and a
+device still busy from another class's twenty launches can miss the budget. That
+shows up as a skipped test, never as a silent pass.
 
 ## Caveat on the timings
 

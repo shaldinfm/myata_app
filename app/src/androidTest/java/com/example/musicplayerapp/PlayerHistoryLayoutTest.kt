@@ -32,17 +32,16 @@ import kotlin.math.roundToInt
  *
  *   17  padding   32  heading   16  gap   row x3   16  gap   54  button   17
  *
- *      13  row padding   42  time (START)   12   40x40 r6 art   12   text
+ *      13 across / 17 down  row padding   42  time (START)   12   40x40 r6 art   12   text
  *
  * The row carries no service actions: the owner-confirmed FINAL reference is
  * time -> artwork -> title/artist and nothing else. With nothing under the text,
- * one-line content measures 66 - 13 + 40 + 13 - and three rows and a button make
- * 350. That the row holds no hidden or reserved space for the removed actions is
- * asserted, not assumed. Why those are not the frozen 74 and 374 is the last of
- * the deliberate divergences listed below.
+ * one-line content measures the frozen 74 - 17 + 40 + 17 - and three rows and a
+ * button make the frozen 374. That the row holds no hidden or reserved space for
+ * the removed actions is asserted, not assumed.
  *
- * Two things here are deliberately NOT the frozen numbers, and both are asserted
- * as such rather than skipped:
+ * Four things here are deliberately NOT the frozen mock, and each is asserted as
+ * such rather than skipped:
  *
  *  - **Row height is a floor, not a fix.** 74 is the height of the mock's one-line
  *    title over its one-line artist. Real metadata wraps, and the row is required
@@ -62,12 +61,13 @@ import kotlin.math.roundToInt
  *    of the cover. By owner decision the first line and the cover's top edge now
  *    share a y at every line count.
  *
- *  - **The row is 66 and the section 350, not the frozen 74 and 374.** Owner
- *    intent is that the normal one-line title over one-line artist reads inside
- *    the cover, so the text block is 40 rather than 48: the title on a 22 line and
- *    the artist on an 18, both local to this surface and both the font's own
- *    natural line rather than the Figma leading. Content is then max(40, 40) = 40
- *    and the row 13 + 40 + 13. Nothing is padded to hold the old number.
+ *  - **The row's 74 is spent as 17 + 40 + 17, not the mock's 13 + 48 + 13.**
+ *    Owner intent is that the normal one-line title over one-line artist reads
+ *    inside the cover, so the text block is 40 rather than 48: the title on a 22
+ *    line and the artist on an 18, both local to this surface and both the font's
+ *    own natural line rather than the Figma leading. The row's vertical padding
+ *    takes up the other 8, which also puts the cover back on the mock's y=17 and
+ *    the timestamp on its y=27. Row and section heights are the frozen ones.
  */
 @RunWith(AndroidJUnit4::class)
 class PlayerHistoryLayoutTest {
@@ -173,9 +173,9 @@ class PlayerHistoryLayoutTest {
             }
 
             // The frozen 74: 13 + 48 + 13, with nothing under the text.
-            // 66, not the frozen 74: the text block is 40 to read inside the 40
-            // cover, so content is 40 rather than 48. See the layout's Height note.
-            expect(where, "row height (one-line content)", row.height, dp(66), tolerance = dp(1.5f))
+            // The frozen 74, spent as 17 + 40 + 17 rather than the mock's
+            // 13 + 48 + 13. See the layout's Height note.
+            expect(where, "row height (one-line content)", row.height, dp(74), tolerance = dp(1.5f))
             expect(where, "time x in row", leftIn(time, row), dp(13))
             expect(where, "time width", time.width, dp(42f))
             // START aligned inside its fixed 42, by owner correction: the text
@@ -210,8 +210,10 @@ class PlayerHistoryLayoutTest {
                 topIn(title, row), topIn(art, row).toFloat(), tolerance = dp(1f),
             )
             // The cover is at the top of the content, not floated in the middle of
-            // it: 13 of row padding and nothing else above it.
-            expect(where, "artwork y in row", topIn(art, row), dp(13), tolerance = dp(1.5f))
+            // it - and that top is the mock's own y=17, because the row's vertical
+            // padding is 17. The cover has not moved from where the frozen frame
+            // draws it; the text came down to meet it.
+            expect(where, "artwork y in row", topIn(art, row), dp(17), tolerance = dp(1.5f))
 
             // The title and artist boxes abut, with no gap between them.
             expect(where, "artist follows title", topIn(artist, row), (topIn(title, row) + title.height).toFloat())
@@ -240,7 +242,7 @@ class PlayerHistoryLayoutTest {
             // be: the row ends at the artist's own bottom plus the row's padding.
             expect(
                 where, "row ends at the text, no reserved line below it",
-                row.height - rectIn(artist, row).bottom, dp(13), tolerance = dp(1.5f),
+                row.height - rectIn(artist, row).bottom, dp(17), tolerance = dp(1.5f),
             )
 
             noOverlap(where, "time", time, "artwork", art, row)
@@ -309,19 +311,18 @@ class PlayerHistoryLayoutTest {
              * This is the page the frozen frame draws and not the three-entry
              * one: it shows three rows with "Показать ещё" under them, which
              * means there is a fourth entry behind it. A history of exactly three
-             * hides the button and the section is 24 shorter - the same numbers,
-             * one part fewer.
+             * hides the button and the section is 304 - the same numbers, one
+             * part fewer.
              *
-             * Nothing is pinned. It is 17 + 32 + 16 + 3x66 + 16 + 54 + 17 = 350,
-             * every term the frozen one except the row: the row is 66 rather than
-             * the mock's 74 because its text block is now 40, to read inside the
-             * 40 cover, instead of the mock's 48. Three rows carry that 8 three
-             * times, so the section is 350 and the three-entry page 280. The
-             * layout's Height note carries the reasoning; this is the arithmetic.
+             * Nothing is pinned. It is 17 + 32 + 16 + 3x74 + 16 + 54 + 17 = 374,
+             * every term the frozen one including the row: the row's text block is
+             * 40 rather than the mock's 48, but its vertical padding is 17 rather
+             * than 13, so the row is still 74 and the section is still the frozen
+             * figure.
              */
             if (widthDp == 390) {
-                expect(where, "section height, 3 rows + button", manySection.height, dp(350), tolerance = dp(2f))
-                expect(where, "section height with all of a 3-entry history up", section.height, dp(280), tolerance = dp(2f))
+                expect(where, "section height, 3 rows + button", manySection.height, dp(374), tolerance = dp(2f))
+                expect(where, "section height with all of a 3-entry history up", section.height, dp(304), tolerance = dp(2f))
             }
             if (manyMore.visibility != View.VISIBLE) {
                 findings += "$where: \"Показать ещё\" is hidden over a history of 30 with only " +

@@ -491,7 +491,23 @@
       section's empty and loading states reserve exactly the frozen band.
     -->
     <dimen name="player_history_row_height">74dp</dimen>
+    <!--
+      13 across, 17 down, and the split is what keeps the frozen row at 74 while
+      the text block inside it is 40 rather than the mock's 48.
+
+      The frozen mock spends its 74 as 13 + 48 + 13 and hides the cover being 8
+      shorter than the text by centring it, which put the cover at y=17 and the
+      timestamp at y=27. With the block at 40 those two would have risen to 13 and
+      23 and the row shrunk to 66. 17 down puts both back exactly where the mock
+      has them - cover 17, timestamp 27 - and the row back at 17 + 40 + 17 = 74, so
+      three rows and the button still make the frozen 374.
+
+      Horizontal stays 13: the row's across-the-page spec is 13 + 42 + 12 + 40 + 12
+      + text + 13 and none of it moves. Hence two dimens and four explicit padding
+      attributes on the row rather than one android:padding.
+    -->
     <dimen name="player_history_row_padding">13dp</dimen>
+    <dimen name="player_history_row_padding_vertical">17dp</dimen>
     <dimen name="player_history_row_gap">12dp</dimen>
     <!--
       42, not the frozen 38.98, because the frozen box cannot hold a real

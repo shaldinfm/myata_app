@@ -22,21 +22,24 @@
   untouched. Nothing is left behind here in their place: no hidden views, no
   reserved width beside the text, no reserved line beneath it.
 
-  **Height. The row is 66, not the frozen 74**, and that follows from owner intent
-  rather than from a spacing choice made here.
+  **Height. The row is the frozen 74, spent differently: 17 + 40 + 17.**
 
-  The frozen 74 is 13 + 48 + 13, where 48 is the title's 28 line over the artist's
-  20 - a text block 8 taller than the 40 cover beside it, which the mock hides by
-  centring the cover in it. Owner intent is that the normal one-line title over
-  one-line artist reads INSIDE the cover, with the artist's bottom about level with
-  the cover's. So the block is 40: the title on 22 and the artist on 18, the two
-  line heights local to this surface (see the dimens for where they come from).
-  Content is then max(40 cover, 40 text) = 40, and 13 + 40 + 13 = 66.
+  The mock spends the same 74 as 13 + 48 + 13, where 48 is the title's 28 line over
+  the artist's 20 - a text block 8 taller than the 40 cover beside it - and hides
+  the difference by centring the cover in the text. That centring is what put the
+  cover at y=17 and the timestamp at y=27, and it is what broke as soon as a title
+  wrapped.
 
-  Three rows and the button make 350 rather than the frozen 374 for the same
-  reason. Nothing here is padded to hold the old number: holding 74 would mean
-  raising the row's 13 to 17, which is a spacing change nobody asked for, and
-  re-opening the gap under the text that this row was explicitly built without.
+  Owner intent is that the normal one-line title over one-line artist reads INSIDE
+  the cover, artist's bottom level with the cover's. So the block is 40: the title
+  on a 22 line and the artist on an 18, both local to this surface (see the dimens
+  for where the two numbers come from and why they cannot clip).
+
+  A 40 block beside a 40 cover leaves the row's own padding to make up the 74, and
+  17 down is exactly what does it. It also puts the cover and the timestamp back on
+  the mock's own y - 17 and 27 - rather than 4 above them, which is why this is the
+  right way round: the text came down to the cover, the cover did not go up to the
+  text. Three rows and the button still make the frozen 374.
 
   Every vertical number is still a MINIMUM. The row grows when a title needs a
   second line and shrinks back when it does not.
@@ -63,7 +66,10 @@
     android:id="@+id/history_row"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="@dimen/player_history_row_padding">
+    android:paddingStart="@dimen/player_history_row_padding"
+    android:paddingTop="@dimen/player_history_row_padding_vertical"
+    android:paddingEnd="@dimen/player_history_row_padding"
+    android:paddingBottom="@dimen/player_history_row_padding_vertical">
 
     <!--
       `Container > Container > NN:NN`. Onest Regular 14/20 on `text_secondary` -

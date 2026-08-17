@@ -32,6 +32,32 @@ Last updated: 2026-08-08.
 - **Playback diagnostics are in `main`**: every playback decision is logged under one tag — `adb logcat | grep MyataPlayback`. This is what #15 will be diagnosed with.
 - **Phase 2 / 3.6.6 — not implemented.** Design source lives in `tools/figma-export/` (approved dark screens, light/dark semantic tokens, plugin sources, rendered previews). No Phase 2 code exists yet: the app is still Material Components (M2), XML Views, with no `values-night/` and no `dimens.xml`.
 - **Repository hygiene, needs owner decision**: `app/release/` and `app/src_backup_best_version/` are still tracked; no CI (build/lint on PRs); no release runbook.
+- **Startup performance — deferring the MediaController connection. FUTURE, deliberately not done.**
+  `StreamsViewModel.init` calls `setupMediaController()`, which binds to the
+  in-process `MediaPlayerService`; that binding creates the service, and its
+  `onCreate` builds the whole ExoPlayer stack — `DefaultLoadControl`,
+  `AudioAttributes`, the OkHttp data source, `ExoPlayer.Builder`, session and
+  notification provider — synchronously on the main thread, between
+  `activityResume` and the first drawn frame. Traced at **447ms** on a debug APK
+  with no dexopt and **105ms** with dex verified at install
+  ([`tools/qa/splash/`](../tools/qa/splash/)).
+  It is the only app-controlled main-thread blocker before first frame, and it was
+  **not** changed in PR #53 by owner decision: it is 3-12% of a launch whose cost
+  is dominated by debug/emulator class loading, and it touches the playback and
+  session-restoration ordering that CLAUDE.md flags as fragile. Any attempt needs
+  its own plan and a re-run of the launch-with-surviving-playback checks.
+- **Cold-start timing must be re-measured on a release build before any startup work. RC/release gate.**
+  Every number recorded so far is from a `debuggable` debug APK on a software-GL
+  emulator, and that is not a startup measurement. Two findings make it
+  unusable as a baseline: `adb install -r` leaves the app at
+  `[status=run-from-apk]` with no dexopt, which alone cost **~1.7s of a ~3.9s
+  launch** (median 3939ms un-dexopted vs 2222ms verified, 7 and 6 cold launches);
+  and ART refuses to AOT-compile a debuggable app at all — a forced
+  `compile -m speed` stopped at `verify`. A release build additionally gets R8
+  shrinking, which cuts the class graph that dominates `bindApplication`.
+  **Decide whether startup optimisation is required only after measuring a
+  release / non-debuggable build on a real device.** Owner action: agents cannot
+  run `assembleRelease`.
 
 ## Phase 2 / 3.6.6 scope (agreed, not started)
 

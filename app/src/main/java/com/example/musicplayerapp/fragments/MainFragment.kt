@@ -112,7 +112,12 @@ class MainFragment : Fragment() {
 
         if (!vm.isInSplitMode.value!!){
             binding.playlists.visibility = View.VISIBLE
-            (activity as MainActivity).binding.bottomNavView.visibility = View.VISIBLE
+            // Ask the shell rather than poking the bar directly. onResume runs
+            // when the transaction commits, which on the very first launch is
+            // while the splash is still fading out - the shell holds the request
+            // until the splash view is actually gone. Every later visit to HOME
+            // is unaffected: there is no splash by then, so this is immediate.
+            (activity as MainActivity).showBottomNav()
             binding.playlistString.visibility = View.VISIBLE
         }
         

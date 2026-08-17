@@ -156,6 +156,10 @@ dependencies {
     implementation("androidx.navigation:navigation-ui-ktx:2.8.9")
 
     implementation 'androidx.core:core-ktx:1.13.1'
+    // The Android 12 splash screen, back-ported. One theme then drives both the
+    // platform SplashScreen on 31+ and an equivalent starting window on 24-30,
+    // which is what removes the launch dead time on every supported API level.
+    implementation 'androidx.core:core-splashscreen:1.0.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'com.google.android.material:material:1.12.0'
     

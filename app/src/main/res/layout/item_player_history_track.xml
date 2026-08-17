@@ -28,14 +28,26 @@
   With the service line gone, one-line content measures the frozen 74 again, and
   three rows and a button make the frozen 374.
 
-  No maxLines and no ellipsis, which is the standing owner decision for History
-  rows recorded on item_history_track.xml: a long Russian title adds a line
-  rather than losing its end. The row is the thing that gives.
+  The title takes at most two lines and ellipsizes at the end after that, by owner
+  decision. That is deliberately NOT what item_history_track.xml does: the History
+  bottom sheet keeps the older "add a line rather than lose the end" rule, and it
+  is unchanged. The two surfaces differ on purpose - the inline section on PLAYER
+  holds three rows inside a fixed card, so an unbounded title pushes the rest of
+  the card down. The artist is not capped either way.
 
-  **Alignment.** Time and artwork are centred against each other, and the artwork
-  is centred against the text block - the frozen time box sits at y=14 in a 48
-  content row with height 20, and the artwork at y=4 with height 40, both exactly
-  centred - so they stay centred as the row grows.
+  **Alignment.** The text block is TOP-aligned to the artwork, not centred against
+  it: the title's first line and the cover's top edge start on the same y, and the
+  artist sits directly under the title. The artwork is pinned to the top of the
+  content for the same reason.
+
+  This replaces centring the artwork against the text block. Centring is stable
+  only while the text is exactly one line taller than the cover, which is the one
+  case the frozen mock draws; the moment a title wraps, the cover slides down by
+  half the added line - 18 at two lines - and the title's first line no longer has
+  anything to do with the top of the cover. The cost of top-aligning is that the
+  cover and the time sit 4 higher than the frozen y=4 on a one-line row, where the
+  mock centred a 40 cover in a 48 text block. The text itself does not move, and
+  the row is still 74.
 -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -78,8 +90,9 @@
       app's single source of truth for artwork, and already the ViewModel's - and
       the plate is what shows until it arrives, or for good if nothing is found.
 
-      Centred against the text block rather than pinned to the top, which puts it
-      at the frozen y=4 of a 48 content row and keeps it centred as the row grows.
+      Pinned to the top of the content, so the title's first line can align to its
+      top edge. It had a bottom constraint to tv_artist, which centred it in the
+      text block and slid it down as the title wrapped.
     -->
     <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/artwork"
@@ -89,9 +102,8 @@
         android:background="@drawable/bg_player_history_artwork"
         android:contentDescription="@string/player_history_artwork"
         android:scaleType="centerCrop"
-        app:layout_constraintBottom_toBottomOf="@id/tv_artist"
         app:layout_constraintStart_toEndOf="@id/tv_time"
-        app:layout_constraintTop_toTopOf="@id/tv_title"
+        app:layout_constraintTop_toTopOf="parent"
         app:shapeAppearanceOverlay="@style/ShapeAppearance.Myata.PlayerHistoryArtwork" />
 
     <!--
@@ -112,12 +124,14 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/player_history_row_gap"
+        android:ellipsize="end"
+        android:maxLines="2"
         android:minHeight="@dimen/player_history_title_height"
         android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.17_28"
         android:textColor="@color/text_primary"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@id/artwork"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toTopOf="@id/artwork"
         tools:text="MEET ME IN LOVE" />
 
     <TextView

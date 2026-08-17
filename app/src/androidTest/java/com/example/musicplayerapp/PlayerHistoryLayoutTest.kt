@@ -52,6 +52,16 @@ import kotlin.math.roundToInt
  *    figures and its digits are proportional, so the frozen box fitted some
  *    clock times and clipped others; 42 holds all 1440, measured through the
  *    view's own paint. Everything after the time therefore sits 3.02 further in.
+ *
+ *  - **The text block is top-aligned to the artwork, not centred against it.**
+ *    The mock centres a 40 cover in a 48 text block, which puts it at y=4 - but
+ *    that only holds while the text is exactly one line taller than the cover.
+ *    A wrapped title slid the cover down by half the added line, and the title's
+ *    first line stopped having anything to do with the top of the cover. By owner
+ *    decision the first line and the cover's top edge now share a y at every line
+ *    count, which costs 4 on a one-line row and is asserted as such below. The
+ *    title is capped at two lines and ellipsizes after that; the artist is not
+ *    capped, and must still never ellipsize.
  */
 @RunWith(AndroidJUnit4::class)
 class PlayerHistoryLayoutTest {
@@ -182,6 +192,18 @@ class PlayerHistoryLayoutTest {
                 topIn(time, row) + time.height / 2f, topIn(art, row) + art.height / 2f,
                 tolerance = dp(1.5f),
             )
+
+            // The title's first line starts at the cover's top edge. Asserted on a
+            // one-line row as well as the wrapped one below, because the defect
+            // this replaces was invisible at one line: centring a 40 cover in a 48
+            // text block is only 4 out, and it is the wrapped row that shows it.
+            expect(
+                where, "title top aligned to artwork top",
+                topIn(title, row), topIn(art, row).toFloat(), tolerance = dp(1f),
+            )
+            // The cover is at the top of the content, not floated in the middle of
+            // it: 13 of row padding and nothing else above it.
+            expect(where, "artwork y in row", topIn(art, row), dp(13), tolerance = dp(1.5f))
 
             // The title and artist boxes abut, as the frozen 0..28 and 28..48 do.
             expect(where, "artist follows title", topIn(artist, row), (topIn(title, row) + title.height).toFloat())
@@ -321,17 +343,37 @@ class PlayerHistoryLayoutTest {
                 findings += "$where: the row stayed at ${longRow.height}px under long metadata " +
                     "against ${row.height}px for one line; rows must grow rather than truncate"
             }
-            // The owner decision on History rows is no ellipsis at all: a long
-            // title adds a line and keeps its end.
-            for ((view, name) in listOf(longTitleView to "long title", longArtistView to "long artist")) {
-                val layout = view.layout ?: continue
-                for (line in 0 until layout.lineCount) {
-                    if (layout.getEllipsisCount(line) > 0) {
-                        findings += "$where: the $name is ellipsized; History rows do not truncate"
-                        break
-                    }
+            // The title is capped at two lines. A 42-character Russian name does
+            // not fit two lines of a ~192 column, so on this row the cap has to be
+            // doing something: two lines exactly, and an ellipsis on the last one.
+            if (longTitleView.lineCount > 2) {
+                findings += "$where: the long title is on ${longTitleView.lineCount} lines; " +
+                    "the title is capped at 2"
+            }
+            longTitleView.layout?.let { l ->
+                if ((0 until l.lineCount).none { l.getEllipsisCount(it) > 0 }) {
+                    findings += "$where: the long title neither fits nor ellipsizes - " +
+                        "it is losing its end silently"
                 }
             }
+            // The artist is NOT capped, and must never ellipsize: only the title
+            // changed, and this is what keeps that true.
+            longArtistView.layout?.let { l ->
+                if ((0 until l.lineCount).any { l.getEllipsisCount(it) > 0 }) {
+                    findings += "$where: the long artist is ellipsized; only the title truncates"
+                }
+            }
+            // The alignment fix has to hold when the title wraps - that is the case
+            // it exists for.
+            expect(
+                where, "wrapped title top aligned to artwork top",
+                topIn(longTitleView, longRow), topIn(longArt, longRow).toFloat(), tolerance = dp(1f),
+            )
+            expect(
+                where, "wrapped row: artist follows title",
+                topIn(longArtistView, longRow),
+                (topIn(longTitleView, longRow) + longTitleView.height).toFloat(),
+            )
             noClipping(longTitleView, "$where/long title")
             noClipping(longArtistView, "$where/long artist")
             noOverlap(where, "long title", longTitleView, "long artist", longArtistView, longRow)

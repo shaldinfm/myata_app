@@ -65,9 +65,12 @@
       equivalent starting window drawn from the same colour and icon on 24-30.
       Nothing here is a new design. The background is the `background` semantic
       role, already day/night and already what the app shell draws underneath
-      every screen; the icon is the app's own launcher foreground, which is a
-      vector and is already authored inside the adaptive safe zone, so the
-      circular splash mask cannot clip it.
+      every screen; the icon is ic_splash_mark, which is the app's own mark with
+      the launcher plate taken off - see that file for what was removed and why.
+
+      ic_launcher_foreground is deliberately NOT used here. It carries the yellow
+      radial-gradient plate, which filled 63.5% of its viewport and rendered at
+      184dp: a second branded splash screen rather than a bridge to one.
 
       postSplashScreenTheme hands the activity back to AppTheme the moment
       installSplashScreen() runs, before super.onCreate, so the live theme is
@@ -79,7 +82,7 @@
     -->
     <style name="Theme.Myata.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_mark</item>
         <item name="postSplashScreenTheme">@style/AppTheme</item>
     </style>
 

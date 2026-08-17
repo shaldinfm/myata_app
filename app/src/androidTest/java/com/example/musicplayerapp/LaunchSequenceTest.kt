@@ -61,10 +61,13 @@ class LaunchSequenceTest {
     private class Recorder : FragmentManager.FragmentLifecycleCallbacks() {
         val splashViewCreated = CountDownLatch(1)
         val homeResumed = CountDownLatch(1)
+        val homeFirstFrame = CountDownLatch(1)
 
         @Volatile var splashHasView = false
         /** Non-null only if the invariant was actually broken. */
         @Volatile var violation: String? = null
+        /** Non-null only if HOME's first presented frame had no bottom bar. */
+        @Volatile var firstFrameViolation: String? = null
 
         override fun onFragmentViewCreated(
             fm: FragmentManager, f: Fragment, v: View, s: Bundle?
@@ -73,6 +76,33 @@ class LaunchSequenceTest {
                 splashHasView = true
                 splashViewCreated.countDown()
             }
+            if (f !is MainFragment) return
+
+            // The other half of the contract: HOME's first presented frame must
+            // already carry the bar.
+            //
+            // MainActivity registered its own callbacks in onCreate, which is
+            // before this test's registration at Stage.CREATED, so its pre-draw
+            // listener is added to the same observer first and runs first in the
+            // same pass. This therefore reads the state MainActivity has already
+            // applied for that frame - not the state one frame behind it.
+            val root = v
+            val observer = root.viewTreeObserver
+            observer.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    if (root.width == 0 || root.height == 0 || root.alpha < 1f) return true
+                    val activity = f.activity as? MainActivity
+                    if (activity != null &&
+                        activity.binding.bottomNavView.visibility != View.VISIBLE
+                    ) {
+                        firstFrameViolation = "HOME's first presented frame had no bottom " +
+                                "navigation bar (alpha=${root.alpha}, ${root.width}x${root.height})"
+                    }
+                    homeFirstFrame.countDown()
+                    if (observer.isAlive) observer.removeOnPreDrawListener(this)
+                    return true
+                }
+            })
         }
 
         override fun onFragmentViewDestroyed(fm: FragmentManager, f: Fragment) {
@@ -96,7 +126,7 @@ class LaunchSequenceTest {
     }
 
     @Test
-    fun bottomNavIsNotGrantedToHomeWhileTheSplashIsStillOnScreen() {
+    fun bottomNavIsHiddenOverTheSplashAndPresentOnHomesFirstFrame() {
         val recorder = Recorder()
 
         val callback = ActivityLifecycleCallback { activity: Activity, stage: Stage ->
@@ -128,9 +158,16 @@ class LaunchSequenceTest {
                         "load did not finish, so the splash never handed over",
                 recorder.homeResumed.await(LAUNCH_BUDGET_SECONDS, TimeUnit.SECONDS)
             )
+            // Inside the scenario, not after it: once `use` closes, the activity is
+            // destroyed and a frame that has not happened yet never will.
+            org.junit.Assume.assumeTrue(
+                "HOME never presented a frame within ${LAUNCH_BUDGET_SECONDS}s",
+                recorder.homeFirstFrame.await(LAUNCH_BUDGET_SECONDS, TimeUnit.SECONDS)
+            )
         }
 
         recorder.violation?.let { org.junit.Assert.fail(it) }
+        recorder.firstFrameViolation?.let { org.junit.Assert.fail(it) }
     }
 
     /**

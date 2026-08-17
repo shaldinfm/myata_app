@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Radio Myata mark on its own, for the system splash.
+
+  Same geometry as ic_launcher_foreground, with two of its eight paths removed and
+  nothing added:
+
+    dropped   the radial-gradient rounded square - the yellow launcher plate;
+    dropped   the 15% white sheen, which is drawn on that plate's shape and is
+              meaningless without it;
+    kept      the green fill, its outline and the four shading paths, unchanged.
+
+  So this is not a redesign. It is the existing mark with its plate taken off,
+  which is what the launcher plate was: a container for the icon grid, not part of
+  the mark.
+
+  Sizing. The framework maps this 108 viewport onto the splash icon box, which
+  measured ~290dp on both API levels, so apparent size is set by how much of the
+  viewport the art occupies - exactly the adaptive-icon contract, and the reason
+  the plate rendered at 184dp: it filled 63.5% of the viewport.
+
+  The group below is ic_launcher_foreground's own transform with the scale reduced
+  and the translation recomputed to keep the mark centred:
+
+    scale       0.5030783 -> 0.3128
+    translate   19.68 -> 32.05, 32.25
+
+  The mark's own bounds are ~107.1 x 89.8 in the group's units, so 0.3128 puts it
+  at ~33.5 x 28.1 of 108, or 31% x 26% of the viewport - about 90 x 75dp rendered.
+  Verified on device rather than assumed; the measured result is in
+  tools/qa/splash/launch-sequence.json.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+  <group
+      android:scaleX="0.3128"
+      android:scaleY="0.3128"
+      android:translateX="32.05"
+      android:translateY="32.25">
+    <path
+        android:pathData="M63.62,83.35l-0.46,3.24l-1.55,-2.88l-10.78,-20.02l-33.07,0l2.67,49.38l19.2,-18.91l0.76,-0.75l0.75,0.75l18.25,18.25l23.31,-23.32l0.76,-0.76l0.76,0.76l17.52,17.56l9.16,-72.05l0.13,-0.93l0.94,0l3.17,0l1,-7.99l-44.42,0l-8.1,57.67z"
+        android:fillColor="#2fb56a"/>
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M70.79,24.61 L63.91,75 58.43,64.71l-7,-2.1L16.63,62.61l2.85,51.84h8L44.17,99.14l14.89,14.53h8.27l20,-20L88.51,95 102,108.69l7.74,-0.45L117.23,38 122,37.9l1.74,-10.54 -6.38,-2.75ZM115.14,33.67L111,33.67l-0.13,0.93 -9.16,72.05L84.22,89.09l-0.76,-0.76 -0.76,0.76L59.39,112.41 41.14,94.16l-0.75,-0.75 -0.76,0.74L20.42,113.07 17.76,63.69L50.83,63.69l10.78,20 1.55,2.88 0.46,-3.24 8.1,-57.67h44.41Z"/>
+    <path
+        android:pathData="M117.58,25.84l-1.09,9.15l-4.44,0l-9.11,72.12l6.11,-0.36l7.42,-69.82l4.75,-0.03l1.44,-8.62l-5.08,-2.44z"
+        android:strokeAlpha="0.84"
+        android:fillColor="#2fb56a"
+        android:fillAlpha="0.84"/>
+    <path
+        android:pathData="M27.51,113.09l-5.81,-0.1l18.6,-17.97l3.21,3.17l-16,14.9z"
+        android:strokeAlpha="0.84"
+        android:fillColor="#2fb56a"
+        android:fillAlpha="0.84"/>
+    <path
+        android:pathData="M67,112.81l-6.92,0l23.34,-23.15l3.21,3.2l-19.63,19.95z"
+        android:strokeAlpha="0.84"
+        android:fillColor="#2fb56a"
+        android:fillAlpha="0.84"/>
+    <path
+        android:pathData="M57.99,65.4l-6.14,-1.58l10.9,19.78l0.95,-7.41l-5.71,-10.79z"
+        android:strokeAlpha="0.84"
+        android:fillColor="#2fb56a"
+        android:fillAlpha="0.84"/>
+  </group>
+</vector>

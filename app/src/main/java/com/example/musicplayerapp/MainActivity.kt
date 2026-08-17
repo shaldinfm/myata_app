@@ -38,25 +38,53 @@ class MainActivity : AppCompatActivity() {
      * decides when it is allowed on screen. Destinations only state what they
      * want; [showBottomNav] applies it when it is safe to.
      *
-     * The two fields below exist because a destination asks too early. The splash
-     * exits with a 250ms crossfade, and MainFragment.onResume runs when the
-     * transaction commits - at the start of that fade, with the splash artwork
-     * still at full opacity and HOME not drawn yet. Revealing the bar there put
-     * the migrated navigation bar on top of the un-migrated splash artwork for
-     * ~0.5-0.7s of every cold launch, on both API 24 and API 36.
+     * The gate exists because on the one edge out of the splash, a destination
+     * asks too early: MainFragment.onResume runs when the transaction commits,
+     * with the splash artwork still the only thing drawn. Revealing the bar there
+     * put the migrated bar on top of the un-migrated splash artwork for ~0.5-0.7s
+     * of every cold launch.
      *
-     * The signal used to unblock is [FragmentManager.FragmentLifecycleCallbacks]
-     * .onFragmentViewDestroyed for SplashFragment: the real end of that fade, the
-     * moment the splash view actually leaves the screen. Not a timer, and not a
-     * duration copied from the animation - if the animation is off, as it is
-     * under instrumentation, the callback simply arrives immediately.
+     * The signal is HOME's own first draw, taken from an
+     * [android.view.ViewTreeObserver.OnPreDrawListener] on its root. That is the
+     * frame in which HOME becomes the visible content, and it is safe by
+     * construction rather than by timing: HOME's root fills the window and paints
+     * `@color/background`, so once it draws opaque the splash behind it
+     * contributes no pixels at all. The listener therefore both conditions are
+     * satisfied in the same instant - the bar cannot land on the splash, and it
+     * cannot land a frame after HOME either.
+     *
+     * The first attempt used onFragmentViewDestroyed for the splash instead. That
+     * was the wrong event, and measurement is what showed it: HOME draws at
+     * alpha 1.0 immediately, but the splash's view lingered ~815ms behind it -
+     * invisible, occluded, and irrelevant - so the bar arrived that much after
+     * HOME. Waiting for the splash to be torn down was waiting for something the
+     * user cannot see.
+     *
+     * `alpha >= 1f` is still required before revealing. HOME is not faded in on
+     * any device measured here, but if a transition ever does fade it, a
+     * translucent HOME would let the splash through and the bar would be back on
+     * top of it. The check costs nothing and removes that dependency.
      */
     private var splashHasView = false
     private var bottomNavRequested = false
+    private var homeFirstFrameListener: android.view.ViewTreeObserver.OnPreDrawListener? = null
 
     /**
-     * A destination asking for the bottom bar. Honoured now if the splash has
-     * already gone, remembered and honoured on its way out if it has not.
+     * The observer the listener was actually registered on, kept so it can be
+     * removed from that one. `view.viewTreeObserver` is only the same object while
+     * the view stays attached, so re-reading it to unregister is a leak waiting
+     * for the view to be detached first.
+     */
+    private var homeFirstFrameObserver: android.view.ViewTreeObserver? = null
+
+    /**
+     * A destination asking for the bottom bar.
+     *
+     * Applied immediately whenever no splash view exists, which is every path
+     * except the first launch - a warm launch, a relaunch after process death,
+     * and every later visit to HOME, COLLECTION or ABOUT US. On the splash edge it
+     * is remembered, and [armHomeFirstFrameReveal] applies it with HOME's first
+     * frame.
      *
      * Hiding needs no gate and stays direct: hiding while the splash is up is
      * what the splash wants anyway.
@@ -66,6 +94,40 @@ class MainActivity : AppCompatActivity() {
         if (!splashHasView) {
             binding.bottomNavView.visibility = android.view.View.VISIBLE
         }
+    }
+
+    /**
+     * Reveal the bar in the traversal that first draws [homeRoot] opaque.
+     *
+     * Only armed while the splash still has a view, so it costs nothing on the
+     * paths that never see a splash.
+     */
+    private fun armHomeFirstFrameReveal(homeRoot: android.view.View) {
+        disarmHomeFirstFrameReveal()
+        val observer = homeRoot.viewTreeObserver
+        val listener = object : android.view.ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                if (homeRoot.width == 0 || homeRoot.height == 0 || homeRoot.alpha < 1f) {
+                    // Not yet the frame that presents HOME. Let it draw and look again.
+                    return true
+                }
+                if (bottomNavRequested) {
+                    binding.bottomNavView.visibility = android.view.View.VISIBLE
+                }
+                disarmHomeFirstFrameReveal()
+                return true
+            }
+        }
+        homeFirstFrameListener = listener
+        homeFirstFrameObserver = observer
+        observer.addOnPreDrawListener(listener)
+    }
+
+    private fun disarmHomeFirstFrameReveal() {
+        val listener = homeFirstFrameListener ?: return
+        homeFirstFrameObserver?.takeIf { it.isAlive }?.removeOnPreDrawListener(listener)
+        homeFirstFrameListener = null
+        homeFirstFrameObserver = null
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -246,14 +308,26 @@ class MainActivity : AppCompatActivity() {
                     if (f is com.example.musicplayerapp.fragments.SplashFragment) {
                         splashHasView = true
                     }
+                    // Only on the edge out of the splash. Everywhere else
+                    // showBottomNav() is already immediate, and arming here would
+                    // add a pre-draw listener to every visit to HOME for nothing.
+                    if (f is com.example.musicplayerapp.fragments.MainFragment && splashHasView) {
+                        armHomeFirstFrameReveal(v)
+                    }
                 }
 
                 override fun onFragmentViewDestroyed(fm: FragmentManager, f: Fragment) {
                     if (f is com.example.musicplayerapp.fragments.SplashFragment) {
                         splashHasView = false
+                        // Backstop. HOME's first frame is what normally reveals the
+                        // bar; this only matters if HOME somehow never draws opaque,
+                        // in which case a late bar still beats no bar.
                         if (bottomNavRequested) {
                             binding.bottomNavView.visibility = android.view.View.VISIBLE
                         }
+                    }
+                    if (f is com.example.musicplayerapp.fragments.MainFragment) {
+                        disarmHomeFirstFrameReveal()
                     }
                 }
             },

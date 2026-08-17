@@ -91,9 +91,13 @@ class RandomWindowBackgroundTest {
     }
 
     /**
-     * AppTheme carries windowFullscreen, windowIsTranslucent and
-     * windowDisablePreview; AppTheme0..9 must not, or reparenting them would have
-     * silently changed window behaviour.
+     * AppTheme carries windowFullscreen and windowIsTranslucent; AppTheme0..9
+     * must not, or reparenting them would have silently changed window behaviour.
+     *
+     * windowDisablePreview is checked too, and is now expected to be absent
+     * everywhere: the launch-experience fix took it off AppTheme, which is what
+     * lets the system draw a starting window at all. If it ever comes back on any
+     * of these ten it would suppress the splash again from the runtime theme.
      */
     @Test
     fun theTenThemesDidNotInheritAppThemeWindowFlags() {

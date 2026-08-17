@@ -9,8 +9,11 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.LayoutInflaterCompat
 import androidx.databinding.DataBindingUtil
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -29,6 +32,41 @@ class MainActivity : AppCompatActivity() {
     lateinit var viewModel: StreamsViewModel
     lateinit var binding: ActivityMainBinding
     private var dismissReceiver: BroadcastReceiver? = null
+
+    /**
+     * The bottom bar belongs to the shell, not to any destination, so the shell
+     * decides when it is allowed on screen. Destinations only state what they
+     * want; [showBottomNav] applies it when it is safe to.
+     *
+     * The two fields below exist because a destination asks too early. The splash
+     * exits with a 250ms crossfade, and MainFragment.onResume runs when the
+     * transaction commits - at the start of that fade, with the splash artwork
+     * still at full opacity and HOME not drawn yet. Revealing the bar there put
+     * the migrated navigation bar on top of the un-migrated splash artwork for
+     * ~0.5-0.7s of every cold launch, on both API 24 and API 36.
+     *
+     * The signal used to unblock is [FragmentManager.FragmentLifecycleCallbacks]
+     * .onFragmentViewDestroyed for SplashFragment: the real end of that fade, the
+     * moment the splash view actually leaves the screen. Not a timer, and not a
+     * duration copied from the animation - if the animation is off, as it is
+     * under instrumentation, the callback simply arrives immediately.
+     */
+    private var splashHasView = false
+    private var bottomNavRequested = false
+
+    /**
+     * A destination asking for the bottom bar. Honoured now if the splash has
+     * already gone, remembered and honoured on its way out if it has not.
+     *
+     * Hiding needs no gate and stays direct: hiding while the splash is up is
+     * what the splash wants anyway.
+     */
+    fun showBottomNav() {
+        bottomNavRequested = true
+        if (!splashHasView) {
+            binding.bottomNavView.visibility = android.view.View.VISIBLE
+        }
+    }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
@@ -70,6 +108,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Before super.onCreate, and before the inflater factory below, because
+        // this is what swaps the activity off the launch theme and onto AppTheme
+        // (Theme.Myata.Splash declares it as postSplashScreenTheme). After this
+        // line the live theme is what it has always been, and the random
+        // AppTheme0..9 below still applies on top of it.
+        //
+        // No setKeepOnScreenCondition. The splash is dismissed by the first frame
+        // the app draws; nothing is held back to show branding for longer.
+        installSplashScreen()
+
         // Before super.onCreate, and it has to be: AppCompat installs its own
         // inflater factory during onCreate and skips it if one is already set, so
         // this is the only point at which ours can wrap it rather than lose to it.
@@ -181,7 +229,38 @@ class MainActivity : AppCompatActivity() {
         // Centralized Navigation Handling with proper back stack management
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.navHostFragment) as androidx.navigation.fragment.NavHostFragment
         val navController = navHostFragment.navController
-        
+
+        // Registered here, inside onCreate, which is before the NavHost's own
+        // child fragments reach onCreateView - those run when the fragment
+        // manager moves to STARTED, after this method returns. So the splash's
+        // view is always seen being created, and never missed.
+        //
+        // A warm launch and a launch after process death never create a
+        // SplashFragment at all - the navigation state is restored past it - so
+        // splashHasView simply stays false there and the bar is never held back.
+        navHostFragment.childFragmentManager.registerFragmentLifecycleCallbacks(
+            object : FragmentManager.FragmentLifecycleCallbacks() {
+                override fun onFragmentViewCreated(
+                    fm: FragmentManager, f: Fragment, v: android.view.View, s: Bundle?
+                ) {
+                    if (f is com.example.musicplayerapp.fragments.SplashFragment) {
+                        splashHasView = true
+                    }
+                }
+
+                override fun onFragmentViewDestroyed(fm: FragmentManager, f: Fragment) {
+                    if (f is com.example.musicplayerapp.fragments.SplashFragment) {
+                        splashHasView = false
+                        if (bottomNavRequested) {
+                            binding.bottomNavView.visibility = android.view.View.VISIBLE
+                        }
+                    }
+                }
+            },
+            false
+        )
+
+
         val navOptions = androidx.navigation.NavOptions.Builder()
             .setPopUpTo(R.id.home, false) // Pop up to home, but don't pop home itself
             .setLaunchSingleTop(true)     // Don't create multiple instances of the same fragment

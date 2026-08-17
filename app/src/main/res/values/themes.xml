@@ -51,6 +51,45 @@
         <item name="android:statusBarColor">@color/tv_window</item>
     </style>
 
+    <!--
+      The launch theme, and the only theme the system reads before the app runs.
+
+      It exists because AppTheme carried android:windowDisablePreview="true",
+      which does exactly what it says: no starting window on 24-30, and no
+      platform splash on 31+. The measured cost was ~4.7s of untouched launcher
+      after the tap on a cold start and ~6.8s after process death, with no
+      acknowledgement of any kind - see docs/SPLASH-LAUNCH-AUDIT.md.
+
+      Theme.SplashScreen back-ports the Android 12 splash, so these three items
+      drive both paths from one place: the platform SplashScreen on 31+, and an
+      equivalent starting window drawn from the same colour and icon on 24-30.
+      Nothing here is a new design. The background is the `background` semantic
+      role, already day/night and already what the app shell draws underneath
+      every screen; the icon is the app's own launcher foreground, which is a
+      vector and is already authored inside the adaptive safe zone, so the
+      circular splash mask cannot clip it.
+
+      postSplashScreenTheme hands the activity back to AppTheme the moment
+      installSplashScreen() runs, before super.onCreate, so the live theme is
+      AppTheme + AppTheme0..9 exactly as it was before this change. Only the
+      window the system creates *before* the app has run is different.
+
+      No setKeepOnScreenCondition anywhere: the splash is dismissed by the first
+      frame the app draws, which is the whole point. Nothing waits for it.
+    -->
+    <style name="Theme.Myata.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/AppTheme</item>
+    </style>
+
+    <!--
+      android:windowDisablePreview is gone; Theme.Myata.Splash above is why.
+      windowIsTranslucent stays only because it is now inert: the system reads
+      translucency from the activity's manifest theme, which is the splash theme,
+      and a setTheme() after the window exists cannot make an opaque window
+      translucent. Removing it is a separate cleanup, not part of this fix.
+    -->
     <style name="AppTheme" parent="Theme.Myata.Base">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
@@ -58,7 +97,6 @@
         <item name="colorPrimary">@color/main_fragment</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowDisablePreview">true</item>
         <item name="android:windowIsTranslucent">true</item>
         <item name="colorSecondary">@color/teal_200</item>
         <item name="colorSecondaryVariant">@color/teal_700</item>

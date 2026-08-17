@@ -36,9 +36,10 @@ import kotlin.math.roundToInt
  *
  * The row carries no service actions: the owner-confirmed FINAL reference is
  * time -> artwork -> title/artist and nothing else. With nothing under the text,
- * one-line content measures the frozen 74 - 13 + 48 + 13 - and three rows and a
- * button make the frozen 374. That the row holds no hidden or reserved space for
- * the removed actions is asserted, not assumed.
+ * one-line content measures 66 - 13 + 40 + 13 - and three rows and a button make
+ * 350. That the row holds no hidden or reserved space for the removed actions is
+ * asserted, not assumed. Why those are not the frozen 74 and 374 is the last of
+ * the deliberate divergences listed below.
  *
  * Two things here are deliberately NOT the frozen numbers, and both are asserted
  * as such rather than skipped:
@@ -56,12 +57,17 @@ import kotlin.math.roundToInt
  *  - **The text block is top-aligned to the artwork, not centred against it.**
  *    The mock centres a 40 cover in a 48 text block, which puts it at y=4 - but
  *    that only holds while the text is exactly one line taller than the cover.
- *    A wrapped title slid the cover down by half the added line, and the title's
- *    first line stopped having anything to do with the top of the cover. By owner
- *    decision the first line and the cover's top edge now share a y at every line
- *    count, which costs 4 on a one-line row and is asserted as such below. The
- *    title is capped at two lines and ellipsizes after that; the artist is not
- *    capped, and must still never ellipsize.
+ *    A wrapped title slid the cover down by half the added line - 32 at three
+ *    lines - and the title's first line stopped having anything to do with the top
+ *    of the cover. By owner decision the first line and the cover's top edge now
+ *    share a y at every line count.
+ *
+ *  - **The row is 66 and the section 350, not the frozen 74 and 374.** Owner
+ *    intent is that the normal one-line title over one-line artist reads inside
+ *    the cover, so the text block is 40 rather than 48: the title on a 22 line and
+ *    the artist on an 18, both local to this surface and both the font's own
+ *    natural line rather than the Figma leading. Content is then max(40, 40) = 40
+ *    and the row 13 + 40 + 13. Nothing is padded to hold the old number.
  */
 @RunWith(AndroidJUnit4::class)
 class PlayerHistoryLayoutTest {
@@ -167,7 +173,9 @@ class PlayerHistoryLayoutTest {
             }
 
             // The frozen 74: 13 + 48 + 13, with nothing under the text.
-            expect(where, "row height (one-line content)", row.height, dp(74), tolerance = dp(1.5f))
+            // 66, not the frozen 74: the text block is 40 to read inside the 40
+            // cover, so content is 40 rather than 48. See the layout's Height note.
+            expect(where, "row height (one-line content)", row.height, dp(66), tolerance = dp(1.5f))
             expect(where, "time x in row", leftIn(time, row), dp(13))
             expect(where, "time width", time.width, dp(42f))
             // START aligned inside its fixed 42, by owner correction: the text
@@ -205,10 +213,28 @@ class PlayerHistoryLayoutTest {
             // it: 13 of row padding and nothing else above it.
             expect(where, "artwork y in row", topIn(art, row), dp(13), tolerance = dp(1.5f))
 
-            // The title and artist boxes abut, as the frozen 0..28 and 28..48 do.
+            // The title and artist boxes abut, with no gap between them.
             expect(where, "artist follows title", topIn(artist, row), (topIn(title, row) + title.height).toFloat())
-            atLeast(where, "title box", title.height, dp(28))
-            atLeast(where, "artist box", artist.height, dp(20))
+            atLeast(where, "title box", title.height, dp(22))
+            atLeast(where, "artist box", artist.height, dp(18))
+
+            // The whole point of the local line heights: on normal one-line-over-
+            // one-line metadata the text block reads inside the cover rather than
+            // hanging 8 below it. 22 + 18 = 40, the cover's own height, so the
+            // artist's bottom lands about level with the cover's bottom.
+            expect(
+                where, "one-line text block height", rectIn(artist, row).bottom - topIn(title, row),
+                dp(40), tolerance = dp(1.5f),
+            )
+            expect(
+                where, "artist bottom level with artwork bottom",
+                rectIn(artist, row).bottom, rectIn(art, row).bottom.toFloat(), tolerance = dp(1.5f),
+            )
+            // ...and the lines are not squeezed below what the font needs. Onest
+            // Regular measures 21.71dp at 17sp and 17.90dp at 14sp with font
+            // padding off, so 22 and 18 are floors, not choices with slack.
+            noClipping(title, "$where/title")
+            noClipping(artist, "$where/artist")
 
             // Nothing is reserved below the text where the service line used to
             // be: the row ends at the artist's own bottom plus the row's padding.
@@ -283,17 +309,19 @@ class PlayerHistoryLayoutTest {
              * This is the page the frozen frame draws and not the three-entry
              * one: it shows three rows with "Показать ещё" under them, which
              * means there is a fourth entry behind it. A history of exactly three
-             * hides the button and the section is 304 - the same numbers, one
-             * part fewer.
+             * hides the button and the section is 24 shorter - the same numbers,
+             * one part fewer.
              *
-             * Nothing is pinned. It is 17 + 32 + 16 + 3x74 + 16 + 54 + 17 = 374,
-             * every term the frozen one including the row: with the service
-             * actions gone the row is the mock's 74 again, so the section is the
-             * frozen figure rather than the 512 the extra line cost.
+             * Nothing is pinned. It is 17 + 32 + 16 + 3x66 + 16 + 54 + 17 = 350,
+             * every term the frozen one except the row: the row is 66 rather than
+             * the mock's 74 because its text block is now 40, to read inside the
+             * 40 cover, instead of the mock's 48. Three rows carry that 8 three
+             * times, so the section is 350 and the three-entry page 280. The
+             * layout's Height note carries the reasoning; this is the arithmetic.
              */
             if (widthDp == 390) {
-                expect(where, "section height, 3 rows + button", manySection.height, dp(374), tolerance = dp(2f))
-                expect(where, "section height with all of a 3-entry history up", section.height, dp(304), tolerance = dp(2f))
+                expect(where, "section height, 3 rows + button", manySection.height, dp(350), tolerance = dp(2f))
+                expect(where, "section height with all of a 3-entry history up", section.height, dp(280), tolerance = dp(2f))
             }
             if (manyMore.visibility != View.VISIBLE) {
                 findings += "$where: \"Показать ещё\" is hidden over a history of 30 with only " +
@@ -343,24 +371,15 @@ class PlayerHistoryLayoutTest {
                 findings += "$where: the row stayed at ${longRow.height}px under long metadata " +
                     "against ${row.height}px for one line; rows must grow rather than truncate"
             }
-            // The title is capped at two lines. A 42-character Russian name does
-            // not fit two lines of a ~192 column, so on this row the cap has to be
-            // doing something: two lines exactly, and an ellipsis on the last one.
-            if (longTitleView.lineCount > 2) {
-                findings += "$where: the long title is on ${longTitleView.lineCount} lines; " +
-                    "the title is capped at 2"
-            }
-            longTitleView.layout?.let { l ->
-                if ((0 until l.lineCount).none { l.getEllipsisCount(it) > 0 }) {
-                    findings += "$where: the long title neither fits nor ellipsizes - " +
-                        "it is losing its end silently"
-                }
-            }
-            // The artist is NOT capped, and must never ellipsize: only the title
-            // changed, and this is what keeps that true.
-            longArtistView.layout?.let { l ->
-                if ((0 until l.lineCount).any { l.getEllipsisCount(it) > 0 }) {
-                    findings += "$where: the long artist is ellipsized; only the title truncates"
+            // Neither is capped and neither ellipsizes: a long title adds a line
+            // and keeps its end, and the row grows to hold it.
+            for ((view, name) in listOf(longTitleView to "long title", longArtistView to "long artist")) {
+                val layout = view.layout ?: continue
+                for (line in 0 until layout.lineCount) {
+                    if (layout.getEllipsisCount(line) > 0) {
+                        findings += "$where: the $name is ellipsized; History rows do not truncate"
+                        break
+                    }
                 }
             }
             // The alignment fix has to hold when the title wraps - that is the case

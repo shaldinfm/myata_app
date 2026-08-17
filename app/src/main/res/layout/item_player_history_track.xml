@@ -22,32 +22,40 @@
   untouched. Nothing is left behind here in their place: no hidden views, no
   reserved width beside the text, no reserved line beneath it.
 
-  **Height.** 74 is 13 + 48 + 13, and the 48 is one line of the title's 28 over
-  one line of the artist's 20. Every vertical number here is a MINIMUM: the row
-  grows when a track name needs a second line and shrinks back when it does not.
-  With the service line gone, one-line content measures the frozen 74 again, and
-  three rows and a button make the frozen 374.
+  **Height. The row is 66, not the frozen 74**, and that follows from owner intent
+  rather than from a spacing choice made here.
 
-  The title takes at most two lines and ellipsizes at the end after that, by owner
-  decision. That is deliberately NOT what item_history_track.xml does: the History
-  bottom sheet keeps the older "add a line rather than lose the end" rule, and it
-  is unchanged. The two surfaces differ on purpose - the inline section on PLAYER
-  holds three rows inside a fixed card, so an unbounded title pushes the rest of
-  the card down. The artist is not capped either way.
+  The frozen 74 is 13 + 48 + 13, where 48 is the title's 28 line over the artist's
+  20 - a text block 8 taller than the 40 cover beside it, which the mock hides by
+  centring the cover in it. Owner intent is that the normal one-line title over
+  one-line artist reads INSIDE the cover, with the artist's bottom about level with
+  the cover's. So the block is 40: the title on 22 and the artist on 18, the two
+  line heights local to this surface (see the dimens for where they come from).
+  Content is then max(40 cover, 40 text) = 40, and 13 + 40 + 13 = 66.
+
+  Three rows and the button make 350 rather than the frozen 374 for the same
+  reason. Nothing here is padded to hold the old number: holding 74 would mean
+  raising the row's 13 to 17, which is a spacing change nobody asked for, and
+  re-opening the gap under the text that this row was explicitly built without.
+
+  Every vertical number is still a MINIMUM. The row grows when a title needs a
+  second line and shrinks back when it does not.
+
+  **No maxLines and no ellipsis.** A long title adds a line and keeps its end; the
+  row is the thing that gives. Same rule as item_history_track.xml, which is
+  unchanged.
 
   **Alignment.** The text block is TOP-aligned to the artwork, not centred against
   it: the title's first line and the cover's top edge start on the same y, and the
-  artist sits directly under the title. The artwork is pinned to the top of the
-  content for the same reason.
+  artist sits directly under the title with no gap. The artwork is pinned to the
+  top of the content for the same reason, so it stays with the first title line
+  however far the title wraps.
 
-  This replaces centring the artwork against the text block. Centring is stable
-  only while the text is exactly one line taller than the cover, which is the one
-  case the frozen mock draws; the moment a title wraps, the cover slides down by
-  half the added line - 18 at two lines - and the title's first line no longer has
-  anything to do with the top of the cover. The cost of top-aligning is that the
-  cover and the time sit 4 higher than the frozen y=4 on a one-line row, where the
-  mock centred a 40 cover in a 48 text block. The text itself does not move, and
-  the row is still 74.
+  This replaces centring the artwork against the text block. Centring was stable
+  only while the text was exactly one line taller than the cover, which is the one
+  case the frozen mock draws; the moment a title wrapped, the cover slid down by
+  half the added line - 32 at three lines, measured - and the title's first line
+  had nothing to do with the top of the cover.
 -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -124,8 +132,6 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/player_history_row_gap"
-        android:ellipsize="end"
-        android:maxLines="2"
         android:minHeight="@dimen/player_history_title_height"
         android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.17_28"
         android:textColor="@color/text_primary"

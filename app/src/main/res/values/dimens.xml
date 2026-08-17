@@ -522,8 +522,31 @@
     <dimen name="player_history_time_height">20dp</dimen>
     <dimen name="player_history_artwork_size">40dp</dimen>
     <dimen name="player_history_artwork_corner">6dp</dimen>
-    <dimen name="player_history_title_height">28dp</dimen>
-    <dimen name="player_history_artist_height">20dp</dimen>
+    <!--
+      History row line heights, local to this surface.
+
+      The shared tokens set the title on a 28 line and the artist on a 20, which
+      is the FINAL Figma leading, and 28 + 20 = 48 - a text block 8 taller than
+      the 40 cover beside it. Owner intent is that the normal one-line title over
+      one-line artist reads inside the cover, so the leading comes off here and
+      only here.
+
+      These are the font's own natural line, not invented numbers. Measured on
+      device through the view's paint with includeFontPadding=false, Onest Regular
+      gives descent-ascent of 57px at 17sp and 47px at 14sp, which at 2.625 is
+      21.71dp and 17.90dp. 22 and 18 are the next whole values above those, so
+      nothing clips - the slack is 0.29dp and 0.10dp - and they sum to exactly 40.
+
+      Applied in PlayerHistoryAdapter, not here: values/typography.xml is
+      generated from the Figma export and says not to hand-edit, so a new token
+      does not belong in it, and MyataTypography.Factory would overwrite a line
+      height set on the view in XML anyway. The adapter sets it after inflation,
+      which is the one place that wins.
+    -->
+    <dimen name="player_history_title_line_height">22sp</dimen>
+    <dimen name="player_history_artist_line_height">18sp</dimen>
+    <dimen name="player_history_title_height">22dp</dimen>
+    <dimen name="player_history_artist_height">18dp</dimen>
 
     <!-- `Button:margin > Button`, 324x54 r12, 16 above it. -->
     <dimen name="player_history_more_gap">16dp</dimen>

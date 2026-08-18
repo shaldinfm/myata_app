@@ -120,7 +120,10 @@ class FavoritesAdapter(
 
     private class DiffCallback : DiffUtil.ItemCallback<FavoriteTrack>() {
         override fun areItemsTheSame(oldItem: FavoriteTrack, newItem: FavoriteTrack): Boolean {
-            return oldItem.id == newItem.id
+            // The track key, not a row id: it is the identity of the track itself,
+            // so a row that leaves the Collection and comes back through Undo is
+            // recognised as the same item.
+            return oldItem.trackKey == newItem.trackKey
         }
 
         override fun areContentsTheSame(oldItem: FavoriteTrack, newItem: FavoriteTrack): Boolean {

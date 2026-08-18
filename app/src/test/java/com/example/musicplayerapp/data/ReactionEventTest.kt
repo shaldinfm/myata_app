@@ -42,33 +42,31 @@ class ReactionEventTest {
         )
     }
 
-    // ==================== A real insert is a LIKE ====================
+    // ==================== A real save is a LIKE ====================
 
     @Test
-    fun `a row that was inserted reports LIKE`() {
-        assertEquals(ReactionEvent.LIKE, ReactionEvent.afterInsert(1L))
-        assertEquals(ReactionEvent.LIKE, ReactionEvent.afterInsert(42L))
+    fun `a save that changed the state reports LIKE`() {
+        assertEquals(ReactionEvent.LIKE, ReactionEvent.forLike(changed = true))
     }
 
     @Test
-    fun `an ignored insert reports nothing`() {
-        // OnConflictStrategy.IGNORE returns -1: the track was already in the
-        // Collection, nothing changed, and a second LIKE would count one opinion twice.
-        assertNull(ReactionEvent.afterInsert(ReactionEvent.NO_ROW_INSERTED))
-        assertNull(ReactionEvent.afterInsert(-1L))
+    fun `a save that changed nothing reports nothing`() {
+        // The track was already LIKED, so nothing moved, and a second LIKE would
+        // count one opinion twice.
+        assertNull(ReactionEvent.forLike(changed = false))
     }
 
-    // ==================== A real delete is an UNLIKE ====================
+    // ==================== A real withdrawal is an UNLIKE ====================
 
     @Test
-    fun `a row that was deleted reports UNLIKE, never DISLIKE`() {
-        assertEquals(ReactionEvent.UNLIKE, ReactionEvent.afterDelete(1))
-        assertNotEquals(ReactionEvent.DISLIKE, ReactionEvent.afterDelete(1))
+    fun `a withdrawal that changed the state reports UNLIKE, never DISLIKE`() {
+        assertEquals(ReactionEvent.UNLIKE, ReactionEvent.forUnlike(changed = true))
+        assertNotEquals(ReactionEvent.DISLIKE, ReactionEvent.forUnlike(changed = true))
     }
 
     @Test
-    fun `a delete that matched nothing reports nothing`() {
-        assertNull(ReactionEvent.afterDelete(0))
+    fun `a withdrawal that changed nothing reports nothing`() {
+        assertNull(ReactionEvent.forUnlike(changed = false))
     }
 
     // ==================== The sequences the screens produce ====================
@@ -76,20 +74,20 @@ class ReactionEventTest {
     @Test
     fun `like then unlike`() {
         // PLAYER: tap to save, tap again to withdraw.
-        assertEquals(ReactionEvent.LIKE, ReactionEvent.afterInsert(7L))
-        assertEquals(ReactionEvent.UNLIKE, ReactionEvent.afterDelete(1))
+        assertEquals(ReactionEvent.LIKE, ReactionEvent.forLike(changed = true))
+        assertEquals(ReactionEvent.UNLIKE, ReactionEvent.forUnlike(changed = true))
     }
 
     @Test
     fun `remove then undo`() {
         // COLLECTION: swipe away, then "Отменить".
-        assertEquals(ReactionEvent.UNLIKE, ReactionEvent.afterDelete(1))
-        assertEquals(ReactionEvent.LIKE, ReactionEvent.afterInsert(7L))
+        assertEquals(ReactionEvent.UNLIKE, ReactionEvent.forUnlike(changed = true))
+        assertEquals(ReactionEvent.LIKE, ReactionEvent.forLike(changed = true))
     }
 
     @Test
     fun `a repeated tap on the same state reports nothing either way`() {
-        assertNull(ReactionEvent.afterDelete(0))
-        assertNull(ReactionEvent.afterInsert(ReactionEvent.NO_ROW_INSERTED))
+        assertNull(ReactionEvent.forUnlike(changed = false))
+        assertNull(ReactionEvent.forLike(changed = false))
     }
 }

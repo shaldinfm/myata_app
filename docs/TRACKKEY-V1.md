@@ -26,34 +26,40 @@ Nothing in the app calls it yet. It lands on its own, ahead of its callers.
 
 ### Normalisation
 
-Applied identically to artist and to title, in this order. The order is part of the
-contract: NFKC first, so compatibility forms are already unpacked when characters
-are inspected; casing last, so it cannot influence any earlier decision.
+Applied identically to artist and to title. The steps are **ordered, numbered and
+total**: every character takes exactly one branch, and the first branch that matches
+wins. NFKC comes first so compatibility forms are already unpacked when characters
+are inspected; casing comes last so it cannot influence any earlier decision.
 
-| # | Step | Detail |
-|---|---|---|
-| 1 | Unicode NFKC | `Normalizer.normalize(s, Form.NFKC)` |
-| 2 | Strip invisibles | named set below, plus any remaining `Cc` / `Cf` character — **removed, not spaced** |
-| 3 | Fold whitespace | tab, LF, VT, FF, CR, U+0085, and Unicode `Zs` / `Zl` / `Zp` → one space each |
-| 4 | Fold dashes | dash set below → ASCII `-` (U+002D) |
-| 5 | Collapse and trim | runs of spaces → one space; leading and trailing spaces removed |
-| 6 | Lowercase | `lowercase(Locale.ROOT)` — never the device locale |
+| # | Step | Applies to | Result |
+|---|---|---|---|
+| 1 | Unicode NFKC | the whole string | `Normalizer.normalize(s, Form.NFKC)` |
+| 2 | Remove format characters | the named invisibles below, and any other `Cf` | **removed** |
+| 3 | Fold whitespace | TAB, LF, CR, VT, FF, NEL (U+0085), and Unicode `Zs` / `Zl` / `Zp` | **one space** |
+| 4 | Remove remaining controls | any other `Cc` | **removed** |
+| 5 | Fold dashes | the dash set below | ASCII `-` (U+002D) |
+| 6 | Keep | everything else, surrogate pairs included | unchanged |
+| 7 | Collapse, trim, lowercase | the folded string | runs of spaces → one space; ends trimmed; `lowercase(Locale.ROOT)`, never the device locale |
 
-Steps 2–4 are one pass with a fixed precedence: named invisibles, then whitespace
-(control or separator), then any other `Cc`/`Cf`, then dashes, then the character
-unchanged. Precedence matters for the control characters that are *also*
-whitespace: `"Artist\nName"` is two words, not `"artistname"`.
+Steps 2–6 are a single pass in exactly that precedence.
+
+**Step 3 before step 4 is the whole point.** TAB, LF, CR, VT, FF and NEL are `Cc`
+*and* whitespace. They are whitespace here: `"Artist\nName"` normalises to
+`artist name`, two words, not `artistname`. Every `Cc` that is not whitespace —
+U+0000, U+0007, U+001F and the rest — is removed at step 4 without leaving a space
+behind, which is what keeps U+001F usable as the field separator (below).
 
 **Dash set folded to `-`:** U+002D, U+2010, U+2011, U+2012, U+2013, U+2014, U+2015,
 U+2212, U+FE58, U+FE63, U+FF0D.
 
 **Invisibles removed by name:** U+00AD, U+200B, U+200C, U+200D, U+200E, U+200F,
-U+FEFF. They are all `Cf` under current Unicode and step 2's category check would
-catch them anyway; they are named because those categories have changed between
-Unicode versions (U+200B was `Zs` before Unicode 4.0.1) and this app runs on
-runtimes from API 24 to API 36. A key whose value depends on the device's Unicode
-table is not a stable key. U+FEFF is not hypothetical — `MetadataRepository`
-already trims it out of the playlist feed by hand.
+U+FEFF. All of them are `Cf` under current Unicode, so step 2's category check
+would catch them anyway. They are named because those categories have changed
+between Unicode versions — U+200B was `Zs` before Unicode 4.0.1, which would make
+it a *space* under step 3 rather than a deletion — and this app runs on runtimes
+from API 24 to API 36. A key whose value depends on the device's Unicode table is
+not a stable key. U+FEFF is not hypothetical: `MetadataRepository` already trims it
+out of the playlist feed by hand.
 
 ### Explicitly preserved
 
@@ -80,9 +86,9 @@ payload   = PREFIX + SEPARATOR + normalize(artist) + SEPARATOR + normalize(title
 track_key = lowercase_hex( SHA-256( UTF-8 bytes of payload ) )     // 64 chars, untruncated
 ```
 
-The separator cannot occur inside either field — it is a `Cc` character and step 2
-removes it — which is what stops `("a b", "c")` and `("a", "b c")` producing one
-key. The version string is inside the hashed payload so a future v2 key space is
+The separator cannot occur inside either field — it is a `Cc` character and not
+whitespace, so step 4 removes it outright — which is what stops `("a b", "c")` and
+`("a", "b c")` producing one key. The version string is inside the hashed payload so a future v2 key space is
 disjoint from v1's and the two can never collide.
 
 ### No key at all

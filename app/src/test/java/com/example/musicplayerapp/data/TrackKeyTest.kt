@@ -187,6 +187,29 @@ class TrackKeyTest {
         assertEquals("depeche mode", TrackKey.normalize("Depeche\u2029Mode")) // PARAGRAPH SEPARATOR
     }
 
+    // ==================== Step 3 before step 4 ====================
+
+    @Test
+    fun `controls that are not whitespace are removed, not spaced`() {
+        assertEquals("depechemode", TrackKey.normalize("Depeche\u0000Mode"))
+        assertEquals("depechemode", TrackKey.normalize("Depeche\u0007Mode"))
+        assertEquals("depechemode", TrackKey.normalize("Depeche\u001FMode"))
+    }
+
+    @Test
+    fun `whitespace wins over control removal for controls that are both`() {
+        // U+000B and U+0001 are both Cc. Step 3 runs before step 4, so the one that
+        // is also whitespace becomes a space and the other disappears. Getting this
+        // order wrong turns "Artist\nName" into one word.
+        assertEquals("a b", TrackKey.normalize("a\u000Bb"))
+        assertEquals("ab", TrackKey.normalize("a\u0001b"))
+    }
+
+    @Test
+    fun `the field separator cannot survive normalisation`() {
+        assertEquals("ab", TrackKey.normalize("a\u001Fb"))
+    }
+
     // ==================== Locale ====================
 
     @Test

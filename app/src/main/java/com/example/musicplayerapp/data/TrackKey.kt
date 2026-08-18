@@ -49,9 +49,10 @@ object TrackKey {
     private const val PAYLOAD_PREFIX = "myata:trackkey:v1"
 
     /**
-     * ASCII Unit Separator - not text, and stripped from both fields by [normalize]
-     * as a control character, so it cannot occur inside either part of the payload.
-     * That is what stops `("a b", "c")` and `("a", "b c")` hashing to one key.
+     * ASCII Unit Separator - not text. It is a `Cc` character and not whitespace, so
+     * step 4 of [normalize] removes it outright: it cannot survive inside either
+     * field, and therefore cannot be injected to make `("a b", "c")` and
+     * `("a", "b c")` hash to one key.
      */
     private const val SEPARATOR = '\u001F'
 
@@ -86,15 +87,16 @@ object TrackKey {
     )
 
     /**
-     * Invisible characters removed outright, named rather than left to
-     * [Character.getType].
+     * Invisible characters removed by name rather than left to [Character.getType].
      *
-     * They are all `Cf` today and the category check below would catch them, but
-     * their categories have moved between Unicode versions (U+200B was `Zs` before
-     * Unicode 4.0.1) and this app runs on runtimes spanning API 24 to 36. A key that
-     * depends on which Unicode table the device ships is not a stable key, so the
-     * ones that actually turn up in this data are pinned here. U+FEFF is not
-     * hypothetical: [MetadataRepository] already trims it out of the playlist feed.
+     * Every one of them is `Cf` today, so step 2 of [normalize] would remove them
+     * anyway. They are named because those categories have moved between Unicode
+     * versions - U+200B was `Zs` before Unicode 4.0.1, which would make it a *space*
+     * under step 3 instead of a deletion - and this app runs on runtimes spanning
+     * API 24 to 36. A key whose value depends on which Unicode table the device
+     * ships is not a stable key, so the ones that actually turn up in this data are
+     * pinned here. U+FEFF is not hypothetical: [MetadataRepository] already trims it
+     * out of the playlist feed by hand.
      */
     private val INVISIBLES = setOf(
         '\u00AD', // SOFT HYPHEN
@@ -107,10 +109,14 @@ object TrackKey {
     )
 
     /**
-     * Control characters that are whitespace, and so fold to a space rather than
-     * being deleted. `"Artist\nName"` is two words, not `"artistname"`.
+     * The whitespace characters that are `Cc` rather than a Unicode separator.
+     *
+     * They are the reason step 3 comes before step 4: as control characters they
+     * would be deleted along with the rest of `Cc`, and `"Artist\nName"` would
+     * become `"artistname"` instead of two words. Whitespace is whitespace whatever
+     * category it happens to sit in.
      */
-    private val CONTROL_WHITESPACE = setOf(
+    private val WHITESPACE_CONTROLS = setOf(
         '\t', // TAB
         '\n', // LINE FEED
         '\u000B', // LINE TABULATION
@@ -146,19 +152,26 @@ object TrackKey {
      * pin what it produces, and the migration that will re-key existing rows has to
      * be able to show its work.
      *
-     * The order is fixed - NFKC first, so compatibility forms are already unpacked
-     * when characters are inspected, and casing last, so it cannot affect any
-     * earlier decision - and the single pass applies, in this precedence:
+     * The steps are numbered, ordered, and total - every character takes exactly one
+     * branch, and the first branch that matches wins:
      *
-     *  1. named [INVISIBLES] -> removed;
-     *  2. [CONTROL_WHITESPACE] and Unicode separators (`Zs`, `Zl`, `Zp`) -> space;
-     *  3. any other control or format character (`Cc`, `Cf`) -> removed;
-     *  4. [DASHES] -> `-`;
-     *  5. everything else, surrogate pairs included, kept as it is.
+     *  1. NFKC, applied to the whole string first, so compatibility forms are
+     *     already unpacked when the characters below are inspected;
+     *  2. named [INVISIBLES] and any other `Cf` character -> **removed**;
+     *  3. whitespace - [WHITESPACE_CONTROLS] and the Unicode separators `Zs`, `Zl`,
+     *     `Zp` -> **one space**;
+     *  4. any other `Cc` character -> **removed**;
+     *  5. [DASHES] -> `-`;
+     *  6. everything else, surrogate pairs included, kept as it is.
      *
      * Then runs of spaces collapse to one, the ends are trimmed, and the result is
      * lowercased with [Locale.ROOT] - never the default locale, which would hand a
      * Turkish device a different key for the same track.
+     *
+     * Steps 3 and 4 both cover `Cc` and their order is what separates them: TAB, LF,
+     * CR, VT, FF and NEL are control characters *and* whitespace, and they are
+     * whitespace here. Every remaining control - U+001F included, which is why it is
+     * safe as the field [SEPARATOR] - is removed without leaving a space behind.
      */
     fun normalize(value: String?): String {
         if (value.isNullOrEmpty()) return ""
@@ -168,12 +181,12 @@ object TrackKey {
         val folded = StringBuilder(nfkc.length)
         for (ch in nfkc) {
             when {
-                ch in INVISIBLES -> Unit
-                ch in CONTROL_WHITESPACE -> folded.append(' ')
-                isSeparator(ch) -> folded.append(' ')
-                isControlOrFormat(ch) -> Unit
-                ch in DASHES -> folded.append('-')
-                else -> folded.append(ch)
+                ch in INVISIBLES -> Unit // 2
+                isFormat(ch) -> Unit // 2
+                isWhitespace(ch) -> folded.append(' ') // 3
+                isControl(ch) -> Unit // 4
+                ch in DASHES -> folded.append('-') // 5
+                else -> folded.append(ch) // 6
             }
         }
 
@@ -184,18 +197,21 @@ object TrackKey {
             .lowercase(Locale.ROOT)
     }
 
-    private fun isSeparator(ch: Char): Boolean = when (Character.getType(ch)) {
-        Character.SPACE_SEPARATOR.toInt(),
-        Character.LINE_SEPARATOR.toInt(),
-        Character.PARAGRAPH_SEPARATOR.toInt() -> true
-        else -> false
+    private fun isFormat(ch: Char): Boolean =
+        Character.getType(ch) == Character.FORMAT.toInt()
+
+    private fun isWhitespace(ch: Char): Boolean = when {
+        ch in WHITESPACE_CONTROLS -> true
+        else -> when (Character.getType(ch)) {
+            Character.SPACE_SEPARATOR.toInt(),
+            Character.LINE_SEPARATOR.toInt(),
+            Character.PARAGRAPH_SEPARATOR.toInt() -> true
+            else -> false
+        }
     }
 
-    private fun isControlOrFormat(ch: Char): Boolean = when (Character.getType(ch)) {
-        Character.CONTROL.toInt(),
-        Character.FORMAT.toInt() -> true
-        else -> false
-    }
+    private fun isControl(ch: Char): Boolean =
+        Character.getType(ch) == Character.CONTROL.toInt()
 
     private fun sha256Hex(payload: String): String {
         val digest = MessageDigest.getInstance("SHA-256")

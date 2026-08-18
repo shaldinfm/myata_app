@@ -22,7 +22,8 @@
 #
 # Sending it as `Authorization: Bearer` is wrong and will not authenticate.
 #
-# Requires: curl, python3. Creates two throwaway anonymous users and one track.
+# Requires: curl, python3. Creates two throwaway anonymous users and a few rows
+# they own.
 # Anonymous sign-ins must be enabled for the project, and the project's IP rate
 # limit (30/hour by default) applies to the sign-ins this makes.
 
@@ -90,10 +91,6 @@ get() { # get <path> <token>
         -H "apikey: $KEY" -H "Authorization: Bearer $2"
 }
 
-rpc() { # rpc <function> <token> <body>
-    curl -s -o /dev/null -w '%{http_code}' -X POST "$URL/rest/v1/rpc/$1"         -H "apikey: $KEY" -H "Authorization: Bearer $2"         -H "Content-Type: application/json" -d "$3"
-}
-
 patch() { # patch <path> <token> <body>
     curl -s -o /dev/null -w '%{http_code}' -X PATCH "$URL/rest/v1/$1" \
         -H "apikey: $KEY" -H "Authorization: Bearer $2" \
@@ -115,35 +112,21 @@ EVENT_B=$(python3 -c "import uuid; print(uuid.uuid4())")
 
 echo
 echo "== A operates on its own rows"
-# The catalogue is not writable through PostgREST at all: no INSERT policy, so a
-# direct write is refused however well-formed it is. The only way in is
-# register_track, which validates the key shape and can never modify a row that
-# already exists (0002).
-check "A cannot write the catalogue directly" deny "$(post tracks "$TOKEN_A" "{\"track_key\":\"$KEY_1\",\"artist\":\"RLS\",\"title\":\"Check\"}")"
-check "A registers a track through the RPC" allow "$(rpc register_track "$TOKEN_A" "{\"p_track_key\":\"$KEY_1\",\"p_artist\":\"RLS\",\"p_title\":\"Check\"}")"
-check "the RPC refuses a key that is not a TrackKey" deny "$(rpc register_track "$TOKEN_A" '{"p_track_key":"junk-not-a-trackkey","p_artist":"X","p_title":"Y"}')"
-
-# Called again with different words, the row must not move: create-only.
-rpc register_track "$TOKEN_A" "{\"p_track_key\":\"$KEY_1\",\"p_artist\":\"OVERWRITTEN\",\"p_title\":\"OVERWRITTEN\"}" > /dev/null
-CATALOGUE=$(curl -s "$URL/rest/v1/tracks?track_key=eq.$KEY_1&select=artist" -H "apikey: $KEY" -H "Authorization: Bearer $TOKEN_A")
-if echo "$CATALOGUE" | grep -q '"RLS"'; then
-    printf '  PASS  %-58s
-' "the RPC cannot rewrite an existing catalogue row"
-    pass=$((pass + 1))
-else
-    printf '  FAIL  %-58s (%s)
-' "the RPC cannot rewrite an existing catalogue row" "$CATALOGUE"
-    fail=$((fail + 1))
-fi
-check "A creates its own reaction"        allow "$(post reactions "$TOKEN_A" "{\"listener_id\":\"$UID_A\",\"track_key\":\"$KEY_1\",\"reaction\":\"LIKED\",\"stream\":\"myata\"}")"
+# There is no catalogue table in this schema, and no client-callable function.
+# A reaction carries its own words, so the write path is one row. This check exists
+# to catch a reintroduction: if `tracks` ever comes back as something a client can
+# write, this stops passing.
+check "there is no client-writable catalogue" deny "$(post tracks "$TOKEN_A" "{\"track_key\":\"$KEY_1\",\"artist\":\"RLS\",\"title\":\"Check\"}")"
+check "the key shape is enforced on reactions" deny "$(post reactions "$TOKEN_A" "{\"listener_id\":\"$UID_A\",\"track_key\":\"junk-not-a-trackkey\",\"artist\":\"X\",\"title\":\"Y\",\"reaction\":\"LIKED\"}")"
+check "A creates its own reaction"        allow "$(post reactions "$TOKEN_A" "{\"listener_id\":\"$UID_A\",\"track_key\":\"$KEY_1\",\"artist\":\"RLS\",\"title\":\"Check\",\"reaction\":\"LIKED\",\"stream\":\"myata\"}")"
 check "A reads its own reaction"          allow "$(get "reactions?listener_id=eq.$UID_A" "$TOKEN_A")"
 check "A updates its own reaction"        allow "$(patch "reactions?listener_id=eq.$UID_A&track_key=eq.$KEY_1" "$TOKEN_A" '{"reaction":"DISLIKED"}')"
-check "A appends its own event"           allow "$(post reaction_events "$TOKEN_A" "{\"event_id\":\"$EVENT_A\",\"listener_id\":\"$UID_A\",\"track_key\":\"$KEY_1\",\"event_type\":\"DISLIKE\",\"stream\":\"myata\",\"occurred_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}")"
+check "A appends its own event"           allow "$(post reaction_events "$TOKEN_A" "{\"event_id\":\"$EVENT_A\",\"listener_id\":\"$UID_A\",\"track_key\":\"$KEY_1\",\"artist\":\"RLS\",\"title\":\"Check\",\"event_type\":\"DISLIKE\",\"stream\":\"myata\",\"occurred_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}")"
 
 echo
 echo "== A cannot act as B"
-check "A writes a reaction owned by B"    deny  "$(post reactions "$TOKEN_A" "{\"listener_id\":\"$UID_B\",\"track_key\":\"$KEY_1\",\"reaction\":\"LIKED\"}")"
-check "A appends an event owned by B"     deny  "$(post reaction_events "$TOKEN_A" "{\"event_id\":\"$EVENT_B\",\"listener_id\":\"$UID_B\",\"track_key\":\"$KEY_1\",\"event_type\":\"LIKE\",\"occurred_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}")"
+check "A writes a reaction owned by B"    deny  "$(post reactions "$TOKEN_A" "{\"listener_id\":\"$UID_B\",\"track_key\":\"$KEY_1\",\"artist\":\"RLS\",\"title\":\"Check\",\"reaction\":\"LIKED\"}")"
+check "A appends an event owned by B"     deny  "$(post reaction_events "$TOKEN_A" "{\"event_id\":\"$EVENT_B\",\"listener_id\":\"$UID_B\",\"track_key\":\"$KEY_1\",\"artist\":\"RLS\",\"title\":\"Check\",\"event_type\":\"LIKE\",\"occurred_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}")"
 
 echo
 echo "== B cannot touch A's rows"

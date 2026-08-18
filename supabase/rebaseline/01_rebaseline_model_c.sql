@@ -1,40 +1,52 @@
--- Radio Myata: the reaction foundation. Model C.
+-- RE-BASELINE - DESTRUCTIVE. Read this before running any of it.
 --
--- Two tables and one owner-only view. There is no catalogue table and no
--- client-callable function, and that is the design rather than an omission.
+-- Run 00_preflight_readonly.sql FIRST and confirm the reaction tables hold nothing
+-- but test data. This script DROPS them. Rows in `reactions`, `reaction_events`
+-- and `tracks` are gone permanently and no listener data survives it.
 --
--- ## Why there is no `tracks` table
+-- WHAT IT TOUCHES - exactly five objects, all created by the reaction foundation:
 --
--- The station's metadata API returns an artist string and a title string and no
--- track id of any kind, so identity is TrackKey v1 - a hash the *device* computes
--- from those two strings (docs/TRACKKEY-V1.md). Anything a device can compute, a
--- device can fabricate. An earlier version of this file had a `tracks` catalogue
--- that clients could write to, and no amount of policy tightening fixed the real
--- problem: a table whose rows come from clients cannot honestly be called the
--- station's catalogue, whatever the column names say. Validating the *shape* of a
--- key proves nothing about its *truth*.
+--     view      public.track_reaction_totals
+--     function  public.register_track(text, text, text)   (only if 0002 was ever run)
+--     table     public.reaction_events
+--     table     public.reactions
+--     table     public.tracks
 --
--- So a reaction carries its own words. Each row states what one listener saw and
--- what they did about it - an observation, which is a claim the row can actually
--- support. No shared writable table sits between listeners, so there is nothing
--- for one listener to pollute for everybody else, and the write path is one row
--- with no ordering, no foreign key and no RPC in front of it.
+-- WHAT IT DOES NOT TOUCH:
 --
--- A trusted catalogue, when the station wants one, arrives separately as an
--- owner/server-managed `station_tracks` populated from the playout system, with no
--- client policies at all. It joins onto this data by `track_key` - the key is
--- stable, so nothing here has to move for that to happen.
+--     * auth.users and everything else in the auth schema - your anonymous
+--       listeners keep their identities, so an install that already has a uid
+--       stays that listener after this runs;
+--     * storage, realtime, extensions, or any other Supabase-managed schema;
+--     * any table in public that this project did not create;
+--     * project settings, keys and the anonymous sign-in toggle.
 --
--- ## Identity
+-- There is no `drop schema` here, no `truncate` of anything outside those tables,
+-- and no `cascade` beyond the objects named above.
 --
--- `auth.users.id` is the listener. There is no `listeners` table: Supabase Auth
--- already owns identity, a copy of it can only drift, and every policy below says
--- `auth.uid()` without one. No profile, follow or comment tables either - this is
--- music-programming analytics, not a social network.
+-- WHY re-baseline rather than a forward migration: the first version of this
+-- schema had a `tracks` table clients could write to, and the fix is not a
+-- tightening but a different model - `tracks` leaves the write path entirely and
+-- reactions carry their own words. With no real listener data yet, a clean schema
+-- is worth more than a migration chain whose first entry is a security hole. Once
+-- any real reaction exists this file must never be run again; the forward-migration
+-- route becomes the only acceptable one.
 --
--- Apply with:  supabase db push        (or paste into the SQL editor)
--- Idempotent: safe to run twice.
+-- Everything below the drops is the Model C schema, identical to
+-- supabase/migrations/0001_reaction_foundation.sql - that file is the source, and
+-- this copy is generated from it. It runs in one transaction: if any statement
+-- fails, nothing changes.
 
+begin;
+
+-- ---------------------------------------------------------------- drops --
+drop view if exists public.track_reaction_totals;
+drop function if exists public.register_track(text, text, text);
+drop table if exists public.reaction_events;
+drop table if exists public.reactions;
+drop table if exists public.tracks;
+
+-- --------------------------------------------------- the corrected schema --
 -- ------------------------------------------------------------- reactions --
 --
 -- Current state: what one listener thinks of one track, now. The primary key is
@@ -198,3 +210,5 @@ comment on view public.track_reaction_totals is
 -- decide whether the role may reach the table at all.
 revoke all on public.reactions from anon;
 revoke all on public.reaction_events from anon;
+
+commit;

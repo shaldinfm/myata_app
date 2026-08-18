@@ -104,94 +104,105 @@ SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 **No file is a supported state.** A fresh clone and CI have none, `isConfigured` is
 false, `SupabaseModule.client()` returns null, and the app has no Supabase in it.
 
-## Schema
+## Schema — Model C
 
-`supabase/migrations/0001_reaction_foundation.sql`, idempotent.
+`supabase/migrations/0001_reaction_foundation.sql`, idempotent. Two tables, one
+owner-only view, **no catalogue table and no client-callable function**.
 
-- **`tracks`** — catalogue keyed by TrackKey v1 (`docs/TRACKKEY-V1.md`), with the
-  artist and title kept beside the key because the key cannot be reversed.
-- **`reactions`** — current state, `primary key (listener_id, track_key)`. That key
-  is what makes one-listener-one-opinion structural rather than something the
-  client must remember. NEUTRAL is absence: a withdrawn reaction deletes the row.
-- **`reaction_events`** — append-only history. `event_id` is a client UUID and the
-  idempotency key, so a retried delivery conflicts instead of double-counting.
-  This cannot be backfilled later, which is why it exists now.
-- **`track_reaction_totals`** — the station's aggregate, **service role only**;
-  `anon` and `authenticated` are revoked.
+- **`reactions`** — current state. `primary key (listener_id, track_key)`, which
+  makes one-listener-one-opinion structural rather than something the client has to
+  remember. Carries `artist` and `title` as observed on that listener's device.
+  NEUTRAL is absence: a withdrawn reaction deletes the row.
+- **`reaction_events`** — append-only history, carrying its own `artist`/`title`
+  because the row is immutable and the words it was written with are part of what
+  happened. `event_id` is a client UUID and the idempotency key, so a retried
+  delivery conflicts instead of double-counting. It cannot be backfilled later,
+  which is why it exists now.
+- **`track_reaction_totals`** — aggregated straight from `reactions`, **service
+  role only**; `anon` and `authenticated` revoked. The displayed words are the most
+  common spelling observed (`mode()`), which changes no counts.
 
-**No `listeners` table.** Supabase Auth already owns identity and `auth.users.id`
-*is* the listener; a second table would be a copy that can drift, and every policy
-reads `auth.uid()` without one. No profile, follow or comment tables either — this
-is programming analytics, not a social network.
+Both tables constrain `track_key` to a TrackKey v1 shape (64 lowercase hex, or the
+`legacy:` namespace) and bound artist/title to 1–300 characters.
 
-## RLS
+### Why there is no `tracks` table
 
-Enabled on all three tables, because the publishable key is public: whatever a
-policy permits, anyone can do.
+The station's metadata API has no track id, so identity is a hash the **device**
+computes from artist and title (`docs/TRACKKEY-V1.md`). Anything a device can
+compute, a device can fabricate — and validating the *shape* of a key proves
+nothing about its *truth*.
+
+The first version of this schema had a `tracks` catalogue that clients could write
+to. Its INSERT policy was `with check (true)`, and the live project proved what
+that meant: an anonymous client inserted a junk key with an artist of
+`<script>whatever` and a 300-character title, having reacted to nothing. The
+attempted fix — drop the policy, add a validating `SECURITY DEFINER` RPC — was
+abandoned because it narrowed the door while keeping the room: any anonymous
+identity could still create arbitrary valid-*looking* rows, so the table still
+could not honestly be called the station's catalogue.
+
+Model C removes the problem instead of guarding it. A reaction carries its own
+words, so:
+
+- there is **no shared writable table** between listeners, and nothing for one
+  listener to pollute for everybody else;
+- junk can exist only as somebody's **own** reaction row, already bounded by RLS
+  and by the `(listener_id, track_key)` primary key;
+- the write path is **one row** — no foreign key, no ordering, no RPC in front of
+  it, which is one less thing for the offline sync phase to get wrong;
+- the trust boundary is **structural rather than editorial**. A row saying "this
+  listener saw these words and reacted" is a claim the row can support. "The
+  station's catalogue" was not.
+
+**A trusted catalogue is still possible, and is a separate thing.** When the
+station wants one it arrives as owner/server-managed `station_tracks`, populated
+from the playout system, with no client policies at all, joining this data by
+`track_key`. The key is stable, so no reaction data has to move for that to happen.
+
+### RLS
 
 | table | select | insert | update | delete |
 |---|---|---|---|---|
-| `tracks` | any signed-in listener | **none** — see below | **none** | **none** |
 | `reactions` | own rows | own rows | own rows | own rows |
 | `reaction_events` | own rows | own rows | **none** | **none** |
 | `track_reaction_totals` | service role only | — | — | — |
 
-"Own" is `(select auth.uid()) = listener_id`, enforced with `with check` on writes,
-so a client cannot insert a row owned by somebody else. `tracks` has no update or
-delete policy at all, so nobody can rewrite the words attached to another
-listener's key.
+"Own" is `(select auth.uid()) = listener_id`, enforced with `with check` on every
+write, so a client cannot insert a row owned by somebody else. `reaction_events`
+has no update or delete policy for any client role — history a client can edit is
+not history.
 
-### The track catalogue is not client-writable (0002)
-
-0001 shipped `tracks` with an INSERT policy of `with check (true)`. Its comment
-claimed "a track they are reacting to"; the policy said no such thing, and the live
-project confirmed the gap — an anonymous client inserted `junk-not-a-trackkey-…`
-with an artist of `<script>whatever` and a 300-character title, having reacted to
-nothing. With the publishable key in the APK, that was an open door into the
-station's catalogue.
-
-`0002_tracks_catalogue_guard.sql` closes it:
-
-- the INSERT policy is **dropped** — `tracks` now has no INSERT, UPDATE or DELETE
-  policy at all, so PostgREST cannot write it under any circumstances;
-- two CHECK constraints (`NOT VALID`, so existing rows are left alone) require a
-  `track_key` to be TrackKey v1 shaped — 64 lowercase hex, or the `legacy:`
-  namespace — and bound artist and title to 1–300 characters;
-- `public.register_track(p_track_key, p_artist, p_title)` is the one way in. It is
-  `SECURITY DEFINER`, granted to `authenticated` only, refuses an unauthenticated
-  caller, validates the key shape itself, trims and bounds the words, and is
-  `ON CONFLICT DO NOTHING` — so it can **create** an entry and can never modify
-  one. Two listeners spelling a track differently cannot overwrite each other, and
-  nobody can rewrite the station's words for a key that already exists.
-
-**How a legitimate row will be created:** when reaction sync lands, the client
-calls `register_track` for the track it is about to react to, then writes its own
-`reactions` row (whose FK requires the catalogue entry). Nothing else in the app
-touches the catalogue.
-
-What this does not claim to solve: the artist and title of a *brand-new* key still
-originate on a device, because the station's metadata API has no track ids and the
-phone is the only source. What is bounded is that a row can appear only through
-that path, only in the right shape, and never change afterwards.
-
-The audit left test rows in the live catalogue (from the harness, and from the junk
-row that demonstrated the hole). They predate the constraints, so nothing rejects
-them; clean them up when convenient, owner-side:
-
-```sql
--- rows that could not exist under 0002's constraints
-delete from public.reactions where track_key in (
-  select track_key from public.tracks
-  where track_key !~ '^[0-9a-f]{64}$' and track_key !~ '^legacy:'
-);
-delete from public.tracks
-where track_key !~ '^[0-9a-f]{64}$' and track_key !~ '^legacy:';
-```
+**No `listeners` table.** Supabase Auth already owns identity and `auth.users.id`
+*is* the listener; a second table would be a copy that can drift. No profile,
+follow or comment tables either — this is programming analytics, not a social
+network.
 
 `tools/supabase/rls-check.sh` proves this against a real project with two throwaway
-anonymous users: A operates on its own rows, A cannot write as B, B cannot see or
-change A's rows, events cannot be edited or deleted, and nobody but the service
-role can read the totals.
+anonymous users, including a guard that fails if a client-writable catalogue is
+ever reintroduced.
+
+**On reading its results:** when RLS filters rows away, PostgREST answers 204 — the
+statement matched nothing — not 403. So for a write that policy is meant to stop,
+the status code says nothing useful and the script reads the row back instead. Its
+first version trusted the codes and reported three false failures.
+
+### Re-baselining the live project
+
+The live project was created against the earlier schema and still holds it. Because
+it contains only test data and no listener reactions, the correction is a
+re-baseline rather than a migration chain whose first entry is a security hole:
+
+1. `supabase/rebaseline/00_preflight_readonly.sql` — **read-only**. Counts rows in
+   `reactions`, `reaction_events` and `tracks`, lists the objects that exist, and
+   flags anything that does not look like test data. Changes nothing.
+2. `supabase/rebaseline/01_rebaseline_model_c.sql` — **destructive**. Drops the
+   five reaction-foundation objects and recreates Model C in one transaction. It
+   touches nothing in `auth`, so existing anonymous listeners keep their uids, and
+   nothing outside the objects it names.
+
+The reset file's schema half is generated from `0001`, so the two cannot drift.
+**Once any real reaction exists, the re-baseline must never be run again** — after
+that only a forward migration is acceptable.
 
 ## Anonymous auth
 

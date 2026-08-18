@@ -42,8 +42,6 @@ import androidx.media3.common.MediaMetadata
 import android.content.ComponentName
 import com.example.musicplayerapp.data.HistoryRepository
 import com.example.musicplayerapp.data.AppDatabase
-import com.example.musicplayerapp.data.FavoriteDao
-import com.example.musicplayerapp.data.FavoriteTrack
 import com.example.musicplayerapp.data.FeedbackRepository
 import com.example.musicplayerapp.data.ReactionEvent
 import com.example.musicplayerapp.data.*
@@ -104,7 +102,7 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     
     // Favorites
     private val database = AppDatabase.getDatabase(app)
-    private val favoriteDao = database.favoriteDao()
+    private val reactionDao = database.reactionDao()
     private val _isCurrentFavorite = MutableLiveData<Boolean>(false)
     val isCurrentFavorite: LiveData<Boolean> = _isCurrentFavorite
     private var favoriteObservationJob: Job? = null
@@ -455,13 +453,17 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         val song = state?.song
 
         favoriteObservationJob?.cancel()
-        if (artist != null && song != null && artist != "YOUR MUSIC! YOUR STATION!") {
+        val trackKey = TrackKey.of(artist, song)
+        if (trackKey != null) {
             favoriteObservationJob = viewModelScope.launch {
-                favoriteDao.isFavorite(artist, song).collectLatest {
+                reactionDao.isLiked(trackKey).collectLatest {
                     _isCurrentFavorite.postValue(it)
                 }
             }
         } else {
+            // No key means nothing to react to: a stream between tracks, or the
+            // jingle sentinel. TrackKey.of refuses both, which is the guard that
+            // used to be spelled out here.
             _isCurrentFavorite.value = false
         }
     }
@@ -478,29 +480,29 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         val artist = state?.artist
         val song = state?.song
 
-        if (artist != null && song != null && artist != "YOUR MUSIC! YOUR STATION!") {
+        val trackKey = TrackKey.of(artist, song)
+        if (trackKey != null && artist != null && song != null) {
             viewModelScope.launch {
-                val existing = favoriteDao.findByArtistAndTrack(artist, song)
-                val event = if (existing != null) {
-                    // Withdrawing a Like is UNLIKE - a return to neutral. It reported
-                    // DISLIKE until now, which is how un-liking became a negative
-                    // signal in the sheet.
-                    ReactionEvent.afterDelete(favoriteDao.delete(existing))
+                val event = if (reactionDao.find(trackKey)?.reaction == Reaction.LIKED) {
+                    // Withdrawing a Like is UNLIKE - a return to neutral, never a
+                    // dislike. The row survives as NEUTRAL; only the Collection
+                    // membership goes.
+                    ReactionEvent.forUnlike(reactionDao.unlike(trackKey))
                 } else {
-                    ReactionEvent.afterInsert(
-                        favoriteDao.insert(
-                            FavoriteTrack(
-                                artist = artist,
-                                track = song,
-                                stream = stream
-                            )
+                    ReactionEvent.forLike(
+                        reactionDao.like(
+                            trackKey = trackKey,
+                            artist = artist,
+                            title = song,
+                            stream = stream,
+                            likedAt = System.currentTimeMillis(),
                         )
                     )
                 }
 
-                // Null when the write changed nothing - the row had already gone, or
-                // the Collection screen added the same track while this ran. Nothing
-                // changed, so there is nothing to report.
+                // Null when the write changed nothing - the Collection screen got
+                // there first, or the same track was liked twice. Nothing changed,
+                // so there is nothing to report.
                 event?.let { feedbackRepository.reportFeedback(artist, song, stream, it) }
             }
         }

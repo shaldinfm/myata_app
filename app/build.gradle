@@ -57,6 +57,11 @@ android {
         viewBinding = true
     }
 
+    sourceSets {
+        // So MigrationTestHelper can read the exported schemas off the device.
+        androidTest.assets.srcDirs += files("$projectDir/schemas")
+    }
+
     dataBinding{
         enabled = true
     }
@@ -98,6 +103,12 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
+}
+
+// The exported Room schema is what MigrationTestHelper builds a real v1 database
+// from, and what makes a schema change visible in review instead of silent.
+ksp {
+    arg('room.schemaLocation', "$projectDir/schemas")
 }
 
 // Release signing guard (issue #10).

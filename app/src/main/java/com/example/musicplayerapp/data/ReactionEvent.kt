@@ -48,25 +48,21 @@ enum class ReactionEvent(val wire: String) {
     companion object {
 
         /**
-         * The event a Room insert earned, or null if it earned none.
+         * The event a save earned, or null if it earned none.
          *
-         * `FavoriteDao.insert` is `OnConflictStrategy.IGNORE` and returns -1 when the
-         * row was already there, which is a no-op: nothing changed, the listener
-         * expressed nothing new, and reporting a second [LIKE] for it would count one
-         * opinion twice. Only a real insert is a [LIKE].
+         * [ReactionDao.like] returns false when the track was already LIKED: nothing
+         * changed, the listener expressed nothing new, and reporting a second [LIKE]
+         * for it would count one opinion twice.
          */
-        fun afterInsert(rowId: Long): ReactionEvent? = if (rowId != NO_ROW_INSERTED) LIKE else null
+        fun forLike(changed: Boolean): ReactionEvent? = if (changed) LIKE else null
 
         /**
-         * The event a Room delete earned, or null if it earned none.
+         * The event a withdrawal earned, or null if it earned none.
          *
-         * Deleting a row that is not there changes nothing, so it reports nothing.
-         * A row that really went is an [UNLIKE] - a return to neutral, never a
-         * [DISLIKE].
+         * Un-liking something that is not liked changes nothing, so it reports
+         * nothing. A Like that really went is an [UNLIKE] - a return to neutral,
+         * never a [DISLIKE].
          */
-        fun afterDelete(rowsDeleted: Int): ReactionEvent? = if (rowsDeleted > 0) UNLIKE else null
-
-        /** What Room's `@Insert` returns when `OnConflictStrategy.IGNORE` skipped the row. */
-        const val NO_ROW_INSERTED = -1L
+        fun forUnlike(changed: Boolean): ReactionEvent? = if (changed) UNLIKE else null
     }
 }

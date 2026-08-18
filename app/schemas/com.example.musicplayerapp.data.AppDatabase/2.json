@@ -1,0 +1,66 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 2,
+    "identityHash": "da069e69354692e7aba7f6304f64cd64",
+    "entities": [
+      {
+        "tableName": "track_reaction",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`track_key` TEXT NOT NULL, `artist` TEXT NOT NULL, `title` TEXT NOT NULL, `stream` TEXT NOT NULL, `reaction` TEXT NOT NULL, `liked_at` INTEGER, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`track_key`))",
+        "fields": [
+          {
+            "fieldPath": "trackKey",
+            "columnName": "track_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "artist",
+            "columnName": "artist",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stream",
+            "columnName": "stream",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reaction",
+            "columnName": "reaction",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "likedAt",
+            "columnName": "liked_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "track_key"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'da069e69354692e7aba7f6304f64cd64')"
+    ]
+  }
+}

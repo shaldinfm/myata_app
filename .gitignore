@@ -16,6 +16,11 @@ local.properties
 
 # Signing — never commit (see docs/RELEASE_SIGNING.md)
 keystore.properties
+
+# Supabase client config. Holds only public values (project URL + publishable
+# key), but stays local so a fork does not inherit someone else's project.
+# supabase.properties.example is the template. A SECRET key must never go in it.
+supabase.properties
 *.jks
 *.keystore
 

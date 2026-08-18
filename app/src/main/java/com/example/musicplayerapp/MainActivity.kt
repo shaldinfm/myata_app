@@ -130,7 +130,12 @@ class MainActivity : AppCompatActivity() {
         homeFirstFrameObserver = null
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    // Non-null since androidx.activity 1.9.0, which arrived with the Supabase
+    // dependency: ComponentActivity declares the parameter @NonNull, so an
+    // `Intent?` override no longer overrides anything. Only the signature changes -
+    // handleIntent still takes a nullable and still returns early on null, because
+    // the intent that reaches it from onCreate genuinely can be null.
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent) // Update the intent stored in this activity
         handleIntent(intent)

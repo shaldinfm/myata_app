@@ -382,10 +382,16 @@
     </style>
 
     <!--
-      PLAYER `like`, frozen canonical: the same 49x54 slot as the other action,
-      but the glyph inside it is placed rather than centred - 24.5x23.33 with 12
-      above it and 19 below, which puts it 3.5 higher than the middle of the row.
-      `center` keeps the drawable at its own 24.5x23.33.
+      PLAYER `like` and `dislike`, frozen canonical: a 49x54 slot whose glyph is
+      placed rather than centred - 24.5x23.33 with 12 above it and 19 below,
+      which puts it 3.5 higher than the middle of the row. `center` keeps the
+      drawable at its own 24.5x23.33.
+
+      Both side slots share it. The frozen frame reads them identically
+      (`like`/`dislike > Container > Icon`, 24.5x23.33), and they only had
+      different styles while the trailing one was standing in for the History
+      entry, which fitCenter'd a 24dp glyph instead. Their colours still differ,
+      and those stay on the views: `player_like` and `player_control_action`.
     -->
     <style name="PlayerLikeSlot">
         <item name="android:layout_width">@dimen/player_action_width</item>
@@ -396,23 +402,6 @@
         <item name="android:paddingEnd">@dimen/player_action_icon_inset</item>
         <item name="android:paddingTop">@dimen/player_action_icon_inset</item>
         <item name="android:paddingBottom">@dimen/player_action_icon_inset_bottom</item>
-    </style>
-
-    <!--
-      Only the trailing slot now: `like` has its own style with the frozen glyph
-      placement. This one still fitCenter's a 24dp icon inside 12dp of padding,
-      because the History entry that occupies the frozen `dislike` slot keeps its
-      own glyph and its own behaviour until the phase that owns it. What it does
-      take is the frozen row's colour, which the design defines unambiguously and
-      identically on both pages.
-    -->
-    <style name="PlayerActionSlot">
-        <item name="android:layout_width">@dimen/player_action_width</item>
-        <item name="android:layout_height">@dimen/player_action_height</item>
-        <item name="android:background">?attr/selectableItemBackgroundBorderless</item>
-        <item name="android:scaleType">fitCenter</item>
-        <item name="android:padding">12dp</item>
-        <item name="tint">@color/player_control_action</item>
     </style>
 
     <!--

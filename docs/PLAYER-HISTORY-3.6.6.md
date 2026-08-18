@@ -249,6 +249,15 @@ The control there now scrolls to the section instead of opening
 on top of itself is not a second view of anything. Its glyph and its colour are
 untouched, and its content description still names the same thing.
 
+> **Superseded.** The slot holds Dislike now that the reaction model gives it
+> something to record - see the note in [PLAYER-3.6.6.md](PLAYER-3.6.6.md). The
+> section itself is unchanged and still inline on this page; only the scroll
+> shortcut is gone. `ic_history` went with it: the shortcut was its only caller,
+> and a drawable with no reference is not a deferred decision the way
+> `HistoryBottomSheet` is - that is still a working screen, and still left in
+> place. The glyph itself is not lost: `tools/figma-export/code.js` carries its
+> SVG inline and names the old path as provenance.
+
 `HistoryBottomSheet` and `item_history_track.xml` are left in place and are now
 unreferenced. Deleting a working feature was not in scope; their disposition is a
 separate decision.

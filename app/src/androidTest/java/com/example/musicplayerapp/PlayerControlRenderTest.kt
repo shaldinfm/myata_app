@@ -101,7 +101,7 @@ class PlayerControlRenderTest {
         val spinner = page.findViewById<CircularProgressIndicator>(R.id.loading_spinner)
         val controls = page.findViewById<ViewGroup>(R.id.player_controls)
         val favourite = page.findViewById<View>(R.id.btn_favorite)
-        val history = page.findViewById<View>(R.id.btn_history)
+        val dislike = page.findViewById<View>(R.id.btn_dislike)
         val control = PlayerControl(button, spinner)
 
         val fills = mutableMapOf<PlayerControlState, Rect>()
@@ -138,7 +138,7 @@ class PlayerControlRenderTest {
             // Centred in the row, and clear of the two 49x54 slots.
             expect(where, "painted control centred", fill.centerX(), controls.width / 2f)
             noOverlap(where, "favourite", rectIn(favourite, controls), "control", fill)
-            noOverlap(where, "control", fill, "history", rectIn(history, controls))
+            noOverlap(where, "control", fill, "dislike", rectIn(dislike, controls))
 
             /* ---- 2. radius 20 ---- */
 

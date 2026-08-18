@@ -169,15 +169,37 @@
                     app:layout_constraintTop_toTopOf="parent"
                     app:tint="@color/player_play_glyph" />
 
+                <!--
+                  The frozen `dislike`, now installed. The slot held the History
+                  entry from #42 onwards - "no new feedback behaviour is
+                  invented" - because there was nothing behind a Dislike to
+                  record. There is now: the reaction model stores NEUTRAL, LIKED
+                  and DISLIKED, and this is the control for the third one.
+
+                  It takes `PlayerLikeSlot`, the same style as `like`: the frozen
+                  frame reads both side slots identically (`like`/`dislike >
+                  Container > Icon`, 24.5x23.33, 12 from the top of a 49x54
+                  slot), so the two are one geometry, and the trailing slot no
+                  longer needs a style of its own. The colour is the frozen row's
+                  own `player_control_action` at rest and `primary` when the
+                  track is disliked - the same active tint `like` uses, because
+                  the frozen frame records no state for either and inventing a
+                  second one would be design this screen has not been given.
+
+                  The History section stays exactly where Phase C put it, inline
+                  further down this page; what goes is the shortcut that scrolled
+                  to it, which was only ever this slot's stand-in.
+                -->
                 <ImageView
-                    android:id="@+id/btn_history"
-                    style="@style/PlayerActionSlot"
+                    android:id="@+id/btn_dislike"
+                    style="@style/PlayerLikeSlot"
                     android:layout_marginEnd="@dimen/player_controls_inset"
-                    android:contentDescription="@string/player_history"
-                    android:src="@drawable/ic_history"
+                    android:contentDescription="@string/player_dislike_add"
+                    android:src="@drawable/ic_player_dislike"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:tint="@color/player_control_action" />
 
                 <!--
                   Connecting and re-buffering. It replaces the glyph, not the

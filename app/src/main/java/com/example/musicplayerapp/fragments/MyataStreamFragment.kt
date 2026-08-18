@@ -22,6 +22,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
+import com.example.musicplayerapp.data.Reaction
 import com.example.musicplayerapp.StreamsViewModel
 import com.example.musicplayerapp.adapters.PlayerHistoryAdapter
 import com.example.musicplayerapp.data.HistoryTrack
@@ -219,22 +220,17 @@ class MyataStreamFragment() : Fragment() {
 
         // Navigation listeners are now handled in MainActivity
 
-        // Favorite button handler
+        // The frozen `like` and `dislike`, both now real reactions.
         binding.btnFavorite.setOnClickListener {
             vm.toggleCurrentFavorite()
         }
-
-        // The frozen `dislike` slot, which History occupies. Phase C brings the
-        // history onto this screen, so the control takes the reader to it instead
-        // of opening a dialog over it: the same content in a modal on top of
-        // itself is not a second view of anything.
-        binding.btnHistory.setOnClickListener {
-            binding.streamScroll.smoothScrollTo(0, binding.historySection.top)
+        binding.btnDislike.setOnClickListener {
+            vm.toggleCurrentDislike()
         }
 
-        // Observe favorite status for current track from centralized VM
-        vm.isCurrentFavorite.observe(viewLifecycleOwner) { isFavorite ->
-            updateHeartIcon(isFavorite)
+        // One value drives both controls, so they cannot both read active.
+        vm.currentReaction.observe(viewLifecycleOwner) { reaction ->
+            updateReactionControls(reaction)
         }
 
         return binding.root
@@ -242,22 +238,44 @@ class MyataStreamFragment() : Fragment() {
     
     
     /**
-     * The frozen `like`. One glyph, always the same 24.5x23.33 thumbs-up in the
-     * same place: the frozen frame records a single visual and no states, so the
-     * collection toggle is the tint. Nothing here changes geometry.
+     * The frozen `like` and `dislike`. One glyph each, always the same 24.5x23.33
+     * in the same place: the frozen frame records a single visual per slot and no
+     * states, so the reaction is carried by the tint and nothing moves.
+     *
+     * The active tint is `primary` on either side. That is the app's existing
+     * "this is on" on this row, and the frozen frame gives no second one; painting
+     * a dislike in some other colour would be inventing design language for a
+     * screen that has been given none. They cannot both be on, because one
+     * [Reaction] decides both.
      */
-    private fun updateHeartIcon(isFavorite: Boolean) {
+    private fun updateReactionControls(reaction: Reaction) {
+        val liked = reaction == Reaction.LIKED
+        val disliked = reaction == Reaction.DISLIKED
+
         ImageViewCompat.setImageTintList(
             binding.btnFavorite,
             ColorStateList.valueOf(
                 ContextCompat.getColor(
                     requireContext(),
-                    if (isFavorite) R.color.primary else R.color.player_like,
+                    if (liked) R.color.primary else R.color.player_like,
                 )
             )
         )
         binding.btnFavorite.contentDescription = getString(
-            if (isFavorite) R.string.player_favorite_remove else R.string.player_favorite_add
+            if (liked) R.string.player_favorite_remove else R.string.player_favorite_add
+        )
+
+        ImageViewCompat.setImageTintList(
+            binding.btnDislike,
+            ColorStateList.valueOf(
+                ContextCompat.getColor(
+                    requireContext(),
+                    if (disliked) R.color.primary else R.color.player_control_action,
+                )
+            )
+        )
+        binding.btnDislike.contentDescription = getString(
+            if (disliked) R.string.player_dislike_remove else R.string.player_dislike_add
         )
     }
 

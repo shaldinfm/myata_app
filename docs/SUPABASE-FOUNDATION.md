@@ -28,19 +28,22 @@ weeks later, or worse, silently creates a *second* anonymous identity and splits
 one person's collection in two — and the reaction data is the thing this whole
 programme exists to get right. That is not a place to save a dependency.
 
-What the dependency costs, measured on the **debug** APK:
+What the dependency costs, measured with R8 and `shrinkResources` on:
 
 ```
-main       21,056,659 bytes (20.1 MB)
-branch     30,383,742 bytes (29.0 MB)   +8.9 MB, +44%
+release APK   9.60 MB -> 10.38 MB    +815,164 bytes  (+0.78 MB,  +8.1%)
+release AAB  12.77 MB -> 14.70 MB  +2,020,885 bytes  (+1.93 MB, +15.1%)
 ```
 
-Debug is unminified. The release build runs R8 with `shrinkResources`, which will
-remove most of it, but **that number has not been measured** — release variants are
-owner-only in this repo, so nobody has yet run R8 over this dependency set. Getting
-a measured release delta, and confirming the ProGuard keeps in
-`app/proguard-rules.pro` are right (or unnecessary), is an owner step before sync
-ships.
+The debug APK grows by 8.9 MB, and that number is worth ignoring: it is
+unminified, and R8 removes nine tenths of the difference. The AAB grows more than
+the APK because it carries every split; what a listener actually downloads is
+derived from it per device and is smaller again.
+
+The ProGuard keeps in `app/proguard-rules.pro` were written blind and are still
+unproven: the release build succeeds, but no auth call has been exercised through
+an R8-processed binary, because nothing calls the sync boundary yet. That check
+belongs to the phase that does.
 
 Two consequences worth naming:
 
@@ -134,19 +137,37 @@ role can read the totals.
 
 ## Anonymous auth
 
-Invisible. No login screen, no prompt, nothing for a listener to decide.
-`MyataApplication` calls `AnonymousSession.ensureInBackground()` at startup; it is
-one request on `Dispatchers.IO`, every failure path ends in a log line, and a build
-with no project configured never starts it. Nothing reads the session yet.
+Invisible, and **created only when there is something to own**.
 
-- **Enable it first**: Dashboard → Authentication → Providers → *Enable Anonymous
-  Sign-Ins*. Without it, sign-in fails and the app carries on exactly as before.
-- The user is a real row in `auth.users` with `is_anonymous: true` in the JWT, so
-  policies can distinguish anonymous from registered later without changing shape.
-- **The account upgrade is not a migration.** Linking an email or an OAuth identity
-  keeps the *same* user id, so rows written today already belong to the account
-  made later. That is the whole reason to use anonymous auth instead of a
-  self-invented device id.
+Opening the radio is not a reason to exist in a database. Most listeners never
+react to anything, so signing each of them in would fill `auth.users` with
+identities that own nothing, add a request to every cold launch, and hand an open
+sign-up endpoint one call per app start. So the two entry points differ:
+
+| | called by | may sign in? |
+|---|---|---|
+| `AnonymousSession.restore()` | `MyataApplication` at startup | **no** - loads an existing session or does nothing |
+| `AnonymousSession.ensureAuthenticatedListener()` | the sync boundary, later | yes, but only if this install has never had an identity |
+
+Nothing calls `ensureAuthenticatedListener` yet. It exists so the phase that syncs
+reactions has a tested boundary to call instead of inventing one.
+
+### Never a second identity
+
+The rule that matters most is what happens when a session cannot be refreshed -
+offline, project paused, token expired. Signing in again would mint a **second**
+`auth.uid()` for one person and split their data permanently, on exactly the flaky
+networks this app is used on. So an install records that it has had an identity,
+and once that marker is set `ensureAuthenticatedListener` returns null rather than
+minting a replacement. Losing one sync is recoverable; splitting a listener is not.
+
+That marker is written with `commit()`, not `apply()`, and the difference is the
+guarantee itself. `apply()` flushes on a background thread, so a process death
+right after a sign-in can lose it - **which is exactly what an API 36 force-stop
+did**, leaving a zero-length preferences file and an install that believed it had
+never signed in. The next call would have minted a second identity. It is one short
+string, already off the main thread, so the synchronous write costs nothing worth
+having.
 
 ### Abuse and rate limits — a real, unaddressed concern
 

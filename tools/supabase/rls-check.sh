@@ -125,21 +125,41 @@ else
     printf '  FAIL  %-58s (%s)\n' "B reading A's reactions sees nothing" "$ROWS"
     fail=$((fail + 1))
 fi
-check "B updates A's reaction"            deny  "$(patch "reactions?listener_id=eq.$UID_A&track_key=eq.$KEY_1" "$TOKEN_B" '{"reaction":"LIKED"}')"
-# PATCH filtered to rows B cannot see returns 204 having changed nothing; verify.
+# NOTE ON STATUS CODES. When RLS filters rows away, PostgREST reports 204 - the
+# statement matched nothing - not 403. So for a write that policy is meant to
+# stop, the status says nothing useful, and the only real question is whether the
+# data moved. These three checks read the row back instead of trusting a code.
+patch "reactions?listener_id=eq.$UID_A&track_key=eq.$KEY_1" "$TOKEN_B" '{"reaction":"LIKED"}' > /dev/null
 STILL=$(curl -s "$URL/rest/v1/reactions?listener_id=eq.$UID_A&select=reaction" -H "apikey: $KEY" -H "Authorization: Bearer $TOKEN_A")
 if echo "$STILL" | grep -q DISLIKED; then
-    printf '  PASS  %-58s\n' "A's reaction is unchanged after B's attempt"
+    printf '  PASS  %-58s\n' "B cannot change A's reaction (row unchanged)"
     pass=$((pass + 1))
 else
-    printf '  FAIL  %-58s (%s)\n' "A's reaction is unchanged after B's attempt" "$STILL"
+    printf '  FAIL  %-58s (%s)\n' "B cannot change A's reaction (row unchanged)" "$STILL"
     fail=$((fail + 1))
 fi
 
 echo
 echo "== history is append-only, and analytics are not for clients"
-check "A updates its own event"           deny  "$(patch "reaction_events?event_id=eq.$EVENT_A" "$TOKEN_A" '{"event_type":"LIKE"}')"
-check "A deletes its own event"           deny  "$(curl -s -o /dev/null -w '%{http_code}' -X DELETE "$URL/rest/v1/reaction_events?event_id=eq.$EVENT_A" -H "apikey: $KEY" -H "Authorization: Bearer $TOKEN_A")"
+patch "reaction_events?event_id=eq.$EVENT_A" "$TOKEN_A" '{"event_type":"LIKE"}' > /dev/null
+AFTER_PATCH=$(curl -s "$URL/rest/v1/reaction_events?event_id=eq.$EVENT_A&select=event_type" -H "apikey: $KEY" -H "Authorization: Bearer $TOKEN_A")
+if echo "$AFTER_PATCH" | grep -q DISLIKE; then
+    printf '  PASS  %-58s\n' 'an event cannot be edited (still DISLIKE)'
+    pass=$((pass + 1))
+else
+    printf '  FAIL  %-58s (%s)\n' 'an event cannot be edited (still DISLIKE)' "$AFTER_PATCH"
+    fail=$((fail + 1))
+fi
+
+curl -s -o /dev/null -X DELETE "$URL/rest/v1/reaction_events?event_id=eq.$EVENT_A" -H "apikey: $KEY" -H "Authorization: Bearer $TOKEN_A"
+AFTER_DELETE=$(curl -s "$URL/rest/v1/reaction_events?event_id=eq.$EVENT_A&select=event_type" -H "apikey: $KEY" -H "Authorization: Bearer $TOKEN_A")
+if [ "$AFTER_DELETE" != "[]" ] && [ -n "$AFTER_DELETE" ]; then
+    printf '  PASS  %-58s\n' 'an event cannot be deleted (row still there)'
+    pass=$((pass + 1))
+else
+    printf '  FAIL  %-58s (%s)\n' 'an event cannot be deleted (row still there)' "$AFTER_DELETE"
+    fail=$((fail + 1))
+fi
 check "A reads station-wide totals"       deny  "$(get "track_reaction_totals" "$TOKEN_A")"
 check "an unauthenticated caller reads reactions" deny "$(curl -s -o /dev/null -w '%{http_code}' "$URL/rest/v1/reactions" -H "apikey: $KEY")"
 

@@ -194,6 +194,14 @@ dependencies {
     // Moving up means moving the whole project's Kotlin first; see
     // docs/SUPABASE-FOUNDATION.md.
     def supabaseVersion = '3.2.6'
+
+    // The engine version is not a free choice: it has to equal the
+    // ktor-client-core that supabase-kt itself drags in, or the app runs one
+    // Ktor engine against a different Ktor core. supabase-kt 3.2.6 declares
+    // ktor-client-core 3.3.1 in its own POM - checked, not assumed - and the
+    // resolved runtime classpath agrees. 3.3.1 IS the aligned version here, and
+    // pinning the engine to 3.3.0 would create exactly the split that aligning
+    // is meant to avoid.
     def ktorVersion = '3.3.1'
     def desugarVersion = '2.1.5'
 

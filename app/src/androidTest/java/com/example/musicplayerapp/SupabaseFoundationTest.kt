@@ -64,8 +64,9 @@ class SupabaseFoundationTest {
 
         assertNull(SupabaseModule.client(context))
         // And the startup bootstrap is a no-op rather than an error.
-        AnonymousSession.ensureInBackground(context)
-        assertNull(runBlocking { AnonymousSession.ensure(context) })
+        AnonymousSession.restoreInBackground(context)
+        assertNull(runBlocking { AnonymousSession.restore(context) })
+        assertNull(runBlocking { AnonymousSession.ensureAuthenticatedListener(context) })
     }
 
     /**
@@ -122,21 +123,58 @@ class SupabaseFoundationTest {
     }
 
     @Test
-    fun anonymousSignInProducesAStableUid() {
+    fun startupRestoresButNeverSignsAnyoneIn() {
         assumeTrue("no supabase.properties in this build", SupabaseConfig.isConfigured)
 
-        val first = runBlocking { AnonymousSession.ensure(context) }
+        // A listener who has never reacted: no stored identity, so startup must
+        // produce nothing at all. This is the check that keeps auth.users free of
+        // rows for people who only ever pressed Play.
+        AnonymousSession.forgetKnownIdentityForTest(context)
+        runBlocking { SupabaseModule.client(context)!!.auth.signOut() }
+
+        assertNull("startup signed a listener in", runBlocking { AnonymousSession.restore(context) })
+        assertFalse(AnonymousSession.hasKnownIdentity(context))
+    }
+
+    @Test
+    fun theSyncBoundaryMintsAnIdentityAndThenReusesIt() {
+        assumeTrue("no supabase.properties in this build", SupabaseConfig.isConfigured)
+
+        AnonymousSession.forgetKnownIdentityForTest(context)
+        runBlocking { SupabaseModule.client(context)!!.auth.signOut() }
+
+        val first = runBlocking { AnonymousSession.ensureAuthenticatedListener(context) }
         assertNotNull(
             "anonymous sign-in failed - is it enabled for the project, and is the device online?",
             first,
         )
+        assertTrue(AnonymousSession.hasKnownIdentity(context))
 
-        // Calling again reuses the session rather than creating a second listener.
-        val second = runBlocking { AnonymousSession.ensure(context) }
+        // Called again it reuses the session rather than creating a second listener.
+        val second = runBlocking { AnonymousSession.ensureAuthenticatedListener(context) }
         assertEquals(first, second)
+        // And startup now restores that same identity.
+        assertEquals(first, runBlocking { AnonymousSession.restore(context) })
 
-        val client = SupabaseModule.client(context)!!
-        assertEquals(first, client.auth.currentUserOrNull()?.id)
+        assertEquals(first, SupabaseModule.client(context)!!.auth.currentUserOrNull()?.id)
+    }
+
+    @Test
+    fun anInstallThatHasAnIdentityNeverMintsAReplacement() {
+        assumeTrue("no supabase.properties in this build", SupabaseConfig.isConfigured)
+
+        val original = runBlocking { AnonymousSession.ensureAuthenticatedListener(context) }
+        assumeTrue("no identity to protect", original != null)
+
+        // Sign out but keep the install's marker: this is what a listener looks like
+        // when the token expired and the refresh could not be made - offline, or the
+        // project unreachable. Minting here would split one person into two uids.
+        runBlocking { SupabaseModule.client(context)!!.auth.signOut() }
+        assertTrue(AnonymousSession.hasKnownIdentity(context))
+
+        val whileUnavailable = runBlocking { AnonymousSession.ensureAuthenticatedListener(context) }
+        assertNull("a second identity was minted for an install that already had one", whileUnavailable)
+        assertEquals("the remembered uid changed", original, AnonymousSession.knownUid(context))
     }
 
     /**
@@ -153,7 +191,7 @@ class SupabaseFoundationTest {
     fun theSessionIsPersistedForTheNextLaunch() {
         assumeTrue("no supabase.properties in this build", SupabaseConfig.isConfigured)
 
-        val uid = runBlocking { AnonymousSession.ensure(context) }
+        val uid = runBlocking { AnonymousSession.ensureAuthenticatedListener(context) }
         assumeTrue("no session to persist", uid != null)
 
         val client = SupabaseModule.client(context)!!

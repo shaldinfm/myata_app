@@ -13,6 +13,15 @@
 #   SUPABASE_PUBLISHABLE_KEY=sb_publishable_... \
 #   tools/supabase/rls-check.sh
 #
+# The owner-side half - proving the service role CAN read the aggregate - is not
+# here on purpose: a secret key must never be in the repo or in this session. Run
+# it yourself, and note the header, because a modern sb_secret_... key is an API
+# key and NOT a JWT:
+#
+#   curl -s "$SUPABASE_URL/rest/v1/track_reaction_totals?limit=5" -H "apikey: $SECRET"
+#
+# Sending it as `Authorization: Bearer` is wrong and will not authenticate.
+#
 # Requires: curl, python3. Creates two throwaway anonymous users and one track.
 # Anonymous sign-ins must be enabled for the project, and the project's IP rate
 # limit (30/hour by default) applies to the sign-ins this makes.
@@ -81,6 +90,10 @@ get() { # get <path> <token>
         -H "apikey: $KEY" -H "Authorization: Bearer $2"
 }
 
+rpc() { # rpc <function> <token> <body>
+    curl -s -o /dev/null -w '%{http_code}' -X POST "$URL/rest/v1/rpc/$1"         -H "apikey: $KEY" -H "Authorization: Bearer $2"         -H "Content-Type: application/json" -d "$3"
+}
+
 patch() { # patch <path> <token> <body>
     curl -s -o /dev/null -w '%{http_code}' -X PATCH "$URL/rest/v1/$1" \
         -H "apikey: $KEY" -H "Authorization: Bearer $2" \
@@ -96,13 +109,32 @@ echo "   A = $UID_A"
 echo "   B = $UID_B"
 [ "$UID_A" != "$UID_B" ] || { echo "both sign-ins returned the same uid - not two listeners"; exit 1; }
 
-KEY_1="rlscheck$(date +%s)"
+KEY_1=$(python3 -c "import hashlib,time; print(hashlib.sha256(str(time.time()).encode()).hexdigest())")
 EVENT_A=$(python3 -c "import uuid; print(uuid.uuid4())")
 EVENT_B=$(python3 -c "import uuid; print(uuid.uuid4())")
 
 echo
 echo "== A operates on its own rows"
-check "A adds a track"                    allow "$(post tracks "$TOKEN_A" "{\"track_key\":\"$KEY_1\",\"artist\":\"RLS\",\"title\":\"Check\"}")"
+# The catalogue is not writable through PostgREST at all: no INSERT policy, so a
+# direct write is refused however well-formed it is. The only way in is
+# register_track, which validates the key shape and can never modify a row that
+# already exists (0002).
+check "A cannot write the catalogue directly" deny "$(post tracks "$TOKEN_A" "{\"track_key\":\"$KEY_1\",\"artist\":\"RLS\",\"title\":\"Check\"}")"
+check "A registers a track through the RPC" allow "$(rpc register_track "$TOKEN_A" "{\"p_track_key\":\"$KEY_1\",\"p_artist\":\"RLS\",\"p_title\":\"Check\"}")"
+check "the RPC refuses a key that is not a TrackKey" deny "$(rpc register_track "$TOKEN_A" '{"p_track_key":"junk-not-a-trackkey","p_artist":"X","p_title":"Y"}')"
+
+# Called again with different words, the row must not move: create-only.
+rpc register_track "$TOKEN_A" "{\"p_track_key\":\"$KEY_1\",\"p_artist\":\"OVERWRITTEN\",\"p_title\":\"OVERWRITTEN\"}" > /dev/null
+CATALOGUE=$(curl -s "$URL/rest/v1/tracks?track_key=eq.$KEY_1&select=artist" -H "apikey: $KEY" -H "Authorization: Bearer $TOKEN_A")
+if echo "$CATALOGUE" | grep -q '"RLS"'; then
+    printf '  PASS  %-58s
+' "the RPC cannot rewrite an existing catalogue row"
+    pass=$((pass + 1))
+else
+    printf '  FAIL  %-58s (%s)
+' "the RPC cannot rewrite an existing catalogue row" "$CATALOGUE"
+    fail=$((fail + 1))
+fi
 check "A creates its own reaction"        allow "$(post reactions "$TOKEN_A" "{\"listener_id\":\"$UID_A\",\"track_key\":\"$KEY_1\",\"reaction\":\"LIKED\",\"stream\":\"myata\"}")"
 check "A reads its own reaction"          allow "$(get "reactions?listener_id=eq.$UID_A" "$TOKEN_A")"
 check "A updates its own reaction"        allow "$(patch "reactions?listener_id=eq.$UID_A&track_key=eq.$KEY_1" "$TOKEN_A" '{"reaction":"DISLIKED"}')"

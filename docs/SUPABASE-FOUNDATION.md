@@ -82,6 +82,17 @@ deprecated by the end of 2026.
   or CI. The build fails if `supabase.properties` holds one; `SupabaseConfig` has
   the same check at runtime.
 
+A modern `sb_secret_…` key is an **API key, not a JWT**, so owner-side calls send it
+in the `apikey` header only:
+
+```bash
+curl -s "$SUPABASE_URL/rest/v1/track_reaction_totals?limit=5" -H "apikey: $SECRET"
+```
+
+`Authorization: Bearer sb_secret_…` is wrong and does not authenticate. `Bearer` is
+for user access tokens, which *are* JWTs — that is what `rls-check.sh` sends for its
+two anonymous listeners.
+
 Configuration lives in `supabase.properties` in the project root — untracked, the
 same route release signing uses, template in `supabase.properties.example`:
 
@@ -120,7 +131,7 @@ policy permits, anyone can do.
 
 | table | select | insert | update | delete |
 |---|---|---|---|---|
-| `tracks` | any signed-in listener | any signed-in listener | **none** | **none** |
+| `tracks` | any signed-in listener | **none** — see below | **none** | **none** |
 | `reactions` | own rows | own rows | own rows | own rows |
 | `reaction_events` | own rows | own rows | **none** | **none** |
 | `track_reaction_totals` | service role only | — | — | — |
@@ -129,6 +140,53 @@ policy permits, anyone can do.
 so a client cannot insert a row owned by somebody else. `tracks` has no update or
 delete policy at all, so nobody can rewrite the words attached to another
 listener's key.
+
+### The track catalogue is not client-writable (0002)
+
+0001 shipped `tracks` with an INSERT policy of `with check (true)`. Its comment
+claimed "a track they are reacting to"; the policy said no such thing, and the live
+project confirmed the gap — an anonymous client inserted `junk-not-a-trackkey-…`
+with an artist of `<script>whatever` and a 300-character title, having reacted to
+nothing. With the publishable key in the APK, that was an open door into the
+station's catalogue.
+
+`0002_tracks_catalogue_guard.sql` closes it:
+
+- the INSERT policy is **dropped** — `tracks` now has no INSERT, UPDATE or DELETE
+  policy at all, so PostgREST cannot write it under any circumstances;
+- two CHECK constraints (`NOT VALID`, so existing rows are left alone) require a
+  `track_key` to be TrackKey v1 shaped — 64 lowercase hex, or the `legacy:`
+  namespace — and bound artist and title to 1–300 characters;
+- `public.register_track(p_track_key, p_artist, p_title)` is the one way in. It is
+  `SECURITY DEFINER`, granted to `authenticated` only, refuses an unauthenticated
+  caller, validates the key shape itself, trims and bounds the words, and is
+  `ON CONFLICT DO NOTHING` — so it can **create** an entry and can never modify
+  one. Two listeners spelling a track differently cannot overwrite each other, and
+  nobody can rewrite the station's words for a key that already exists.
+
+**How a legitimate row will be created:** when reaction sync lands, the client
+calls `register_track` for the track it is about to react to, then writes its own
+`reactions` row (whose FK requires the catalogue entry). Nothing else in the app
+touches the catalogue.
+
+What this does not claim to solve: the artist and title of a *brand-new* key still
+originate on a device, because the station's metadata API has no track ids and the
+phone is the only source. What is bounded is that a row can appear only through
+that path, only in the right shape, and never change afterwards.
+
+The audit left test rows in the live catalogue (from the harness, and from the junk
+row that demonstrated the hole). They predate the constraints, so nothing rejects
+them; clean them up when convenient, owner-side:
+
+```sql
+-- rows that could not exist under 0002's constraints
+delete from public.reactions where track_key in (
+  select track_key from public.tracks
+  where track_key !~ '^[0-9a-f]{64}$' and track_key !~ '^legacy:'
+);
+delete from public.tracks
+where track_key !~ '^[0-9a-f]{64}$' and track_key !~ '^legacy:';
+```
 
 `tools/supabase/rls-check.sh` proves this against a real project with two throwaway
 anonymous users: A operates on its own rows, A cannot write as B, B cannot see or

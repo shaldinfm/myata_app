@@ -44,6 +44,16 @@ abstract class ReactionDao {
     @Query("SELECT EXISTS(SELECT 1 FROM track_reaction WHERE track_key = :trackKey AND reaction = 'LIKED')")
     abstract fun isLiked(trackKey: String): Flow<Boolean>
 
+    /**
+     * This track's reaction as it changes, or null while there is no row for it.
+     *
+     * What the PLAYER's two controls draw. A track nobody has reacted to has no
+     * row at all, so null and [Reaction.NEUTRAL] mean the same thing to a reader
+     * and the caller maps one to the other.
+     */
+    @Query("SELECT reaction FROM track_reaction WHERE track_key = :trackKey")
+    abstract fun observeReaction(trackKey: String): Flow<Reaction?>
+
     @Query("SELECT * FROM track_reaction WHERE track_key = :trackKey LIMIT 1")
     abstract suspend fun find(trackKey: String): TrackReaction?
 
@@ -93,15 +103,27 @@ abstract class ReactionDao {
      */
     @Transaction
     open suspend fun unlike(trackKey: String, now: Long = System.currentTimeMillis()): Boolean =
-        neutralise(trackKey, now) > 0
+        neutraliseLiked(trackKey, now) > 0
+
+    /**
+     * Withdraws a Dislike: back to [Reaction.NEUTRAL].
+     *
+     * The mirror of [unlike], and separate from it for the same reason the two
+     * events are separate - which opinion is being withdrawn is the whole content
+     * of the act. Nothing enters the Collection here; NEUTRAL is not LIKED.
+     *
+     * @return true if a DISLIKED row was actually neutralised.
+     */
+    @Transaction
+    open suspend fun undislike(trackKey: String, now: Long = System.currentTimeMillis()): Boolean =
+        neutraliseDisliked(trackKey, now) > 0
 
     /**
      * Sets an explicit negative reaction.
      *
-     * Nothing calls this yet - there is no Dislike control on the PLAYER, and this
-     * PR deliberately does not add one. It is here because DISLIKED is a state of
-     * the model that the storage has to be able to hold and the tests have to be
-     * able to exercise; the control that drives it comes later.
+     * A dislike takes the track out of the Collection by construction, because the
+     * Collection is the LIKED rows - so LIKED -> DISLIKED needs no separate
+     * removal, and reports one DISLIKE rather than an invented UNLIKE first.
      *
      * @return true if the state changed.
      */
@@ -133,7 +155,10 @@ abstract class ReactionDao {
     }
 
     @Query("UPDATE track_reaction SET reaction = 'NEUTRAL', updated_at = :now WHERE track_key = :trackKey AND reaction = 'LIKED'")
-    protected abstract suspend fun neutralise(trackKey: String, now: Long): Int
+    protected abstract suspend fun neutraliseLiked(trackKey: String, now: Long): Int
+
+    @Query("UPDATE track_reaction SET reaction = 'NEUTRAL', updated_at = :now WHERE track_key = :trackKey AND reaction = 'DISLIKED'")
+    protected abstract suspend fun neutraliseDisliked(trackKey: String, now: Long): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     protected abstract suspend fun upsert(reaction: TrackReaction)

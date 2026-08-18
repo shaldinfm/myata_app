@@ -137,6 +137,13 @@
     <string name="player_connecting">Подключение</string>
     <string name="player_favorite_add">Добавить в коллекцию</string>
     <string name="player_favorite_remove">Убрать из коллекции</string>
+    <!--
+      The `dislike` slot's labels. They describe the reaction, not the
+      Collection: a dislike is an opinion about the track and never puts it in
+      the Collection, which is what `player_favorite_*` above is about.
+    -->
+    <string name="player_dislike_add">Не нравится</string>
+    <string name="player_dislike_remove">Убрать «не нравится»</string>
     <string name="player_history">История эфира</string>
     <string name="player_artwork">Обложка трека</string>
 

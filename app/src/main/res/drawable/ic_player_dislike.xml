@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PLAYER `dislike` glyph - the literal Figma vector.
+
+    node 2399:31224, 24.5 x 23.3333334, one path, fill-rule nonzero
+
+  An OUTLINED thumbs-down, the `like` glyph's mirror, and the same 24.5 x 23.33
+  the canonical snapshot records for both side slots. It shipped in the icon
+  bundle with #42 and was deliberately not installed then, because the slot it
+  belongs to was holding the History entry until the phase that owns Dislike -
+  this one. Nothing about it is redrawn: the path is the bundle's, verbatim.
+
+  It sits 12 below the top of its 49x54 slot rather than centred in it, exactly
+  as `like` does - see PlayerLikeSlot, which both slots now share.
+
+  Only the fill is changed, to the repo's #FFFFFF placeholder: the colour is
+  `player_control_action` at rest - the frozen row defines that slot's colour
+  unambiguously on both pages - and `primary` when the track is disliked,
+  applied from the fragment.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="@dimen/player_action_icon_width"
+    android:height="@dimen/player_action_icon_height"
+    android:viewportWidth="24.5"
+    android:viewportHeight="23.333334">
+    <path android:fillColor="#FFFFFF" android:pathData="M 5.8333335 0 L 18.666666 0 L 18.666666 15.166667 L 10.5 23.333334 L 9.041667 21.875 C 8.9055557 21.7388897 8.7937498 21.5541668 8.7062502 21.3208332 C 8.6187506 21.0874996 8.5749998 20.8638878 8.5749998 20.6499996 L 8.5749998 20.2416668 L 9.8583336 15.166667 L 2.3333333 15.166667 C 1.7111111 15.166667 1.1666666 14.9333324 0.7 14.4666662 C 0.2333333 14 0 13.455555 0 12.833333 L 0 10.5 C 0 10.3638887 0.0194444 10.2180557 0.0583333 10.0625 C 0.0972222 9.9069443 0.1361111 9.7611113 0.175 9.625 L 3.675 1.4 C 3.8499999 1.011111 4.1416669 0.6805556 4.5500002 0.4083333 C 4.9583335 0.1361111 5.3861113 0 5.8333335 0 L 5.8333335 0 M 16.333334 2.3333333 L 5.8333335 2.3333333 L 5.8333335 2.3333333 L 5.8333335 2.3333333 L 2.3333333 10.5 L 2.3333333 12.833333 L 2.3333333 12.833333 L 2.3333333 12.833333 L 12.833333 12.833333 L 11.2583332 19.25 L 16.333334 14.1750002 L 16.333334 2.3333333 L 16.333334 2.3333333 M 16.333334 14.1750002 L 16.333334 14.1750002 L 16.333334 12.833333 L 16.333334 12.833333 L 16.333334 12.833333 L 16.333334 12.833333 L 16.333334 10.5 L 16.333334 2.3333333 L 16.333334 2.3333333 L 16.333334 2.3333333 L 16.333334 2.3333333 L 16.333334 14.1750002 L 16.333334 14.1750002 M 18.666666 15.166667 L 18.666666 12.833333 L 22.166666 12.833333 L 22.166666 2.3333333 L 18.666666 2.3333333 L 18.666666 0 L 24.5 0 L 24.5 15.166667 L 18.666666 15.166667 L 18.666666 15.166667" />
+</vector>

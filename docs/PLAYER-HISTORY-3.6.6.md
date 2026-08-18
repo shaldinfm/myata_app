@@ -249,6 +249,12 @@ The control there now scrolls to the section instead of opening
 on top of itself is not a second view of anything. Its glyph and its colour are
 untouched, and its content description still names the same thing.
 
+> **Superseded.** The slot holds Dislike now that the reaction model gives it
+> something to record - see the note in [PLAYER-3.6.6.md](PLAYER-3.6.6.md). The
+> section itself is unchanged and still inline on this page; only the scroll
+> shortcut is gone, and `ic_history` with no caller joins `HistoryBottomSheet` in
+> being left in place rather than deleted.
+
 `HistoryBottomSheet` and `item_history_track.xml` are left in place and are now
 unreferenced. Deleting a working feature was not in scope; their disposition is a
 separate decision.

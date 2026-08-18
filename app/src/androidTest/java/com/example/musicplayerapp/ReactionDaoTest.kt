@@ -149,6 +149,55 @@ class ReactionDaoTest {
         assertEquals(Reaction.LIKED, dao.find(caveKey)!!.reaction)
     }
 
+    @Test
+    fun undisliking_returns_to_neutral_and_not_to_the_collection() = runBlocking {
+        dao.dislike(caveKey, "Nick Cave", "Red Right Hand", "gold")
+        assertTrue(dao.undislike(caveKey))
+
+        assertEquals(Reaction.NEUTRAL, dao.find(caveKey)!!.reaction)
+        assertEquals(emptyList<Any>(), dao.likedTracks().first())
+        assertFalse(dao.isLiked(caveKey).first())
+    }
+
+    @Test
+    fun each_withdrawal_only_touches_its_own_opinion() = runBlocking {
+        // undislike must not clear a Like, and unlike must not clear a Dislike:
+        // which opinion is being withdrawn is the whole content of the act.
+        likeDepeche()
+        assertFalse(dao.undislike(depecheKey))
+        assertEquals(Reaction.LIKED, dao.find(depecheKey)!!.reaction)
+
+        dao.dislike(caveKey, "Nick Cave", "Red Right Hand", "gold")
+        assertFalse(dao.unlike(caveKey))
+        assertEquals(Reaction.DISLIKED, dao.find(caveKey)!!.reaction)
+    }
+
+    @Test
+    fun the_observed_reaction_is_what_the_player_draws() = runBlocking {
+        // Null while nobody has reacted; the caller reads that as NEUTRAL.
+        assertEquals(null, dao.observeReaction(depecheKey).first())
+
+        likeDepeche()
+        assertEquals(Reaction.LIKED, dao.observeReaction(depecheKey).first())
+
+        dao.dislike(depecheKey, "Depeche Mode", "Enjoy the Silence", "myata")
+        assertEquals(Reaction.DISLIKED, dao.observeReaction(depecheKey).first())
+
+        dao.undislike(depecheKey)
+        assertEquals(Reaction.NEUTRAL, dao.observeReaction(depecheKey).first())
+    }
+
+    @Test
+    fun a_second_track_keeps_its_own_reaction() = runBlocking {
+        // Switching tracks shows that track's stored reaction, not the last one's.
+        likeDepeche()
+        dao.dislike(caveKey, "Nick Cave", "Red Right Hand", "gold")
+
+        assertEquals(Reaction.LIKED, dao.observeReaction(depecheKey).first())
+        assertEquals(Reaction.DISLIKED, dao.observeReaction(caveKey).first())
+        assertEquals(listOf("Depeche Mode"), dao.likedTracks().first().map { it.artist })
+    }
+
     // ==================== Ordering and Undo ====================
 
     @Test

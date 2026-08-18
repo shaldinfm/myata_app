@@ -103,8 +103,17 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     // Favorites
     private val database = AppDatabase.getDatabase(app)
     private val reactionDao = database.reactionDao()
-    private val _isCurrentFavorite = MutableLiveData<Boolean>(false)
-    val isCurrentFavorite: LiveData<Boolean> = _isCurrentFavorite
+    /**
+     * The reaction the PLAYER's two controls draw for the track that is playing.
+     *
+     * One value, not two flags: the states are exclusive, and a screen that reads
+     * a single [Reaction] cannot paint both controls active at once however the
+     * taps arrive. It is re-read from the database on every track change, so a
+     * track that was disliked three sessions ago shows disliked the moment it
+     * comes back on air.
+     */
+    private val _currentReaction = MutableLiveData(Reaction.NEUTRAL)
+    val currentReaction: LiveData<Reaction> = _currentReaction
     private var favoriteObservationJob: Job? = null
 
     private val client = SecureNetModule.getOkHttpClient(app)
@@ -456,54 +465,81 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         val trackKey = TrackKey.of(artist, song)
         if (trackKey != null) {
             favoriteObservationJob = viewModelScope.launch {
-                reactionDao.isLiked(trackKey).collectLatest {
-                    _isCurrentFavorite.postValue(it)
+                reactionDao.observeReaction(trackKey).collectLatest {
+                    // No row and NEUTRAL are the same thing to a reader.
+                    _currentReaction.postValue(it ?: Reaction.NEUTRAL)
                 }
             }
         } else {
             // No key means nothing to react to: a stream between tracks, or the
             // jingle sentinel. TrackKey.of refuses both, which is the guard that
             // used to be spelled out here.
-            _isCurrentFavorite.value = false
+            _currentReaction.value = Reaction.NEUTRAL
         }
     }
 
-    fun toggleCurrentFavorite() {
-        val stream = currentStreamLive.value ?: "myata"
-        val state = when(stream) {
-            "myata" -> currentMyataState.value
-            "gold" -> currentGoldState.value
-            "myata_hits" -> currentXtraState.value
+    /** A tap on the PLAYER's `like`. */
+    fun toggleCurrentFavorite() = toggleReaction(ReactionToggle::likeTap)
+
+    /** A tap on the PLAYER's `dislike`. */
+    fun toggleCurrentDislike() = toggleReaction(ReactionToggle::dislikeTap)
+
+    /**
+     * Applies one tap to the track that is playing.
+     *
+     * Both controls run through here because the rules are the same for both and
+     * only [target] differs: read what the listener currently thinks, ask
+     * [ReactionToggle] where this tap leads, write it, and report the transition -
+     * but only if the write changed something. A second tap on an already-active
+     * control lands on its own state, changes nothing and reports nothing, and so
+     * does a tap that raced the Collection screen to the same track.
+     *
+     * LIKED -> DISLIKED and DISLIKED -> LIKED are single writes and single events.
+     * The intermediate NEUTRAL is never written and never reported, because the
+     * listener never asked for it.
+     */
+    private fun toggleReaction(target: (Reaction) -> Reaction) {
+        val stream = currentStreamLive.value ?: Streams.DEFAULT
+        val state = when (stream) {
+            Streams.MYATA -> currentMyataState.value
+            Streams.GOLD -> currentGoldState.value
+            Streams.XTRA -> currentXtraState.value
             else -> null
         }
 
-        val artist = state?.artist
-        val song = state?.song
+        val artist = state?.artist ?: return
+        val song = state.song ?: return
+        val trackKey = TrackKey.of(artist, song) ?: return
 
-        val trackKey = TrackKey.of(artist, song)
-        if (trackKey != null && artist != null && song != null) {
-            viewModelScope.launch {
-                val event = if (reactionDao.find(trackKey)?.reaction == Reaction.LIKED) {
-                    // Withdrawing a Like is UNLIKE - a return to neutral, never a
-                    // dislike. The row survives as NEUTRAL; only the Collection
-                    // membership goes.
-                    ReactionEvent.forUnlike(reactionDao.unlike(trackKey))
-                } else {
-                    ReactionEvent.forLike(
-                        reactionDao.like(
-                            trackKey = trackKey,
-                            artist = artist,
-                            title = song,
-                            stream = stream,
-                            likedAt = System.currentTimeMillis(),
-                        )
-                    )
+        viewModelScope.launch {
+            val from = reactionDao.find(trackKey)?.reaction ?: Reaction.NEUTRAL
+            val to = target(from)
+
+            val changed = when (to) {
+                Reaction.LIKED -> reactionDao.like(
+                    trackKey = trackKey,
+                    artist = artist,
+                    title = song,
+                    stream = stream,
+                    likedAt = System.currentTimeMillis(),
+                )
+                Reaction.DISLIKED -> reactionDao.dislike(
+                    trackKey = trackKey,
+                    artist = artist,
+                    title = song,
+                    stream = stream,
+                )
+                Reaction.NEUTRAL -> when (from) {
+                    Reaction.LIKED -> reactionDao.unlike(trackKey)
+                    Reaction.DISLIKED -> reactionDao.undislike(trackKey)
+                    Reaction.NEUTRAL -> false
                 }
+            }
 
-                // Null when the write changed nothing - the Collection screen got
-                // there first, or the same track was liked twice. Nothing changed,
-                // so there is nothing to report.
-                event?.let { feedbackRepository.reportFeedback(artist, song, stream, it) }
+            if (changed) {
+                ReactionToggle.eventFor(from, to)?.let {
+                    feedbackRepository.reportFeedback(artist, song, stream, it)
+                }
             }
         }
     }

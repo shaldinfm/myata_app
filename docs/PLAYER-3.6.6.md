@@ -58,6 +58,15 @@ Two more owner decisions, both because the frozen source describes a later phase
   entry in the other, so History keeps working until Phase C brings the card onto
   this screen. No new feedback behaviour is invented.
 
+  > **Superseded.** The `dislike` slot now holds Dislike. The reason it did not was
+  > that there was nothing behind it to record; the reaction model has since landed
+  > NEUTRAL / LIKED / DISLIKED, so the control has something to mean. It uses the
+  > bundle's own `dislike` glyph, the same 49x54 slot and the same 24.5x23.33
+  > placement as `like`, and the frozen row's own colour, `player_control_action`,
+  > with `primary` when active - the tint `like` already used for the same thing.
+  > The History section stays inline where Phase C put it; what went is the
+  > shortcut that scrolled to it.
+
 ## The frozen upper section
 
 Offsets are absolute, from the top of the frame; `Player Section` is

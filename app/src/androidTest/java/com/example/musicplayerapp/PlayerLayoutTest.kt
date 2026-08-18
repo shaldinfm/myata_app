@@ -165,7 +165,7 @@ class PlayerLayoutTest {
             val artist = page.findViewById<TextView>(R.id.main_author)
             val play = page.findViewById<View>(R.id.btn_play)
             val favorite = page.findViewById<View>(R.id.btn_favorite)
-            val history = page.findViewById<View>(R.id.btn_history)
+            val dislike = page.findViewById<View>(R.id.btn_dislike)
 
             expect(where, "album art y", topIn(art, page), dp(16))
             expect(where, "album art size", art.width, dp(239))
@@ -209,8 +209,31 @@ class PlayerLayoutTest {
             val likeBoxHeight = favorite.height - favorite.paddingTop - favorite.paddingBottom
             val likeTop = likeBoxTop + (likeBoxHeight - likeIcon.intrinsicHeight) / 2f
             expect(where, "like glyph y in its slot", likeTop, dp(12), tolerance = dp(0.5f))
-            expect(where, "history slot width", history.width, dp(49))
-            expect(where, "history x", widthPx - leftIn(history, page) - history.width, dp(48))
+            /*
+             * The frozen `dislike`, installed in this phase and reading exactly as
+             * `like` does: the same 49x54 slot, the same 24.5x23.33 of ink placed 12
+             * below the top of it. It held the History entry until now, which
+             * fitCenter'd a 24dp glyph in a 12dp padded box instead.
+             */
+            expect(where, "dislike slot width", dislike.width, dp(49))
+            expect(where, "dislike slot height", dislike.height, dp(54))
+            expect(where, "dislike x", widthPx - leftIn(dislike, page) - dislike.width, dp(48))
+
+            val dislikeIcon = (dislike as android.widget.ImageView).drawable
+            expect(where, "dislike glyph width", dislikeIcon.intrinsicWidth, dp(24.5f))
+            expect(where, "dislike glyph height", dislikeIcon.intrinsicHeight, dp(23.33f))
+            if (!hasHole(dislikeIcon)) {
+                findings += "$where: the dislike glyph paints solid; the frozen one is an outlined thumbs-down"
+            }
+            val dislikeBoxTop = dislike.paddingTop
+            val dislikeBoxHeight = dislike.height - dislike.paddingTop - dislike.paddingBottom
+            val dislikeTop = dislikeBoxTop + (dislikeBoxHeight - dislikeIcon.intrinsicHeight) / 2f
+            expect(where, "dislike glyph y in its slot", dislikeTop, dp(12), tolerance = dp(0.5f))
+
+            // The two side slots are mirrors: same size, same glyph box, same
+            // vertical placement, same distance from their own edge.
+            expect(where, "side slots agree on height", dislike.height.toFloat(), favorite.height.toFloat())
+            expect(where, "side slots agree on glyph y", dislikeTop, likeTop, tolerance = dp(0.5f))
 
             /* ---- long Russian metadata: one line each, nothing cut or piled up ---- */
 
@@ -222,7 +245,7 @@ class PlayerLayoutTest {
             noOverlap(where, "title", title, "artist", artist, page)
             noOverlap(where, "artist", artist, "play", play, page)
             noOverlap(where, "favourite", favorite, "play", play, page)
-            noOverlap(where, "play", play, "history", history, page)
+            noOverlap(where, "play", play, "dislike", dislike, page)
 
             log += "$where: header@${topIn(header, shell)} ${header.height}, swipe@${topIn(dots, shell)}, " +
                 "page@${topIn(pager, shell)} | art@${topIn(art, page)} ${art.width}, " +

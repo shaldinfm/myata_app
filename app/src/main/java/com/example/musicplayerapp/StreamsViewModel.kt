@@ -45,6 +45,7 @@ import com.example.musicplayerapp.data.AppDatabase
 import com.example.musicplayerapp.data.FavoriteDao
 import com.example.musicplayerapp.data.FavoriteTrack
 import com.example.musicplayerapp.data.FeedbackRepository
+import com.example.musicplayerapp.data.ReactionEvent
 import com.example.musicplayerapp.data.*
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.gson.reflect.TypeToken
@@ -480,17 +481,27 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         if (artist != null && song != null && artist != "YOUR MUSIC! YOUR STATION!") {
             viewModelScope.launch {
                 val existing = favoriteDao.findByArtistAndTrack(artist, song)
-                if (existing != null) {
-                    favoriteDao.delete(existing)
-                    feedbackRepository.reportFeedback(artist, song, stream, "DISLIKE")
+                val event = if (existing != null) {
+                    // Withdrawing a Like is UNLIKE - a return to neutral. It reported
+                    // DISLIKE until now, which is how un-liking became a negative
+                    // signal in the sheet.
+                    ReactionEvent.afterDelete(favoriteDao.delete(existing))
                 } else {
-                    favoriteDao.insert(FavoriteTrack(
-                        artist = artist,
-                        track = song,
-                        stream = stream
-                    ))
-                    feedbackRepository.reportFeedback(artist, song, stream, "LIKE")
+                    ReactionEvent.afterInsert(
+                        favoriteDao.insert(
+                            FavoriteTrack(
+                                artist = artist,
+                                track = song,
+                                stream = stream
+                            )
+                        )
+                    )
                 }
+
+                // Null when the write changed nothing - the row had already gone, or
+                // the Collection screen added the same track while this ran. Nothing
+                // changed, so there is nothing to report.
+                event?.let { feedbackRepository.reportFeedback(artist, song, stream, it) }
             }
         }
     }

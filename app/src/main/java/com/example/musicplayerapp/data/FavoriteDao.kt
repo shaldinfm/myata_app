@@ -12,11 +12,17 @@ interface FavoriteDao {
     @Query("SELECT * FROM favorites ORDER BY addedAt DESC")
     fun getAll(): Flow<List<FavoriteTrack>>
     
+    /**
+     * @return the new row id, or [ReactionEvent.NO_ROW_INSERTED] when the unique
+     *   `(artist, track)` index already held this track and IGNORE skipped it.
+     *   Callers report a LIKE only for a row that was really added.
+     */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(track: FavoriteTrack)
-    
+    suspend fun insert(track: FavoriteTrack): Long
+
+    /** @return how many rows went, so a delete that matched nothing reports nothing. */
     @Delete
-    suspend fun delete(track: FavoriteTrack)
+    suspend fun delete(track: FavoriteTrack): Int
     
     @Query("DELETE FROM favorites WHERE artist = :artist AND track = :track")
     suspend fun deleteByArtistAndTrack(artist: String, track: String)

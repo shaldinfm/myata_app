@@ -9,6 +9,30 @@ plugins {
 // Release signing is read from an untracked keystore.properties in the project root.
 // The file is intentionally NOT in git — see docs/RELEASE_SIGNING.md.
 // Debug builds do not need it.
+// Supabase client configuration. Untracked, like keystore.properties, and unlike it
+// this file holds nothing secret: the project URL and the *publishable* key are
+// meant to be public and ship in the APK. A secret key must never appear here -
+// see docs/SUPABASE-FOUNDATION.md.
+//
+// Absent or empty is a supported state: the app then has no Supabase at all and
+// behaves exactly as it did before this existed, which is what keeps CI and any
+// fresh clone building.
+def supabasePropsFile = rootProject.file('supabase.properties')
+def supabaseProps = new Properties()
+if (supabasePropsFile.exists()) {
+    supabasePropsFile.withInputStream { supabaseProps.load(it) }
+}
+def supabaseUrl = (supabaseProps['SUPABASE_URL'] ?: '').trim()
+def supabaseKey = (supabaseProps['SUPABASE_PUBLISHABLE_KEY'] ?: '').trim()
+
+// A secret key in the client is the one mistake that cannot be walked back: it
+// bypasses every RLS policy and would be readable in the APK. Fail the build.
+if (supabaseKey.startsWith('sb_secret_') || supabaseKey.startsWith('service_role')) {
+    throw new GradleException(
+            'supabase.properties holds a SECRET key. Only the publishable key ' +
+            '(sb_publishable_...) may ship in an app. Remove it and rotate that key now.')
+}
+
 def keystorePropsFile = rootProject.file('keystore.properties')
 def keystoreProps = new Properties()
 if (keystorePropsFile.exists()) {
@@ -51,10 +75,14 @@ android {
         versionName "3.6.5"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField "String", "SUPABASE_URL", "\"${supabaseUrl}\""
+        buildConfigField "String", "SUPABASE_PUBLISHABLE_KEY", "\"${supabaseKey}\""
     }
 
     buildFeatures{
         viewBinding = true
+        buildConfig = true
     }
 
     sourceSets {
@@ -92,6 +120,12 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+        // Required by supabase-kt, whose documented minimum is API 26; this is how
+        // it runs on our minSdk 24. It back-ports java.time and the other newer
+        // java.* APIs Ktor and kotlinx-datetime reach for, and without it those
+        // calls are a runtime NoClassDefFoundError on 24 and 25 rather than a
+        // build error - see docs/SUPABASE-FOUNDATION.md.
+        coreLibraryDesugaringEnabled true
     }
     testOptions {
         unitTests {
@@ -152,6 +186,16 @@ dependencies {
     def retrofitVersion = '2.9.0'
     // 2.7.x is the first Room line built for KSP2 / Kotlin 2.2. Schema is unchanged.
     def room_version = '2.7.2'
+    // NOT the newest supabase-kt. 3.7.0 is built with Kotlin 2.4 and publishes
+    // metadata this project's Kotlin 2.2.21 compiler cannot read - it fails the
+    // build outright, and it would also pull kotlin-stdlib 2.4 onto the classpath
+    // of every module. 3.2.6 is the last line built with exactly our Kotlin, so
+    // there is no metadata gap and no stdlib upgrade smuggled in behind one.
+    // Moving up means moving the whole project's Kotlin first; see
+    // docs/SUPABASE-FOUNDATION.md.
+    def supabaseVersion = '3.2.6'
+    def ktorVersion = '3.3.1'
+    def desugarVersion = '2.1.5'
 
     implementation 'org.jsoup:jsoup:1.17.2'
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
@@ -202,6 +246,20 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     
+    // Supabase: Auth and PostgREST only. No realtime, storage or functions - this
+    // app has no use for them and each is more to ship and to keep current.
+    //
+    // The Ktor engine is OkHttp, and it is handed the app's own shared client, so
+    // every Supabase request goes through the same connection pool, timeouts and -
+    // the part that matters on API 24 - the same network_security_config with its
+    // bundled roots. A second HTTP stack with its own TLS would be a second thing
+    // to get right on old devices.
+    implementation platform("io.github.jan-tennert.supabase:bom:$supabaseVersion")
+    implementation 'io.github.jan-tennert.supabase:auth-kt'
+    implementation 'io.github.jan-tennert.supabase:postgrest-kt'
+    implementation "io.ktor:ktor-client-okhttp:$ktorVersion"
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:$desugarVersion"
+
     // Firebase
     implementation platform('com.google.firebase:firebase-bom:32.7.0')
     implementation 'com.google.firebase:firebase-crashlytics-ktx'

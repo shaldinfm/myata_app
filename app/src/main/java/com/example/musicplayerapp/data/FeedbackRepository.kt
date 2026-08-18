@@ -9,7 +9,12 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 
 /**
- * Repository for sending track feedback (LIKE/DISLIKE) to Google Sheets.
+ * Repository for sending track reactions to Google Sheets.
+ *
+ * The action is a [ReactionEvent] rather than a `String`. It used to be free text
+ * documented as "LIKE or DISLIKE", which left no way to say that a reaction had
+ * gone back to neutral, so every un-like site sent `DISLIKE` and the sheet recorded
+ * listeners as disliking tracks they had merely taken out of their Collection.
  */
 class FeedbackRepository(private val client: OkHttpClient) {
     companion object {
@@ -17,17 +22,21 @@ class FeedbackRepository(private val client: OkHttpClient) {
     }
 
     /**
-     * Reports feedback to Google Sheets.
+     * Reports a reaction to Google Sheets.
+     *
+     * Fire-and-forget: the local Collection is the source of truth and never waits
+     * on, or is rolled back by, this call.
+     *
      * @param artist Artist name
      * @param track Track title
-     * @param stream Stream name (myata, gold, xtra)
-     * @param action Action taken (LIKE or DISLIKE)
+     * @param stream Stream name (myata, gold, myata_hits)
+     * @param action What the listener did - see [ReactionEvent]
      */
-    fun reportFeedback(artist: String, track: String, stream: String, action: String) {
+    fun reportFeedback(artist: String, track: String, stream: String, action: ReactionEvent) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val formBody = FormBody.Builder(java.nio.charset.StandardCharsets.UTF_8)
-                    .add("action", action)
+                    .add("action", action.wire)
                     .add("artist", artist)
                     .add("track", track)
                     .add("stream", stream)
@@ -44,7 +53,7 @@ class FeedbackRepository(private val client: OkHttpClient) {
                     if (!response.isSuccessful) {
                         Log.e("Feedback", "Failed to report: ${response.code}")
                     } else {
-                        Log.d("Feedback", "Successfully reported $action for $artist - $track")
+                        Log.d("Feedback", "Successfully reported ${action.wire} for $artist - $track")
                     }
                 }
             } catch (e: Exception) {

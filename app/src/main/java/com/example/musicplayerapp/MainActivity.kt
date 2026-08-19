@@ -233,6 +233,8 @@ class MainActivity : AppCompatActivity() {
         viewModel = ViewModelProvider(this, viewModelProviderFactory).get(StreamsViewModel ::class.java)
 
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
+
+        applySystemBarAppearance()
         
         // Ensure bottom navigation is hidden on startup (splash screen)
         binding.bottomNavView.visibility = android.view.View.GONE
@@ -381,6 +383,35 @@ class MainActivity : AppCompatActivity() {
             if (navController.currentDestination?.id != R.id.info) {
                 navController.navigate(R.id.info, null, navOptions)
             }
+        }
+    }
+
+    /**
+     * Which way round the system bar icons are drawn.
+     *
+     * targetSdk 36 runs the window EDGE_TO_EDGE_ENFORCED, which makes the platform
+     * ignore `android:statusBarColor` and leave the bar transparent: what shows
+     * behind the clock and the battery is the app's own `background` role. That is
+     * `#F8F9FA` in Light, so the bar needs **dark** icons, and `#0F253E` in Dark, so
+     * it needs light ones. Without this the bar is technically visible and
+     * practically unreadable - white on near-white - which is how it first came back
+     * when `windowFullscreen` was removed.
+     *
+     * `isAppearanceLightStatusBars = true` means "the background behind me is light,
+     * draw dark icons", which is why it is the negation of night mode.
+     *
+     * Read from the configuration rather than stored, and applied in onCreate:
+     * `uiMode` is not in this activity's `configChanges`, so a day/night switch
+     * recreates the activity and this runs again with the new answer.
+     */
+    private fun applySystemBarAppearance() {
+        val night = (resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+
+        androidx.core.view.WindowInsetsControllerCompat(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !night
+            isAppearanceLightNavigationBars = !night
         }
     }
 

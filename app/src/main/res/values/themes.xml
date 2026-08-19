@@ -96,7 +96,28 @@
     <style name="AppTheme" parent="Theme.Myata.Base">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <item name="android:windowFullscreen">true</item>
+        <!--
+          android:windowFullscreen is deliberately NOT set here, and its absence is
+          load-bearing.
+
+          It used to be true, which set FLAG_FULLSCREEN and hid the status bar. The
+          consequence was not the missing clock - it was that every screen's
+          `systemBars().top` inset became **zero**, because there was no status bar
+          to inset for. Each screen already applies that inset correctly, so all of
+          them faithfully applied nothing, and content landed at y=0: on a device
+          with a hole-punch or a notch, Сейчас играет drew underneath the camera.
+
+          targetSdk 36 makes this sharper rather than softer. The platform runs the
+          window EDGE_TO_EDGE_ENFORCED with layoutInDisplayCutoutMode=always, so it
+          is always allowed into the cutout; the only thing keeping content out of
+          it is the inset the app applies. Hiding the status bar removed the one
+          number that was doing that job.
+
+          The frozen design assumes a status bar - its 16dp header offset is
+          measured below one, and docs/PLAYER-3.6.6.md records the inset moving to
+          the shell root for exactly that reason. Nothing in FINAL asks for
+          fullscreen, so nothing here asks the platform for it.
+        -->
         <item name="colorPrimary">@color/main_fragment</item>
         <item name="colorPrimaryVariant">@color/main_fragment</item>
         <item name="colorOnPrimary">@color/white</item>

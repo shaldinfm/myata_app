@@ -360,7 +360,19 @@
       them. Measured, the visible gap between the two lines of text comes out at
       about 7 against the frozen 8.
     -->
-    <dimen name="player_track_title_top">292dp</dimen>
+    <!--
+      The title is anchored by its BOTTOM, just above the artist, so a two-line
+      title grows up into the gap under the artwork instead of over the artist.
+      See fragment_myata_stream.xml for the measurements behind that.
+
+      3dp is what the frozen offsets leave between the two boxes in practice: the
+      frozen title box is 24 tall against a 292 top and a 324 artist, which is an
+      8 gap, and Android's real box is 29.3 because Montserrat Black at 24sp does
+      not fit in 24. The 8 absorbs the difference and 3 is what is left. Keeping
+      the gap rather than a second absolute offset is what ties the title to the
+      artist, so the frozen 292 falls out of it: 324 - 3 - 29.3 = 291.7.
+    -->
+    <dimen name="player_track_title_artist_gap">3dp</dimen>
     <dimen name="player_track_artist_top">324dp</dimen>
 
     <!-- `Controls`: 358x80, padding 0/32, play 80x80 r20, like/dislike 49x54. -->

@@ -287,13 +287,19 @@ class ReactionOutboxTest {
     }
 
     @Test
-    fun the_queue_is_ordered_by_when_the_listener_acted() = runBlocking {
+    fun the_queue_is_ordered_by_when_it_was_written_not_by_the_clock() = runBlocking {
+        // A clock that went backwards between the two acts: an NTP correction, a
+        // timezone change, a reboot before time sync. occurred_at now disagrees with
+        // what actually happened first.
         dao.dislike(caveKey, "Nick Cave", "Red Right Hand", "gold", 9_000L)
         likeDepeche(now = 1_000L)
 
-        // Written second, acted first: the sender has to be told them in the order
-        // they happened, not the order they were written.
-        assertEquals(listOf(1_000L, 9_000L), events().map { it.occurredAt })
+        // The queue is in the order the rows were written, not the order the clock
+        // claims. Local insertion order is causal and cannot go backwards; a device
+        // wall clock can, and handing the backend a listener's history inside out is
+        // the failure this ordering exists to prevent. See ReactionOutboxDao.
+        assertEquals(listOf(9_000L, 1_000L), events().map { it.occurredAt })
+        assertEquals(listOf(caveKey, depecheKey), events().map { it.trackKey })
     }
 
     // ==================== the pair is one write ====================

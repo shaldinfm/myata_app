@@ -2,6 +2,7 @@ package com.example.musicplayerapp
 
 import android.app.Application
 import com.example.musicplayerapp.data.supabase.AnonymousSession
+import com.example.musicplayerapp.data.supabase.ReactionSyncScheduler
 import com.squareup.picasso.OkHttp3Downloader
 import com.squareup.picasso.Picasso
 
@@ -19,6 +20,14 @@ class MyataApplication : Application() {
         // Off the main thread, and a build with no project configured does not even
         // start it. Nothing reads the session yet.
         AnonymousSession.restoreInBackground(this)
+
+        // Startup recovery for the reaction outbox. A reaction commits to Room and
+        // *then* schedules its drain, so a process death between the two leaves a
+        // row with no wake-up; this is what finds it. It asks the outbox first and
+        // schedules nothing when the answer is zero, so a listener who has never
+        // reacted pays one COUNT on a table that is empty - and still no identity,
+        // no request and no user row.
+        ReactionSyncScheduler.onAppStart(this)
 
         // Configure Picasso to use the shared, fully validating OkHttpClient.
         // Old Android TV/projector trust stores are handled by the extra roots

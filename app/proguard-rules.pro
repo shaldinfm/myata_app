@@ -33,14 +33,24 @@
 -keep class com.example.musicplayerapp.** { *; }
 # Supabase / Ktor / kotlinx-serialization.
 #
-# These are conservative keeps for a release build this branch cannot verify:
-# release variants are owner-only here (docs/RELEASE_SIGNING.md), so nobody has
-# yet run R8 over this dependency set. kotlinx-serialization generates companion
-# serializers that are reached reflectively, and R8 strips them silently - the
-# symptom is a SerializationException at runtime, in release only.
+# These began as conservative keeps for a release build that could not be
+# verified, because nothing called Supabase yet. That gate has now been run.
 #
-# Before the reaction-sync phase ships, a release build has to be made and the
-# anonymous sign-in exercised on it; if these prove unnecessary, delete them.
+# The reaction-sync phase drove the whole path - anonymous sign-in, a PostgREST
+# upsert into reaction_events, the guarded update/insert into reactions, and the
+# delete - through the real minified, release-signed APK on API 24 and API 36.
+# No SerializationException, no NoClassDefFoundError, no VerifyError, and R8
+# emitted no missing_rules.txt, meaning it asked for no keep rule this file does
+# not already provide.
+#
+# **No new keep rule was needed for the sync phase.** Nothing was added here to
+# make it pass, which is the result worth recording: the payloads are built as
+# kotlinx.serialization JsonObject values rather than @Serializable classes, so
+# the phase introduced no generated $$serializer for R8 to strip.
+#
+# Whether the rules below are still load-bearing is a separate question this did
+# not answer - proving each unnecessary needs a release build and a device run per
+# rule removed. Left alone deliberately rather than pruned on a guess.
 -keepattributes *Annotation*, InnerClasses
 -dontnote kotlinx.serialization.**
 -keepclassmembers class kotlinx.serialization.json.** {

@@ -70,6 +70,22 @@ object ReactionMigration {
         "(`track_key`, `artist`, `title`, `stream`, `reaction`, `liked_at`, `updated_at`) " +
         "VALUES (?, ?, ?, ?, ?, ?, ?)"
 
+    /**
+     * Exactly the table Room expects for [ReactionOutboxEntry] at version 3, and its
+     * index, written out for the same reason [CREATE_TRACK_REACTION] is: what a
+     * migration builds has to match what the next open validates, and
+     * `ReactionOutboxMigrationTest` runs that validation for real.
+     */
+    internal const val CREATE_REACTION_OUTBOX = "CREATE TABLE IF NOT EXISTS `reaction_outbox` " +
+        "(`event_id` TEXT NOT NULL, `track_key` TEXT NOT NULL, `artist` TEXT NOT NULL, " +
+        "`title` TEXT NOT NULL, `stream` TEXT NOT NULL, `event_type` TEXT NOT NULL, " +
+        "`occurred_at` INTEGER NOT NULL, `attempts` INTEGER NOT NULL, " +
+        "`next_attempt_at` INTEGER NOT NULL, PRIMARY KEY(`event_id`))"
+
+    internal const val CREATE_REACTION_OUTBOX_INDEX =
+        "CREATE INDEX IF NOT EXISTS `index_reaction_outbox_next_attempt_at` " +
+            "ON `reaction_outbox` (`next_attempt_at`)"
+
     val MIGRATION_1_2: Migration = object : Migration(1, 2) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL(CREATE_TRACK_REACTION)
@@ -90,6 +106,29 @@ object ReactionMigration {
             }
 
             db.execSQL("DROP TABLE IF EXISTS `favorites`")
+        }
+    }
+
+    /**
+     * Adding the reaction outbox: one CREATE TABLE, one CREATE INDEX, nothing else.
+     *
+     * The interesting property of this migration is everything it does **not** do.
+     * It reads no existing row, so a Collection cannot be reshaped by a bug here; it
+     * drops nothing, so nothing can be lost; and it back-fills no events, so the
+     * queue starts empty.
+     *
+     * That last one is a decision rather than an omission. Every reaction already on
+     * a phone was reported to the sheet when it happened, and the rows carry no
+     * record of which. Synthesising a LIKE for each of them would tell the backend
+     * that everybody re-liked their whole Collection the day they updated the app -
+     * a burst of acts at a timestamp nobody acted at. The outbox is for transitions
+     * this build observes; the existing state belongs to a separate, deliberate
+     * backfill if one is ever wanted, and that is not this.
+     */
+    val MIGRATION_2_3: Migration = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(CREATE_REACTION_OUTBOX)
+            db.execSQL(CREATE_REACTION_OUTBOX_INDEX)
         }
     }
 

@@ -68,9 +68,19 @@ class ReactionMigrationTest {
         db.close()
     }
 
+    /**
+     * Every migration, not just the one under test: the database class has moved on
+     * since v2, and a phone that has been sitting on v1 has to reach whatever the
+     * current version is in one open. Registering only 1 -> 2 would make this test
+     * fail the moment a v3 exists - which is exactly what it did - while saying
+     * nothing about the v1 data these tests are actually about.
+     */
     private fun openMigrated(): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, dbName)
-            .addMigrations(ReactionMigration.MIGRATION_1_2)
+            .addMigrations(
+                ReactionMigration.MIGRATION_1_2,
+                ReactionMigration.MIGRATION_2_3,
+            )
             .build()
 
     @Test

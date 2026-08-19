@@ -127,6 +127,41 @@ everything chained behind it.
 Constraint: `NetworkType.CONNECTED`. Backoff: exponential from 30s. Batch: 50 rows,
 after which the run reports `MoreWorkDue` and appends its own follow-up.
 
+### Waking a parked row
+
+`APPEND_OR_REPLACE` closes both commit races, but **it is not a timer**. A row that
+failed is given a `next_attempt_at` in the future, which makes it invisible to the
+`due` query until its moment — and once a chain has finished, nothing in WorkManager
+schedules anything by itself. A single row parked for an hour by a 4xx would otherwise
+sit there until the listener happened to react again or restart the app.
+
+So every run reports the moment anything it left behind becomes eligible —
+`DrainResult.Waiting(until)` when nothing could be sent, or `Drained.nextAttemptAt`
+when some rows went and others were parked — and the worker turns it into a delayed
+request via `ReactionSyncScheduler.scheduleWakeUp`, taken from
+`SELECT MIN(next_attempt_at) FROM reaction_outbox`.
+
+Two properties of that timer are deliberate:
+
+- **It has its own unique name** (`reaction-outbox-retry`), not the main chain. A
+  delayed request appended to the main chain would put every reaction tapped
+  afterwards behind it — a fresh Like could wait the full backoff, up to a day.
+- **Its policy is `REPLACE`.** There is at most one meaningful "next wake-up", and a
+  newly computed one always supersedes the pending one. Appending would build a queue
+  of stale timers.
+
+Overlap between the two chains is harmless: both remote writes are idempotent and the
+outbox row is deleted only after both succeed, so the worst case of two runs meeting
+is a duplicate round trip that changes nothing.
+
+WorkManager persists a delayed request in its own database and reschedules it across
+process death and reboot, so the timer survives everything short of an uninstall — and
+`onAppStart` is still there behind it.
+
+A run that finds only parked rows also **does not request an identity**: there is
+nothing it may send, so asking would mint an anonymous user for somebody whose only
+pending row is one the server has already refused.
+
 ## Retry and failure policy
 
 Classification, from what the live project actually returned:

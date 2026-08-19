@@ -40,12 +40,24 @@ import com.example.musicplayerapp.data.ReactionOutboxEntry
  *
  * ## Identity
  *
- * [identity] is called **once, and only after** [ReactionOutboxDao.count] has
- * proved there is work. A listener who never reacts never reaches it, so no
- * anonymous user is ever created for them. When it returns null the drain stops
- * with [DrainResult.RetryLater] and touches nothing: no session is not a reason to
+ * [identity] is called **once per run, and only after a batch of rows that may
+ * actually be sent has been found** - after [ReactionOutboxDao.count] and after
+ * [ReactionOutboxDao.due]. A listener who never reacts never reaches it, and neither
+ * does one whose only pending row is parked behind a backoff, so no anonymous user
+ * is created for either. When it returns null the drain stops with
+ * [DrainResult.RetryLater] and touches nothing: no session is not a reason to
  * penalise a row, and it is never a reason to mint a second identity - see
  * [AnonymousSession].
+ *
+ * ## Waking a parked row
+ *
+ * A row that failed is given a `next_attempt_at` in the future, which makes it
+ * invisible to [ReactionOutboxDao.due] until its moment. Nothing else in the system
+ * watches a clock, so every run that leaves such a row behind reports **when** it
+ * becomes eligible - [DrainResult.Waiting], or [DrainResult.Drained.nextAttemptAt] -
+ * and the worker turns that into a delayed WorkManager request. Without it a row
+ * parked by a 4xx for an hour would sit there until the listener happened to react
+ * again or restart the app.
  */
 class ReactionSyncEngine(
     private val reactions: ReactionDao,
@@ -62,15 +74,17 @@ class ReactionSyncEngine(
         // them a database identity for nothing.
         if (outbox.count() == 0) return DrainResult.Idle
 
-        val listenerId = identity()
-            ?: return DrainResult.RetryLater("no listener identity available")
-
         val batch = outbox.due(now(), batchSize)
         if (batch.isEmpty()) {
-            // Rows exist but every one is serving a backoff. Nothing to do now, and
-            // nothing wrong either.
-            return DrainResult.Idle
+            // Rows exist but every one is serving a backoff. Nothing to send yet, so
+            // no identity is requested for it - asking here would mint an anonymous
+            // user for somebody whose only pending row is one the server has already
+            // refused. The caller is told when to come back instead.
+            return DrainResult.Waiting(outbox.earliestAttemptAt() ?: now())
         }
+
+        val listenerId = identity()
+            ?: return DrainResult.RetryLater("no listener identity available")
 
         var delivered = 0
 
@@ -124,10 +138,17 @@ class ReactionSyncEngine(
             }
         }
 
+        // What is owed, and when. Both halves matter: rows that are due now want
+        // another run immediately, and rows parked in the future want a timer. A run
+        // that reported neither is how a parked row used to be forgotten until the
+        // next reaction or the next app start.
         val stillDue = outbox.dueCount(now())
+        if (delivered > 0 && stillDue > 0) return DrainResult.MoreWorkDue(stillDue)
+
+        val parkedUntil = outbox.earliestAttemptAt()
         return when {
-            delivered > 0 && stillDue > 0 -> DrainResult.MoreWorkDue(stillDue)
-            delivered > 0 -> DrainResult.Drained(delivered)
+            delivered > 0 -> DrainResult.Drained(delivered, parkedUntil)
+            parkedUntil != null -> DrainResult.Waiting(parkedUntil)
             else -> DrainResult.Idle
         }
     }
@@ -196,11 +217,27 @@ class ReactionSyncEngine(
 /** What one drain run concluded, and what the worker should do about it. */
 sealed interface DrainResult {
 
-    /** Nothing owed, or nothing due yet. The common case, and it costs one COUNT. */
+    /** Nothing owed at all. The common case, and it costs one COUNT. */
     data object Idle : DrainResult
 
-    /** Everything that was due went out. */
-    data class Drained(val delivered: Int) : DrainResult
+    /**
+     * Rows are owed but none may be attempted yet: every one is serving a backoff.
+     *
+     * [until] is the soonest any of them becomes eligible, and the worker turns it
+     * into a delayed run. Without that, a parked row has nothing watching a clock for
+     * it - `APPEND_OR_REPLACE` closes the commit and mid-run races, but it is not a
+     * timer, and a chain that has finished schedules nothing by itself.
+     */
+    data class Waiting(val until: Long) : DrainResult
+
+    /**
+     * Everything that was due went out.
+     *
+     * @property nextAttemptAt when a row that is still parked becomes eligible, or
+     *   null if the outbox is now empty. A run that delivered something can still
+     *   leave a poison row behind it, and that row needs its timer just as much.
+     */
+    data class Drained(val delivered: Int, val nextAttemptAt: Long?) : DrainResult
 
     /** The batch filled up and more is due now. Schedule another run immediately. */
     data class MoreWorkDue(val remaining: Int) : DrainResult

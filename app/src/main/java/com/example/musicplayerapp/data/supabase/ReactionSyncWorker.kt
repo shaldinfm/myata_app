@@ -57,8 +57,18 @@ class ReactionSyncWorker(
         }) {
             is DrainResult.Idle -> Result.success()
 
+            is DrainResult.Waiting -> {
+                // Nothing to send yet. Leave a timer behind so the parked rows are
+                // not waiting on a reaction that may never come.
+                ReactionSyncScheduler.scheduleWakeUp(applicationContext, result.until)
+                Result.success()
+            }
+
             is DrainResult.Drained -> {
                 Log.d(TAG, "delivered ${result.delivered} reaction(s)")
+                result.nextAttemptAt?.let {
+                    ReactionSyncScheduler.scheduleWakeUp(applicationContext, it)
+                }
                 Result.success()
             }
 

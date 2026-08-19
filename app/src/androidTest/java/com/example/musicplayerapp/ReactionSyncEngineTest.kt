@@ -431,13 +431,125 @@ class ReactionSyncEngineTest {
         engine().drain()
 
         backend.onEvent = { SyncOutcome.Success }
-        // Too early: nothing due, so the run is idle rather than a retry storm.
-        assertEquals(DrainResult.Idle, engine().drain())
+        // Too early: nothing due. The run does not hammer the row - but it does say
+        // when to come back, which is what stops the row being forgotten.
+        assertEquals(DrainResult.Waiting(clock + 30_000L), engine().drain())
         assertTrue(backend.history.isEmpty())
 
         clock += 30_000
         engine().drain()
         assertEquals(1, backend.history.size)
+    }
+
+    // ==================== the parked-row wake-up contract ====================
+
+    @Test
+    fun a_single_parked_row_reports_exactly_when_it_should_be_retried() = runBlocking {
+        // One row, one permanent-looking 4xx. Nothing else happens: no new reaction,
+        // no restart, no other work. The run must still say when to come back.
+        like()
+        backend.onEvent = { SyncOutcome.Permanent(400, "check constraint") }
+
+        val result = engine().drain()
+
+        assertEquals(DrainResult.Waiting(clock + 3_600_000L), result)
+        assertEquals(1, outbox.count())
+        assertEquals(0, outbox.dueCount(clock))
+    }
+
+    @Test
+    fun a_parked_row_does_not_ask_for_an_identity_again() = runBlocking {
+        like()
+        backend.onEvent = { SyncOutcome.Permanent(403, "rls") }
+        engine().drain()
+        val afterFirstRun = identityCalls
+
+        // Every wake-up between now and the row's moment finds nothing it may send.
+        // None of them should mint or fetch an identity for it.
+        repeat(3) {
+            clock += 60_000
+            assertTrue(engine().drain() is DrainResult.Waiting)
+        }
+        assertEquals(afterFirstRun, identityCalls)
+    }
+
+    @Test
+    fun a_parked_row_is_retried_when_its_moment_arrives() = runBlocking {
+        // The whole contract in one test: a row is parked, nothing else happens at
+        // all, the clock reaches next_attempt_at, and the row goes out.
+        like()
+        backend.onEvent = { SyncOutcome.Permanent(500 - 100, "bad request") }
+        val parked = engine().drain()
+        assertTrue(parked is DrainResult.Waiting)
+        assertTrue(backend.history.isEmpty())
+
+        // No new reaction. No restart. Only time passing, and whatever was wrong
+        // server-side being fixed.
+        clock = (parked as DrainResult.Waiting).until
+        backend.onEvent = { SyncOutcome.Success }
+
+        val result = engine().drain()
+
+        assertTrue(result is DrainResult.Drained)
+        assertEquals(listOf(ReactionEvent.LIKE), backend.history.values.map { it.eventType })
+        assertEquals("LIKED", backend.state[depeche])
+        assertEquals(0, outbox.count())
+    }
+
+    @Test
+    fun a_run_that_delivered_still_reports_the_row_it_left_behind() = runBlocking {
+        like()
+        like(cave, "Nick Cave", "Red Right Hand")
+        val poison = outbox.pending().first()
+        backend.onEvent = { entry ->
+            if (entry.eventId == poison.eventId) SyncOutcome.Permanent(400, "bad") else SyncOutcome.Success
+        }
+
+        val result = engine().drain()
+
+        // One delivered, one parked. A run that succeeded overall must still carry
+        // the timer for what it could not send, or the poison row is forgotten.
+        assertTrue(result is DrainResult.Drained)
+        assertEquals(1, (result as DrainResult.Drained).delivered)
+        assertEquals(clock + 3_600_000L, result.nextAttemptAt)
+    }
+
+    @Test
+    fun a_fully_drained_outbox_asks_for_no_further_wakeup() = runBlocking {
+        like()
+
+        val result = engine().drain()
+
+        assertTrue(result is DrainResult.Drained)
+        // Nothing left, so nothing to wake up for - no pointless timer.
+        assertEquals(null, (result as DrainResult.Drained).nextAttemptAt)
+    }
+
+    @Test
+    fun the_reported_moment_is_the_soonest_of_several_parked_rows() = runBlocking {
+        like()
+        like(cave, "Nick Cave", "Red Right Hand")
+
+        // The first row fails transiently (30s), the second permanently (1h). The
+        // transient one returns early, so run twice to park both.
+        val first = outbox.pending().first()
+        backend.onEvent = { entry ->
+            if (entry.eventId == first.eventId) SyncOutcome.Transient("timeout")
+            else SyncOutcome.Permanent(400, "bad")
+        }
+        engine().drain()
+        backend.onEvent = { entry ->
+            if (entry.eventId == first.eventId) SyncOutcome.Transient("timeout")
+            else SyncOutcome.Permanent(400, "bad")
+        }
+        clock += 30_000
+        engine().drain()
+
+        val result = engine().drain()
+        assertTrue(result is DrainResult.Waiting)
+        // The soonest, not the latest: the run has to come back for the first row
+        // that becomes eligible, not the last.
+        assertEquals(outbox.pending().minOf { it.nextAttemptAt }, (result as DrainResult.Waiting).until)
     }
 
     @Test

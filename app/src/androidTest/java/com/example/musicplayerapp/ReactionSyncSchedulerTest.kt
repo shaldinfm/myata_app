@@ -18,6 +18,7 @@ import com.example.musicplayerapp.data.supabase.SupabaseConfig
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -56,12 +57,14 @@ class ReactionSyncSchedulerTest {
                 .build(),
         )
         workManager.cancelUniqueWork(ReactionSyncScheduler.UNIQUE_WORK)
+        workManager.cancelUniqueWork(ReactionSyncScheduler.RETRY_WORK)
         clearOutbox()
     }
 
     @After
     fun tidy() {
         workManager.cancelUniqueWork(ReactionSyncScheduler.UNIQUE_WORK)
+        workManager.cancelUniqueWork(ReactionSyncScheduler.RETRY_WORK)
         clearOutbox()
     }
 
@@ -72,6 +75,37 @@ class ReactionSyncSchedulerTest {
 
     private fun infos(): List<WorkInfo> =
         workManager.getWorkInfosForUniqueWork(ReactionSyncScheduler.UNIQUE_WORK).get()
+
+    /** The timer chain: what a parked row leaves behind. */
+    private fun timers(): List<WorkInfo> =
+        workManager.getWorkInfosForUniqueWork(ReactionSyncScheduler.RETRY_WORK).get()
+
+    private val testDriver
+        get() = WorkManagerTestInitHelper.getTestDriver(context)!!
+
+    /**
+     * Puts the outbox in exactly the state a permanent-looking 4xx leaves it in: one
+     * row, counted against, and not eligible again until [at].
+     */
+    private fun parkOneRow(at: Long) = runBlocking {
+        val db = AppDatabase.getDatabase(context)
+        // A fresh track each time. These tests share the app's real database, and
+        // liking a track that is already LIKED is correctly a no-op that writes no
+        // outbox row - so reusing one key makes every test after the first silently
+        // set up nothing.
+        val name = markedTrack()
+        val key = TrackKey.of(name, name)!!
+        db.reactionDao().like(key, name, name, "myata", 1L, 1L)
+        val row = db.reactionOutboxDao().pending().single()
+        db.reactionOutboxDao().recordFailedAttempt(row.eventId, at)
+    }
+
+    /** A distinct, obviously-fake track name, marked so cleanup can find it. */
+    private fun markedTrack(): String = "ZZ Sync Fixture ${System.nanoTime()}"
+
+    private fun runWorkerOnce() = runBlocking {
+        TestListenableWorkerBuilder<ReactionSyncWorker>(context).build().doWork()
+    }
 
     // ==================== race B: a reaction during a running drain ====================
 
@@ -136,8 +170,9 @@ class ReactionSyncSchedulerTest {
         // enqueued" leaves behind: a pending row and no scheduled drain.
         runBlocking {
             val db = AppDatabase.getDatabase(context)
-            val key = TrackKey.of("ZZ Startup Recovery", "ZZ Startup Recovery")!!
-            db.reactionDao().like(key, "ZZ Startup Recovery", "ZZ Startup Recovery", "myata", 1L, 1L)
+            val name = markedTrack()
+            val key = TrackKey.of(name, name)!!
+            db.reactionDao().like(key, name, name, "myata", 1L, 1L)
         }
         assertEquals(0, infos().size)
 
@@ -145,6 +180,114 @@ class ReactionSyncSchedulerTest {
         settle()
 
         assertEquals(1, infos().size)
+    }
+
+    // ==================== the parked-row wake-up ====================
+
+    @Test
+    fun a_parked_row_leaves_a_timer_behind() {
+        assumeTrue(SupabaseConfig.isConfigured)
+
+        // An hour out, which is what a permanent-looking 4xx earns on its first
+        // attempt. Nothing is due, so this run needs no network and no identity.
+        val parkedUntil = System.currentTimeMillis() + 3_600_000L
+        parkOneRow(parkedUntil)
+
+        assertEquals(androidx.work.ListenableWorker.Result.success(), runWorkerOnce())
+
+        // The mechanism the whole gate is about. APPEND_OR_REPLACE closes the two
+        // commit races but it is not a timer: once a chain finishes it schedules
+        // nothing, so without this the row would wait for the listener to react
+        // again or restart the app - up to a day away, or forever.
+        val timer = timers().single()
+        assertEquals(WorkInfo.State.ENQUEUED, timer.state)
+        assertTrue(ReactionSyncScheduler.RETRY_WORK in timer.tags)
+    }
+
+    @Test
+    fun the_timer_is_set_for_the_moment_the_row_becomes_eligible() {
+        assumeTrue(SupabaseConfig.isConfigured)
+
+        val parkedUntil = System.currentTimeMillis() + 3_600_000L
+        parkOneRow(parkedUntil)
+        runWorkerOnce()
+
+        // Not "some time later" - the row's own next_attempt_at, carried out of the
+        // drain and turned into an initial delay.
+        val scheduledFor = timers().single().nextScheduleTimeMillis
+        assertTrue(
+            "scheduled for $scheduledFor, row is eligible at $parkedUntil",
+            kotlin.math.abs(scheduledFor - parkedUntil) < 30_000L,
+        )
+    }
+
+    @Test
+    fun the_timer_fires_and_runs_the_worker_with_no_restart_and_no_new_reaction() {
+        assumeTrue(SupabaseConfig.isConfigured)
+
+        // The timer a parked row leaves behind, on its own. The outbox is empty here
+        // deliberately: this test is about the wake-up reaching the worker at all,
+        // and an empty outbox keeps the run off the network and out of the
+        // self-rescheduling that would muddy what is being observed. That the row is
+        // then actually retried is ReactionSyncEngineTest's
+        // `a_parked_row_is_retried_when_its_moment_arrives`.
+        ReactionSyncScheduler.scheduleWakeUp(context, System.currentTimeMillis() + 3_600_000L)
+        val timer = timers().single()
+        assertEquals(WorkInfo.State.ENQUEUED, timer.state)
+
+        // Nothing else happens: no app restart, no reaction, no other enqueue. Only
+        // the delay elapsing, which is what the test driver simulates.
+        testDriver.setAllConstraintsMet(timer.id)
+        testDriver.setInitialDelayMet(timer.id)
+
+        // It ran. Without this link a parked row has nothing watching a clock for it.
+        assertEquals(
+            WorkInfo.State.SUCCEEDED,
+            workManager.getWorkInfoById(timer.id).get()!!.state,
+        )
+    }
+
+    @Test
+    fun an_empty_outbox_leaves_no_timer() {
+        assumeTrue(SupabaseConfig.isConfigured)
+
+        assertEquals(androidx.work.ListenableWorker.Result.success(), runWorkerOnce())
+
+        // Nothing owed, so no pointless timer for a listener who has never reacted.
+        assertEquals(0, timers().size)
+    }
+
+    @Test
+    fun a_newer_timer_replaces_the_pending_one_rather_than_queueing() {
+        assumeTrue(SupabaseConfig.isConfigured)
+
+        val now = System.currentTimeMillis()
+        ReactionSyncScheduler.scheduleWakeUp(context, now + 3_600_000L)
+        ReactionSyncScheduler.scheduleWakeUp(context, now + 60_000L)
+        ReactionSyncScheduler.scheduleWakeUp(context, now + 120_000L)
+
+        // There is only ever one meaningful "next wake-up". Appending would build a
+        // queue of stale timers, each waking the device for nothing.
+        assertEquals(1, timers().size)
+        assertEquals(ExistingWorkPolicy.REPLACE, ReactionSyncScheduler.RETRY_POLICY)
+    }
+
+    @Test
+    fun the_timer_is_not_on_the_main_chain() {
+        assumeTrue(SupabaseConfig.isConfigured)
+
+        // A day-long delay, as a row parked by a repeated 4xx would earn.
+        ReactionSyncScheduler.scheduleWakeUp(context, System.currentTimeMillis() + 86_400_000L)
+        assertEquals(0, infos().size)
+
+        // A reaction tapped now must not be queued behind that. If the timer lived on
+        // the main chain, this request would be appended after a request that will
+        // not run for a day.
+        ReactionSyncScheduler.onReactionCommitted(context)
+
+        assertEquals(1, infos().size)
+        assertEquals(WorkInfo.State.ENQUEUED, infos().single().state)
+        assertNotEquals(ReactionSyncScheduler.UNIQUE_WORK, ReactionSyncScheduler.RETRY_WORK)
     }
 
     // ==================== the worker's own gate ====================

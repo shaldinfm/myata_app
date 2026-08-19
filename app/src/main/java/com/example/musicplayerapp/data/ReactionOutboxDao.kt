@@ -82,6 +82,21 @@ interface ReactionOutboxDao {
     @Query("SELECT COUNT(*) FROM reaction_outbox")
     suspend fun count(): Int
 
+    /**
+     * The soonest moment any pending row may next be attempted, or null when there
+     * are none at all.
+     *
+     * This is the timer the drain runs on. A row parked by a failure is invisible to
+     * [due] until its moment arrives, and nothing else in the system is watching a
+     * clock - so without this the row would simply wait for the next reaction or the
+     * next app start. See [com.example.musicplayerapp.data.supabase.ReactionSyncScheduler.scheduleWakeUp].
+     *
+     * MIN over a column that is indexed, on a table whose whole purpose is to
+     * usually be empty.
+     */
+    @Query("SELECT MIN(next_attempt_at) FROM reaction_outbox")
+    suspend fun earliestAttemptAt(): Long?
+
     @Query("SELECT * FROM reaction_outbox WHERE event_id = :eventId")
     suspend fun find(eventId: String): ReactionOutboxEntry?
 

@@ -84,6 +84,25 @@ object ReactionSyncScheduler {
     val POLICY: ExistingWorkPolicy = ExistingWorkPolicy.APPEND_OR_REPLACE
 
     /**
+     * The timer chain, kept deliberately separate from [UNIQUE_WORK].
+     *
+     * A parked row's wake-up is a *delayed* request. Appending a delayed request to
+     * the main chain would put every reaction tapped afterwards behind it - a fresh
+     * Like could wait the full backoff, up to a day, which is precisely the
+     * behaviour the main chain exists to avoid. So the timer gets its own name and
+     * the main chain stays immediate.
+     */
+    const val RETRY_WORK = "reaction-outbox-retry"
+
+    /**
+     * The timer chain's policy. There is at most one meaningful "next wake-up", so a
+     * newly computed one always supersedes whatever was pending: an earlier one
+     * because it is sooner, a later one because the row that wanted the earlier one
+     * has since gone. Appending would build a queue of stale timers instead.
+     */
+    val RETRY_POLICY: ExistingWorkPolicy = ExistingWorkPolicy.REPLACE
+
+    /**
      * A reaction has just been committed locally. Schedule a drain.
      *
      * Safe to call on any thread and safe to call far more often than necessary,
@@ -127,6 +146,48 @@ object ReactionSyncScheduler {
      * the run that requested it.
      */
     internal fun onBatchFull(context: Context) = enqueue(context, "batch full")
+
+    /**
+     * Schedules the run that a parked row is waiting for.
+     *
+     * This is the mechanism that turns `next_attempt_at` into guaranteed execution.
+     * `APPEND_OR_REPLACE` closes the two commit races but it is **not a timer**: once
+     * a chain has finished, nothing schedules anything, and a row parked by a 4xx for
+     * an hour - or a day - would otherwise sit there until the listener happened to
+     * react again or restart the app. WorkManager persists a delayed request in its
+     * own database and reschedules it across process death and reboot, so the timer
+     * survives everything except the app being uninstalled.
+     *
+     * Overlap with the main chain is harmless and worth stating: both remote writes
+     * are idempotent and the outbox row is deleted only after both succeed, so the
+     * worst case of two runs meeting is a duplicate round trip that changes nothing.
+     *
+     * @param at wall-clock millis, from [com.example.musicplayerapp.data.ReactionOutboxDao.earliestAttemptAt].
+     *   Already in the past is fine and means "as soon as the network allows".
+     */
+    internal fun scheduleWakeUp(context: Context, at: Long) {
+        if (!SupabaseConfig.isConfigured) return
+
+        val delay = (at - System.currentTimeMillis()).coerceAtLeast(0L)
+        val request = OneTimeWorkRequestBuilder<ReactionSyncWorker>()
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .addTag(RETRY_WORK)
+            .build()
+
+        runCatching {
+            WorkManager.getInstance(context.applicationContext)
+                .enqueueUniqueWork(RETRY_WORK, RETRY_POLICY, request)
+            Log.d(TAG, "retry wake-up scheduled in ${delay / 1000}s")
+        }.onFailure {
+            Log.w(TAG, "could not schedule the retry wake-up: ${it.message}")
+        }
+    }
 
     private fun enqueue(context: Context, why: String) {
         val request = OneTimeWorkRequestBuilder<ReactionSyncWorker>()

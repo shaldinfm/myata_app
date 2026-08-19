@@ -9,6 +9,7 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
+import com.example.musicplayerapp.data.supabase.ReactionSyncScheduler
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -540,6 +541,11 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
                 ReactionToggle.eventFor(from, to)?.let {
                     feedbackRepository.reportFeedback(artist, song, stream, it)
                 }
+                // The reaction and its outbox row are already committed; this only
+                // asks for them to be sent. Nothing here blocks the tap, nothing
+                // here can fail it, and the Sheets report above is untouched and
+                // independent - neither path waits on the other.
+                ReactionSyncScheduler.onReactionCommitted(context)
             }
         }
     }

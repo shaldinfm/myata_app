@@ -231,6 +231,13 @@ dependencies {
     implementation "androidx.room:room-ktx:$room_version"
     ksp "androidx.room:room-compiler:$room_version"
     
+    // WorkManager: persistent, network-constrained delivery of the reaction
+    // outbox. 2.9.1 rather than the 2.10 line, which requires a newer AGP/compileSdk
+    // pairing than this project pins. It brings its own Room, resolved up to the
+    // 2.7.2 this project already uses.
+    def work_version = '2.9.1'
+    implementation "androidx.work:work-runtime-ktx:$work_version"
+
     // SwipeRefreshLayout
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
     
@@ -253,6 +260,9 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    // Drives the sync worker synchronously and lets a test decide what WorkManager
+    // thinks the time and the constraints are.
+    androidTestImplementation "androidx.work:work-testing:$work_version"
     
     // Supabase: Auth and PostgREST only. No realtime, storage or functions - this
     // app has no use for them and each is more to ship and to keep current.

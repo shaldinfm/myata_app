@@ -8,6 +8,7 @@ import com.example.musicplayerapp.data.ArtworkRepository
 import com.example.musicplayerapp.data.FavoriteTrack
 import com.example.musicplayerapp.data.FeedbackRepository
 import com.example.musicplayerapp.data.ReactionEvent
+import com.example.musicplayerapp.data.supabase.ReactionSyncScheduler
 import com.example.musicplayerapp.data.TrackKey
 import com.example.musicplayerapp.SecureNetModule
 import kotlinx.coroutines.flow.Flow
@@ -20,6 +21,7 @@ import okhttp3.OkHttpClient
  */
 class FavoritesViewModel(application: Application) : AndroidViewModel(application) {
     
+    private val appContext = application.applicationContext
     private val database = AppDatabase.getDatabase(application)
     private val reactionDao = database.reactionDao()
     private val httpClient = SecureNetModule.getOkHttpClient(application)
@@ -60,6 +62,7 @@ class FavoritesViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             ReactionEvent.forUnlike(reactionDao.unlike(track.trackKey))?.let { event ->
                 feedbackRepository.reportFeedback(track.artist, track.track, track.stream, event)
+                ReactionSyncScheduler.onReactionCommitted(appContext)
             }
         }
     }
@@ -97,6 +100,7 @@ class FavoritesViewModel(application: Application) : AndroidViewModel(applicatio
             )
             ReactionEvent.forLike(restored)?.let { event ->
                 feedbackRepository.reportFeedback(track.artist, track.track, track.stream, event)
+                ReactionSyncScheduler.onReactionCommitted(appContext)
             }
         }
     }

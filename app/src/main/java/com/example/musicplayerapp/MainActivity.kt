@@ -405,15 +405,39 @@ class MainActivity : AppCompatActivity() {
      * recreates the activity and this runs again with the new answer.
      */
     private fun applySystemBarAppearance() {
-        val night = (resources.configuration.uiMode and
-            android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-            android.content.res.Configuration.UI_MODE_NIGHT_YES
-
-        androidx.core.view.WindowInsetsControllerCompat(window, window.decorView).apply {
-            isAppearanceLightStatusBars = !night
-            isAppearanceLightNavigationBars = !night
-        }
+        val controller = androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
+        controller.isAppearanceLightStatusBars = isLight(behind(window.statusBarColor))
+        controller.isAppearanceLightNavigationBars = isLight(behind(window.navigationBarColor))
     }
+
+    /**
+     * What is actually painted behind a system bar, which is not the same answer on
+     * every API level and is the whole reason this is a function.
+     *
+     * From API 35 the window is edge-to-edge enforced: the platform ignores
+     * `statusBarColor` / `navigationBarColor` entirely and leaves the bars
+     * transparent, so what shows through is the app's own `background` role. Below
+     * 35 those colours are still honoured and painted as an opaque strip, and this
+     * app's themes set `statusBarColor` to `main_fragment`, which is `#000000`.
+     *
+     * Deriving the icon colour from the app background on every level - which the
+     * first version of this did - therefore produced dark icons on a black bar on
+     * API 24: a status bar that was present, correct, and completely invisible.
+     * Measured, the band had exactly one distinct colour in it.
+     *
+     * @param themeColor the colour the theme asks for, used only where the platform
+     *   still honours it.
+     */
+    private fun behind(themeColor: Int): Int =
+        if (Build.VERSION.SDK_INT >= 35) {
+            androidx.core.content.ContextCompat.getColor(this, R.color.background)
+        } else {
+            themeColor
+        }
+
+    /** Whether icons drawn on [color] need to be dark to be legible. */
+    private fun isLight(color: Int): Boolean =
+        androidx.core.graphics.ColorUtils.calculateLuminance(color) > 0.5
 
     override fun onStart() {
         super.onStart()

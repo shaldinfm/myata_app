@@ -17,7 +17,10 @@ import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.StreamsViewModel
 import com.example.musicplayerapp.adapters.PlaylistAdapter
+import com.example.musicplayerapp.data.MyataPlaylist
 import com.example.musicplayerapp.databinding.FragmentMainBinding
+import com.example.musicplayerapp.ui.HomePlaylistSection
+import com.example.musicplayerapp.ui.HomePlaylistsState
 import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.utils.ServiceUtils
 
@@ -26,6 +29,18 @@ class MainFragment : Fragment() {
 
     lateinit var binding: FragmentMainBinding
     lateinit var vm: StreamsViewModel
+
+    /**
+     * Created once, empty, and attached before any data exists.
+     *
+     * The row used to get its adapter from `playlistList.value` at this point,
+     * which silently produced a **null adapter** whenever the value had not
+     * arrived - and nothing ever set one afterwards, because there was no
+     * observer. It only worked because the splash held HOME back until the load
+     * had finished. Attaching an empty adapter and filling it later is what makes
+     * HOME safe to exist before that is true.
+     */
+    private lateinit var playlistAdapter: PlaylistAdapter
 
 
     override fun onCreateView(
@@ -79,8 +94,27 @@ class MainFragment : Fragment() {
             )
             insets
         }
-        binding.playlists.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
-        binding.playlists.adapter = vm.playlistList.value?.let { PlaylistAdapter(it, { position -> onItemClick(position)}) }
+        binding.playlists.layoutManager =
+            LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+        playlistAdapter = PlaylistAdapter(::onPlaylistClick)
+        binding.playlists.adapter = playlistAdapter
+
+        binding.playlistRetry.setOnClickListener {
+            // The same entry point the splash's Retry uses, and the same one the
+            // connectivity callback calls. It is a no-op while a load is already
+            // running, so an impatient double tap costs nothing.
+            vm.refreshPlaylists()
+        }
+
+        // Both halves of the section's state, observed for the lifetime of the
+        // view. Either can arrive first, and either can arrive long after HOME is
+        // already on screen, so both just re-render.
+        vm.playlistList.observe(viewLifecycleOwner, Observer { playlists ->
+            playlistAdapter.submit(playlists ?: emptyList())
+            renderPlaylistSection()
+        })
+
+        vm.playlistsState.observe(viewLifecycleOwner, Observer { renderPlaylistSection() })
 
         // Navigation listeners are now handled in MainActivity
 
@@ -107,10 +141,11 @@ class MainFragment : Fragment() {
 
         vm.isInSplitMode.observe(viewLifecycleOwner, Observer {
             if(it){
-                binding.playlists.visibility = View.GONE
                 (activity as MainActivity).binding.bottomNavView.visibility = View.GONE
-                binding.playlistString.visibility = View.GONE
             }
+            // Split mode hides the whole section; renderPlaylistSection owns that
+            // now, so the inline status cannot survive a rotation into split view.
+            renderPlaylistSection()
         })
 
         return binding.root
@@ -121,15 +156,18 @@ class MainFragment : Fragment() {
         vm.currentFragmentLiveData.value = "main"
 
         if (!vm.isInSplitMode.value!!){
-            binding.playlists.visibility = View.VISIBLE
             // Ask the shell rather than poking the bar directly. onResume runs
             // when the transaction commits, which on the very first launch is
             // while the splash is still fading out - the shell holds the request
             // until the splash view is actually gone. Every later visit to HOME
             // is unaffected: there is no splash by then, so this is immediate.
             (activity as MainActivity).showBottomNav()
-            binding.playlistString.visibility = View.VISIBLE
         }
+
+        // Not `visibility = VISIBLE`. This used to force the row and its heading
+        // on regardless of whether there was anything to put in them, which would
+        // have overwritten the section's state on every return to HOME.
+        renderPlaylistSection()
         
         // MediaController automatically syncs state when re-connected
 
@@ -137,10 +175,46 @@ class MainFragment : Fragment() {
     }
 
 
-    private fun onItemClick(position: Int){
+    /**
+     * Draws the playlist section for whatever the loader currently knows.
+     *
+     * Everything about which of the three views is on screen lives here, so there
+     * is one answer rather than one per caller - `onCreateView`, both observers,
+     * the split-mode observer and `onResume` all route through it.
+     *
+     * HOME itself is never blocked: the greeting, the three stream cards and the
+     * whole navigation shell are untouched by any of these states. Only the
+     * section that has nothing to show changes.
+     */
+    private fun renderPlaylistSection() {
+        if (!::binding.isInitialized || !::playlistAdapter.isInitialized) return
+
+        if (vm.isInSplitMode.value == true) {
+            HomePlaylistSection.hide(
+                binding.playlistString, binding.playlists, binding.playlistState
+            )
+            return
+        }
+
+        HomePlaylistSection.apply(
+            state = HomePlaylistsState.of(
+                state = vm.playlistsState.value,
+                itemCount = vm.playlistList.value?.size ?: 0,
+                isOnline = vm.isOnline(),
+            ),
+            heading = binding.playlistString,
+            row = binding.playlists,
+            status = binding.playlistState,
+            loading = binding.playlistLoading,
+            error = binding.playlistError,
+            errorText = binding.playlistErrorText,
+        )
+    }
+
+    private fun onPlaylistClick(playlist: MyataPlaylist){
         val intent = Intent(Intent.ACTION_VIEW)
         intent.addCategory(Intent.CATEGORY_BROWSABLE)
-        intent.setData(Uri.parse(vm.playlistList.value!![position].uri))
+        intent.setData(Uri.parse(playlist.uri))
         try {
             startActivity(intent)
         } catch (e: android.content.ActivityNotFoundException) {

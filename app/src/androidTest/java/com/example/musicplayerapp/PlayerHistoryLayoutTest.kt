@@ -53,13 +53,18 @@ import kotlin.math.roundToInt
  *    clock times and clipped others; 42 holds all 1440, measured through the
  *    view's own paint. Everything after the time therefore sits 3.02 further in.
  *
- *  - **The text block is top-aligned to the artwork, not centred against it.**
- *    The mock centres a 40 cover in a 48 text block, which puts it at y=4 - but
- *    that only holds while the text is exactly one line taller than the cover.
- *    A wrapped title slid the cover down by half the added line - 32 at three
- *    lines - and the title's first line stopped having anything to do with the top
- *    of the cover. By owner decision the first line and the cover's top edge now
- *    share a y at every line count.
+ *  - **The text defines the vertical content; the cover and the timestamp are
+ *    centred against it.** The complete title + artist block starts at the top of
+ *    the content and grows downward - the text is never centred - and the 40 cover
+ *    is centred against all of it, with the timestamp centred on the cover and
+ *    riding along. On the normal one-line row the block is exactly 40, so the
+ *    cover resolves to the same y=17 a top pin would give and the row is
+ *    pixel-identical; the two only differ once the text wraps, which is the case
+ *    the rule exists for. Both the mock's own centring and the top-pin that
+ *    replaced it are gone: the mock centred a 40 cover in a 48 block and only held
+ *    while the text was exactly one line taller, while the top-pin held the cover
+ *    to the title's first line and left it 11 above the block's centre at two
+ *    title lines and 22 at three. Row height is unaffected either way.
  *
  *  - **The row's 74 is spent as 17 + 40 + 17, not the mock's 13 + 48 + 13.**
  *    Owner intent is that the normal one-line title over one-line artist reads
@@ -201,19 +206,28 @@ class PlayerHistoryLayoutTest {
                 tolerance = dp(1.5f),
             )
 
-            // The title's first line starts at the cover's top edge. Asserted on a
-            // one-line row as well as the wrapped one below, because the defect
-            // this replaces was invisible at one line: centring a 40 cover in a 48
-            // text block is only 4 out, and it is the wrapped row that shows it.
+            // On the one-line row the cover's top edge and the title's first line
+            // still share a y - not because the title is pinned to the cover, but
+            // because the block is exactly 40 and a 40 cover centred in it has
+            // nowhere to go. This is the case that has to stay pixel-identical
+            // across the centring change, so it is asserted as its own fact.
             expect(
                 where, "title top aligned to artwork top",
                 topIn(title, row), topIn(art, row).toFloat(), tolerance = dp(1f),
             )
-            // The cover is at the top of the content, not floated in the middle of
-            // it - and that top is the mock's own y=17, because the row's vertical
-            // padding is 17. The cover has not moved from where the frozen frame
-            // draws it; the text came down to meet it.
+            // ...and that shared y is the mock's own 17, because the row's vertical
+            // padding is 17 and the block starts at the top of the content. The
+            // cover has not moved from where the frozen frame draws it.
             expect(where, "artwork y in row", topIn(art, row), dp(17), tolerance = dp(1.5f))
+            // The same centre-on-centre rule the wrapped row below is held to,
+            // checked here too: at one line it resolves to zero offset, which is
+            // what makes the normal row identical rather than merely close.
+            expect(
+                where, "artwork centred on the metadata block",
+                topIn(art, row) + art.height / 2f,
+                (topIn(title, row) + rectIn(artist, row).bottom) / 2f,
+                tolerance = dp(1f),
+            )
 
             // The title and artist boxes abut, with no gap between them.
             expect(where, "artist follows title", topIn(artist, row), (topIn(title, row) + title.height).toFloat())
@@ -383,12 +397,46 @@ class PlayerHistoryLayoutTest {
                     }
                 }
             }
-            // The alignment fix has to hold when the title wraps - that is the case
-            // it exists for.
+            // The alignment rule has to hold when the title wraps - that is the case
+            // it exists for. The complete title + artist block defines the vertical
+            // content, and the cover is centred against ALL of it, so the cover's
+            // centre and the block's centre are the same line however many lines
+            // the title takes. This replaces asserting that the cover's top edge
+            // stays level with the title's first line: that held the cover to the
+            // top while the text grew past it - 11 above the block's centre at two
+            // title lines, 22 at three - which is what read as unbalanced.
+            val longBlockTop = topIn(longTitleView, longRow)
+            val longBlockBottom = rectIn(longArtistView, longRow).bottom
             expect(
-                where, "wrapped title top aligned to artwork top",
-                topIn(longTitleView, longRow), topIn(longArt, longRow).toFloat(), tolerance = dp(1f),
+                where, "wrapped: artwork centred on the metadata block",
+                topIn(longArt, longRow) + longArt.height / 2f,
+                (longBlockTop + longBlockBottom) / 2f,
+                tolerance = dp(1f),
             )
+            // The timestamp keeps its relationship to the cover rather than to the
+            // row: it is centred on the cover and therefore rides down with it.
+            val longTime = longRow.findViewById<TextView>(R.id.tv_time)
+            expect(
+                where, "wrapped: time still centred on artwork",
+                topIn(longTime, longRow) + longTime.height / 2f,
+                topIn(longArt, longRow) + longArt.height / 2f,
+                tolerance = dp(1.5f),
+            )
+            // The text is NOT centred: it still reads top-to-bottom from the top of
+            // the content, which is the row's own 17 of padding. Only the cover and
+            // the timestamp move.
+            expect(
+                where, "wrapped: title still starts at the top of the content",
+                longBlockTop, dp(17), tolerance = dp(1.5f),
+            )
+            // Centring the cover must not change what the row measures: the block
+            // is at least 40, so the cover's bottom can never pass the artist's and
+            // the row still ends at the artist plus 17.
+            expect(
+                where, "wrapped: row still ends at the text",
+                longRow.height - longBlockBottom, dp(17), tolerance = dp(1.5f),
+            )
+            noOverlap(where, "long time", longTime, "long artwork", longArt, longRow)
             expect(
                 where, "wrapped row: artist follows title",
                 topIn(longArtistView, longRow),

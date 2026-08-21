@@ -27,68 +27,6 @@ import com.example.musicplayerapp.ui.MyataTypography
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 
-/**
- * The ten random launch skins: a window-background artwork and the status-bar icon
- * appearance that artwork needs, declared together.
- *
- * Together is the point. The artwork is the window background, so from API 35 - where
- * the platform ignores `statusBarColor` and leaves the bar transparent - it is what
- * is painted behind the clock during the artwork splash. Six of the ten are dark
- * enough to need white icons and four are light enough to need dark ones, so there is
- * no single right answer and the choice has to travel with the artwork. Keeping it in
- * a second list, or in a `when`, is how the two silently drift apart the first time an
- * artwork is swapped.
- *
- * [topIsLight] answers exactly the question `isAppearanceLightStatusBars` asks: is the
- * thing behind the bar light, so the icons must be dark?
- *
- * The values are measured, not judged. For each artwork the top 5.67% of the frame -
- * the status-bar band once the background is FILL-stretched to a 2400px window - was
- * sampled across the two regions the icons actually occupy (the clock on the left, the
- * status icons on the right), and the WCAG contrast ratio computed for white icons and
- * for dark ones. The winner is the colour with the better *worst case*, taken as the
- * 10th percentile, because these are graphic artworks rather than flat fills and a
- * mean would hide a bright shape sitting exactly under the clock:
- *
- * ```
- *   artwork  meanL   white p10   dark p10   ->
- *   screen0  0.112     4.61        1.07     white icons
- *   screen1  0.462     1.54        3.87     dark icons
- *   screen2  0.183     3.36        1.07     white icons
- *   screen3  0.676     1.07        6.66     dark icons
- *   screen4  0.229     3.36        2.22     white icons
- *   screen5  0.119     9.59        1.07     white icons
- *   screen6  0.229     4.61        2.22     white icons
- *   screen7  0.669     1.37        6.77     dark icons
- *   screen8  0.315     2.10        1.07     white icons
- *   screen9  0.839     1.07        3.83     dark icons
- * ```
- *
- * Measured once, here, rather than computed at runtime: decoding an 8MB bitmap on the
- * launch path to ask it a question whose answer never changes would be paying every
- * cold start for a constant.
- */
-internal enum class SplashSkin(
-    @get:androidx.annotation.StyleRes val theme: Int,
-    val topIsLight: Boolean,
-) {
-    SCREEN_0(R.style.AppTheme0, topIsLight = false),
-    SCREEN_1(R.style.AppTheme1, topIsLight = true),
-    SCREEN_2(R.style.AppTheme2, topIsLight = false),
-    SCREEN_3(R.style.AppTheme3, topIsLight = true),
-    SCREEN_4(R.style.AppTheme4, topIsLight = false),
-    SCREEN_5(R.style.AppTheme5, topIsLight = false),
-    SCREEN_6(R.style.AppTheme6, topIsLight = false),
-    SCREEN_7(R.style.AppTheme7, topIsLight = true),
-    SCREEN_8(R.style.AppTheme8, topIsLight = false),
-    SCREEN_9(R.style.AppTheme9, topIsLight = true);
-
-    companion object {
-        /** One per launch, exactly as the ten-way `when` this replaced did. */
-        fun random(): SplashSkin = entries.random()
-    }
-}
-
 class MainActivity : AppCompatActivity() {
 
     lateinit var viewModel: StreamsViewModel
@@ -96,108 +34,20 @@ class MainActivity : AppCompatActivity() {
     private var dismissReceiver: BroadcastReceiver? = null
 
     /**
-     * The bottom bar belongs to the shell, not to any destination, so the shell
-     * decides when it is allowed on screen. Destinations only state what they
-     * want; [showBottomNav] applies it when it is safe to.
-     *
-     * The gate exists because on the one edge out of the splash, a destination
-     * asks too early: MainFragment.onResume runs when the transaction commits,
-     * with the splash artwork still the only thing drawn. Revealing the bar there
-     * put the migrated bar on top of the un-migrated splash artwork for ~0.5-0.7s
-     * of every cold launch.
-     *
-     * The signal is HOME's own first draw, taken from an
-     * [android.view.ViewTreeObserver.OnPreDrawListener] on its root. That is the
-     * frame in which HOME becomes the visible content, and it is safe by
-     * construction rather than by timing: HOME's root fills the window and paints
-     * `@color/background`, so once it draws opaque the splash behind it
-     * contributes no pixels at all. The listener therefore both conditions are
-     * satisfied in the same instant - the bar cannot land on the splash, and it
-     * cannot land a frame after HOME either.
-     *
-     * The first attempt used onFragmentViewDestroyed for the splash instead. That
-     * was the wrong event, and measurement is what showed it: HOME draws at
-     * alpha 1.0 immediately, but the splash's view lingered ~815ms behind it -
-     * invisible, occluded, and irrelevant - so the bar arrived that much after
-     * HOME. Waiting for the splash to be torn down was waiting for something the
-     * user cannot see.
-     *
-     * `alpha >= 1f` is still required before revealing. HOME is not faded in on
-     * any device measured here, but if a transition ever does fade it, a
-     * translucent HOME would let the splash through and the bar would be back on
-     * top of it. The check costs nothing and removes that dependency.
-     */
-    /** The artwork this launch drew, and the icon appearance it needs. */
-    private var splashSkin: SplashSkin? = null
-
-    private var splashHasView = false
-    private var bottomNavRequested = false
-    private var homeFirstFrameListener: android.view.ViewTreeObserver.OnPreDrawListener? = null
-
-    /**
-     * The observer the listener was actually registered on, kept so it can be
-     * removed from that one. `view.viewTreeObserver` is only the same object while
-     * the view stays attached, so re-reading it to unregister is a leak waiting
-     * for the view to be detached first.
-     */
-    private var homeFirstFrameObserver: android.view.ViewTreeObserver? = null
-
-    /**
      * A destination asking for the bottom bar.
      *
-     * Applied immediately whenever no splash view exists, which is every path
-     * except the first launch - a warm launch, a relaunch after process death,
-     * and every later visit to HOME, COLLECTION or ABOUT US. On the splash edge it
-     * is remembered, and [armHomeFirstFrameReveal] applies it with HOME's first
-     * frame.
+     * Direct, now that HOME is the first application screen. This used to be a
+     * gate: the bar had to be held back until the artwork splash was gone, because
+     * MainFragment.onResume runs when the transaction commits and the splash was
+     * still the only thing drawn, which put the bar on top of it for ~0.5-0.7s of
+     * every cold launch. With no second splash there is nothing to be on top of,
+     * and the pre-draw listener that timed the reveal has gone with it.
      *
-     * Hiding needs no gate and stays direct: hiding while the splash is up is
-     * what the splash wants anyway.
+     * The bar starts visible rather than being revealed - see onCreate - so HOME's
+     * first frame already has it and there is no hidden-to-visible step to see.
      */
     fun showBottomNav() {
-        bottomNavRequested = true
-        if (!splashHasView) {
-            binding.bottomNavView.visibility = android.view.View.VISIBLE
-        }
-    }
-
-    /**
-     * Reveal the bar in the traversal that first draws [homeRoot] opaque.
-     *
-     * Only armed while the splash still has a view, so it costs nothing on the
-     * paths that never see a splash.
-     */
-    private fun armHomeFirstFrameReveal(homeRoot: android.view.View) {
-        disarmHomeFirstFrameReveal()
-        val observer = homeRoot.viewTreeObserver
-        val listener = object : android.view.ViewTreeObserver.OnPreDrawListener {
-            override fun onPreDraw(): Boolean {
-                if (homeRoot.width == 0 || homeRoot.height == 0 || homeRoot.alpha < 1f) {
-                    // Not yet the frame that presents HOME. Let it draw and look again.
-                    return true
-                }
-                if (bottomNavRequested) {
-                    binding.bottomNavView.visibility = android.view.View.VISIBLE
-                }
-                // HOME is the visible content from this frame, so the bar is back
-                // over `background` and the theme decides its icons again. Same
-                // instant as the bar reveal, and for the same reason: this is the
-                // frame in which the artwork stops being what the user sees.
-                applySystemBarAppearance()
-                disarmHomeFirstFrameReveal()
-                return true
-            }
-        }
-        homeFirstFrameListener = listener
-        homeFirstFrameObserver = observer
-        observer.addOnPreDrawListener(listener)
-    }
-
-    private fun disarmHomeFirstFrameReveal() {
-        val listener = homeFirstFrameListener ?: return
-        homeFirstFrameObserver?.takeIf { it.isAlive }?.removeOnPreDrawListener(listener)
-        homeFirstFrameListener = null
-        homeFirstFrameObserver = null
+        binding.bottomNavView.visibility = android.view.View.VISIBLE
     }
 
     // Non-null since androidx.activity 1.9.0, which arrived with the Supabase
@@ -266,10 +116,13 @@ class MainActivity : AppCompatActivity() {
 
         super.onCreate(savedInstanceState)
 
-        // One skin per launch, and it carries its own status-bar appearance with it.
-        val skin = SplashSkin.random()
-        splashSkin = skin
-        setTheme(skin.theme)
+        // No setTheme() here any more. It used to install one of AppTheme0..9, whose
+        // only real content was a random full-bleed windowBackground - and the only
+        // thing that ever displayed that artwork was SplashFragment, which copied it
+        // into an ImageView. With the splash gone the artwork would have been decoded
+        // on every cold start and never seen, so the themes and the ten 8.3MB bitmaps
+        // went with it. AppTheme, installed by installSplashScreen() above as the
+        // postSplashScreenTheme, is the whole story now.
         
         // Projector/TV Detection Hack:
         // If we are on a device that identifies as a TV OR has no touchscreen, 
@@ -296,8 +149,12 @@ class MainActivity : AppCompatActivity() {
 
         applySystemBarAppearance()
         
-        // Ensure bottom navigation is hidden on startup (splash screen)
-        binding.bottomNavView.visibility = android.view.View.GONE
+        // Visible from the first frame. HOME is the first application screen and
+        // every destination that follows it shows the bar too, so there is nothing
+        // to hide it for - and starting hidden would put a hidden-to-visible step
+        // inside HOME's first frame for no reason. The two screens that genuinely
+        // hide it (split mode, and ABOUT's export sheet) still do so themselves.
+        binding.bottomNavView.visibility = android.view.View.VISIBLE
 
         // Handle window insets for accessibility (lift bottom menu above system navigation)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.bottomNavView) { v, insets ->
@@ -358,55 +215,6 @@ class MainActivity : AppCompatActivity() {
         // Centralized Navigation Handling with proper back stack management
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.navHostFragment) as androidx.navigation.fragment.NavHostFragment
         val navController = navHostFragment.navController
-
-        // Registered here, inside onCreate, which is before the NavHost's own
-        // child fragments reach onCreateView - those run when the fragment
-        // manager moves to STARTED, after this method returns. So the splash's
-        // view is always seen being created, and never missed.
-        //
-        // A warm launch and a launch after process death never create a
-        // SplashFragment at all - the navigation state is restored past it - so
-        // splashHasView simply stays false there and the bar is never held back.
-        navHostFragment.childFragmentManager.registerFragmentLifecycleCallbacks(
-            object : FragmentManager.FragmentLifecycleCallbacks() {
-                override fun onFragmentViewCreated(
-                    fm: FragmentManager, f: Fragment, v: android.view.View, s: Bundle?
-                ) {
-                    if (f is com.example.musicplayerapp.fragments.SplashFragment) {
-                        splashHasView = true
-                        // The artwork is now what is behind the status bar.
-                        applySplashArtworkAppearance()
-                    }
-                    // Only on the edge out of the splash. Everywhere else
-                    // showBottomNav() is already immediate, and arming here would
-                    // add a pre-draw listener to every visit to HOME for nothing.
-                    if (f is com.example.musicplayerapp.fragments.MainFragment && splashHasView) {
-                        armHomeFirstFrameReveal(v)
-                    }
-                }
-
-                override fun onFragmentViewDestroyed(fm: FragmentManager, f: Fragment) {
-                    if (f is com.example.musicplayerapp.fragments.SplashFragment) {
-                        splashHasView = false
-                        // Backstop, for the same reason the bar reveal has one: if
-                        // HOME somehow never draws opaque, the artwork appearance
-                        // must still not outlive the artwork.
-                        applySystemBarAppearance()
-                        // Backstop. HOME's first frame is what normally reveals the
-                        // bar; this only matters if HOME somehow never draws opaque,
-                        // in which case a late bar still beats no bar.
-                        if (bottomNavRequested) {
-                            binding.bottomNavView.visibility = android.view.View.VISIBLE
-                        }
-                    }
-                    if (f is com.example.musicplayerapp.fragments.MainFragment) {
-                        disarmHomeFirstFrameReveal()
-                    }
-                }
-            },
-            false
-        )
-
 
         val navOptions = androidx.navigation.NavOptions.Builder()
             .setPopUpTo(R.id.home, false) // Pop up to home, but don't pop home itself
@@ -505,29 +313,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             themeColor
         }
-
-    /**
-     * The icon appearance the *artwork splash* needs, from [SplashSkin].
-     *
-     * Only from API 35. Below that the platform still paints an opaque
-     * `statusBarColor` strip on top of the window background, so the artwork is not
-     * behind the bar at all and its luminance says nothing about legibility - the
-     * legacy path in [behind] already reads the colour that really is there. Applying
-     * artwork logic on API 24 would be choosing icons for something the user cannot
-     * see through.
-     *
-     * Only the status bar. The navigation bar sits over the *bottom* of the artwork,
-     * which is a different strip with a different answer, and nothing has asked for
-     * it; it stays on the theme's value rather than inheriting a number measured at
-     * the other end of the image.
-     */
-    private fun applySplashArtworkAppearance() {
-        if (Build.VERSION.SDK_INT < 35) return
-        val skin = splashSkin ?: return
-
-        androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
-            .isAppearanceLightStatusBars = skin.topIsLight
-    }
 
     /** Whether icons drawn on [color] need to be dark to be legible. */
     private fun isLight(color: Int): Boolean =

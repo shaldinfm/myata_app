@@ -13,34 +13,35 @@ import androidx.test.runner.lifecycle.ActivityLifecycleCallback
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
 import androidx.test.runner.lifecycle.Stage
 import com.example.musicplayerapp.fragments.MainFragment
-import com.example.musicplayerapp.fragments.SplashFragment
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 /**
  * The launch sequence: what may be on screen, and when.
  *
- * The defect this pins down was visible on every cold launch, on API 24 and API
- * 36 alike - the migrated bottom navigation bar drawn on top of the un-migrated
- * splash artwork for ~0.5-0.7s. MainFragment.onResume runs when the transaction
- * commits, which is the *start* of the splash's 250ms exit fade, so the bar
- * appeared while the splash was still at full opacity.
+ * The sequence is now two steps - the platform's starting window, then HOME. The
+ * artwork SplashFragment that used to sit between them is gone, and with it the
+ * defect this file was originally written for: the bottom navigation bar drawn on
+ * top of the un-migrated splash artwork for ~0.5-0.7s of every cold launch.
  *
- * The check is hung off the exact lifecycle moment the defect happened -
- * MainFragment being resumed - rather than sampled. The first version of this
- * test polled, and was wrong: with the playlist response already in OkHttp's
- * cache the splash can come and go between ActivityScenario.launch returning and
- * the first sample, so the run reported that the splash was never on screen. A
- * transient cannot be caught by looking at it later, only by being told about it.
+ * That invariant cannot be restated, because the thing it protected against no
+ * longer exists. What replaces it is stronger and simpler: **HOME is the first
+ * application screen, and its first presented frame already carries the bar.**
+ * There is no hidden-to-visible step to catch, because the bar is visible from
+ * `onCreate` and nothing on this path hides it.
  *
- * Registering through ActivityLifecycleMonitorRegistry at Stage.CREATED is what
- * makes that possible: it runs after MainActivity.onCreate but before the
- * NavHost's children reach onCreateView, so the splash's view is always seen.
+ * The first-frame check is still hung off an
+ * [android.view.ViewTreeObserver.OnPreDrawListener] rather than sampled. That was
+ * a lesson learned the hard way here: a polled version of this test reported that
+ * the splash was never on screen, because with the playlist response already in
+ * OkHttp's cache the whole transient could happen between `launch` returning and
+ * the first sample. A transient cannot be caught by looking at it later.
  *
  * Test-only. Compiled into the androidTest APK and never shipped.
  */
@@ -59,33 +60,22 @@ class LaunchSequenceTest {
     }
 
     private class Recorder : FragmentManager.FragmentLifecycleCallbacks() {
-        val splashViewCreated = CountDownLatch(1)
-        val homeResumed = CountDownLatch(1)
+        val homeViewCreated = CountDownLatch(1)
         val homeFirstFrame = CountDownLatch(1)
 
-        @Volatile var splashHasView = false
-        /** Non-null only if the invariant was actually broken. */
-        @Volatile var violation: String? = null
+        /** Any destination that reached the screen before HOME did. */
+        @Volatile var firstFragment: String? = null
+
         /** Non-null only if HOME's first presented frame had no bottom bar. */
         @Volatile var firstFrameViolation: String? = null
 
         override fun onFragmentViewCreated(
             fm: FragmentManager, f: Fragment, v: View, s: Bundle?
         ) {
-            if (f is SplashFragment) {
-                splashHasView = true
-                splashViewCreated.countDown()
-            }
+            if (firstFragment == null) firstFragment = f.javaClass.simpleName
             if (f !is MainFragment) return
+            homeViewCreated.countDown()
 
-            // The other half of the contract: HOME's first presented frame must
-            // already carry the bar.
-            //
-            // MainActivity registered its own callbacks in onCreate, which is
-            // before this test's registration at Stage.CREATED, so its pre-draw
-            // listener is added to the same observer first and runs first in the
-            // same pass. This therefore reads the state MainActivity has already
-            // applied for that frame - not the state one frame behind it.
             val root = v
             val observer = root.viewTreeObserver
             observer.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
@@ -104,29 +94,10 @@ class LaunchSequenceTest {
                 }
             })
         }
-
-        override fun onFragmentViewDestroyed(fm: FragmentManager, f: Fragment) {
-            if (f is SplashFragment) splashHasView = false
-        }
-
-        /**
-         * The moment of the defect. MainFragment.onResume is what asked for the
-         * bottom bar; if the splash still has a view here, the bar must not have
-         * been granted it.
-         */
-        override fun onFragmentResumed(fm: FragmentManager, f: Fragment) {
-            if (f !is MainFragment) return
-            val activity = f.activity as? MainActivity
-            if (splashHasView && activity?.binding?.bottomNavView?.visibility == View.VISIBLE) {
-                violation = "the bottom navigation bar was already visible when HOME " +
-                        "resumed, while the splash still had a view on screen"
-            }
-            homeResumed.countDown()
-        }
     }
 
     @Test
-    fun bottomNavIsHiddenOverTheSplashAndPresentOnHomesFirstFrame() {
+    fun homeIsTheFirstScreenAndItsFirstFrameCarriesTheBottomNav() {
         val recorder = Recorder()
 
         val callback = ActivityLifecycleCallback { activity: Activity, stage: Stage ->
@@ -141,33 +112,47 @@ class LaunchSequenceTest {
         ActivityLifecycleMonitorRegistry.getInstance().addLifecycleCallback(callback)
 
         ActivityScenario.launch(MainActivity::class.java).use {
+            // No network in this assertion, and that is the headline: HOME is
+            // reached without waiting for anything. The old sequence could not
+            // make this claim - it waited on a real playlist fetch, which is why
+            // the equivalent assertion had to be an assumption instead.
             assertTrue(
-                "the splash destination never created a view - this launch did not " +
-                        "exercise the sequence under test",
-                recorder.splashViewCreated.await(LAUNCH_BUDGET_SECONDS, TimeUnit.SECONDS)
+                "HOME never created a view within ${LAUNCH_BUDGET_SECONDS}s",
+                recorder.homeViewCreated.await(LAUNCH_BUDGET_SECONDS, TimeUnit.SECONDS)
             )
-            // An assumption, not an assertion, and deliberately so. The splash
-            // exits on a real playlist fetch, so a device that is offline - or
-            // simply still busy from RandomWindowBackgroundTest's twenty launches,
-            // which is what made this fail in a combined run and pass on its own -
-            // cannot exercise the sequence at all. That is an environment that
-            // cannot answer the question, not an answer of "no": it shows up as a
-            // skipped test rather than a red one, and never as a silent pass.
-            org.junit.Assume.assumeTrue(
-                "HOME never resumed within ${LAUNCH_BUDGET_SECONDS}s - the playlist " +
-                        "load did not finish, so the splash never handed over",
-                recorder.homeResumed.await(LAUNCH_BUDGET_SECONDS, TimeUnit.SECONDS)
-            )
-            // Inside the scenario, not after it: once `use` closes, the activity is
-            // destroyed and a frame that has not happened yet never will.
-            org.junit.Assume.assumeTrue(
+            assertTrue(
                 "HOME never presented a frame within ${LAUNCH_BUDGET_SECONDS}s",
                 recorder.homeFirstFrame.await(LAUNCH_BUDGET_SECONDS, TimeUnit.SECONDS)
             )
         }
 
-        recorder.violation?.let { org.junit.Assert.fail(it) }
+        assertEquals(
+            "the first destination on screen should be HOME itself",
+            "MainFragment", recorder.firstFragment
+        )
         recorder.firstFrameViolation?.let { org.junit.Assert.fail(it) }
+    }
+
+    /**
+     * HOME is the navigation graph's start destination.
+     *
+     * Asserted on the graph rather than by observing a launch, so it fails for the
+     * right reason if someone reintroduces an intermediate destination: the launch
+     * would still end at HOME, just later.
+     */
+    @Test
+    fun theGraphStartsAtHome() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val navHost = activity.supportFragmentManager
+                    .findFragmentById(R.id.navHostFragment) as NavHostFragment
+                assertEquals(
+                    "the mobile graph must start at HOME",
+                    R.id.home,
+                    navHost.navController.graph.startDestinationId,
+                )
+            }
+        }
     }
 
     /**
@@ -176,8 +161,7 @@ class LaunchSequenceTest {
      * This is the flag that produced the measured ~4.7s of untouched launcher on a
      * cold start: with it set there is no starting window on 24-30 and no platform
      * splash on 31+. It is checked on the *live* activity theme, so it covers the
-     * composition of the launch theme, AppTheme and the random AppTheme0..9 rather
-     * than any one of them in isolation.
+     * composition of the launch theme and AppTheme rather than either in isolation.
      */
     @Test
     fun theLiveThemeDoesNotSuppressTheStartingWindow() {

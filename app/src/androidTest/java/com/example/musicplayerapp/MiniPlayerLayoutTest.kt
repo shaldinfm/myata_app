@@ -319,12 +319,12 @@ class MiniPlayerLayoutTest {
     /**
      * Launches, runs [block], and closes again.
      *
-     * Per test rather than once for the class, and that is not an oversight:
-     * `screen0..9` live in a density-less `drawable/`, so each launch decodes a
-     * 1080x1921 window background upscaled to 57 MB on a 420dpi device. Holding
-     * one Activity open across the class keeps that alive for the whole class and
-     * measurably makes the API 24 heap worse, not better. Closing between tests
-     * lets it go.
+     * Per test rather than once for the class. The original reason was the ten
+     * `screen0..9` window backgrounds, which decoded a 1080x1921 bitmap per launch
+     * and made the API 24 heap worse when one Activity was held open for the whole
+     * class. Those are gone with the artwork splash, so the pressure is gone with
+     * them - but closing between tests is still the cheaper default and there is
+     * nothing to gain by holding an Activity open across a whole class.
      */
     private fun onMainActivity(block: (MainActivity) -> Unit) {
         ActivityScenario.launch(MainActivity::class.java).let { scenario ->

@@ -128,123 +128,22 @@
         <item name="android:statusBarColor">@color/main_fragment</item>
     </style>
     <!--
-      AppTheme0..9 are the ten random window backgrounds. MainActivity picks one
-      per launch; this is product behaviour, not duplicate styles.
+      AppTheme0..9 are gone, and so are the ten `screen0..9` artworks they set as
+      `android:windowBackground`.
 
-      screen0..9 live in res/drawable-nodpi/ and must stay there. An unqualified
-      res/drawable/ does not mean "any density" - it means mdpi, so the framework
-      scales the bitmap up by the device density on decode. At 1080x1921 on a
-      420dpi device that decoded 2835x5043, 57MB per background, and the
-      instrumented suite died with OutOfMemoryError before it could finish.
-      nodpi means what drawable/ was mistaken for: decode as authored, 1080x1921,
-      8.3MB, the same on every device.
+      They were only ever visible through one view. SplashFragment copied the
+      resolved windowBackground into a full-bleed ImageView; nothing else drew it,
+      because every screen root paints an opaque `@color/background` over the
+      window. With the splash retired the artwork would have been decoded on every
+      cold start - 8.3MB, once per launch - and never seen by anyone, so the themes
+      and the bitmaps went together rather than leaving an invisible cost behind.
 
-      Nothing is lost by not scaling. A window background is drawn at the size of
-      the window, not at its intrinsic size (BitmapDrawable gravity FILL), so the
-      density scale never affected framing - only how many pixels were decoded
-      before being stretched back. 1080 wide is exactly the width of the screens
-      this app runs on, so the drawn result is unchanged.
+      The random pick in MainActivity went with them: the activity now simply keeps
+      AppTheme, which installSplashScreen() installs as the postSplashScreenTheme.
+      Nothing in the app resolves ?attr/colorPrimary or its neighbours - every
+      screen names its colours directly - which is what made the two themes
+      interchangeable in practice as well as on paper.
     -->
-    <style name="AppTheme0" parent="Theme.Myata.Base">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen0</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-    <style name="AppTheme1" parent="Theme.Myata.Base">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen1</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-    <style name="AppTheme2" parent="Theme.Myata.Base">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen2</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-    <style name="AppTheme3" parent="Theme.Myata.Base">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen3</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-    <style name="AppTheme4" parent="Theme.Myata.Base">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen4</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-    <style name="AppTheme5" parent="Theme.Myata.Base">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen5</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-    <style name="AppTheme6" parent="Theme.Myata.Base">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen6</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-    <style name="AppTheme7" parent="Theme.Myata.Base">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen7</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-    <style name="AppTheme8" parent="Theme.Myata.Base">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen8</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
-    <style name="AppTheme9" parent="Theme.Myata.Base">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/main_fragment</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:windowBackground">@drawable/screen9</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-    </style>
     <!--
       Bottom navigation, frozen 3.6.6 canonical metrics.
 

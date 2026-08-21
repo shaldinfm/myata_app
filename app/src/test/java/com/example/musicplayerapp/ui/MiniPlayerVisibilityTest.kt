@@ -80,7 +80,7 @@ class MiniPlayerVisibilityTest {
     /* The rest of the surface. */
 
     @Test
-    fun `donate and splash are not screens the design gives a mini player`() {
+    fun `unknown destinations are not screens the design gives a mini player`() {
         assertFalse(show("donate"))
         assertFalse(show(null))
         assertFalse(show("something_else"))

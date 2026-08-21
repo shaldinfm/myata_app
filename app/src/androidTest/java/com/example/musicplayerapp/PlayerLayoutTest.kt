@@ -172,8 +172,27 @@ class PlayerLayoutTest {
             expect(where, "album art height", art.height, dp(239))
             expect(where, "album art centred", leftIn(art, page) + art.width / 2, dp(widthDp) / 2f)
 
-            expect(where, "track title y", topIn(title, page), dp(292))
             expect(where, "artist y", topIn(artist, page), dp(324))
+
+            /*
+             * The frozen 292 belongs to a ONE-LINE title, and that is now measured
+             * on a title that fits one line rather than on `longTitle`.
+             *
+             * The title is anchored by its bottom, just above the artist, so a
+             * second line grows up into the gap under the artwork instead of down
+             * over the artist. A one-line title therefore still lands on 292 - it
+             * falls out of 324 - 3 - 29.3 - while a two-line one starts higher on
+             * purpose. Asserting 292 against a wrapped title would be asserting the
+             * old behaviour.
+             */
+            val onePage = measured(inflater, R.layout.fragment_myata_stream, widthPx) { r ->
+                r.findViewById<TextView>(R.id.main_song).text = "FLAME"
+                r.findViewById<TextView>(R.id.main_author).text = longArtist
+            }
+            val oneTitle = onePage.findViewById<TextView>(R.id.main_song)
+            requireOneLine(oneTitle, "$where/one-line title")
+            expect(where, "one-line track title y", topIn(oneTitle, onePage), dp(292))
+            expect(where, "one-line artist y", topIn(onePage.findViewById(R.id.main_author), onePage), dp(324))
 
             // The frozen boxes are 24 and 18 - exactly the font size, which Figma
             // can draw and Android cannot without clipping. So the requirement is
@@ -235,9 +254,18 @@ class PlayerLayoutTest {
             expect(where, "side slots agree on height", dislike.height.toFloat(), favorite.height.toFloat())
             expect(where, "side slots agree on glyph y", dislikeTop, likeTop, tolerance = dp(0.5f))
 
-            /* ---- long Russian metadata: one line each, nothing cut or piled up ---- */
+            /* ---- long Russian metadata: nothing cut, nothing piled up ---- */
 
-            requireOneLine(title, "$where/title")
+            /*
+             * The title takes up to two lines and the artist exactly one.
+             *
+             * Two is not a taste: measured at 390dp a line is 29.3 and a second
+             * costs 23.8, and the gap under the artwork is 36.8 - so the second
+             * line fits with 13.0 to spare and a third would start above the
+             * artwork's own bottom edge. `noOverlap(album art, title)` below is
+             * what actually holds that line, on every width in the sweep.
+             */
+            atMostLines(title, 2, "$where/title")
             requireOneLine(artist, "$where/artist")
             noClipping(title, "$where/title")
             noClipping(artist, "$where/artist")
@@ -249,7 +277,8 @@ class PlayerLayoutTest {
 
             log += "$where: header@${topIn(header, shell)} ${header.height}, swipe@${topIn(dots, shell)}, " +
                 "page@${topIn(pager, shell)} | art@${topIn(art, page)} ${art.width}, " +
-                "title@${topIn(title, page)} ${title.height} ${title.lineCount}L, " +
+                "title@${topIn(title, page)} ${title.height} ${title.lineCount}L " +
+                "(1-line@${topIn(oneTitle, onePage)}), " +
                 "artist@${topIn(artist, page)} ${artist.height} ${artist.lineCount}L, " +
                 "play@${topIn(play, page)} ${play.width}"
         }
@@ -413,6 +442,16 @@ class PlayerLayoutTest {
         bitmap.recycle()
         val mean = radii.average().toFloat()
         return if (mean <= 0f) 0f else (radii.max() - radii.min()) / mean
+    }
+
+    /**
+     * A ceiling rather than an exact count: a short title still occupies one line,
+     * and the rule is "up to", not "always".
+     */
+    private fun atMostLines(tv: TextView, max: Int, where: String) {
+        if (tv.lineCount > max) {
+            findings += "$where: wrapped to ${tv.lineCount} lines; at most $max is allowed here"
+        }
     }
 
     private fun requireOneLine(tv: TextView, where: String) {

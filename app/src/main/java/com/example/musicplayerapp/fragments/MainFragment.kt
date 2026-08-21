@@ -53,7 +53,17 @@ class MainFragment : Fragment() {
 
         // Handle window insets for safe area (notch/status bar)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.mainContentContainer) { v, insets ->
-            val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            // systemBars() OR displayCutout(), not systemBars() alone. The status
+            // bar normally covers a top cutout - measured 49.1dp of bar against a
+            // 30.3dp hole on the API 36 emulator - but that is the platform being
+            // helpful, not a guarantee the app is entitled to. The union is the
+            // safe top area by construction, and it costs nothing: on every cutout
+            // emulation measured (none/hole/tall/waterfall/double) it resolves to
+            // exactly the same number the status bar alone gave.
+            val bars = insets.getInsets(
+                androidx.core.view.WindowInsetsCompat.Type.systemBars() or
+                    androidx.core.view.WindowInsetsCompat.Type.displayCutout()
+            )
             v.setPadding(v.paddingLeft, bars.top, v.paddingRight, v.paddingBottom)
 
             // The frozen clearance covers the chrome the design draws - navigation

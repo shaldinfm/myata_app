@@ -27,6 +27,68 @@ import com.example.musicplayerapp.ui.MyataTypography
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 
+/**
+ * The ten random launch skins: a window-background artwork and the status-bar icon
+ * appearance that artwork needs, declared together.
+ *
+ * Together is the point. The artwork is the window background, so from API 35 - where
+ * the platform ignores `statusBarColor` and leaves the bar transparent - it is what
+ * is painted behind the clock during the artwork splash. Six of the ten are dark
+ * enough to need white icons and four are light enough to need dark ones, so there is
+ * no single right answer and the choice has to travel with the artwork. Keeping it in
+ * a second list, or in a `when`, is how the two silently drift apart the first time an
+ * artwork is swapped.
+ *
+ * [topIsLight] answers exactly the question `isAppearanceLightStatusBars` asks: is the
+ * thing behind the bar light, so the icons must be dark?
+ *
+ * The values are measured, not judged. For each artwork the top 5.67% of the frame -
+ * the status-bar band once the background is FILL-stretched to a 2400px window - was
+ * sampled across the two regions the icons actually occupy (the clock on the left, the
+ * status icons on the right), and the WCAG contrast ratio computed for white icons and
+ * for dark ones. The winner is the colour with the better *worst case*, taken as the
+ * 10th percentile, because these are graphic artworks rather than flat fills and a
+ * mean would hide a bright shape sitting exactly under the clock:
+ *
+ * ```
+ *   artwork  meanL   white p10   dark p10   ->
+ *   screen0  0.112     4.61        1.07     white icons
+ *   screen1  0.462     1.54        3.87     dark icons
+ *   screen2  0.183     3.36        1.07     white icons
+ *   screen3  0.676     1.07        6.66     dark icons
+ *   screen4  0.229     3.36        2.22     white icons
+ *   screen5  0.119     9.59        1.07     white icons
+ *   screen6  0.229     4.61        2.22     white icons
+ *   screen7  0.669     1.37        6.77     dark icons
+ *   screen8  0.315     2.10        1.07     white icons
+ *   screen9  0.839     1.07        3.83     dark icons
+ * ```
+ *
+ * Measured once, here, rather than computed at runtime: decoding an 8MB bitmap on the
+ * launch path to ask it a question whose answer never changes would be paying every
+ * cold start for a constant.
+ */
+internal enum class SplashSkin(
+    @get:androidx.annotation.StyleRes val theme: Int,
+    val topIsLight: Boolean,
+) {
+    SCREEN_0(R.style.AppTheme0, topIsLight = false),
+    SCREEN_1(R.style.AppTheme1, topIsLight = true),
+    SCREEN_2(R.style.AppTheme2, topIsLight = false),
+    SCREEN_3(R.style.AppTheme3, topIsLight = true),
+    SCREEN_4(R.style.AppTheme4, topIsLight = false),
+    SCREEN_5(R.style.AppTheme5, topIsLight = false),
+    SCREEN_6(R.style.AppTheme6, topIsLight = false),
+    SCREEN_7(R.style.AppTheme7, topIsLight = true),
+    SCREEN_8(R.style.AppTheme8, topIsLight = false),
+    SCREEN_9(R.style.AppTheme9, topIsLight = true);
+
+    companion object {
+        /** One per launch, exactly as the ten-way `when` this replaced did. */
+        fun random(): SplashSkin = entries.random()
+    }
+}
+
 class MainActivity : AppCompatActivity() {
 
     lateinit var viewModel: StreamsViewModel
@@ -65,6 +127,9 @@ class MainActivity : AppCompatActivity() {
      * translucent HOME would let the splash through and the bar would be back on
      * top of it. The check costs nothing and removes that dependency.
      */
+    /** The artwork this launch drew, and the icon appearance it needs. */
+    private var splashSkin: SplashSkin? = null
+
     private var splashHasView = false
     private var bottomNavRequested = false
     private var homeFirstFrameListener: android.view.ViewTreeObserver.OnPreDrawListener? = null
@@ -114,6 +179,11 @@ class MainActivity : AppCompatActivity() {
                 if (bottomNavRequested) {
                     binding.bottomNavView.visibility = android.view.View.VISIBLE
                 }
+                // HOME is the visible content from this frame, so the bar is back
+                // over `background` and the theme decides its icons again. Same
+                // instant as the bar reveal, and for the same reason: this is the
+                // frame in which the artwork stops being what the user sees.
+                applySystemBarAppearance()
                 disarmHomeFirstFrameReveal()
                 return true
             }
@@ -196,20 +266,10 @@ class MainActivity : AppCompatActivity() {
 
         super.onCreate(savedInstanceState)
 
-        val theme = (0..9).random()
-
-        when(theme){
-            0->{ setTheme(R.style.AppTheme0) }
-            1->{ setTheme(R.style.AppTheme1) }
-            2->{ setTheme(R.style.AppTheme2) }
-            3->{ setTheme(R.style.AppTheme3) }
-            4->{ setTheme(R.style.AppTheme4) }
-            5->{ setTheme(R.style.AppTheme5) }
-            6->{ setTheme(R.style.AppTheme6) }
-            7->{ setTheme(R.style.AppTheme7) }
-            8->{ setTheme(R.style.AppTheme8) }
-            9->{ setTheme(R.style.AppTheme9) }
-        }
+        // One skin per launch, and it carries its own status-bar appearance with it.
+        val skin = SplashSkin.random()
+        splashSkin = skin
+        setTheme(skin.theme)
         
         // Projector/TV Detection Hack:
         // If we are on a device that identifies as a TV OR has no touchscreen, 
@@ -233,6 +293,8 @@ class MainActivity : AppCompatActivity() {
         viewModel = ViewModelProvider(this, viewModelProviderFactory).get(StreamsViewModel ::class.java)
 
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
+
+        applySystemBarAppearance()
         
         // Ensure bottom navigation is hidden on startup (splash screen)
         binding.bottomNavView.visibility = android.view.View.GONE
@@ -312,6 +374,8 @@ class MainActivity : AppCompatActivity() {
                 ) {
                     if (f is com.example.musicplayerapp.fragments.SplashFragment) {
                         splashHasView = true
+                        // The artwork is now what is behind the status bar.
+                        applySplashArtworkAppearance()
                     }
                     // Only on the edge out of the splash. Everywhere else
                     // showBottomNav() is already immediate, and arming here would
@@ -324,6 +388,10 @@ class MainActivity : AppCompatActivity() {
                 override fun onFragmentViewDestroyed(fm: FragmentManager, f: Fragment) {
                     if (f is com.example.musicplayerapp.fragments.SplashFragment) {
                         splashHasView = false
+                        // Backstop, for the same reason the bar reveal has one: if
+                        // HOME somehow never draws opaque, the artwork appearance
+                        // must still not outlive the artwork.
+                        applySystemBarAppearance()
                         // Backstop. HOME's first frame is what normally reveals the
                         // bar; this only matters if HOME somehow never draws opaque,
                         // in which case a late bar still beats no bar.
@@ -383,6 +451,87 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+    /**
+     * Which way round the system bar icons are drawn.
+     *
+     * targetSdk 36 runs the window EDGE_TO_EDGE_ENFORCED, which makes the platform
+     * ignore `android:statusBarColor` and leave the bar transparent: what shows
+     * behind the clock and the battery is the app's own `background` role. That is
+     * `#F8F9FA` in Light, so the bar needs **dark** icons, and `#0F253E` in Dark, so
+     * it needs light ones. Without this the bar is technically visible and
+     * practically unreadable - white on near-white - which is how it first came back
+     * when `windowFullscreen` was removed.
+     *
+     * `isAppearanceLightStatusBars = true` means "the background behind me is light,
+     * draw dark icons", which is why it is the negation of night mode.
+     *
+     * Read from the configuration rather than stored, and applied in onCreate:
+     * `uiMode` is not in this activity's `configChanges`, so a day/night switch
+     * recreates the activity and this runs again with the new answer.
+     */
+    private fun applySystemBarAppearance() {
+        val controller = androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
+        // statusBarColor/navigationBarColor are deprecated because the platform stopped
+        // honouring them at API 35 - which is exactly the distinction [behind] draws, so
+        // reading them here is deliberate rather than overlooked.
+        @Suppress("DEPRECATION")
+        controller.isAppearanceLightStatusBars = isLight(behind(window.statusBarColor))
+        @Suppress("DEPRECATION")
+        controller.isAppearanceLightNavigationBars = isLight(behind(window.navigationBarColor))
+    }
+
+    /**
+     * What is actually painted behind a system bar, which is not the same answer on
+     * every API level and is the whole reason this is a function.
+     *
+     * From API 35 the window is edge-to-edge enforced: the platform ignores
+     * `statusBarColor` / `navigationBarColor` entirely and leaves the bars
+     * transparent, so what shows through is the app's own `background` role. Below
+     * 35 those colours are still honoured and painted as an opaque strip, and this
+     * app's themes set `statusBarColor` to `main_fragment`, which is `#000000`.
+     *
+     * Deriving the icon colour from the app background on every level - which the
+     * first version of this did - therefore produced dark icons on a black bar on
+     * API 24: a status bar that was present, correct, and completely invisible.
+     * Measured, the band had exactly one distinct colour in it.
+     *
+     * @param themeColor the colour the theme asks for, used only where the platform
+     *   still honours it.
+     */
+    private fun behind(themeColor: Int): Int =
+        if (Build.VERSION.SDK_INT >= 35) {
+            androidx.core.content.ContextCompat.getColor(this, R.color.background)
+        } else {
+            themeColor
+        }
+
+    /**
+     * The icon appearance the *artwork splash* needs, from [SplashSkin].
+     *
+     * Only from API 35. Below that the platform still paints an opaque
+     * `statusBarColor` strip on top of the window background, so the artwork is not
+     * behind the bar at all and its luminance says nothing about legibility - the
+     * legacy path in [behind] already reads the colour that really is there. Applying
+     * artwork logic on API 24 would be choosing icons for something the user cannot
+     * see through.
+     *
+     * Only the status bar. The navigation bar sits over the *bottom* of the artwork,
+     * which is a different strip with a different answer, and nothing has asked for
+     * it; it stays on the theme's value rather than inheriting a number measured at
+     * the other end of the image.
+     */
+    private fun applySplashArtworkAppearance() {
+        if (Build.VERSION.SDK_INT < 35) return
+        val skin = splashSkin ?: return
+
+        androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
+            .isAppearanceLightStatusBars = skin.topIsLight
+    }
+
+    /** Whether icons drawn on [color] need to be dark to be legible. */
+    private fun isLight(color: Int): Boolean =
+        androidx.core.graphics.ColorUtils.calculateLuminance(color) > 0.5
 
     override fun onStart() {
         super.onStart()

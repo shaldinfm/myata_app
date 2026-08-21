@@ -33,10 +33,15 @@
         tools:context=".fragments.MyataStreamFragment">
 
         <!--
-          Each block is anchored by its own offset from the page top rather than
-          stacked, so a text box that needs more height than the frozen one grows
-          into the gap above the next block instead of pushing it down. See
-          player_track_title_top in dimens.xml for the measurement behind that.
+          Each block is anchored by its own absolute offset from the page top -
+          artwork 16, artist 324, controls 363 - rather than stacked, so a box that
+          needs more height than the frozen one cannot push the blocks below it out
+          of place.
+
+          The track title is the one exception, and it proves the rule: it is
+          anchored by its bottom to the artist instead, so its second line grows
+          up into the gap under the artwork. Everything else stays exactly where
+          the frozen frame puts it. The measurements are on main_song below.
         -->
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/stream_content_container"
@@ -76,27 +81,53 @@
               the track title, main_author the artist, and the clipboard copy still
               reads "artist - title" from them.
 
-              One line each, ellipsized. The frozen boxes are 24 and 18 tall with
-              clipping on, holding exactly one line: the design decision is one
-              line, and ellipsis is that decision without the clipping. minHeight
-              carries the token's own line height for the reason measured in B2, so
-              the box holds the line instead of the font's natural height.
+              The artist is one line, ellipsized: the frozen box is 18 tall with
+              clipping on, and ellipsis is that decision without the clipping.
+
+              The **title takes up to two**, and it grows upward. It is the primary
+              content on this screen, and at one line it rendered "WHERE CAN I PUT
+              ALL MY LOVE" as "WHERE CAN I PUT ALL MY ..." at 390dp - a title that
+              fits perfectly well in two.
+
+              Upward is the only direction available, and the numbers say so.
+              Measured at 390dp: a line is 29.3 tall and a second costs 23.8, the
+              artist starts at 324 and the controls at 363, so the whole space below
+              the title is 2.9 before the artist and 17.0 before the controls. A
+              second line growing downward would cross the artist by 20.9. Above the
+              title there is 36.8 of deliberate gap under the artwork, and 23.8 fits
+              inside it with 13.0 to spare - so the title's **bottom** is anchored
+              and the box extends up into that gap.
+
+              What this buys, beyond the reported title: artist and controls never
+              move. They keep the frozen 324 and 363 whatever the title does, which
+              is what the top-anchored version could not have offered. It is also
+              the better failure direction for a large system font scale, which now
+              grows into 36.8 of gap instead of into 2.9.
+
+              Two, not three: a third line needs another 23.8 and would start at
+              244.2, which is above the artwork's own bottom edge at 255. maxLines
+              is what keeps that from being reachable, and a title too long for two
+              lines still ellipsizes on the second.
+
+              The frozen one-line position is unchanged: bottom at (324 - 3) with a
+              29.3 box puts the top at 291.7, which is the frozen 292.
+              PlayerLayoutTest pins it.
             -->
             <TextView
                 android:id="@+id/main_song"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/player_margin"
-                android:layout_marginTop="@dimen/player_track_title_top"
                 android:layout_marginEnd="@dimen/player_margin"
+                android:layout_marginBottom="@dimen/player_track_title_artist_gap"
                 android:ellipsize="end"
                 android:gravity="center"
-                android:maxLines="1"
+                android:maxLines="2"
                 android:textAppearance="@style/TextAppearance.Myata.Montserrat.Black.24_24"
                 android:textColor="@color/text_primary"
+                app:layout_constraintBottom_toTopOf="@+id/main_author"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
                 tools:text="WHAT YOU KNOW" />
 
             <TextView

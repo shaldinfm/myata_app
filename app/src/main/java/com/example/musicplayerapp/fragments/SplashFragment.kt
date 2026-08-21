@@ -1,10 +1,6 @@
 package com.example.musicplayerapp.fragments
 
 
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -24,6 +20,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
+/**
+ * The legacy full-screen splash: it holds the app back until the playlist load
+ * finishes, and offers a retry when it does not.
+ *
+ * Its connectivity retry has moved to [StreamsViewModel]. That behaviour belongs
+ * to the loader rather than to a screen - the reader should get their playlists
+ * back when the network returns whether or not a splash happens to be on top -
+ * and it has to keep working once this screen is gone. Nothing else here changed:
+ * this fragment still gates entry exactly as it did, and still shows the same
+ * loading, error and offline copy, so the launch sequence is unaffected.
+ */
 class
 SplashFragment : Fragment() {
 
@@ -32,7 +39,6 @@ SplashFragment : Fragment() {
 
     private var hasNavigated = false
     private var waitDeadlineJob: Job? = null
-    private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -71,8 +77,6 @@ SplashFragment : Fragment() {
             }
         })
 
-        registerNetworkCallback()
-
         return binding.root
     }
 
@@ -106,64 +110,16 @@ SplashFragment : Fragment() {
     private fun showErrorState() {
         if (hasNavigated) return
         binding.splashErrorTitle.setText(
-            if (isOnline(requireContext())) R.string.splash_error_title
+            if (vm.isOnline()) R.string.splash_error_title
             else R.string.splash_offline_title
         )
         binding.splashErrorContainer.visibility = View.VISIBLE
     }
 
-    /**
-     * Retries once connectivity comes back, so a user who was offline at launch does
-     * not have to press anything. Event-driven — no polling.
-     */
-    private fun registerNetworkCallback() {
-        val connectivityManager =
-            requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-                ?: return
-
-        val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                view?.post {
-                    if (!hasNavigated && vm.playlistsState.value == PlaylistsState.ERROR) {
-                        showLoadingState()
-                        vm.refreshPlaylists()
-                    }
-                }
-            }
-        }
-
-        try {
-            connectivityManager.registerDefaultNetworkCallback(callback)
-            networkCallback = callback
-        } catch (e: SecurityException) {
-            // Some OEM builds refuse the callback; manual retry still works.
-        }
-    }
-
     override fun onDestroyView() {
         waitDeadlineJob?.cancel()
         waitDeadlineJob = null
-        networkCallback?.let { callback ->
-            val connectivityManager =
-                context?.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-            try {
-                connectivityManager?.unregisterNetworkCallback(callback)
-            } catch (e: IllegalArgumentException) {
-                // Already unregistered.
-            }
-        }
-        networkCallback = null
         super.onDestroyView()
-    }
-
-    fun isOnline(context: Context): Boolean {
-        val connectivityManager =
-            context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-                ?: return false
-        val capabilities =
-            connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
-                ?: return false
-        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
     private companion object {

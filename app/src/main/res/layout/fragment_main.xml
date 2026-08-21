@@ -186,6 +186,71 @@
                         android:clipToPadding="false"
                         android:paddingStart="@dimen/home_margin"
                         tools:listitem="@layout/rw_playlist_item" />
+
+                    <!--
+                      The playlist section's inline status, shown in place of the
+                      card row while there is nothing to put in it.
+
+                      Same height and same top margin as the row it replaces, and
+                      only ever one of the two is visible, so the section occupies
+                      an identical band whichever it is and nothing below moves
+                      when the load lands. The card design is untouched: this is a
+                      sibling, not a wrapper.
+
+                      It is deliberately compact. HOME stays fully usable while
+                      playlists are missing - the streams above it are the radio,
+                      and they need no network to be tapped - so a failure here is
+                      a section that could not fill itself, not a screen-wide
+                      error. That is the whole difference from the full-screen
+                      splash this replaces.
+                    -->
+                    <FrameLayout
+                        android:id="@+id/playlist_state"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/home_playlist_row_height"
+                        android:layout_marginTop="@dimen/home_section_gap"
+                        android:paddingStart="@dimen/home_margin"
+                        android:paddingEnd="@dimen/home_margin"
+                        android:visibility="gone"
+                        tools:visibility="visible">
+
+                        <ProgressBar
+                            android:id="@+id/playlist_loading"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:indeterminateTint="@color/text_secondary" />
+
+                        <LinearLayout
+                            android:id="@+id/playlist_error"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:visibility="gone"
+                            tools:visibility="visible">
+
+                            <TextView
+                                android:id="@+id/playlist_error_text"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                                android:textColor="@color/text_secondary"
+                                tools:text="@string/splash_error_title" />
+
+                            <Button
+                                android:id="@+id/playlist_retry"
+                                style="?attr/borderlessButtonStyle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/home_section_gap"
+                                android:text="@string/splash_retry"
+                                android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                                android:textColor="@color/primary" />
+                        </LinearLayout>
+                    </FrameLayout>
                 </LinearLayout>
             </androidx.core.widget.NestedScrollView>
         </LinearLayout>

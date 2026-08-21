@@ -6,6 +6,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -89,6 +92,11 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     private val _playlistsState = MutableLiveData(PlaylistsState.LOADING)
     val playlistsState: LiveData<PlaylistsState> = _playlistsState
     private var playlistsJob: Job? = null
+
+    /** Held so [onCleared] can hand it back; null when none is registered. */
+    private var connectivityCallback: ConnectivityManager.NetworkCallback? = null
+
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
     var lastObservedStream: String? = null
     
     // Use SavedStateHandle for persistence
@@ -204,7 +212,20 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         currentXtraState.value = PlayerState(slogan, brand, null)
 
         startMetadataPolling()
+
+        // Unchanged, and deliberately so: the playlist request still starts here,
+        // in the ViewModel's own init, which runs while the platform is still
+        // drawing its splash. That free preload time is the reason the request is
+        // usually finished before anything asks for it - and it is why nothing
+        // needs to *wait* for it.
         refreshPlaylists()
+
+        // The retry-on-reconnect used to live in SplashFragment, which meant it
+        // only existed while a full-screen splash was on top of the app. It
+        // belongs to the loader, not to a screen: whoever is looking at HOME when
+        // the network comes back should get their playlists without having to
+        // press anything, and that has to keep working once the splash is gone.
+        registerConnectivityRetry()
 
         // Observe current track state to update favorite status
         observeTrackForFavorites()
@@ -313,6 +334,8 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
      */
     override fun onCleared() {
         isCleared = true
+
+        unregisterConnectivityRetry()
 
         // Off the controller before it goes, so a listener registered by a dead
         // ViewModel cannot be called back while the release is being completed.
@@ -585,6 +608,65 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
                 Log.w("StreamsViewModel", "Playlists not loaded within budget, showing error state")
                 _playlistsState.value = PlaylistsState.ERROR
             }
+        }
+    }
+
+    /**
+     * Whether the device currently has a network capable of reaching the internet.
+     *
+     * Used to tell "the load failed" apart from "there is nothing to load over",
+     * which are the same state to the loader and very different sentences to read.
+     */
+    fun isOnline(): Boolean {
+        val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            ?: return false
+        val capabilities = manager.getNetworkCapabilities(manager.activeNetwork) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    /**
+     * Retries the playlist load once connectivity comes back.
+     *
+     * Event-driven, never a poll, and guarded twice over: it only acts when the
+     * last load actually failed, and [refreshPlaylists] is a no-op while a load is
+     * already running, so a burst of callbacks - which is normal when a device
+     * reconnects - cannot pile up requests.
+     */
+    private fun registerConnectivityRetry() {
+        val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            ?: return
+
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                // onAvailable arrives on a binder thread; LiveData and the loader
+                // both want the main one.
+                mainHandler.post {
+                    if (isCleared) return@post
+                    if (_playlistsState.value == PlaylistsState.ERROR) {
+                        refreshPlaylists()
+                    }
+                }
+            }
+        }
+
+        try {
+            manager.registerDefaultNetworkCallback(callback)
+            connectivityCallback = callback
+        } catch (e: SecurityException) {
+            // Some OEM builds refuse the callback. Manual retry still works, which
+            // is why the inline error offers one rather than relying on this.
+            Log.w("StreamsViewModel", "connectivity callback refused: ${e.message}")
+        }
+    }
+
+    private fun unregisterConnectivityRetry() {
+        val callback = connectivityCallback ?: return
+        connectivityCallback = null
+        val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        try {
+            manager?.unregisterNetworkCallback(callback)
+        } catch (e: IllegalArgumentException) {
+            // Already unregistered.
         }
     }
 

@@ -16,10 +16,10 @@
     -->
     <style name="Theme.Myata.Base" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- The eleven approved v1 semantic roles from A2, wired to the Material
-             attributes Phase B will read. Nothing consumes these yet: AppTheme and
-             AppTheme0-9 still pin their own colours, and every screen still names
-             its colours directly. Phase B removes those overrides screen by screen,
-             at which point this mapping starts doing the work. -->
+             attributes Phase B will read. Nothing consumes these yet: AppTheme
+             still pins its own colours, and every screen still names its colours
+             directly. Phase B removes those overrides screen by screen, at which
+             point this mapping starts doing the work. -->
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
         <item name="colorSurface">@color/surface</item>

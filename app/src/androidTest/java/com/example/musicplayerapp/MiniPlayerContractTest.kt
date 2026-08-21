@@ -28,9 +28,10 @@ import org.junit.Assert.fail
  * on an image that cannot reach the stream host as well as on one that can.
  *
  * The *screen* half is set directly through `currentFragmentLiveData` rather than
- * by navigating. Reaching HOME for real means clearing the splash, which waits on
- * a network load and does not complete on an offline image - it would make the
- * test a network test. The screen rule itself is covered exhaustively by
+ * by navigating. That was originally because reaching HOME meant clearing a splash
+ * that waited on a network load; HOME is the start destination now, so the reason
+ * is the weaker one that it keeps this a unit-shaped test of the rule rather than
+ * a navigation test. The screen rule itself is covered exhaustively by
  * `MiniPlayerVisibilityTest`, and by real navigation in
  * `tools/qa/phone/capture-mini-player.mjs`, which confirms on device that PLAYER
  * shows no pill.

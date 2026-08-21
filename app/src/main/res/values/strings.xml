@@ -7,7 +7,6 @@
     <!-- Splash: offline / load failure state -->
     <string name="splash_offline_title">Нет подключения к интернету</string>
     <string name="splash_error_title">Не удалось загрузить данные</string>
-    <string name="splash_error_message">Проверьте соединение и попробуйте снова</string>
     <string name="splash_retry">Повторить</string>
     <string name="track_info_clip">Track Info</string>
     

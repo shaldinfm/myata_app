@@ -44,21 +44,47 @@
   Every vertical number is still a MINIMUM. The row grows when a title needs a
   second line and shrinks back when it does not.
 
+  The 74 floor now rests on the two minHeight dimens alone - 22 on the title and
+  18 on the artist, which sum to exactly the 40 of the cover. The cover is no
+  longer pinned to the top of the content, so it no longer contributes a floor of
+  its own; anything that lowers player_history_title_height or
+  player_history_artist_height shortens the ROW, not just the text.
+
   **No maxLines and no ellipsis.** A long title adds a line and keeps its end; the
   row is the thing that gives. Same rule as item_history_track.xml, which is
   unchanged.
 
-  **Alignment.** The text block is TOP-aligned to the artwork, not centred against
-  it: the title's first line and the cover's top edge start on the same y, and the
-  artist sits directly under the title with no gap. The artwork is pinned to the
-  top of the content for the same reason, so it stays with the first title line
-  however far the title wraps.
+  **Alignment. The TEXT defines the vertical content; the cover and the timestamp
+  are centred against it.**
 
-  This replaces centring the artwork against the text block. Centring was stable
-  only while the text was exactly one line taller than the cover, which is the one
-  case the frozen mock draws; the moment a title wrapped, the cover slid down by
-  half the added line - 32 at three lines, measured - and the title's first line
-  had nothing to do with the top of the cover.
+  tv_title is the view pinned to the top of the content, and tv_artist sits
+  directly under it with no gap - so the complete title + artist block is the
+  row's content height. The artwork is centred against that whole block, top to
+  the title's top and bottom to the artist's bottom at the default 0.5 bias, and
+  tv_time is centred on the artwork, so the timestamp keeps its relationship to
+  the cover and moves with it. The text itself is never centred: it reads
+  top-to-bottom from the content's top edge, whatever it grows to.
+
+  On the normal one-line title over one-line artist the block is exactly 40 - the
+  cover's own height - so the centring resolves to the same y=17 the old top pin
+  gave and the row is byte-for-byte the frozen 74. The two only diverge once the
+  text wraps, which is the case this exists for: at two title lines the block is
+  62 and the cover lands at 28 rather than 17, at three it is 84 and the cover
+  lands at 39.
+
+  This replaces TOP-aligning the cover to the title's first line. That was correct
+  for the one-line row and only for it: as soon as a title wrapped, the cover and
+  the timestamp stayed level with the first line while the text grew past them,
+  which read as unbalanced - the cover 11 above the block's centre at two lines
+  and 22 above it at three.
+
+  It is not a return to the earlier centring that was removed here. That one
+  centred the cover in a text block whose top was itself pinned to the cover, so
+  the frozen mock's 48-over-40 was the only case it held; this one makes the text
+  the anchor and the cover the follower, so it holds at every line count. Row
+  height is unchanged in every case either way - the cover's bottom cannot pass
+  the artist's bottom while the block is at least 40 - so the section's frozen 374
+  and the scroll reach are untouched.
 -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -104,9 +130,13 @@
       app's single source of truth for artwork, and already the ViewModel's - and
       the plate is what shows until it arrives, or for good if nothing is found.
 
-      Pinned to the top of the content, so the title's first line can align to its
-      top edge. It had a bottom constraint to tv_artist, which centred it in the
-      text block and slid it down as the title wrapped.
+      Centred against the WHOLE metadata block: top to the title's top, bottom to
+      the artist's bottom, at the default 0.5 bias. On the normal one-line title
+      over one-line artist the block is exactly 40 - the same 40 as the cover - so
+      this resolves to the same y=17 the top pin gave, pixel for pixel. When the
+      title wraps the block grows and the cover slides down with its centre, which
+      is the whole point: it stays balanced against the text rather than clinging
+      to the first line. tv_time is centred on this view and rides along untouched.
     -->
     <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/artwork"
@@ -116,8 +146,9 @@
         android:background="@drawable/bg_player_history_artwork"
         android:contentDescription="@string/player_history_artwork"
         android:scaleType="centerCrop"
+        app:layout_constraintBottom_toBottomOf="@id/tv_artist"
         app:layout_constraintStart_toEndOf="@id/tv_time"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toTopOf="@id/tv_title"
         app:shapeAppearanceOverlay="@style/ShapeAppearance.Myata.PlayerHistoryArtwork" />
 
     <!--
@@ -143,7 +174,7 @@
         android:textColor="@color/text_primary"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@id/artwork"
-        app:layout_constraintTop_toTopOf="@id/artwork"
+        app:layout_constraintTop_toTopOf="parent"
         tools:text="MEET ME IN LOVE" />
 
     <TextView

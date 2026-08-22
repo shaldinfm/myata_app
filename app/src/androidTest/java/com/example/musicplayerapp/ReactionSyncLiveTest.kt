@@ -13,6 +13,7 @@ import com.example.musicplayerapp.data.supabase.SupabaseConfig
 import com.example.musicplayerapp.data.supabase.SupabaseModule
 import com.example.musicplayerapp.data.supabase.SupabaseReactionSyncApi
 import io.github.jan.supabase.postgrest.postgrest
+import java.time.OffsetDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -118,6 +119,20 @@ class ReactionSyncLiveTest {
     private fun reactionOf(row: JsonObject?): String? =
         row?.get("reaction")?.jsonPrimitive?.content
 
+    /**
+     * A row's `updated_at` as epoch millis.
+     *
+     * PostgREST renders `timestamptz` with an explicit offset - `+00:00`, not `Z` -
+     * so this parses as an [OffsetDateTime] rather than an [java.time.Instant].
+     * `Instant.parse` wants the `Z` form and would throw on what the server actually
+     * sends. (The *outbound* direction is the opposite problem, and is why
+     * `ReactionSyncWire.timestamp` renders `Z`: a `+` in a query-string filter
+     * decodes as a space.)
+     */
+    private fun remoteUpdatedAt(row: JsonObject?): Long? =
+        row?.get("updated_at")?.jsonPrimitive?.content
+            ?.let { OffsetDateTime.parse(it).toInstant().toEpochMilli() }
+
     // ==================== 1-4: the four simple transitions ====================
 
     @Test
@@ -134,7 +149,7 @@ class ReactionSyncLiveTest {
     }
 
     @Test
-    fun an_unlike_adds_its_event_and_removes_the_current_state_row() = runBlocking {
+    fun an_unlike_adds_its_event_and_leaves_a_neutral_state_row() = runBlocking {
         val key = keyFor("UNLIKE")
         val now = System.currentTimeMillis()
         db.reactionDao().like(key, "$MARKER UNLIKE", "$MARKER UNLIKE", "myata", now, now)
@@ -145,9 +160,13 @@ class ReactionSyncLiveTest {
         engine().drain()
 
         assertEquals(listOf("LIKE", "UNLIKE"), remoteHistory(key))
-        // NEUTRAL is absence. Not a row saying NEUTRAL - the schema's CHECK forbids
-        // that value, and the aggregate counts rows.
-        assertEquals(null, remoteState(key))
+        // The row stays, saying NEUTRAL. Migration 0002 admits the value, and the
+        // point of storing it is the updated_at that comes with it: an absent row
+        // cannot lose a last-writer-wins comparison, because it has nothing to
+        // compare. The aggregate hides all-NEUTRAL tracks instead.
+        val state = remoteState(key)
+        assertNotNull("the reactions row must survive an UNLIKE", state)
+        assertEquals("NEUTRAL", reactionOf(state))
     }
 
     @Test
@@ -162,7 +181,7 @@ class ReactionSyncLiveTest {
     }
 
     @Test
-    fun an_undislike_removes_the_current_state_row() = runBlocking {
+    fun an_undislike_leaves_a_neutral_state_row() = runBlocking {
         val key = keyFor("UNDISLIKE")
         val now = System.currentTimeMillis()
         db.reactionDao().dislike(key, "$MARKER UNDISLIKE", "$MARKER UNDISLIKE", "myata", now)
@@ -171,7 +190,51 @@ class ReactionSyncLiveTest {
         engine().drain()
 
         assertEquals(listOf("DISLIKE", "UNDISLIKE"), remoteHistory(key))
-        assertEquals(null, remoteState(key))
+        assertEquals("NEUTRAL", reactionOf(remoteState(key)))
+    }
+
+    // ==================== NEUTRAL is a state, not a gap ====================
+
+    @Test
+    fun a_neutral_row_carries_the_time_the_listener_changed_their_mind() = runBlocking {
+        val key = keyFor("NEUTRAL_TS")
+        val liked = System.currentTimeMillis()
+        val withdrawn = liked + 5_000
+
+        db.reactionDao().like(key, "$MARKER NEUTRAL_TS", "$MARKER NEUTRAL_TS", "myata", liked, liked)
+        engine().drain()
+        db.reactionDao().unlike(key, withdrawn)
+        engine().drain()
+
+        // This is the whole reason NEUTRAL is stored rather than implied. The remote
+        // row's updated_at is the moment of the *withdrawal*, so a second device
+        // holding a stale LIKED can be told it is out of date.
+        val row = remoteState(key)
+        assertEquals("NEUTRAL", reactionOf(row))
+        assertEquals(withdrawn, remoteUpdatedAt(row)!!)
+    }
+
+    @Test
+    fun a_stale_unlike_cannot_overwrite_a_newer_like() = runBlocking {
+        val key = keyFor("LWW_NEUTRAL")
+        val now = System.currentTimeMillis()
+
+        // Remote already holds a *newer* LIKED than the withdrawal we are about to
+        // deliver. Under the old model this was untestable: a delete had no
+        // updated_at to lose with, so a late UNLIKE removed the row regardless.
+        db.reactionDao().like(key, "$MARKER LWW_NEUTRAL", "$MARKER LWW_NEUTRAL", "myata", now + 60_000, now + 60_000)
+        engine().drain()
+        assertEquals("LIKED", reactionOf(remoteState(key)))
+
+        // Now a withdrawal stamped an hour in the past arrives.
+        db.reactionDao().unlike(key, now - 3_600_000)
+        engine().drain()
+
+        // Local is NEUTRAL and that is delivered as history, but the guarded update
+        // matched nothing and the ignore-duplicates insert found a row, so the newer
+        // remote state stands.
+        assertTrue(remoteHistory(key).contains("UNLIKE"))
+        assertEquals("LIKED", reactionOf(remoteState(key)))
     }
 
     // ==================== 5-6: changing your mind ====================

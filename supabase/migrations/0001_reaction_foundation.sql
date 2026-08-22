@@ -1,3 +1,13 @@
+-- SUPERSEDED IN PART BY 0002. This file is the applied history and is left exactly
+-- as it ran; do not edit its statements. Two things below are no longer true of the
+-- live schema, both corrected by `0002_neutral_is_a_value.sql`:
+--
+--   * `reactions.reaction` now admits NEUTRAL as a third stored value - a withdrawn
+--     reaction keeps its row rather than deleting it;
+--   * `track_reaction_totals` now excludes tracks whose current rows are all NEUTRAL.
+--
+-- A fresh project applies 0001 and then 0002.
+
 -- Radio Myata: the reaction foundation. Model C.
 --
 -- Two tables and one owner-only view. There is no catalogue table and no

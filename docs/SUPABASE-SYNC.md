@@ -18,8 +18,45 @@ Supabase. Neither reporting path waits on the other and neither can fail the oth
 ```
 local LIKED     ->  reactions row = LIKED
 local DISLIKED  ->  reactions row = DISLIKED
-local NEUTRAL   ->  reactions row absent (deleted)
+local NEUTRAL   ->  reactions row = NEUTRAL      <- migration 0002
+no local row    ->  reactions row deleted        <- data removal only
 ```
+
+### NEUTRAL is a value, not a gap
+
+The third line used to read `reactions row absent (deleted)`, and absence is a
+tempting way to spell "no opinion" — it needs no vocabulary and the aggregate
+counts rows for free. It fails on one thing: **a deleted row has no
+`updated_at`.**
+
+Every other state is protected by the last-writer-wins guard below, which asks
+"is what is already there newer than what I am about to write". A delete cannot
+be asked that question. It carries no timestamp to lose with, so a withdrawal
+that had been stuck in an outbox for a week would remove a Like tapped five
+minutes ago on another device, and the only tie-break left was delivery order —
+the one thing this whole design refuses to depend on.
+
+So migration `0002` widens the `reactions.reaction` CHECK to `NEUTRAL | LIKED |
+DISLIKED`, and a withdrawal writes a row like everything else. Three
+consequences, all deliberate:
+
+- **the tombstone stays, indefinitely, for v1.** It is small, it is what makes
+  reconciliation total, and a sweeper is a decision to take with real data in
+  hand rather than up front;
+- **`track_reaction_totals` hides tracks whose current rows are all NEUTRAL.** A
+  0-like/0-dislike line is sync metadata wearing the costume of a programming
+  signal. Likes and dislikes still count only those two states, and the track
+  reappears the moment one listener holds an opinion again;
+- **`reaction_events` is untouched.** Its four names are still exactly the four
+  real transitions. Nothing manufactures a fifth event to go with the new state —
+  state and history stay two different questions, which is the point of having
+  two tables.
+
+**DELETE is still a policy, and normal sync no longer uses it.** The only caller
+left is a track whose *local* row is gone — clearing data, or the retirement half
+of a future identity handoff — where there are no words left to write a row with
+and absence really is the intent. Taking the policy away would leave a listener
+unable to erase their own rows.
 
 The second row of that table is the whole design. Remote current state is **never**
 folded from the queued events; it is read from Room at send time. A row that has sat
@@ -70,14 +107,31 @@ Both halves were probed live: a stale guard matched 0 rows and left the row alon
 fresh guard matched 1; an ignore-duplicates insert against a newer row did not
 clobber it.
 
-NEUTRAL deletes the row, and **a delete that matches nothing is success** — the
-desired state is "no row", and there being no row already is that state.
+All three states go through those two steps, NEUTRAL included — which is the
+point of storing it. Only a missing local row still deletes, and **a delete that
+matches nothing is success**: the desired state is "no row", and there being no
+row already is that state.
 
 > **Timestamps must end in `Z`.** `Instant.toString()` renders UTC that way. An
 > offset written `+00:00` contains a `+`, which decodes as a space when the value is
 > used as a query-string filter; Postgres then rejects it outright. A live probe
 > reproduced exactly that: `invalid input syntax for type timestamp with time zone:
 > "…T08:32:26 00:00"`.
+
+### The clock is the device's, and that is a known G-A7 item
+
+`updated_at` is the device wall clock at the moment of the tap, and the guard
+above compares two of them. Within one device that is a total order and the guard
+is exact. **Across devices it is only as good as the two clocks agree**, so a
+phone running some minutes fast can win a comparison it should have lost.
+
+This is unchanged by 0002 and deliberately not addressed here. It costs nothing
+today — one identity has one device in practice, and the local Room state is the
+source of truth the listener actually sees. It becomes real the moment accounts
+let one person react from two devices, so it is an explicit conflict-resolution
+item for **G-A7**, to be answered there with a server-assigned time or a version
+counter. Widening this PR into a clock redesign would put an unproven ordering
+scheme underneath a schema change that does not need one.
 
 ## FIFO order: `rowid`, not the clock
 
@@ -233,6 +287,37 @@ Expect `N reaction(s) pending from a previous run`, `drain scheduled (startup)`,
 device in airplane mode first: the row is scheduled, the `NetworkType.CONNECTED`
 constraint holds it, and it drains by itself when the network returns.
 
+## The owner-facing aggregate
+
+`track_reaction_totals` is service-role only — `anon` and `authenticated` are
+revoked — so no instrumentation test can read it and its behaviour is checked
+with owner-side SQL:
+
+```sql
+-- an all-NEUTRAL track must not appear
+select count(*) from public.track_reaction_totals
+ where track_key = '<the key an UNLIKE test used>';        -- expect 0
+
+-- a track with an opinion appears normally
+select track_key, likes, dislikes, last_activity
+  from public.track_reaction_totals
+ where track_key = '<the key a LIKE test used>';           -- expect 1 / 0
+
+-- and no 0/0 rows exist anywhere
+select count(*) from public.track_reaction_totals
+ where likes = 0 and dislikes = 0;                         -- expect 0
+```
+
+The NEUTRAL rows are still inside each surviving group, on purpose:
+`last_activity` counts a withdrawal as activity, because it is, and `mode()` gets
+the spellings carried by the current rows, NEUTRAL ones included, which changes no
+count.
+
+Those tombstones are **current state, not history.** `reactions` holds one row per
+listener per track; a NEUTRAL row says "this listener has no opinion now", not
+"here is what they withdrew". The record of who changed their mind and when is
+`reaction_events`, and it is the only place that record exists.
+
 ## Test data
 
 The validation suites mark every row they write with `ZZ_` in `artist` and `title`.
@@ -242,3 +327,8 @@ DELETE policy for any client role, because history a client can edit is not hist
 
 So validation permanently adds history rows, and removing them is owner-side SQL. The
 current cleanup statement lives in the pull request that added this document.
+
+Since 0002 the suite's `reactions` rows also survive as NEUTRAL tombstones where
+they used to vanish — `tidy()` still deletes them, and that is now the only thing
+standing between a validation run and a handful of permanent 0/0 rows. They would
+be invisible in the aggregate either way, which is the safety net.

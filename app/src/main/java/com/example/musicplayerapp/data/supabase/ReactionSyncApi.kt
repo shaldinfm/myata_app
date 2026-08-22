@@ -41,8 +41,14 @@ interface ReactionSyncApi {
      * Makes the remote current state match [current], which is the local row as it
      * is right now, or null when the track has no local row at all.
      *
-     * LIKED and DISLIKED upsert a row; NEUTRAL - and a missing row, which means the
-     * same thing - delete it. Absence is how the schema spells NEUTRAL.
+     * **All three states upsert a row**, NEUTRAL included. A withdrawal is a state
+     * the listener holds, not a gap where a state used to be, and storing it is what
+     * gives it an `updated_at` to be compared against - see [ReactionSyncWire.remoteReaction].
+     *
+     * [current] being null is a different thing and the only remaining delete: the
+     * local row is *gone*, which is what data removal looks like, and there are no
+     * words left to write a row with. Normal sync never produces it - a reaction
+     * that returns to neutral keeps its Room row.
      */
     suspend fun reconcileCurrentState(
         trackKey: String,
@@ -119,11 +125,23 @@ object ReactionSyncWire {
      */
     fun timestamp(epochMillis: Long): String = Instant.ofEpochMilli(epochMillis).toString()
 
-    /** The remote spelling of a local reaction, or null for NEUTRAL, which is absence. */
-    fun remoteReaction(reaction: Reaction): String? = when (reaction) {
+    /**
+     * The remote spelling of a local reaction. Total - every state has one.
+     *
+     * NEUTRAL used to map to null and mean "delete the row", which read well until
+     * two devices had to be reconciled: an absent row carries no `updated_at`, so
+     * the last-writer-wins guard that protects LIKED and DISLIKED had nothing to
+     * compare a withdrawal against, and the only tie-break left was delivery order -
+     * the one thing this design refuses to depend on. Migration 0002 makes NEUTRAL a
+     * stored value, so all three travel the same guarded upsert.
+     *
+     * These names are the schema. `reactions.reaction` has a CHECK admitting exactly
+     * these three, so a fourth spelling is a 400, not a silent bad row.
+     */
+    fun remoteReaction(reaction: Reaction): String = when (reaction) {
         Reaction.LIKED -> "LIKED"
         Reaction.DISLIKED -> "DISLIKED"
-        Reaction.NEUTRAL -> null
+        Reaction.NEUTRAL -> "NEUTRAL"
     }
 }
 

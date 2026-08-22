@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  profile-guest 2517:2644 (light) / 2517:3611 (dark), 390x700.
+
+  A pushed destination, not a root tab: the band carries a back button where the
+  four tabbed screens carry a title alone, and the frame has no bottom bar.
+  MainActivity hides the bar for this destination; see its destination listener.
+
+  ## Geometry
+
+  Every margin here is the difference between two absolute Figma offsets, so the
+  screen can be checked by adding them up rather than trusted:
+
+      band            0..64
+      Guest card      96..322    (32 below the band)
+      Войти           346..398   (24 below the card)
+      Создать аккаунт 414..466   (16 below it)
+      section         494..514   (28 below it)
+      row 1           522..586   (8 below it)
+      row 2           594..658   (8 below it)
+
+  Content ends at 658 inside a 700 frame, so it fits a 390dp viewport without
+  scrolling - but the ScrollView is not decoration. At 360dp the two body lines
+  and the two row labels are the same strings in less width, and a screen whose
+  last row cannot be reached is worse than one that scrolls a little.
+
+  ## The two buttons do nothing
+
+  `Войти` and `Создать аккаунт` are drawn exactly as designed and are inert: no
+  destination exists until G-A4, and there is deliberately no placeholder toast.
+  A control that lies about being ready is worse than one that waits.
+-->
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <LinearLayout
+        android:id="@+id/profile_root"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/background"
+        android:orientation="vertical"
+        tools:context=".fragments.ProfileGuestFragment">
+
+        <!--
+          `Header - TopAppBar` 390x64. Back 24x24 at x=12 (vertically centred:
+          20+24=44, 64-44=20), heading at x=56 - 20 past the back button's
+          trailing edge.
+        -->
+        <LinearLayout
+            android:id="@+id/profile_header"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/profile_header_height"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/profile_back_margin_start"
+            android:paddingEnd="@dimen/profile_margin">
+
+            <ImageView
+                android:id="@+id/profile_back"
+                android:layout_width="@dimen/profile_back_size"
+                android:layout_height="@dimen/profile_back_size"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/profile_back_description"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_profile_back" />
+
+            <TextView
+                android:id="@+id/profile_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/profile_title_margin_start"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/profile_title"
+                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.24_32"
+                android:textColor="@color/text_heading" />
+        </LinearLayout>
+
+        <ScrollView
+            android:id="@+id/profile_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:paddingBottom="@dimen/content_bottom_clearance">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/profile_margin"
+                android:paddingEnd="@dimen/profile_margin">
+
+                <!-- `Guest card` 358x226, r=24, 1dp outline. -->
+                <LinearLayout
+                    android:id="@+id/profile_guest_card"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_card_height"
+                    android:layout_marginTop="@dimen/profile_card_margin_top"
+                    android:background="@drawable/bg_profile_card"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical">
+
+                    <!--
+                      `Generic avatar` 2518:3932. 72x72 at y=32, centred: Figma
+                      puts it at x=143 in a 358 card, and (358-72)/2 = 143.
+                    -->
+                    <ImageView
+                        android:id="@+id/profile_avatar"
+                        android:layout_width="@dimen/profile_avatar_size"
+                        android:layout_height="@dimen/profile_avatar_size"
+                        android:layout_marginTop="@dimen/profile_avatar_margin_top"
+                        android:background="@drawable/bg_avatar_guest"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_profile_guest" />
+
+                    <TextView
+                        android:id="@+id/profile_guest_heading"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/profile_card_heading_margin_top"
+                        android:gravity="center_horizontal"
+                        android:text="@string/profile_guest_heading"
+                        android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.24_32"
+                        android:textColor="@color/text_heading" />
+
+                    <!--
+                      Two nodes in Figma, contiguous at y=168 and y=190 - one
+                      sentence broken where the design breaks it, so the wrap is
+                      the designer's rather than the measure's.
+                    -->
+                    <TextView
+                        android:id="@+id/profile_guest_body_first"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/profile_card_body_margin_top"
+                        android:gravity="center_horizontal"
+                        android:text="@string/profile_guest_body_first"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.15_22"
+                        android:textColor="@color/profile_guest_body" />
+
+                    <TextView
+                        android:id="@+id/profile_guest_body_second"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_horizontal"
+                        android:text="@string/profile_guest_body_second"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.15_22"
+                        android:textColor="@color/profile_guest_body" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/profile_sign_in"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_button_height"
+                    android:layout_marginTop="@dimen/profile_primary_button_margin_top"
+                    android:background="@drawable/bg_profile_button_primary"
+                    android:gravity="center"
+                    android:text="@string/profile_sign_in"
+                    android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.22_28"
+                    android:textColor="@color/profile_primary_button_label" />
+
+                <TextView
+                    android:id="@+id/profile_create_account"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_button_height"
+                    android:layout_marginTop="@dimen/profile_secondary_button_margin_top"
+                    android:background="@drawable/bg_profile_button_secondary"
+                    android:gravity="center"
+                    android:text="@string/profile_create_account"
+                    android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.22_28"
+                    android:textColor="@color/text_heading" />
+
+                <TextView
+                    android:id="@+id/profile_benefits_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/profile_section_margin_top"
+                    android:text="@string/profile_benefits_section"
+                    android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                    android:textColor="@color/profile_section_label" />
+
+                <!-- `Row / Синхронизация коллекции` 358x64. Icon 24 at x=16, label at x=56. -->
+                <LinearLayout
+                    android:id="@+id/profile_benefit_sync"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_row_height"
+                    android:layout_marginTop="@dimen/profile_row_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/profile_row_icon_margin_start"
+                    android:paddingEnd="@dimen/profile_row_icon_margin_start">
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_row_icon_size"
+                        android:layout_height="@dimen/profile_row_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_collection_sync" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_row_label_margin_start"
+                        android:layout_weight="1"
+                        android:text="@string/profile_benefit_sync"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                        android:textColor="@color/profile_row_label" />
+                </LinearLayout>
+
+                <!-- `Row / Восстановление коллекции` 358x64. -->
+                <LinearLayout
+                    android:id="@+id/profile_benefit_restore"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_row_height"
+                    android:layout_marginTop="@dimen/profile_row_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/profile_row_icon_margin_start"
+                    android:paddingEnd="@dimen/profile_row_icon_margin_start">
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_row_icon_size"
+                        android:layout_height="@dimen/profile_row_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_collection_restore" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_row_label_margin_start"
+                        android:layout_weight="1"
+                        android:text="@string/profile_benefit_restore"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                        android:textColor="@color/profile_row_label" />
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+</layout>

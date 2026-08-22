@@ -214,4 +214,17 @@
     <string name="collection_sheet_remove">Удалить из коллекции</string>
     <string name="collection_removed">Трек удалён из коллекции</string>
     <string name="collection_removed_undo">Отменить</string>
+    <!-- ACCOUNTS (Phase G-A3). Copy verbatim from profile-guest 2517:2644. -->
+    <string name="profile_title">Профиль</string>
+    <string name="profile_entry_description">Профиль</string>
+    <string name="profile_back_description">Назад</string>
+    <string name="profile_guest_heading">Вы не вошли</string>
+    <string name="profile_guest_body_first">Радио, плеер, история эфира, таймер сна</string>
+    <string name="profile_guest_body_second">и коллекция работают без аккаунта.</string>
+    <string name="profile_sign_in">Войти</string>
+    <string name="profile_create_account">Создать аккаунт</string>
+    <string name="profile_benefits_section">Аккаунт добавляет</string>
+    <string name="profile_benefit_sync">Синхронизация коллекции</string>
+    <string name="profile_benefit_restore">Восстановление коллекции</string>
+
 </resources>

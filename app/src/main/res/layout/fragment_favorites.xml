@@ -48,8 +48,15 @@
 
           The frozen `COLLECTION pusto` header carries a 40x40 circular
           control in that trailing slot instead of the overflow. It is the
-          same node HOME and ABOUT US carry, it opens the profile, and it is
-          Phase G - deferred here exactly as fragment_main.xml defers it.
+          same node HOME and ABOUT US carry and it opens the profile.
+
+          Landed in G-A3, and the two controls are mutually exclusive, which is
+          the part worth stating: the FINAL Figma file gives the profile control
+          to `COLLECTION pusto` (2429:352 / 2444:18515) and gives the populated
+          frames (2399:31129 / 2444:18376) the three-dot overflow instead. So the
+          empty state shows the profile control and the populated state shows the
+          overflow, never both - FavoritesFragment toggles them together against
+          the same emptiness that already decided the overflow.
         -->
         <LinearLayout
             android:id="@+id/collection_header"
@@ -87,6 +94,18 @@
                 android:contentDescription="@string/collection_overflow"
                 android:scaleType="center"
                 android:src="@drawable/ic_collection_overflow" />
+
+            <!--
+              GONE by default, which is the populated state - the mirror of the
+              overflow above, whose layout default is VISIBLE for the same reason.
+              FavoritesFragment swaps the pair when it learns the collection is
+              empty; until it does, the header must already be the populated one or
+              the overflow is pushed 40dp off its frozen trailing anchor.
+            -->
+            <include
+                android:id="@+id/profile_entry"
+                layout="@layout/view_profile_entry"
+                android:visibility="gone" />
         </LinearLayout>
 
         <TextView

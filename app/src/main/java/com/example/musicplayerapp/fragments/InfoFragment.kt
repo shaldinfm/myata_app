@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import androidx.lifecycle.Observer
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
@@ -166,14 +167,24 @@ class InfoFragment : Fragment() {
             if(it){
 //                binding.bottomStreams.visibility = View.GONE
                 (activity as MainActivity).binding.bottomNavView.visibility = View.GONE
-                binding.title.visibility = View.GONE
+                // The whole band, so the profile control goes with the title
+                // rather than being left floating in split mode.
+                binding.aboutHeader.visibility = View.GONE
             }
             else{
 //                binding.bottomStreams.visibility = View.VISIBLE
                 (activity as MainActivity).binding.bottomNavView.visibility = View.VISIBLE
-                binding.title.visibility = View.VISIBLE
+                binding.aboutHeader.visibility = View.VISIBLE
             }
         })
+
+        // The 40x40 profile control. It opens profile-guest and does nothing else -
+        // in particular it does not touch the identity boundary, so looking at the
+        // profile never mints an anonymous uid.
+        binding.profileEntry.root.setOnClickListener {
+            findNavController().navigate(R.id.profile)
+        }
+
 
         return binding.root
     }

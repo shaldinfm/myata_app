@@ -120,4 +120,30 @@
     <color name="about_onetime_chip_container">#003056</color>
     <color name="about_onetime_chip_outline">#003056</color>
     <color name="about_onetime_chip_label">#5FD9B4</color>
+    <!--
+      ACCOUNTS (Phase G-A3). The dark halves of the pairs declared in
+      values/colors.xml, which carries the provenance.
+
+      The entry circle and the guest avatar background are the same #1C4771 in
+      dark while their foregrounds differ - #F5F7FA on the 40dp control, #5FD9B4
+      on the 72dp avatar - so they are two colours rather than one shared token.
+    -->
+    <color name="profile_entry_circle">#1C4771</color>
+    <color name="profile_entry_icon">#F5F7FA</color>
+    <color name="avatar_guest_background">#1C4771</color>
+    <color name="avatar_guest_icon">#5FD9B4</color>
+    <!-- profile-guest_dark 2517:3611. Dark halves; provenance in values/colors.xml. -->
+    <color name="profile_back_icon">#F5F7FA</color>
+    <color name="profile_row_icon">#B3C4D1</color>
+    <color name="profile_card_container">#142D47</color>
+    <color name="profile_card_outline">#466D8F</color>
+    <color name="profile_guest_body">#B3C4D1</color>
+    <color name="profile_primary_button_container">#5FD9B4</color>
+    <color name="profile_primary_button_label">#0F253E</color>
+    <color name="profile_secondary_button_container">#142D47</color>
+    <color name="profile_secondary_button_outline">#466D8F</color>
+    <color name="profile_section_label">#B3C4D1</color>
+    <color name="profile_row_container">#142D47</color>
+    <color name="profile_row_outline">#466D8F</color>
+    <color name="profile_row_label">#F5F7FA</color>
 </resources>

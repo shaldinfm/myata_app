@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Icon / sync` 2517:2664, from the owner's Figma export (`ic_collection_sync.svg`).
+
+  A **stroked** glyph, not a filled one: two opposed arcs with arrowheads, 1.8
+  wide with round caps and joins, exactly as the export records the vector
+  (stroke #42474e, weight 1.8). The earlier Material substitution was a filled
+  circular-arrows glyph and read differently at 24dp.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M4.5,12C4.536,8.904 6.472,6.148 9.372,5.064C12.272,3.979 15.541,4.788 17.6,7.1M18,3.5V7.5H14M19.5,12C19.464,15.096 17.528,17.852 14.628,18.936C11.728,20.021 8.459,19.212 6.4,16.9M6,20.5V16.5H10"
+        android:strokeColor="@color/profile_row_icon"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Back chevron for the profile header, 2517:2648.
+
+  Stroked rather than filled, and drawn to the box the export measures: the glyph
+  is 8 wide and 16 tall at x=7,y=4, stroked 1.8 with round caps - so the path runs
+  (15,4) -> (7,12) -> (15,20) and nothing else. The first version was a filled
+  Material chevron at the same box, which read heavier than the design's line.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M15,4L7,12L15,20"
+        android:strokeColor="@color/profile_back_icon"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

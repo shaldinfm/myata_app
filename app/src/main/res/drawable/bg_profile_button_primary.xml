@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- profile-guest 2517:2644 / 2517:3611. Filled, no stroke. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/profile_primary_button_container" />
+    <corners android:radius="@dimen/profile_button_radius" />
+</shape>

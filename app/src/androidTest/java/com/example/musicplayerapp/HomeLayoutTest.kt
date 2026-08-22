@@ -72,6 +72,13 @@ class HomeLayoutTest {
             val where = "$theme@${widthDp}dp"
 
             val greeting = root.findViewById<TextView>(R.id.home_greeting)
+            // The band is the header row, not the greeting. Until G-A3 the greeting
+            // *was* the band - it was the only thing in it - and then the 40x40
+            // profile control landed on its trailing edge, so the greeting became
+            // wrap_content inside a 64dp row. The band's height is unchanged and so
+            // is the greeting's baseline, which is why "Main starts under the
+            // header" below still reads 64 and nothing under it moved.
+            val band = root.findViewById<View>(R.id.home_header)
             val scroll = root.findViewById<View>(R.id.home_scroll)
             val streams = root.findViewById<View>(R.id.streams)
             val playlistHeading = root.findViewById<TextView>(R.id.playlistString)
@@ -80,7 +87,7 @@ class HomeLayoutTest {
 
             /* ---- the header band, and Main starting under it ---- */
 
-            expect(where, "header band height", greeting.height, dp(64))
+            expect(where, "header band height", band.height, dp(64))
             expect(where, "Main starts under the header", topInRoot(scroll), dp(64))
 
             /* ---- the frozen vertical anchors ---- */

@@ -425,4 +425,48 @@
     <color name="about_onetime_chip_outline">#452149</color>
     <color name="about_onetime_chip_label">#1C4771</color>
 
+    <!--
+      ACCOUNTS (Phase G-A3). The profile entry control and the guest avatar.
+
+      Four pairs, each inverting between the canonical pages, so each is declared
+      here and again in values-night. None of them tracks an existing semantic
+      role in both themes - the entry circle is a neutral grey in light and the
+      brand navy in dark, and the guest silhouette swaps from navy to mint - which
+      is why they are pairs rather than references to text_heading or background.
+
+      Provenance, from the FINAL Figma file:
+      entry control  HOME 2393:1665 / 2444:10389, ABOUT US 2413:58 / 2444:18571,
+                     COLLECTION pusto 2429:352 / 2444:18515;
+      guest avatar   `Generic avatar` 2518:3932 inside profile-guest
+                     2517:2644 / 2517:3611.
+    -->
+    <color name="profile_entry_circle">#E7E8E9</color>
+    <color name="profile_entry_icon">#42474E</color>
+    <color name="avatar_guest_background">#F8F9FA</color>
+    <color name="avatar_guest_icon">#1C4771</color>
+
+    <!--
+      profile-guest 2517:2644 / 2517:3611.
+
+      The screen background and the guest-card heading are deliberately absent:
+      they are `background` (#F8F9FA/#0F253E) and `text_heading` (#003056/#F5F7FA)
+      exactly, and pointing at the existing roles is what keeps this screen from
+      drifting away from the other three when those roles move.
+
+      Everything else is a pair, because every one of them inverts.
+    -->
+    <color name="profile_back_icon">#191C1D</color>
+    <color name="profile_row_icon">#42474E</color>
+    <color name="profile_card_container">#FFFFFF</color>
+    <color name="profile_card_outline">#E1E3E4</color>
+    <color name="profile_guest_body">#42474E</color>
+    <color name="profile_primary_button_container">#1C4771</color>
+    <color name="profile_primary_button_label">#FFFFFF</color>
+    <color name="profile_secondary_button_container">#F8F9FA</color>
+    <color name="profile_secondary_button_outline">#E1E3E4</color>
+    <color name="profile_section_label">#42474E</color>
+    <color name="profile_row_container">#FFFFFF</color>
+    <color name="profile_row_outline">#E1E3E4</color>
+    <color name="profile_row_label">#191C1D</color>
+
 </resources>

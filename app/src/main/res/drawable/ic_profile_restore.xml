@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Icon / download` 2523:119. A 24x24 box whose glyph is 17x17 at x=4,y=4,
+  filled #42474e.
+
+  Path data is not in the export (see ic_profile_back), so this is the standard
+  download glyph at the measured box.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@color/profile_row_icon">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M19,9h-4L15,3L9,3v6L5,9l7,7 7,-7zM5,18v2h14v-2L5,18z" />
+</vector>

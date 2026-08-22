@@ -11,11 +11,12 @@
   Three owner-approved departures from the frozen frame, each of which would
   otherwise have added or removed behaviour:
 
-    1. The header. Figma titles this screen "Поддержать радио" and puts a 40dp
-       icon button top-right whose glyph has no path data in the export and no
-       destination in the app. The title here is "О нас", which is what the
-       bottom bar calls the screen, and the button is not drawn - a control that
-       does nothing is worse than a missing one.
+    1. The header. Figma titles this screen "Поддержать радио"; the title here is
+       "О нас", which is what the bottom bar calls the screen.
+       The 40dp trailing button IS now drawn (G-A3): the FINAL Figma file places
+       the profile control here as 2413:58 / 2444:18571, and it has a destination -
+       profile-guest. The earlier note said it was omitted because it did nothing;
+       that reason has expired rather than been overruled.
     2. Section 2. Figma draws paragraph 1 and hides the other two; the shipping
        screen has always shown all three. "Читать подробнее" expands them in
        place, so the collapsed default matches the design and no copy is lost.
@@ -50,16 +51,30 @@
 
           Keeps the id `title`: the split-mode observer hides this view.
         -->
-        <TextView
-            android:id="@+id/title"
+        <LinearLayout
+            android:id="@+id/about_header"
             android:layout_width="match_parent"
             android:layout_height="@dimen/about_header_height"
             android:gravity="center_vertical"
+            android:orientation="horizontal"
             android:paddingStart="@dimen/about_content_margin_horizontal"
-            android:paddingEnd="@dimen/about_content_margin_horizontal"
-            android:text="@string/about_title"
-            android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.24_32"
-            android:textColor="@color/text_heading" />
+            android:paddingEnd="@dimen/about_content_margin_horizontal">
+
+            <TextView
+                android:id="@+id/title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/about_title"
+                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.24_32"
+                android:textColor="@color/text_heading" />
+
+            <include
+                android:id="@+id/profile_entry"
+                layout="@layout/view_profile_entry" />
+        </LinearLayout>
 
         <!--
           `Main` 2411:31630. The frozen frame is 1418 tall against a 757 viewport,

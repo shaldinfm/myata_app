@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- profile-guest 2517:2644 / 2517:3611. 1dp inside stroke, as Figma draws it. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/profile_row_container" />
+    <stroke
+        android:width="@dimen/profile_stroke_width"
+        android:color="@color/profile_row_outline" />
+    <corners android:radius="@dimen/profile_row_radius" />
+</shape>

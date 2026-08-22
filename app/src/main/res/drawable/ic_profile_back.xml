@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Back chevron for the profile header. 24x24 box, glyph 8x16 at x=7,y=4 in
+  Figma (2517:2648).
+
+  The exporter records the vector's box, fill and stroke but not its path data,
+  so the glyph itself is the standard back chevron drawn to the measured box
+  rather than traced from the file. Geometry and colour are Figma's; the curve is
+  the platform's.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@color/profile_back_icon">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M15,4.41L13.59,3l-9,9 9,9L15,19.59 7.42,12z" />
+</vector>

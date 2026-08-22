@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -167,10 +168,14 @@ class FavoritesFragment : Fragment() {
                     // condition the two export pills used to express by going
                     // disabled.
                     binding.collectionOverflow.visibility = View.GONE
+                    // `COLLECTION pusto` carries the profile control where the
+                    // populated frame carries the overflow. Never both.
+                    binding.profileEntry.root.visibility = View.VISIBLE
                 } else {
                     binding.rvFavorites.visibility = View.VISIBLE
                     binding.emptyState.visibility = View.GONE
                     binding.collectionOverflow.visibility = View.VISIBLE
+                    binding.profileEntry.root.visibility = View.GONE
                     adapter.submitList(favorites)
                 }
             }
@@ -207,6 +212,14 @@ class FavoritesFragment : Fragment() {
                 }
             }.show()
         }
+
+        // The 40x40 profile control. It opens profile-guest and does nothing else -
+        // in particular it does not touch the identity boundary, so looking at the
+        // profile never mints an anonymous uid.
+        binding.profileEntry.root.setOnClickListener {
+            findNavController().navigate(R.id.profile)
+        }
+
 
         return binding.root
     }

@@ -216,6 +216,25 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.navHostFragment) as androidx.navigation.fragment.NavHostFragment
         val navController = navHostFragment.navController
 
+        // profile-guest is a pushed destination and the frame has no bottom bar, so
+        // the bar follows the destination rather than being toggled by whichever
+        // screen happened to open the profile. Doing it here also means Back
+        // restores it without any of the three entry points having to remember to.
+        //
+        // GONE, not INVISIBLE: the Mini Player is constrained to the bar's top
+        // edge, and a GONE view collapses to a point at its own position, which
+        // drops the player to the screen bottom rather than leaving it floating
+        // above a 76dp hole.
+        //
+        // Split mode owns the bar too and sets it directly; the two do not fight,
+        // because split mode is not entered while the profile is open.
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            binding.bottomNavView.visibility =
+                if (destination.id == R.id.profile) android.view.View.GONE
+                else android.view.View.VISIBLE
+        }
+
+
         val navOptions = androidx.navigation.NavOptions.Builder()
             .setPopUpTo(R.id.home, false) // Pop up to home, but don't pop home itself
             .setLaunchSingleTop(true)     // Don't create multiple instances of the same fragment

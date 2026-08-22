@@ -148,6 +148,14 @@ class MainFragment : Fragment() {
             renderPlaylistSection()
         })
 
+        // The 40x40 profile control. It opens profile-guest and does nothing else -
+        // in particular it does not touch the identity boundary, so looking at the
+        // profile never mints an anonymous uid.
+        binding.profileEntry.root.setOnClickListener {
+            findNavController().navigate(R.id.profile)
+        }
+
+
         return binding.root
     }
 

@@ -116,4 +116,18 @@
             app:popEnterAnim="@anim/fade_in"
             app:popExitAnim="@anim/fade_out" />
     </fragment>
+    <!--
+      profile-guest (G-A3). A pushed destination, not a fifth root tab: the four
+      bottom-bar items are unchanged and none of them points here. It is reached
+      from the 40x40 control in the HOME, ABOUT US and empty-COLLECTION headers,
+      and Back pops to whichever of them opened it.
+
+      MainActivity hides the bottom bar while this is the current destination,
+      which is what the frame shows.
+    -->
+    <fragment
+        android:id="@+id/profile"
+        android:name="com.example.musicplayerapp.fragments.ProfileGuestFragment"
+        android:label="ProfileGuestFragment" />
+
 </navigation>

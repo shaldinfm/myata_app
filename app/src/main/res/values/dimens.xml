@@ -660,4 +660,62 @@
     <dimen name="about_social_heading_gap">16dp</dimen>
     <dimen name="about_social_tile_gap_horizontal">18dp</dimen>
     <dimen name="about_social_tile_gap_vertical">16dp</dimen>
+    <!--
+      ACCOUNTS (Phase G-A3).
+
+      The entry control and profile-guest, measured off the FINAL Figma file at
+      the 390 reference. Every gap below is a difference between two absolute
+      Figma offsets rather than a round number chosen to look right, so the
+      screen can be checked against the frame by adding them up.
+
+      Entry control: circle 40x40 at x=334,y=12 in the 390x64 band. 390-334-40=16,
+      which is the same trailing margin the three headers already carry, so the
+      control is simply the last child of the row rather than a positioned view.
+      Its 16x16 glyph sits at x=12,y=12 inside the circle - (40-16)/2 - which is
+      what the inset below is.
+    -->
+    <dimen name="profile_entry_size">40dp</dimen>
+    <dimen name="profile_entry_icon_inset">12dp</dimen>
+
+    <!-- profile-guest 2517:2644 / 2517:3611. -->
+    <dimen name="profile_header_height">64dp</dimen>
+    <dimen name="profile_back_size">24dp</dimen>
+    <dimen name="profile_back_margin_start">12dp</dimen>
+    <!-- heading x=56, back ends at 12+24=36. -->
+    <dimen name="profile_title_margin_start">20dp</dimen>
+    <dimen name="profile_margin">16dp</dimen>
+    <dimen name="profile_stroke_width">1dp</dimen>
+
+    <!-- Guest card 358x226 at y=96; the band ends at 64. -->
+    <dimen name="profile_card_margin_top">32dp</dimen>
+    <dimen name="profile_card_height">226dp</dimen>
+    <dimen name="profile_card_radius">24dp</dimen>
+    <dimen name="profile_avatar_size">72dp</dimen>
+    <dimen name="profile_avatar_margin_top">32dp</dimen>
+    <!-- The 72dp avatar's glyph is the one measurement the export does not carry;
+         it is set to the same 40% ratio the measured 16-in-40 control uses. -->
+    <dimen name="profile_avatar_icon_inset">22dp</dimen>
+    <!-- heading y=128, avatar ends at 32+72=104. -->
+    <dimen name="profile_card_heading_margin_top">24dp</dimen>
+    <!-- b0 y=168, heading ends at 128+32=160. b1 y=190 is contiguous with b0. -->
+    <dimen name="profile_card_body_margin_top">8dp</dimen>
+
+    <!-- Buttons 358x52 at y=346 and y=414; the card ends at 96+226=322. -->
+    <dimen name="profile_button_height">52dp</dimen>
+    <dimen name="profile_button_radius">12dp</dimen>
+    <dimen name="profile_primary_button_margin_top">24dp</dimen>
+    <dimen name="profile_secondary_button_margin_top">16dp</dimen>
+
+    <!-- Section 358x20 at y=494; the second button ends at 414+52=466. -->
+    <dimen name="profile_section_margin_top">28dp</dimen>
+
+    <!-- Rows 358x64 at y=522 and y=594; section ends 514, first row ends 586. -->
+    <dimen name="profile_row_margin_top">8dp</dimen>
+    <dimen name="profile_row_height">64dp</dimen>
+    <dimen name="profile_row_radius">12dp</dimen>
+    <dimen name="profile_row_icon_size">24dp</dimen>
+    <dimen name="profile_row_icon_margin_start">16dp</dimen>
+    <!-- label x=56, icon ends at 16+24=40. -->
+    <dimen name="profile_row_label_margin_start">16dp</dimen>
+
 </resources>

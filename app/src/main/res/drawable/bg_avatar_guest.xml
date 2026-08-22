@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The 72x72 circle behind the guest avatar on profile-guest.
+
+  Provenance: `Generic avatar` 2518:3932.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/avatar_guest_background" />
+</shape>

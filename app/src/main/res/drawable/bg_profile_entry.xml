@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The 40x40 circle behind the profile entry control.
+
+  A shape rather than a vector so the fill is a colour resource and inverts with
+  the theme on its own. Provenance: 2393:1665 / 2444:10389.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/profile_entry_circle" />
+</shape>

@@ -355,10 +355,20 @@ not exist in the data being adopted. A state-only path needs none of it.
 
 Automated (`SupabaseFoundationTest`): library loads and classes resolve on the API
 level under test — the desugaring gate; an unconfigured build has no client and
-does not crash; no secret key is compiled in. With a project configured, it also
-covers client construction, anonymous sign-in, uid stability across calls, and that
-the session is persisted and reloadable. Those skip, rather than pass, without
-`supabase.properties`.
+does not crash; no secret key is compiled in. Those four run in every instrumentation
+run and need no project.
+
+The four that perform real auth I/O — anonymous sign-in, uid stability, the
+never-a-second-identity marker, session persistence — **also require the live opt-in**,
+because each can mint an `auth.users` row:
+
+```bash
+./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.liveSupabase=true "-Pandroid.testInstrumentationRunnerArguments.class=com.example.musicplayerapp.SupabaseFoundationTest"
+```
+
+They skip, rather than pass, without both the flag and `supabase.properties`. See
+`docs/SUPABASE-SYNC.md` for why the gate lives in the test runner rather than in the
+tests.
 
 Manual, and part of the API 24 gate, because instrumentation cannot kill its own
 process:

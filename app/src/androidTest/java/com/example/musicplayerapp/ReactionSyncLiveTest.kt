@@ -32,9 +32,19 @@ import org.junit.runner.RunWith
 /**
  * The whole path against the real project: Room -> outbox -> PostgREST -> back.
  *
- * Skipped rather than passed when there is no `supabase.properties`, which is the
- * pattern the rest of this suite uses - a test that cannot ask its question must
- * not answer it.
+ * **Opt-in.** This suite writes to the real project, so it runs only when the run
+ * asked for it:
+ *
+ * ```
+ * ./gradlew connectedDebugAndroidTest  *   -Pandroid.testInstrumentationRunnerArguments.liveSupabase=true  *   "-Pandroid.testInstrumentationRunnerArguments.class=com.example.musicplayerapp.ReactionSyncLiveTest"
+ * ```
+ *
+ * Without that flag every test here skips, and `MyataTestRunner` has additionally
+ * replaced the network boundary process-wide, so there is nothing left to reach the
+ * project even by accident. A configured `supabase.properties` is still required on
+ * top of the flag - it is skipped rather than passed when absent, which is the
+ * pattern the rest of this suite uses: a test that cannot ask its question must not
+ * answer it.
  *
  * ## Test data
  *
@@ -72,7 +82,11 @@ class ReactionSyncLiveTest {
     }
 
     @Before
-    fun requireAProjectAndAnIdentity() {
+    fun requireAnOptInAProjectAndAnIdentity() {
+        // First, and before anything that could touch the network. A configured
+        // project is not consent to write to it: this suite runs only when the run
+        // said so on the command line. See LiveSupabase.
+        LiveSupabase.assumeOptedIn()
         assumeTrue("no supabase.properties in this build", SupabaseConfig.isConfigured)
 
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()

@@ -111,6 +111,7 @@ object ReactionSyncScheduler {
      */
     fun onReactionCommitted(context: Context) {
         if (!SupabaseConfig.isConfigured) return
+        if (pausedBySignOut(context)) return
         enqueue(context, "reaction")
     }
 
@@ -125,6 +126,7 @@ object ReactionSyncScheduler {
      */
     fun onAppStart(context: Context) {
         if (!SupabaseConfig.isConfigured) return
+        if (pausedBySignOut(context)) return
 
         val app = context.applicationContext
         CoroutineScope(Dispatchers.IO).launch {
@@ -167,6 +169,7 @@ object ReactionSyncScheduler {
      */
     internal fun scheduleWakeUp(context: Context, at: Long) {
         if (!SupabaseConfig.isConfigured) return
+        if (pausedBySignOut(context)) return
 
         val delay = (at - System.currentTimeMillis()).coerceAtLeast(0L)
         val request = OneTimeWorkRequestBuilder<ReactionSyncWorker>()
@@ -188,6 +191,26 @@ object ReactionSyncScheduler {
             Log.w(TAG, "could not schedule the retry wake-up: ${it.message}")
         }
     }
+
+    /**
+     * Whether a deliberate sign-out has paused cloud sync.
+     *
+     * Checked at every entry point rather than left to the worker, and the reason is
+     * what "paused" has to mean in practice. The worker already declines to touch a
+     * row while signed out, so correctness does not depend on this - but without it a
+     * listener who signs out and keeps reacting would enqueue one constrained,
+     * network-waiting work request per tap, each waking the device to discover it may
+     * do nothing. The rows still accumulate in Room and the outbox; only the wake-ups
+     * stop.
+     *
+     * It reads SharedPreferences, which is a hash-map lookup after the first load, so
+     * it is safe on the tap path - [onReactionCommitted] still does no real I/O.
+     *
+     * The way back is an explicit sign-in, which is G-A4's job: it changes the state
+     * and then schedules a drain, and everything that has been waiting goes out.
+     */
+    private fun pausedBySignOut(context: Context): Boolean =
+        runCatching { IdentityStore.isSignedOut(context) }.getOrDefault(false)
 
     private fun enqueue(context: Context, why: String) {
         val request = OneTimeWorkRequestBuilder<ReactionSyncWorker>()

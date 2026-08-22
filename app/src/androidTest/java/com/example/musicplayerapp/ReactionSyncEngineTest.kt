@@ -12,6 +12,7 @@ import com.example.musicplayerapp.data.ReactionOutboxEntry
 import com.example.musicplayerapp.data.TrackKey
 import com.example.musicplayerapp.data.TrackReaction
 import com.example.musicplayerapp.data.supabase.DrainResult
+import com.example.musicplayerapp.data.supabase.ListenerIdentity
 import com.example.musicplayerapp.data.supabase.ReactionSyncApi
 import com.example.musicplayerapp.data.supabase.ReactionSyncEngine
 import com.example.musicplayerapp.data.supabase.ReactionSyncWire
@@ -110,7 +111,7 @@ class ReactionSyncEngineTest {
     private val cave = TrackKey.of("Nick Cave", "Red Right Hand")!!
 
     private var identityCalls = 0
-    private var identity: String? = listener
+    private var identity: ListenerIdentity = ListenerIdentity.Available(listener)
     private var clock = 1_000_000L
 
     @Before
@@ -120,7 +121,7 @@ class ReactionSyncEngineTest {
         outbox = db.reactionOutboxDao()
         backend = FakeBackend()
         identityCalls = 0
-        identity = listener
+        identity = ListenerIdentity.Available(listener)
         clock = 1_000_000L
     }
 
@@ -168,9 +169,80 @@ class ReactionSyncEngineTest {
     }
 
     @Test
+    fun a_signed_out_listener_pauses_without_touching_a_single_row() = runBlocking {
+        like()
+        val before = outbox.pending().single()
+        identity = ListenerIdentity.Paused(listener)
+
+        val result = engine().drain()
+
+        assertEquals(DrainResult.Paused, result)
+        assertTrue("nothing may be delivered while paused", backend.history.isEmpty())
+        assertTrue(backend.reconciliations.isEmpty())
+        assertNull("the identity must never reach the backend", backend.listenerSeen)
+
+        // The row is byte-for-byte as it was. Not delivered, not counted against, not
+        // parked - because a sign-out is not the row's fault and it will go out
+        // untouched when the listener signs back in.
+        val after = outbox.pending().single()
+        assertEquals(before.eventId, after.eventId)
+        assertEquals(before.attempts, after.attempts)
+        assertEquals(before.nextAttemptAt, after.nextAttemptAt)
+        assertEquals(1, outbox.count())
+    }
+
+    @Test
+    fun a_paused_run_is_distinct_from_a_failed_one() = runBlocking {
+        like()
+
+        identity = ListenerIdentity.Unavailable("offline")
+        assertTrue(engine().drain() is DrainResult.RetryLater)
+
+        identity = ListenerIdentity.Paused(listener)
+        assertEquals(DrainResult.Paused, engine().drain())
+
+        // Same outbox, same row, opposite verdicts - which is the entire reason the
+        // identity boundary stopped returning a nullable String.
+        assertEquals(1, outbox.count())
+    }
+
+    @Test
+    fun reactions_keep_accumulating_while_paused() = runBlocking {
+        identity = ListenerIdentity.Paused(listener)
+
+        like()
+        clock += 1_000
+        dao.unlike(depeche, clock)
+        clock += 1_000
+        dislike(cave, "Nick Cave", "Red Right Hand")
+
+        assertEquals(DrainResult.Paused, engine().drain())
+
+        // Signing out pauses the cloud, not the app. Three transitions are queued and
+        // waiting, and the Collection they came from is untouched.
+        assertEquals(3, outbox.count())
+        assertTrue(backend.history.isEmpty())
+    }
+
+    @Test
+    fun signing_back_in_sends_everything_that_waited() = runBlocking {
+        identity = ListenerIdentity.Paused(listener)
+        like()
+        like(cave, "Nick Cave", "Red Right Hand")
+        assertEquals(DrainResult.Paused, engine().drain())
+
+        identity = ListenerIdentity.Available(listener)
+        val result = engine().drain()
+
+        assertTrue(result is DrainResult.Drained)
+        assertEquals(2, backend.history.size)
+        assertEquals(0, outbox.count())
+    }
+
+    @Test
     fun no_identity_sends_nothing_and_keeps_everything() = runBlocking {
         like()
-        identity = null
+        identity = ListenerIdentity.Unavailable("offline")
 
         val result = engine().drain()
 
@@ -692,7 +764,7 @@ class ReactionSyncEngineTest {
 
             val offline = FakeBackend().apply { onEvent = { SyncOutcome.Transient("offline") } }
             val result = ReactionSyncEngine(
-                first.reactionDao(), first.reactionOutboxDao(), offline, { listener }, { 5_000L },
+                first.reactionDao(), first.reactionOutboxDao(), offline, { ListenerIdentity.Available(listener) }, { 5_000L },
             ).drain()
 
             assertTrue(result is DrainResult.RetryLater)
@@ -708,7 +780,7 @@ class ReactionSyncEngineTest {
             assertEquals(2, second.reactionOutboxDao().count())
             val online = FakeBackend()
             val result = ReactionSyncEngine(
-                second.reactionDao(), second.reactionOutboxDao(), online, { listener },
+                second.reactionDao(), second.reactionOutboxDao(), online, { ListenerIdentity.Available(listener) },
                 // Past the 30s backoff the first run recorded.
                 { 5_000L + 60_000L },
             ).drain()

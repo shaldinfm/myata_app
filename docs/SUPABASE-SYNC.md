@@ -216,6 +216,24 @@ A run that finds only parked rows also **does not request an identity**: there i
 nothing it may send, so asking would mint an anonymous user for somebody whose only
 pending row is one the server has already refused.
 
+## Signed out: paused, not failed
+
+`SIGNED_OUT` is the one state where the right answer is to stop rather than retry.
+The drain checks the identity **before** it reads the batch, so a paused run touches
+no row: nothing delivered, no `attempts` incremented, no `next_attempt_at` moved.
+
+| | auth temporarily unavailable | deliberately signed out |
+|---|---|---|
+| identity | `ListenerIdentity.Unavailable` | `ListenerIdentity.Paused` |
+| drain | `DrainResult.RetryLater` | `DrainResult.Paused` |
+| worker | `Result.retry()` | `Result.success()`, no reschedule |
+| scheduler | enqueues normally | enqueues nothing |
+| rows | untouched, retried later | untouched, wait for sign-in |
+
+Fresh reactions still commit to Room and the outbox while paused — the Collection is
+local and was never the cloud's copy. They go out on the next drain after an explicit
+sign-in. See `docs/SUPABASE-FOUNDATION.md` for the state machine itself.
+
 ## Retry and failure policy
 
 Classification, from what the live project actually returned:
@@ -247,7 +265,7 @@ somebody listens to. No analytics framework was added.
 
 ## Auth lifecycle
 
-`AnonymousSession.ensureAuthenticatedListener` is called **once per run, and only
+`ListenerSession.identity` is called **once per run, and only
 after `count()` has proved there is work**. Three gates stand between opening the
 radio and existing in `auth.users`:
 

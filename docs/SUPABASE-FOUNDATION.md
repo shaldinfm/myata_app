@@ -227,6 +227,74 @@ if it is ever used again.
 that only a forward migration is acceptable. `0002` is the first of those: it drops
 no table, deletes no row and rewrites no data.
 
+## Identity state (G-A2)
+
+The install's identity is a **persisted state machine**, not an inference from a
+marker. `IdentityState` + `IdentityStore`, in `shared_prefs/supabase_identity.xml`.
+
+| state | meaning | sync |
+|---|---|---|
+| `NONE` | never owned an identity — the only state that may mint one | may mint |
+| `ANONYMOUS(uid)` | anonymous `auth.users` row this install owns | normal |
+| `EMAIL_PENDING(uid, email)` | **reserved G-A4** — address claimed, unconfirmed | normal |
+| `EMAIL_VERIFIED(uid)` | **reserved G-A4** — confirmed, no password yet | normal |
+| `REGISTERED(uid)` | full account, same uid throughout | normal |
+| `SIGNED_OUT(lastUid)` | deliberate local sign-out | **paused** |
+
+Persisted as `identity_state` / `identity_uid` / `identity_email`, every transition
+written with `commit()` rather than `apply()` — a process death after an `apply()`
+can lose the write and leave an install that believes it has never had an identity,
+which is how a second uid gets minted for one person. The legacy `listener_uid` key
+is still written alongside, so a downgraded build still finds a marker and still
+refuses to mint.
+
+### What this replaced, and why
+
+There used to be one string, `listener_uid`, meaning **a uid exists, therefore never
+mint again**. That was exactly right while there were only two situations, and it is
+why a flaky network never split a listener in two. It has no answer once accounts
+arrive: nothing distinguishes *deliberately signed out* from *temporarily unable to
+reach the server*, and those want opposite behaviour from the sync worker.
+
+### Legacy migration
+
+Deterministic for all three field situations, and deliberately **independent of the
+network**:
+
+| on disk | result |
+|---|---|
+| nothing | `NONE` |
+| `listener_uid`, session restorable | `ANONYMOUS(uid)` |
+| `listener_uid`, session **not** restorable | `ANONYMOUS(uid)` |
+
+The last two are the same row on purpose. Whether a session can be restored right now
+is a fact about the network, not about who this install is; letting a failed restore
+downgrade a known identity toward `NONE` would reintroduce the duplicate-uid bug the
+marker was invented to prevent.
+
+### Sign-out is paused, not broken
+
+`ListenerSession.identity()` returns three cases rather than a nullable string:
+`Available(uid)`, `Unavailable(reason)`, `Paused(lastUid)`. The last two used to be
+the same `null`, and they want opposite handling — one retries on a backoff, the
+other must stop.
+
+While `SIGNED_OUT`:
+
+- the local Room Collection is untouched, and reactions keep accumulating in the
+  outbox for a later sign-in;
+- `ReactionSyncEngine` returns `DrainResult.Paused` **before reading the batch** — no
+  row is delivered, no attempt counted, nothing parked;
+- `ReactionSyncWorker` returns `success()` and schedules nothing, because retrying a
+  paused account is a wake-up that can never accomplish anything;
+- `ReactionSyncScheduler` enqueues nothing at all, so a listener who signs out and
+  keeps reacting does not queue one device wake-up per tap;
+- **no anonymous identity is ever minted.** Signing out is not a route back to `NONE`.
+
+The way out is an explicit sign-in (`IdentityStore.resumeAs`), which is G-A4's job.
+The future `HANDOFF` state for G-A7 is documented in `IdentityState`'s KDoc and needs
+no storage placeholder — the existing shape already carries it.
+
 ## Anonymous auth
 
 Invisible, and **created only when there is something to own**.
@@ -238,10 +306,10 @@ sign-up endpoint one call per app start. So the two entry points differ:
 
 | | called by | may sign in? |
 |---|---|---|
-| `AnonymousSession.restore()` | `MyataApplication` at startup | **no** - loads an existing session or does nothing |
-| `AnonymousSession.ensureAuthenticatedListener()` | the sync boundary, later | yes, but only if this install has never had an identity |
+| `ListenerSession.restore()` | `MyataApplication` at startup | **no** - loads an existing session or does nothing |
+| `ListenerSession.identity()` | the sync boundary, later | yes, but only if this install has never had an identity |
 
-Nothing calls `ensureAuthenticatedListener` yet. It exists so the phase that syncs
+Nothing calls `identity` yet. It exists so the phase that syncs
 reactions has a tested boundary to call instead of inventing one.
 
 ### Never a second identity
@@ -250,7 +318,7 @@ The rule that matters most is what happens when a session cannot be refreshed -
 offline, project paused, token expired. Signing in again would mint a **second**
 `auth.uid()` for one person and split their data permanently, on exactly the flaky
 networks this app is used on. So an install records that it has had an identity,
-and once that marker is set `ensureAuthenticatedListener` returns null rather than
+and once that marker is set `identity` returns null rather than
 minting a replacement. Losing one sync is recoverable; splitting a listener is not.
 
 That marker is written with `commit()`, not `apply()`, and the difference is the

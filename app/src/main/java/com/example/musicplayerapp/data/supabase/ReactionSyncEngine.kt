@@ -47,7 +47,7 @@ import com.example.musicplayerapp.data.ReactionOutboxEntry
  * is created for either. When it returns null the drain stops with
  * [DrainResult.RetryLater] and touches nothing: no session is not a reason to
  * penalise a row, and it is never a reason to mint a second identity - see
- * [AnonymousSession].
+ * [ListenerSession].
  *
  * ## Waking a parked row
  *
@@ -63,7 +63,7 @@ class ReactionSyncEngine(
     private val reactions: ReactionDao,
     private val outbox: ReactionOutboxDao,
     private val api: ReactionSyncApi,
-    private val identity: suspend () -> String?,
+    private val identity: suspend () -> ListenerIdentity,
     private val now: () -> Long = { System.currentTimeMillis() },
     private val batchSize: Int = BATCH_SIZE,
 ) {
@@ -83,8 +83,18 @@ class ReactionSyncEngine(
             return DrainResult.Waiting(outbox.earliestAttemptAt() ?: now())
         }
 
-        val listenerId = identity()
-            ?: return DrainResult.RetryLater("no listener identity available")
+        val listenerId = when (val who = identity()) {
+            is ListenerIdentity.Available -> who.uid
+
+            // Deliberately signed out. Not a failure, and emphatically not something
+            // to retry: no row is read, no attempt is counted, nothing is parked, and
+            // the caller schedules no follow-up. The rows stay exactly as they are,
+            // waiting for an explicit sign-in.
+            is ListenerIdentity.Paused -> return DrainResult.Paused
+
+            is ListenerIdentity.Unavailable ->
+                return DrainResult.RetryLater("no listener identity: ${who.reason}")
+        }
 
         var delivered = 0
 
@@ -249,4 +259,15 @@ sealed interface DrainResult {
      * was lost; WorkManager should back off and try again.
      */
     data class RetryLater(val reason: String) : DrainResult
+
+    /**
+     * Cloud sync is paused by a deliberate sign-out.
+     *
+     * Distinct from [RetryLater] because the right response is the opposite one. A
+     * retry is for something that will fix itself; this will not, until the listener
+     * signs in, and a worker that retried it would wake the device on a backoff
+     * schedule forever to do nothing. **No outbox row was read or written** - the
+     * check happens before the batch is touched.
+     */
+    data object Paused : DrainResult
 }

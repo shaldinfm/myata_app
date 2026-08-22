@@ -3,7 +3,9 @@ package com.example.musicplayerapp
 import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.example.musicplayerapp.data.supabase.AnonymousSession
+import com.example.musicplayerapp.data.supabase.IdentityStore
+import com.example.musicplayerapp.data.supabase.ListenerIdentity
+import com.example.musicplayerapp.data.supabase.ListenerSession
 import com.example.musicplayerapp.data.supabase.SupabaseConfig
 import com.example.musicplayerapp.data.supabase.SupabaseModule
 import io.github.jan.supabase.auth.Auth
@@ -64,9 +66,9 @@ class SupabaseFoundationTest {
 
         assertNull(SupabaseModule.client(context))
         // And the startup bootstrap is a no-op rather than an error.
-        AnonymousSession.restoreInBackground(context)
-        assertNull(runBlocking { AnonymousSession.restore(context) })
-        assertNull(runBlocking { AnonymousSession.ensureAuthenticatedListener(context) })
+        ListenerSession.restoreInBackground(context)
+        assertNull(runBlocking { ListenerSession.restore(context) })
+        assertNull(runBlocking { (ListenerSession.identity(context) as? ListenerIdentity.Available)?.uid })
     }
 
     /**
@@ -132,11 +134,11 @@ class SupabaseFoundationTest {
         // A listener who has never reacted: no stored identity, so startup must
         // produce nothing at all. This is the check that keeps auth.users free of
         // rows for people who only ever pressed Play.
-        AnonymousSession.forgetKnownIdentityForTest(context)
+        IdentityStore.clearForTest(context)
         runBlocking { SupabaseModule.client(context)!!.auth.signOut() }
 
-        assertNull("startup signed a listener in", runBlocking { AnonymousSession.restore(context) })
-        assertFalse(AnonymousSession.hasKnownIdentity(context))
+        assertNull("startup signed a listener in", runBlocking { ListenerSession.restore(context) })
+        assertFalse(ListenerSession.hasKnownIdentity(context))
     }
 
     @Test
@@ -146,21 +148,21 @@ class SupabaseFoundationTest {
         LiveSupabase.assumeOptedIn()
         assumeTrue("no supabase.properties in this build", SupabaseConfig.isConfigured)
 
-        AnonymousSession.forgetKnownIdentityForTest(context)
+        IdentityStore.clearForTest(context)
         runBlocking { SupabaseModule.client(context)!!.auth.signOut() }
 
-        val first = runBlocking { AnonymousSession.ensureAuthenticatedListener(context) }
+        val first = runBlocking { (ListenerSession.identity(context) as? ListenerIdentity.Available)?.uid }
         assertNotNull(
             "anonymous sign-in failed - is it enabled for the project, and is the device online?",
             first,
         )
-        assertTrue(AnonymousSession.hasKnownIdentity(context))
+        assertTrue(ListenerSession.hasKnownIdentity(context))
 
         // Called again it reuses the session rather than creating a second listener.
-        val second = runBlocking { AnonymousSession.ensureAuthenticatedListener(context) }
+        val second = runBlocking { (ListenerSession.identity(context) as? ListenerIdentity.Available)?.uid }
         assertEquals(first, second)
         // And startup now restores that same identity.
-        assertEquals(first, runBlocking { AnonymousSession.restore(context) })
+        assertEquals(first, runBlocking { ListenerSession.restore(context) })
 
         assertEquals(first, SupabaseModule.client(context)!!.auth.currentUserOrNull()?.id)
     }
@@ -172,18 +174,18 @@ class SupabaseFoundationTest {
         LiveSupabase.assumeOptedIn()
         assumeTrue("no supabase.properties in this build", SupabaseConfig.isConfigured)
 
-        val original = runBlocking { AnonymousSession.ensureAuthenticatedListener(context) }
+        val original = runBlocking { (ListenerSession.identity(context) as? ListenerIdentity.Available)?.uid }
         assumeTrue("no identity to protect", original != null)
 
         // Sign out but keep the install's marker: this is what a listener looks like
         // when the token expired and the refresh could not be made - offline, or the
         // project unreachable. Minting here would split one person into two uids.
         runBlocking { SupabaseModule.client(context)!!.auth.signOut() }
-        assertTrue(AnonymousSession.hasKnownIdentity(context))
+        assertTrue(ListenerSession.hasKnownIdentity(context))
 
-        val whileUnavailable = runBlocking { AnonymousSession.ensureAuthenticatedListener(context) }
+        val whileUnavailable = runBlocking { (ListenerSession.identity(context) as? ListenerIdentity.Available)?.uid }
         assertNull("a second identity was minted for an install that already had one", whileUnavailable)
-        assertEquals("the remembered uid changed", original, AnonymousSession.knownUid(context))
+        assertEquals("the remembered uid changed", original, ListenerSession.knownUid(context))
     }
 
     /**
@@ -203,7 +205,7 @@ class SupabaseFoundationTest {
         LiveSupabase.assumeOptedIn()
         assumeTrue("no supabase.properties in this build", SupabaseConfig.isConfigured)
 
-        val uid = runBlocking { AnonymousSession.ensureAuthenticatedListener(context) }
+        val uid = runBlocking { (ListenerSession.identity(context) as? ListenerIdentity.Available)?.uid }
         assumeTrue("no session to persist", uid != null)
 
         val client = SupabaseModule.client(context)!!

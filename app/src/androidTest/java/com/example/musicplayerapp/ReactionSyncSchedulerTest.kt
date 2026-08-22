@@ -12,6 +12,7 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
 import com.example.musicplayerapp.data.AppDatabase
 import com.example.musicplayerapp.data.TrackKey
+import com.example.musicplayerapp.data.supabase.IdentityStore
 import com.example.musicplayerapp.data.supabase.ReactionSyncScheduler
 import com.example.musicplayerapp.data.supabase.ReactionSyncWorker
 import com.example.musicplayerapp.data.supabase.SupabaseConfig
@@ -76,6 +77,9 @@ class ReactionSyncSchedulerTest {
         workManager.cancelUniqueWork(ReactionSyncScheduler.UNIQUE_WORK)
         workManager.cancelUniqueWork(ReactionSyncScheduler.RETRY_WORK)
         clearOutbox()
+        // These tests share the app's real preferences, so a signed-out state left
+        // behind would silently disable scheduling for every test after it.
+        IdentityStore.clearForTest(context)
     }
 
     private fun clearOutbox() = runBlocking {
@@ -122,6 +126,9 @@ class ReactionSyncSchedulerTest {
      * number.
      */
     private fun markedTrack(): String = "ZZ_SCHED_FIXTURE ${System.nanoTime()}"
+
+    /** A uid for the paused-state tests. Never signed in anywhere; storage only. */
+    private val PAUSED_UID = "00000000-0000-4000-8000-00000000cafe"
 
     private fun runWorkerOnce() = runBlocking {
         TestListenableWorkerBuilder<ReactionSyncWorker>(context).build().doWork()
@@ -329,6 +336,65 @@ class ReactionSyncSchedulerTest {
         assertEquals(1, infos().size)
         assertEquals(WorkInfo.State.ENQUEUED, infos().single().state)
         assertNotEquals(ReactionSyncScheduler.UNIQUE_WORK, ReactionSyncScheduler.RETRY_WORK)
+    }
+
+    // ==================== signed out: paused, not broken ====================
+
+    @Test
+    fun a_signed_out_listener_schedules_no_drain_when_reacting() {
+        assumeTrue(SupabaseConfig.isConfigured)
+        IdentityStore.adoptAnonymous(context, PAUSED_UID)
+        IdentityStore.signOut(context)
+
+        ReactionSyncScheduler.onReactionCommitted(context)
+        ReactionSyncScheduler.onReactionCommitted(context)
+
+        // Each of those would otherwise be a constrained, network-waiting request that
+        // wakes the device to discover it may do nothing. The reaction itself is
+        // already committed to Room by this point - only the wake-up is withheld.
+        assertEquals(0, infos().size)
+    }
+
+    @Test
+    fun a_signed_out_listener_schedules_nothing_at_startup_either() {
+        assumeTrue(SupabaseConfig.isConfigured)
+        runBlocking {
+            val db = AppDatabase.getDatabase(context)
+            val name = markedTrack()
+            db.reactionDao().like(TrackKey.of(name, name)!!, name, name, "myata", 1L, 1L)
+        }
+        IdentityStore.adoptAnonymous(context, PAUSED_UID)
+        IdentityStore.signOut(context)
+
+        ReactionSyncScheduler.onAppStart(context)
+        settle()
+
+        // A pending row exists and is deliberately left pending: it is waiting for a
+        // sign-in, not for a network.
+        assertTrue(runBlocking { AppDatabase.getDatabase(context).reactionOutboxDao().count() } > 0)
+        assertEquals(0, infos().size)
+    }
+
+    @Test
+    fun a_signed_out_worker_succeeds_and_mutates_no_row() = runBlocking {
+        val db = AppDatabase.getDatabase(context)
+        val name = markedTrack()
+        db.reactionDao().like(TrackKey.of(name, name)!!, name, name, "myata", 1L, 1L)
+        val before = db.reactionOutboxDao().pending().single()
+
+        IdentityStore.adoptAnonymous(context, PAUSED_UID)
+        IdentityStore.signOut(context)
+
+        // success(), not retry(). A retry would put this on a backoff schedule that
+        // can never accomplish anything until the listener signs in - and the sign-in
+        // is what schedules the drain.
+        assertEquals(androidx.work.ListenableWorker.Result.success(), runWorkerOnce())
+
+        val after = db.reactionOutboxDao().pending().single()
+        assertEquals(before.eventId, after.eventId)
+        assertEquals(before.attempts, after.attempts)
+        assertEquals(before.nextAttemptAt, after.nextAttemptAt)
+        assertEquals(0, timers().size)
     }
 
     // ==================== the worker's own gate ====================

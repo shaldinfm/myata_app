@@ -5,6 +5,9 @@ import android.os.Bundle
 import androidx.test.runner.AndroidJUnitRunner
 import com.example.musicplayerapp.data.ReactionOutboxEntry
 import com.example.musicplayerapp.data.TrackReaction
+import com.example.musicplayerapp.data.supabase.IdentityState
+import com.example.musicplayerapp.data.supabase.IdentityStore
+import com.example.musicplayerapp.data.supabase.ListenerIdentity
 import com.example.musicplayerapp.data.supabase.ReactionSyncApi
 import com.example.musicplayerapp.data.supabase.ReactionSyncBackend
 import com.example.musicplayerapp.data.supabase.SyncOutcome
@@ -38,11 +41,22 @@ class MyataTestRunner : AndroidJUnitRunner() {
         } else {
             ReactionSyncBackend.overrideForInstrumentation(
                 api = { OfflineReactionSyncApi },
-                // Null identity is the important half. The drain asks for it before
-                // it makes any call, and stops the run when it cannot get one -
-                // without penalising a row - so nothing is delivered and nothing is
-                // marked as having failed.
-                identity = { null },
+                // The identity half is the important one, and it is not a constant.
+                //
+                // The harness must remove the *network*, not the product's state
+                // machine. Returning a flat Unavailable would do both: a genuinely
+                // signed-out install would report "temporarily broken" instead of
+                // "paused", the worker would retry it forever, and the distinction
+                // this whole state machine exists to draw would be invisible to every
+                // test. So the persisted state still decides - reading it is a
+                // SharedPreferences lookup and reaches nothing - and only the ability
+                // to mint or refresh is taken away.
+                identity = { ctx ->
+                    when (val state = IdentityStore.state(ctx)) {
+                        is IdentityState.SignedOut -> ListenerIdentity.Paused(state.lastUid)
+                        else -> ListenerIdentity.Unavailable("instrumentation")
+                    }
+                },
             )
         }
         super.onCreate(arguments)

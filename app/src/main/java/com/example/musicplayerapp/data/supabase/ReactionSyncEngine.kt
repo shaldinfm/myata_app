@@ -112,8 +112,10 @@ class ReactionSyncEngine(
                 }
             }
 
-            // The current opinion, read now. Null means no row at all, which is the
-            // same as NEUTRAL and reconciles to a remote delete.
+            // The current opinion, read now - NEUTRAL included, which since migration
+            // 0002 upserts a row like any other state rather than deleting one. Null
+            // means the local row is gone entirely, which is data removal, not a
+            // withdrawal; that is the only case that still reconciles to a delete.
             val current = reactions.find(row.trackKey)
 
             when (val state = api.reconcileCurrentState(row.trackKey, current, listenerId)) {

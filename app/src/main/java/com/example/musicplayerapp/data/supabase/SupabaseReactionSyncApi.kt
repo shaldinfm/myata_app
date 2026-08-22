@@ -69,10 +69,12 @@ class SupabaseReactionSyncApi(private val context: Context) : ReactionSyncApi {
     ): SyncOutcome {
         val db = postgrest ?: return SyncOutcome.AuthUnavailable("no supabase client")
 
-        val remote = current?.let { ReactionSyncWire.remoteReaction(it.reaction) }
-            ?: return deleteCurrentState(trackKey, listenerId)
+        // No local row at all is not NEUTRAL - it is the row having been removed,
+        // and there are no words left to write one with. That is the only delete
+        // left on this path; see [dropCurrentState].
+        val row = current ?: return dropCurrentState(trackKey, listenerId)
 
-        val row = requireNotNull(current)
+        val remote = ReactionSyncWire.remoteReaction(row.reaction)
         val updatedAt = ReactionSyncWire.timestamp(row.updatedAt)
 
         return runCatching {
@@ -127,7 +129,16 @@ class SupabaseReactionSyncApi(private val context: Context) : ReactionSyncApi {
     }
 
     /**
-     * NEUTRAL is absence, so withdrawing an opinion deletes the row.
+     * Removes the remote row, for the one case that still means it: **no local row
+     * exists**.
+     *
+     * Withdrawing a reaction does not come here any more. Since migration 0002,
+     * NEUTRAL is a value with an `updated_at`, so an UNLIKE or an UNDISLIKE goes
+     * through the same guarded upsert as everything else, and the remote row stays
+     * put as a tombstone. What reaches this function is a track whose Room row is
+     * gone - clearing the collection, a data-removal request, the retirement half of
+     * a future identity handoff - and for those, absence really is the desired state.
+     * The DELETE policy exists for exactly this and is deliberately kept.
      *
      * A delete that matches nothing is success, not an error - the desired state is
      * "no row", and there being no row already is that state. PostgREST answers 200
@@ -135,11 +146,11 @@ class SupabaseReactionSyncApi(private val context: Context) : ReactionSyncApi {
      * written down because it is the kind of thing a future reader would otherwise
      * add a guard for.
      *
-     * No `updated_at` guard here. A delete carries no state to be stale *with*, and
-     * the drain only ever asks for one when the current local row says NEUTRAL,
-     * which it read a moment ago.
+     * No `updated_at` guard here, because there is no local state to guard *with*.
+     * That asymmetry is the price of deleting at all, and it is why nothing on the
+     * ordinary reaction path does.
      */
-    private suspend fun deleteCurrentState(trackKey: String, listenerId: String): SyncOutcome {
+    private suspend fun dropCurrentState(trackKey: String, listenerId: String): SyncOutcome {
         val db = postgrest ?: return SyncOutcome.AuthUnavailable("no supabase client")
 
         return runCatching {

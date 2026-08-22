@@ -1,3 +1,8 @@
+-- SUPERSEDED IN PART BY migration 0002. The schema half below is generated from
+-- 0001 and reproduces its NEUTRAL-is-absence model. If this file is ever run on a
+-- fresh project, `supabase/migrations/0002_neutral_is_a_value.sql` must be run
+-- after it. Nothing here is a substitute for that migration.
+
 -- RE-BASELINE - DESTRUCTIVE. Read this before running any of it.
 --
 -- Run 00_preflight_readonly.sql FIRST and confirm the reaction tables hold nothing

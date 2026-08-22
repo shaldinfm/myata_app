@@ -5,7 +5,6 @@ import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.musicplayerapp.data.AppDatabase
-import com.example.musicplayerapp.data.Reaction
 import com.example.musicplayerapp.data.ReactionDao
 import com.example.musicplayerapp.data.ReactionEvent
 import com.example.musicplayerapp.data.ReactionOutboxDao
@@ -15,6 +14,7 @@ import com.example.musicplayerapp.data.TrackReaction
 import com.example.musicplayerapp.data.supabase.DrainResult
 import com.example.musicplayerapp.data.supabase.ReactionSyncApi
 import com.example.musicplayerapp.data.supabase.ReactionSyncEngine
+import com.example.musicplayerapp.data.supabase.ReactionSyncWire
 import com.example.musicplayerapp.data.supabase.SyncOutcome
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -34,7 +34,9 @@ import org.junit.runner.RunWith
  *
  *  - `reaction_events` is **idempotent on event_id and append-only**. Redelivering
  *    an event is success and adds nothing, exactly as `ignore-duplicates` does.
- *  - `reactions` is **current state**, where NEUTRAL is an absent row.
+ *  - `reactions` is **current state**, and since migration 0002 that state has
+ *    three values: a withdrawal stores NEUTRAL rather than removing the row. Only
+ *    a track with no local row at all reconciles to a delete.
  */
 private class FakeBackend : ReactionSyncApi {
 
@@ -44,7 +46,7 @@ private class FakeBackend : ReactionSyncApi {
     /** History as it would actually be stored: one row per event_id. */
     val history = LinkedHashMap<String, ReactionOutboxEntry>()
 
-    /** Current remote state: trackKey -> "LIKED"/"DISLIKED". Absence is NEUTRAL. */
+    /** Current remote state: trackKey -> "NEUTRAL"/"LIKED"/"DISLIKED". */
     val state = LinkedHashMap<String, String>()
 
     /** Every reconciliation asked for, as (trackKey, remote value or null for delete). */
@@ -73,11 +75,9 @@ private class FakeBackend : ReactionSyncApi {
         listenerSeen = listenerId
         val outcome = onState(trackKey)
         if (outcome is SyncOutcome.Success) {
-            val remote = when (current?.reaction) {
-                Reaction.LIKED -> "LIKED"
-                Reaction.DISLIKED -> "DISLIKED"
-                else -> null
-            }
+            // Null only when there is no local row - the schema's third value is
+            // written, not implied by absence.
+            val remote = current?.let { ReactionSyncWire.remoteReaction(it.reaction) }
             reconciliations += trackKey to remote
             if (remote == null) state.remove(trackKey) else state[trackKey] = remote
         }
@@ -196,7 +196,7 @@ class ReactionSyncEngineTest {
     }
 
     @Test
-    fun liked_to_neutral_writes_history_and_removes_state() = runBlocking {
+    fun liked_to_neutral_writes_history_and_a_neutral_state_row() = runBlocking {
         like()
         engine().drain()
         assertEquals("LIKED", backend.state[depeche])
@@ -209,8 +209,10 @@ class ReactionSyncEngineTest {
             listOf(ReactionEvent.LIKE, ReactionEvent.UNLIKE),
             backend.history.values.map { it.eventType },
         )
-        // NEUTRAL is absence, not a third value.
-        assertFalse(backend.state.containsKey(depeche))
+        // NEUTRAL is the third value, and the row stays: an absent row could not
+        // say *when* the listener changed their mind, which is what the next
+        // device's last-writer-wins comparison needs.
+        assertEquals("NEUTRAL", backend.state[depeche])
         assertEquals(0, outbox.count())
     }
 
@@ -224,7 +226,7 @@ class ReactionSyncEngineTest {
     }
 
     @Test
-    fun disliked_to_neutral_removes_state() = runBlocking {
+    fun disliked_to_neutral_writes_a_neutral_state_row() = runBlocking {
         dislike()
         engine().drain()
         clock += 1_000
@@ -235,7 +237,9 @@ class ReactionSyncEngineTest {
             listOf(ReactionEvent.DISLIKE, ReactionEvent.UNDISLIKE),
             backend.history.values.map { it.eventType },
         )
-        assertFalse(backend.state.containsKey(depeche))
+        // Same row, third value - an UNDISLIKE is not a deletion any more than an
+        // UNLIKE is, and neither manufactures an extra event.
+        assertEquals("NEUTRAL", backend.state[depeche])
     }
 
     @Test
@@ -312,9 +316,10 @@ class ReactionSyncEngineTest {
 
         // The event is delivered as it happened - history is history.
         assertEquals(listOf(ReactionEvent.LIKE), backend.history.values.map { it.eventType })
-        // But the state written is what the listener thinks NOW, which is nothing.
-        assertEquals(listOf(depeche to null), backend.reconciliations)
-        assertFalse(backend.state.containsKey(depeche))
+        // But the state written is what the listener thinks NOW, which is NEUTRAL -
+        // read from Room, not folded from the LIKE that was actually delivered.
+        assertEquals(listOf(depeche to "NEUTRAL"), backend.reconciliations)
+        assertEquals("NEUTRAL", backend.state[depeche])
     }
 
     @Test
@@ -732,7 +737,7 @@ class ReactionSyncEngineTest {
         engine().drain()
 
         assertEquals(3, backend.history.size)
-        assertFalse(backend.state.containsKey(depeche))
+        assertEquals("NEUTRAL", backend.state[depeche])
         assertEquals("LIKED", backend.state[cave])
         assertEquals(0, outbox.count())
     }

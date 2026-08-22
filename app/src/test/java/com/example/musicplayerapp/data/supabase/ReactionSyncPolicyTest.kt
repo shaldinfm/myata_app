@@ -144,11 +144,23 @@ class ReactionSyncPolicyTest {
     }
 
     @Test
-    fun neutral_has_no_remote_spelling_because_it_is_absence() {
+    fun every_local_state_has_a_remote_spelling() {
         assertEquals("LIKED", ReactionSyncWire.remoteReaction(Reaction.LIKED))
         assertEquals("DISLIKED", ReactionSyncWire.remoteReaction(Reaction.DISLIKED))
-        // Not "NEUTRAL": the schema's CHECK allows only LIKED and DISLIKED, and a
-        // withdrawn reaction is a deleted row.
-        assertEquals(null, ReactionSyncWire.remoteReaction(Reaction.NEUTRAL))
+        // "NEUTRAL", not null. Migration 0002 widened the schema's CHECK to admit
+        // it, so a withdrawal is a row with an updated_at rather than a hole where
+        // one used to be - which is what lets last-writer-wins see it at all.
+        assertEquals("NEUTRAL", ReactionSyncWire.remoteReaction(Reaction.NEUTRAL))
+    }
+
+    @Test
+    fun the_mapping_is_total_and_matches_the_schema_check() {
+        // The three spellings in `reactions_reaction_is_known`, and nothing else. A
+        // fourth local state added without a schema migration would fail here rather
+        // than as a 400 on somebody's device.
+        assertEquals(
+            setOf("NEUTRAL", "LIKED", "DISLIKED"),
+            Reaction.entries.map { ReactionSyncWire.remoteReaction(it) }.toSet(),
+        )
     }
 }

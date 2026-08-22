@@ -106,13 +106,24 @@ false, `SupabaseModule.client()` returns null, and the app has no Supabase in it
 
 ## Schema — Model C
 
-`supabase/migrations/0001_reaction_foundation.sql`, idempotent. Two tables, one
+`supabase/migrations/`, applied in order and each idempotent. Two tables, one
 owner-only view, **no catalogue table and no client-callable function**.
+
+| migration | what it does |
+|---|---|
+| `0001_reaction_foundation.sql` | the two tables, the RLS policies, the view |
+| `0002_neutral_is_a_value.sql` | widens `reactions.reaction` to admit NEUTRAL; excludes all-NEUTRAL tracks from the view |
+
+`0001` is left exactly as it ran and carries a banner saying which of its comments
+`0002` supersedes. A fresh project applies both.
 
 - **`reactions`** — current state. `primary key (listener_id, track_key)`, which
   makes one-listener-one-opinion structural rather than something the client has to
   remember. Carries `artist` and `title` as observed on that listener's device.
-  NEUTRAL is absence: a withdrawn reaction deletes the row.
+  `reaction` is **`NEUTRAL | LIKED | DISLIKED`**: a withdrawal stores NEUTRAL and
+  keeps its row, because an absent row has no `updated_at` and therefore cannot take
+  part in the last-writer-wins comparison that protects every other state
+  (`docs/SUPABASE-SYNC.md`). Tombstones are kept indefinitely for v1.
 - **`reaction_events`** — append-only history, carrying its own `artist`/`title`
   because the row is immutable and the words it was written with are part of what
   happened. `event_id` is a client UUID and the idempotency key, so a retried
@@ -120,7 +131,10 @@ owner-only view, **no catalogue table and no client-callable function**.
   which is why it exists now.
 - **`track_reaction_totals`** — aggregated straight from `reactions`, **service
   role only**; `anon` and `authenticated` revoked. The displayed words are the most
-  common spelling observed (`mode()`), which changes no counts.
+  common spelling observed (`mode()`), which changes no counts. Since `0002` a track
+  appears only while at least one listener currently holds a LIKED or DISLIKED: a
+  0/0 row is sync metadata, not a programming signal. Likes and dislikes count those
+  two states and nothing else.
 
 Both tables constrain `track_key` to a TrackKey v1 shape (64 lowercase hex, or the
 `legacy:` namespace) and bound artist/title to 1–300 characters.
@@ -172,6 +186,11 @@ write, so a client cannot insert a row owned by somebody else. `reaction_events`
 has no update or delete policy for any client role — history a client can edit is
 not history.
 
+`reactions` keeps its DELETE policy even though normal sync stopped using it at
+`0002`. What still needs it is a listener erasing their own rows, and the
+retirement half of the future identity handoff below; removing it would take the
+first of those away to tidy up the second.
+
 **No `listeners` table.** Supabase Auth already owns identity and `auth.users.id`
 *is* the listener; a second table would be a copy that can drift. No profile,
 follow or comment tables either — this is programming analytics, not a social
@@ -200,9 +219,13 @@ re-baseline rather than a migration chain whose first entry is a security hole:
    touches nothing in `auth`, so existing anonymous listeners keep their uids, and
    nothing outside the objects it names.
 
-The reset file's schema half is generated from `0001`, so the two cannot drift.
+The reset file's schema half is generated from `0001`, so the two cannot drift —
+which also means it reproduces the pre-`0002` model, and `0002` must be run after it
+if it is ever used again.
+
 **Once any real reaction exists, the re-baseline must never be run again** — after
-that only a forward migration is acceptable.
+that only a forward migration is acceptable. `0002` is the first of those: it drops
+no table, deletes no row and rewrites no data.
 
 ## Anonymous auth
 
@@ -238,16 +261,95 @@ never signed in. The next call would have minted a second identity. It is one sh
 string, already off the main thread, so the synchronous write costs nothing worth
 having.
 
-### Abuse and rate limits — a real, unaddressed concern
+### Abuse and rate limits — real, decided, and deferred on purpose
 
 Anonymous sign-in is an open door: anyone with the publishable key can mint
 identities, and each one is a vote in the aggregates. Supabase applies a default
 **30 sign-ups per hour per IP**, and recommends invisible CAPTCHA or Turnstile.
 
-This PR adds no anti-abuse UI, deliberately. What it means for now: read the
-aggregates as *one identity, one vote*, not one human. Before those numbers drive
-any decision that matters, the owner should turn on CAPTCHA/Turnstile for
-anonymous sign-ins and review the rate limits.
+**Owner decision, G-A1: CAPTCHA stays off, and this is not an oversight.** A
+project-wide CAPTCHA toggle would break every client already in the field, because
+the anonymous identity can be minted from a background WorkManager run — the sync
+boundary, with no Activity and no user present — which has no way to produce a
+challenge token. Turning it on would silently stop reactions syncing for existing
+installs, which is worse than the abuse it prevents at this scale.
+
+Also decided: **anonymous listeners are not excluded from the station aggregate.**
+They are the overwhelming majority of the audience and their feedback is the data
+this programme exists to collect; dropping it to sidestep an abuse question would
+throw away the signal to protect the metric.
+
+So anti-abuse and rate-limit hardening stay a **separate production concern**, to
+be taken as its own piece of work — most likely CAPTCHA gated on a foreground
+sign-in path once accounts exist, so a background mint is never asked for a token
+it cannot supply. What it means until then: read the aggregates as *one identity,
+one vote*, not one human, and treat that as a caveat on the numbers rather than a
+reason to distrust them.
+
+## Accounts and identity handoff — the frozen contract for G-A7
+
+**Nothing here is implemented.** It is written down now because `0002` changes what
+a correct handoff looks like, and the wrong version of it is easy to reach for and
+impossible to undo once it has run. G-A1 implements none of it; G-A7 inherits it.
+
+The situation: an install has been reacting as anonymous identity **X**. The
+listener then signs into an existing account **Y**, which already has its own
+reactions and its own history from another device.
+
+### The rule
+
+> **Adopting state must never fabricate history.**
+
+Concretely, when X signs into Y:
+
+1. **X's `reaction_events` stay under X.** They are what actually happened, to that
+   identity, at those times. They are not moved, not rewritten and not re-attributed.
+   The table has no UPDATE and no DELETE policy for any client role, so this is
+   structural rather than a promise.
+2. **X's `reactions` are retired before the identity switch**, as already designed —
+   X's current state stops asserting an opinion once X is no longer the listener
+   using this device.
+3. **After switching to Y, the CURRENT local reaction states are adopted into Y's
+   `reactions`** through a **state-only reconciliation path**: the same guarded
+   upsert the sync engine already uses, over the local `track_reaction` rows, writing
+   nothing but current state.
+4. **No synthetic `LIKE` / `UNLIKE` / `DISLIKE` / `UNDISLIKE` is created by the
+   adoption.** Not one.
+
+### Why re-enqueueing every local reaction as an event is wrong
+
+The obvious implementation — walk `track_reaction` and push each row into the outbox
+as an event under Y — is wrong twice over, and the second reason is the one that
+makes it unfixable rather than merely untidy:
+
+- **It fabricates history.** Y would acquire a burst of events all stamped now, for
+  opinions formed over months by a different identity. `reaction_events` is the table
+  that answers "when did the audience change its mind", and this is precisely the
+  answer it would corrupt. It is append-only, so the corruption is permanent.
+- **It cannot be done correctly for NEUTRAL at all.** Since `0002` a local NEUTRAL row
+  is a real state that must be adopted — and **the state row does not record how it
+  got there.** NEUTRAL after an UNLIKE and NEUTRAL after an UNDISLIKE are the same
+  row. There is no honest event to synthesise for it: any choice invents a transition
+  that may never have happened, and omitting it leaves the adoption incomplete.
+
+That second point is why the rule is a hard separation rather than a preference. The
+information needed to fake the history is not merely inconvenient to obtain — it does
+not exist in the data being adopted. A state-only path needs none of it.
+
+### What this leaves open for G-A7
+
+- **Merge policy when X and Y both hold an opinion on one track.** The reconciliation
+  is guarded by `updated_at`, so it resolves by timestamp today — which is the same
+  device-clock caveat named below, now with real weight behind it, since two devices
+  is exactly the case accounts create.
+- **Cross-device clock skew.** `updated_at` is the device wall clock, and comparing
+  two of them is only as good as the two clocks agree. This is an explicit G-A7
+  conflict-resolution item, to be answered there with a server-assigned time or a
+  version counter. It was deliberately **not** touched in G-A1: the schema change did
+  not need it, and putting an unproven ordering scheme underneath it would have made
+  both harder to trust.
+- **What happens to X's `auth.users` row** once it owns no current state — retained
+  for its history, which is the only thing left pointing at it.
 
 ## Validation
 

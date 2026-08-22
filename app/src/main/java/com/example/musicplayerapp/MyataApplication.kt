@@ -1,7 +1,7 @@
 package com.example.musicplayerapp
 
 import android.app.Application
-import com.example.musicplayerapp.data.supabase.AnonymousSession
+import com.example.musicplayerapp.data.supabase.ListenerSession
 import com.example.musicplayerapp.data.supabase.ReactionSyncScheduler
 import com.squareup.picasso.OkHttp3Downloader
 import com.squareup.picasso.Picasso
@@ -14,12 +14,12 @@ class MyataApplication : Application() {
         // Opening the radio is not a reason to exist in a database: a listener who
         // never reacts to anything never signs in, so there is no user row and no
         // request on their cold launch. The identity is minted at the sync
-        // boundary - AnonymousSession.ensureAuthenticatedListener - by the first
+        // boundary - ListenerSession.identity - by the first
         // caller that actually has remote data to own.
         //
         // Off the main thread, and a build with no project configured does not even
         // start it. Nothing reads the session yet.
-        AnonymousSession.restoreInBackground(this)
+        ListenerSession.restoreInBackground(this)
 
         // Startup recovery for the reaction outbox. A reaction commits to Room and
         // *then* schedules its drain, so a process death between the two leaves a

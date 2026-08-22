@@ -227,6 +227,103 @@ if it is ever used again.
 that only a forward migration is acceptable. `0002` is the first of those: it drops
 no table, deletes no row and rewrites no data.
 
+## Identity state (G-A2)
+
+The install's identity is a **persisted state machine**, not an inference from a
+marker. `IdentityState` + `IdentityStore`, in `shared_prefs/supabase_identity.xml`.
+
+| state | meaning | sync |
+|---|---|---|
+| `NONE` | never owned an identity — the only state that may mint one | may mint |
+| `ANONYMOUS(uid)` | anonymous `auth.users` row this install owns | normal |
+| `EMAIL_PENDING(uid, email)` | **reserved G-A4** — address claimed, unconfirmed | normal |
+| `EMAIL_VERIFIED(uid)` | **reserved G-A4** — confirmed, no password yet | normal |
+| `REGISTERED(uid)` | full account, same uid throughout | normal |
+| `SIGNED_OUT(lastUid)` | deliberate local sign-out | **paused** |
+
+Persisted as `identity_state` / `identity_uid` / `identity_email`, every transition
+written with `commit()` rather than `apply()` — a process death after an `apply()`
+can lose the write and leave an install that believes it has never had an identity,
+which is how a second uid gets minted for one person. The legacy `listener_uid` key
+is still written alongside, so a downgraded build still finds a marker and still
+refuses to mint.
+
+### What this replaced, and why
+
+There used to be one string, `listener_uid`, meaning **a uid exists, therefore never
+mint again**. That was exactly right while there were only two situations, and it is
+why a flaky network never split a listener in two. It has no answer once accounts
+arrive: nothing distinguishes *deliberately signed out* from *temporarily unable to
+reach the server*, and those want opposite behaviour from the sync worker.
+
+### Legacy migration
+
+Deterministic for all three field situations, and deliberately **independent of the
+network**:
+
+| on disk | result |
+|---|---|
+| nothing | `NONE` |
+| `listener_uid`, session restorable | `ANONYMOUS(uid)` |
+| `listener_uid`, session **not** restorable | `ANONYMOUS(uid)` |
+
+The last two are the same row on purpose. Whether a session can be restored right now
+is a fact about the network, not about who this install is; letting a failed restore
+downgrade a known identity toward `NONE` would reintroduce the duplicate-uid bug the
+marker was invented to prevent.
+
+### Sign-out is paused, not broken
+
+`ListenerSession.identity()` returns three cases rather than a nullable string:
+`Available(uid)`, `Unavailable(reason)`, `Paused(lastUid)`. The last two used to be
+the same `null`, and they want opposite handling — one retries on a backoff, the
+other must stop.
+
+While `SIGNED_OUT`:
+
+- the local Room Collection is untouched, and reactions keep accumulating in the
+  outbox for a later sign-in;
+- `ReactionSyncEngine` returns `DrainResult.Paused` **before reading the batch** — no
+  row is delivered, no attempt counted, nothing parked;
+- `ReactionSyncWorker` returns `success()` and schedules nothing, because retrying a
+  paused account is a wake-up that can never accomplish anything;
+- `ReactionSyncScheduler` enqueues nothing at all, so a listener who signs out and
+  keeps reacting does not queue one device wake-up per tap;
+- **no anonymous identity is ever minted.** Signing out is not a route back to `NONE`.
+
+The way out is an explicit sign-in (`IdentityStore.resumeAs`), which is G-A4's job.
+The future `HANDOFF` state for G-A7 is documented in `IdentityState`'s KDoc and needs
+no storage placeholder — the existing shape already carries it.
+
+### The frozen logout contract (owner decision, G-A2)
+
+Settled now so G-A4 inherits it rather than re-deciding it. **None of it is
+implemented** — there is no logout UI and no `auth.signOut()` call, because nothing
+can sign out yet. What is fixed is the shape:
+
+1. **LOCAL scope only.** Signing out on this device signs out *this* device; other
+   devices stay signed in.
+2. **The stored Supabase session and tokens are cleared from this device.**
+3. **No session is retained for a "fast re-login".** The convenience is real and is
+   refused deliberately: a signed-out install holding a live authenticated session is
+   one bug away from silently resuming as a listener who asked to be signed out, and
+   "signed out" would stop being a claim the app can honestly make.
+4. Local Room and the Collection are untouched.
+5. Persisted state becomes `SIGNED_OUT(lastUid)`.
+6. **That state is authoritative over any Supabase session that turns up anyway.** A
+   restored session does not un-sign-out an install — which is why
+   `ListenerSession.restore()` checks the state before it touches the client at all.
+7. **A stale session left by a crash mid-logout is ignored and cleared** by G-A4's
+   startup handling. Clearing the token and writing the state cannot be made atomic,
+   so the recovery rule is written down instead: `SIGNED_OUT` plus a live session
+   means the logout was interrupted, and the session is the part that is wrong.
+8. No new anonymous uid is ever minted automatically.
+
+There is deliberately **no `SIGNING_OUT` state**. It would earn its place only if the
+ordering needed a durable marker between "token cleared" and "state written", and
+rule 7 removes that need by making the end state self-correcting. Ordering and crash
+recovery are G-A4's to implement.
+
 ## Anonymous auth
 
 Invisible, and **created only when there is something to own**.
@@ -238,10 +335,10 @@ sign-up endpoint one call per app start. So the two entry points differ:
 
 | | called by | may sign in? |
 |---|---|---|
-| `AnonymousSession.restore()` | `MyataApplication` at startup | **no** - loads an existing session or does nothing |
-| `AnonymousSession.ensureAuthenticatedListener()` | the sync boundary, later | yes, but only if this install has never had an identity |
+| `ListenerSession.restore()` | `MyataApplication` at startup | **no** - loads an existing session or does nothing |
+| `ListenerSession.identity()` | the sync boundary, later | yes, but only if this install has never had an identity |
 
-Nothing calls `ensureAuthenticatedListener` yet. It exists so the phase that syncs
+Nothing calls `identity` yet. It exists so the phase that syncs
 reactions has a tested boundary to call instead of inventing one.
 
 ### Never a second identity
@@ -250,7 +347,7 @@ The rule that matters most is what happens when a session cannot be refreshed -
 offline, project paused, token expired. Signing in again would mint a **second**
 `auth.uid()` for one person and split their data permanently, on exactly the flaky
 networks this app is used on. So an install records that it has had an identity,
-and once that marker is set `ensureAuthenticatedListener` returns null rather than
+and once that marker is set `identity` returns null rather than
 minting a replacement. Losing one sync is recoverable; splitting a listener is not.
 
 That marker is written with `commit()`, not `apply()`, and the difference is the
@@ -352,6 +449,26 @@ not exist in the data being adopted. A state-only path needs none of it.
   for its history, which is the only thing left pointing at it.
 
 ## Validation
+
+### The anonymous mint path
+
+`AnonymousMintLiveTest` is the one G-A2 gate that cannot run offline, because it
+proves the boundary that G-A2 rewrote: from `NONE` with no session, that startup
+alone mints nothing, that eight concurrent boundary calls produce exactly **one**
+uid, that the state becomes `ANONYMOUS(uid)`, and that repeat calls and a restore all
+resolve to the same uid.
+
+```bash
+./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.liveSupabase=true "-Pandroid.testInstrumentationRunnerArguments.class=com.example.musicplayerapp.AnonymousMintLiveTest"
+```
+
+It writes no reaction, event or outbox row. It does create one anonymous
+`auth.users` identity — that is the subject under test — logged as
+`MintProbe: MINTED_TEST_UID=<uid>` so it can be deleted by exact id afterwards.
+
+The concurrency assertion detects a broken guard; it cannot prove the absence of a
+race, as no probabilistic test can. Its worth is that the failure it looks for is
+otherwise silent: two uids for one person shows up much later as a split collection.
 
 Automated (`SupabaseFoundationTest`): library loads and classes resolve on the API
 level under test — the desugaring gate; an unconfigured build has no client and

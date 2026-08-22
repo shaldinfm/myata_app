@@ -86,6 +86,15 @@ class ReactionSyncWorker(
                 Log.d(TAG, "drain deferred: ${result.reason}")
                 Result.retry()
             }
+
+            is DrainResult.Paused -> {
+                // Success, and deliberately no reschedule. Retrying a signed-out
+                // install is a wake-up that can never accomplish anything, on a
+                // backoff schedule, until the listener signs in - and the sign-in is
+                // what will schedule the drain. The rows are untouched.
+                Log.d(TAG, "cloud sync paused: signed out")
+                Result.success()
+            }
         }
     }
 

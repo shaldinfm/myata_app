@@ -8,7 +8,7 @@ import android.content.Context
  * **This changes nothing about how the app behaves.** With no override installed -
  * which is every state a shipped build can be in - [api] and [identity] return
  * exactly what the worker constructed inline before: a [SupabaseReactionSyncApi] and
- * [AnonymousSession.ensureAuthenticatedListener]. Nothing in `src/main` ever calls
+ * [ListenerSession.identity]. Nothing in `src/main` ever calls
  * [overrideForInstrumentation]; there is no setting, no BuildConfig flag and no code
  * path that reaches it outside an instrumentation run.
  *
@@ -39,15 +39,15 @@ object ReactionSyncBackend {
     private var apiOverride: ((Context) -> ReactionSyncApi)? = null
 
     @Volatile
-    private var identityOverride: (suspend (Context) -> String?)? = null
+    private var identityOverride: (suspend (Context) -> ListenerIdentity)? = null
 
     /** The PostgREST boundary: the real one unless instrumentation replaced it. */
     fun api(context: Context): ReactionSyncApi =
         apiOverride?.invoke(context) ?: SupabaseReactionSyncApi(context)
 
     /** The identity boundary: the real one unless instrumentation replaced it. */
-    suspend fun identity(context: Context): String? =
-        identityOverride?.invoke(context) ?: AnonymousSession.ensureAuthenticatedListener(context)
+    suspend fun identity(context: Context): ListenerIdentity =
+        identityOverride?.invoke(context) ?: ListenerSession.identity(context)
 
     /**
      * Instrumentation only, called from the test runner before the Application starts.
@@ -55,7 +55,7 @@ object ReactionSyncBackend {
      */
     fun overrideForInstrumentation(
         api: ((Context) -> ReactionSyncApi)?,
-        identity: (suspend (Context) -> String?)?,
+        identity: (suspend (Context) -> ListenerIdentity)?,
     ) {
         apiOverride = api
         identityOverride = identity

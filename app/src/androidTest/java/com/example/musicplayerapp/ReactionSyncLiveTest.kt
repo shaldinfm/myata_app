@@ -6,7 +6,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.musicplayerapp.data.AppDatabase
 import com.example.musicplayerapp.data.TrackKey
-import com.example.musicplayerapp.data.supabase.AnonymousSession
+import com.example.musicplayerapp.data.supabase.ListenerIdentity
+import com.example.musicplayerapp.data.supabase.ListenerSession
 import com.example.musicplayerapp.data.supabase.DrainResult
 import com.example.musicplayerapp.data.supabase.ReactionSyncEngine
 import com.example.musicplayerapp.data.supabase.SupabaseConfig
@@ -92,7 +93,9 @@ class ReactionSyncLiveTest {
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
 
         // The real identity boundary, and the real session this install holds.
-        listener = runBlocking { AnonymousSession.ensureAuthenticatedListener(context) }
+        listener = runBlocking {
+            (ListenerSession.identity(context) as? ListenerIdentity.Available)?.uid
+        }
             ?: run {
                 assumeTrue("could not obtain a listener identity (offline?)", false)
                 error("unreachable")
@@ -117,7 +120,7 @@ class ReactionSyncLiveTest {
     }
 
     private fun engine(api: SupabaseReactionSyncApi = SupabaseReactionSyncApi(context)) =
-        ReactionSyncEngine(db.reactionDao(), db.reactionOutboxDao(), api, { listener })
+        ReactionSyncEngine(db.reactionDao(), db.reactionOutboxDao(), api, { ListenerIdentity.Available(listener) })
 
     private suspend fun remoteState(key: String): JsonObject? =
         SupabaseModule.client(context)!!.postgrest.from("reactions").select {
@@ -379,9 +382,9 @@ class ReactionSyncLiveTest {
 
     @Test
     fun the_anonymous_uid_is_stable_across_repeated_sync_boundaries() = runBlocking {
-        val first = AnonymousSession.ensureAuthenticatedListener(context)
-        val second = AnonymousSession.ensureAuthenticatedListener(context)
-        val third = AnonymousSession.ensureAuthenticatedListener(context)
+        val first = (ListenerSession.identity(context) as? ListenerIdentity.Available)?.uid
+        val second = (ListenerSession.identity(context) as? ListenerIdentity.Available)?.uid
+        val third = (ListenerSession.identity(context) as? ListenerIdentity.Available)?.uid
 
         assertNotNull(first)
         assertEquals(first, second)
@@ -389,6 +392,6 @@ class ReactionSyncLiveTest {
         assertEquals(first, listener)
         // And the marker on disk agrees, which is what stops a failed refresh being
         // read as a new listener.
-        assertEquals(first, AnonymousSession.knownUid(context))
+        assertEquals(first, ListenerSession.knownUid(context))
     }
 }

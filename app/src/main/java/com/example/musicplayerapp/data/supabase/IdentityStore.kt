@@ -161,6 +161,13 @@ object IdentityStore {
      * which is what stops the next sync boundary treating this install as new. Signing
      * out is not a way back to [IdentityState.None] and there is deliberately no
      * method here that is.
+     *
+     * **This writes the state and nothing else.** Clearing the Supabase session is the
+     * other half of the frozen contract in [IdentityState.SignedOut]'s KDoc - LOCAL
+     * scope, tokens cleared, no session retained for a fast re-login - and it belongs
+     * to G-A4 along with the ordering and the crash-recovery rule. Calling this alone
+     * is still safe: the persisted state is authoritative, so an install is paused
+     * from this moment whether or not a session is still sitting on disk.
      */
     fun signOut(context: Context) {
         val last = state(context).uid

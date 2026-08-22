@@ -295,6 +295,35 @@ The way out is an explicit sign-in (`IdentityStore.resumeAs`), which is G-A4's j
 The future `HANDOFF` state for G-A7 is documented in `IdentityState`'s KDoc and needs
 no storage placeholder — the existing shape already carries it.
 
+### The frozen logout contract (owner decision, G-A2)
+
+Settled now so G-A4 inherits it rather than re-deciding it. **None of it is
+implemented** — there is no logout UI and no `auth.signOut()` call, because nothing
+can sign out yet. What is fixed is the shape:
+
+1. **LOCAL scope only.** Signing out on this device signs out *this* device; other
+   devices stay signed in.
+2. **The stored Supabase session and tokens are cleared from this device.**
+3. **No session is retained for a "fast re-login".** The convenience is real and is
+   refused deliberately: a signed-out install holding a live authenticated session is
+   one bug away from silently resuming as a listener who asked to be signed out, and
+   "signed out" would stop being a claim the app can honestly make.
+4. Local Room and the Collection are untouched.
+5. Persisted state becomes `SIGNED_OUT(lastUid)`.
+6. **That state is authoritative over any Supabase session that turns up anyway.** A
+   restored session does not un-sign-out an install — which is why
+   `ListenerSession.restore()` checks the state before it touches the client at all.
+7. **A stale session left by a crash mid-logout is ignored and cleared** by G-A4's
+   startup handling. Clearing the token and writing the state cannot be made atomic,
+   so the recovery rule is written down instead: `SIGNED_OUT` plus a live session
+   means the logout was interrupted, and the session is the part that is wrong.
+8. No new anonymous uid is ever minted automatically.
+
+There is deliberately **no `SIGNING_OUT` state**. It would earn its place only if the
+ordering needed a durable marker between "token cleared" and "state written", and
+rule 7 removes that need by making the end state self-correcting. Ordering and crash
+recovery are G-A4's to implement.
+
 ## Anonymous auth
 
 Invisible, and **created only when there is something to own**.
@@ -420,6 +449,26 @@ not exist in the data being adopted. A state-only path needs none of it.
   for its history, which is the only thing left pointing at it.
 
 ## Validation
+
+### The anonymous mint path
+
+`AnonymousMintLiveTest` is the one G-A2 gate that cannot run offline, because it
+proves the boundary that G-A2 rewrote: from `NONE` with no session, that startup
+alone mints nothing, that eight concurrent boundary calls produce exactly **one**
+uid, that the state becomes `ANONYMOUS(uid)`, and that repeat calls and a restore all
+resolve to the same uid.
+
+```bash
+./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.liveSupabase=true "-Pandroid.testInstrumentationRunnerArguments.class=com.example.musicplayerapp.AnonymousMintLiveTest"
+```
+
+It writes no reaction, event or outbox row. It does create one anonymous
+`auth.users` identity — that is the subject under test — logged as
+`MintProbe: MINTED_TEST_UID=<uid>` so it can be deleted by exact id afterwards.
+
+The concurrency assertion detects a broken guard; it cannot prove the absence of a
+race, as no probabilistic test can. Its worth is that the failure it looks for is
+otherwise silent: two uids for one person shows up much later as a split collection.
 
 Automated (`SupabaseFoundationTest`): library loads and classes resolve on the API
 level under test — the desugaring gate; an unconfigured build has no client and

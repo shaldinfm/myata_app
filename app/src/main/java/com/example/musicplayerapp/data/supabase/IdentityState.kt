@@ -88,6 +88,39 @@ sealed interface IdentityState {
      *  - **no anonymous identity may be minted.** Signing out is not a route back to
      *    [None]. Doing that would hand the listener a fresh uid and quietly orphan
      *    everything [lastUid] owns.
+     *
+     * ## The frozen logout contract (owner decision, G-A2)
+     *
+     * Settled now so G-A4 inherits it rather than re-deciding it. **None of it is
+     * implemented here** - there is no logout UI and no call to `auth.signOut()`,
+     * because nothing can sign out yet. What is fixed is the shape:
+     *
+     *  1. **LOCAL scope only.** Signing out on this device signs out *this* device.
+     *     Other devices stay signed in, because one person deciding to sign out of
+     *     their phone is not a statement about their tablet.
+     *  2. **The stored Supabase session and tokens are cleared from this device.**
+     *  3. **No session is retained for a "fast re-login".** The convenience is real
+     *     and it is refused deliberately: a signed-out install holding a live
+     *     authenticated session is one bug away from silently resuming as a listener
+     *     who asked to be signed out, and "signed out" would stop being a claim the
+     *     app can honestly make.
+     *  4. Local Room and the Collection are untouched.
+     *  5. The persisted state becomes `SignedOut(lastUid)`.
+     *  6. **This state is authoritative over any Supabase session that turns up
+     *     anyway.** A restored session does not un-sign-out an install; the stored
+     *     state wins. That is why [ListenerSession.restore] checks it before it
+     *     touches the client at all.
+     *  7. **A stale session left by a crash mid-logout must be ignored and cleared**
+     *     by G-A4's startup handling. Clearing the token and writing the state cannot
+     *     be made atomic, so the recovery rule is written down instead: state
+     *     `SignedOut` plus a live session means the logout was interrupted, and the
+     *     session is the part that is wrong.
+     *  8. No new anonymous uid is ever minted automatically.
+     *
+     * There is deliberately **no `SIGNING_OUT` state**. It would only earn its place
+     * if the ordering above needed a durable marker between "token cleared" and "state
+     * written", and rule 7 removes that need by making the end state self-correcting.
+     * Ordering and crash recovery are G-A4's to implement.
      */
     data class SignedOut(val lastUid: String) : IdentityState {
         override val uid: String get() = lastUid

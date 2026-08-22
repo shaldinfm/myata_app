@@ -131,7 +131,7 @@ owner-only view, **no catalogue table and no client-callable function**.
   which is why it exists now.
 - **`track_reaction_totals`** — aggregated straight from `reactions`, **service
   role only**; `anon` and `authenticated` revoked. The displayed words are the most
-  common spelling observed (`mode()`), which changes no counts. Since `0002` a track
+  common spelling among the current rows (`mode()`), which changes no counts. Since `0002` a track
   appears only while at least one listener currently holds a LIKED or DISLIKED: a
   0/0 row is sync metadata, not a programming signal. Likes and dislikes count those
   two states and nothing else.

@@ -108,14 +108,19 @@ comment on column public.reactions.reaction is
 -- rows now exist, and a track whose every current row is NEUTRAL would otherwise
 -- surface as a 0/0 line - sync metadata wearing the costume of a music-programming
 -- signal. The HAVING removes it. The moment one listener likes or dislikes it, the
--- track returns, with its full history of withdrawals intact underneath.
+-- track returns, and the NEUTRAL rows are still counted in among its group.
 --
--- The NEUTRAL rows are still *inside* each surviving group, deliberately:
+-- Those NEUTRAL rows are *current states*, not a record of past withdrawals. This
+-- table holds one row per listener per track and nothing else; the history of who
+-- changed their mind and when is `reaction_events`, which is the only place it has
+-- ever lived. Keeping the NEUTRAL rows inside each surviving group is deliberate:
 --
 --  * `last_activity` counts a withdrawal as activity, because it is. A track whose
---    only recent event was somebody taking their Like back has not gone quiet.
---  * `mode()` sees every spelling this key was ever observed under, which is more
---    evidence for the same answer and changes no count.
+--    only recent change was somebody taking their Like back has not gone quiet.
+--  * `mode()` gets the spellings carried by the *current* rows, NEUTRAL ones
+--    included - more evidence for the same answer, and it changes no count. It does
+--    not see spellings that were overwritten, or ones recorded only in
+--    `reaction_events`.
 create or replace view public.track_reaction_totals
 with (security_invoker = true) as
 select

@@ -309,8 +309,14 @@ select count(*) from public.track_reaction_totals
 ```
 
 The NEUTRAL rows are still inside each surviving group, on purpose:
-`last_activity` counts a withdrawal as activity, because it is, and `mode()` sees
-every spelling the key was observed under, which changes no count.
+`last_activity` counts a withdrawal as activity, because it is, and `mode()` gets
+the spellings carried by the current rows, NEUTRAL ones included, which changes no
+count.
+
+Those tombstones are **current state, not history.** `reactions` holds one row per
+listener per track; a NEUTRAL row says "this listener has no opinion now", not
+"here is what they withdrew". The record of who changed their mind and when is
+`reaction_events`, and it is the only place that record exists.
 
 ## Test data
 

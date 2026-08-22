@@ -74,7 +74,11 @@ android {
         versionCode 202611
         versionName "3.6.5"
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        // Not the stock runner. MyataTestRunner installs the live-Supabase gate
+        // before MyataApplication.onCreate, which is the only point early enough to
+        // stop the app's own startup drain reaching the live project. See
+        // androidTest/.../LiveSupabase.kt.
+        testInstrumentationRunner "com.example.musicplayerapp.MyataTestRunner"
 
         buildConfigField "String", "SUPABASE_URL", "\"${supabaseUrl}\""
         buildConfigField "String", "SUPABASE_PUBLISHABLE_KEY", "\"${supabaseKey}\""

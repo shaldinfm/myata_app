@@ -43,10 +43,14 @@ class ReactionSyncWorker(
         val engine = ReactionSyncEngine(
             reactions = database.reactionDao(),
             outbox = database.reactionOutboxDao(),
-            api = SupabaseReactionSyncApi(applicationContext),
+            // Both boundaries come from ReactionSyncBackend rather than being
+            // constructed here. In a shipped build that is the same two objects this
+            // line used to name; under instrumentation it is what keeps the app's own
+            // startup drain off the live project. See ReactionSyncBackend.
+            api = ReactionSyncBackend.api(applicationContext),
             // The identity boundary, reached only once the engine has established
             // that there is something to own.
-            identity = { AnonymousSession.ensureAuthenticatedListener(applicationContext) },
+            identity = { ReactionSyncBackend.identity(applicationContext) },
         )
 
         return when (val result = runCatching { engine.drain() }.getOrElse { failed ->

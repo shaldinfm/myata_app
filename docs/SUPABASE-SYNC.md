@@ -318,7 +318,58 @@ listener per track; a NEUTRAL row says "this listener has no opinion now", not
 "here is what they withdrew". The record of who changed their mind and when is
 `reaction_events`, and it is the only place that record exists.
 
+## Running the instrumentation suite
+
+**The normal suite cannot reach the live project.** Live Supabase is opt-in, stated
+per run on the command line:
+
+```bash
+./gradlew connectedDebugAndroidTest
+```
+
+```bash
+./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.liveSupabase=true "-Pandroid.testInstrumentationRunnerArguments.class=com.example.musicplayerapp.ReactionSyncLiveTest"
+```
+
+The first writes nothing to Supabase and reaches no Supabase endpoint. The second is
+the deliberate live validation, and is the only way to run it.
+
+### Why a per-test guard was not enough
+
+A configured `supabase.properties` used to be the whole condition, so the ordinary
+way to run the tests was also the way to write rows into production. The leak was not
+in any one test: **instrumentation runs inside the app's process**, so
+`MyataApplication.onCreate` fires before the first test does, and it calls
+`ReactionSyncScheduler.onAppStart`. Any outbox row a previous test left behind was
+delivered to the live project by *the app*, outside every `@Before`, `@After` and
+skip condition. A guard in a test method is already too late for that.
+
+So the gate is installed by `MyataTestRunner`, a custom `testInstrumentationRunner`,
+in `onCreate` — which the framework calls before `Application.onCreate`. Unless the
+run opted in, it replaces `ReactionSyncBackend`'s two network-facing collaborators
+with an offline stand-in that reports `AuthUnavailable`, which the drain treats as
+nobody's fault: the run stops, no row is penalised or discarded, and nothing leaves
+the device. Every layer above the socket — the config gate, the database, the engine,
+the drain verdicts and the rescheduling they trigger — still runs for real, so the
+scheduling assertions keep their teeth.
+
+Two independent things enforce it, and `LiveSupabaseIsolationTest` asserts the gate
+is actually installed, in both modes, so an unregistered runner fails a test instead
+of quietly writing to production.
+
 ## Test data
+
+Two suites write fixture rows, and both use `ZZ_` identifiers so a narrow cleanup
+predicate can find them:
+
+| suite | identifier | reaches Supabase |
+|---|---|---|
+| `ReactionSyncLiveTest` | `ZZ_SYNC_TEST <case>` | only in opt-in mode |
+| `ReactionSyncSchedulerTest` | `ZZ_SCHED_FIXTURE <nanos>` | never — local Room only |
+
+The scheduler fixture used to be spelled `ZZ Sync Fixture`, **with spaces**, which
+`artist like 'ZZ\_%'` does not match — so the rows it leaked were invisible to every
+cleanup pass aimed at them. Keep new fixtures on the `ZZ_` spelling.
 
 The validation suites mark every row they write with `ZZ_` in `artist` and `title`.
 This matters because of an asymmetry that is deliberate: `reactions` rows the client

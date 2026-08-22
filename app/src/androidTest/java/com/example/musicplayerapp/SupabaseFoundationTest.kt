@@ -124,6 +124,9 @@ class SupabaseFoundationTest {
 
     @Test
     fun startupRestoresButNeverSignsAnyoneIn() {
+        // Talks to the real auth endpoint and can mint an auth.users row, so it
+        // needs the run's explicit consent as well as a configured project.
+        LiveSupabase.assumeOptedIn()
         assumeTrue("no supabase.properties in this build", SupabaseConfig.isConfigured)
 
         // A listener who has never reacted: no stored identity, so startup must
@@ -138,6 +141,9 @@ class SupabaseFoundationTest {
 
     @Test
     fun theSyncBoundaryMintsAnIdentityAndThenReusesIt() {
+        // Talks to the real auth endpoint and can mint an auth.users row, so it
+        // needs the run's explicit consent as well as a configured project.
+        LiveSupabase.assumeOptedIn()
         assumeTrue("no supabase.properties in this build", SupabaseConfig.isConfigured)
 
         AnonymousSession.forgetKnownIdentityForTest(context)
@@ -161,6 +167,9 @@ class SupabaseFoundationTest {
 
     @Test
     fun anInstallThatHasAnIdentityNeverMintsAReplacement() {
+        // Talks to the real auth endpoint and can mint an auth.users row, so it
+        // needs the run's explicit consent as well as a configured project.
+        LiveSupabase.assumeOptedIn()
         assumeTrue("no supabase.properties in this build", SupabaseConfig.isConfigured)
 
         val original = runBlocking { AnonymousSession.ensureAuthenticatedListener(context) }
@@ -189,6 +198,9 @@ class SupabaseFoundationTest {
      */
     @Test
     fun theSessionIsPersistedForTheNextLaunch() {
+        // Talks to the real auth endpoint and can mint an auth.users row, so it
+        // needs the run's explicit consent as well as a configured project.
+        LiveSupabase.assumeOptedIn()
         assumeTrue("no supabase.properties in this build", SupabaseConfig.isConfigured)
 
         val uid = runBlocking { AnonymousSession.ensureAuthenticatedListener(context) }

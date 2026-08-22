@@ -15,7 +15,11 @@ import com.example.musicplayerapp.data.TrackKey
 import com.example.musicplayerapp.data.supabase.ReactionSyncScheduler
 import com.example.musicplayerapp.data.supabase.ReactionSyncWorker
 import com.example.musicplayerapp.data.supabase.SupabaseConfig
+import java.util.UUID
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -37,6 +41,12 @@ import org.junit.runner.RunWith
  * The work is kept from running by leaving its network constraint unmet, which is
  * the test harness's default. That is also what makes "a request arriving while an
  * earlier one is unfinished" reproducible without racing a real worker.
+ *
+ * **Nothing here reaches the live project.** `MyataTestRunner` has replaced the
+ * network boundary for the whole process, so the runs below exercise the real config
+ * gate, the real database, the real [com.example.musicplayerapp.data.supabase.ReactionSyncEngine]
+ * and the real rescheduling - everything except the two calls that would leave the
+ * device. The assertions are unchanged; only the far side of the socket is.
  */
 @RunWith(AndroidJUnit4::class)
 class ReactionSyncSchedulerTest {
@@ -100,8 +110,18 @@ class ReactionSyncSchedulerTest {
         db.reactionOutboxDao().recordFailedAttempt(row.eventId, at)
     }
 
-    /** A distinct, obviously-fake track name, marked so cleanup can find it. */
-    private fun markedTrack(): String = "ZZ Sync Fixture ${System.nanoTime()}"
+    /**
+     * A distinct, obviously-fake track name, marked so cleanup can find it.
+     *
+     * `ZZ_SCHED_FIXTURE`, with the underscore the rest of the project uses. The old
+     * spelling was `ZZ Sync Fixture`, with spaces, which the documented cleanup
+     * predicate `artist like 'ZZ\_%'` does not match - so rows that escaped to the
+     * live project were invisible to every cleanup pass aimed at them. These rows can
+     * no longer escape at all (see LiveSupabase), and the name now matches the
+     * predicate anyway, because two independent reasons to not leak is the right
+     * number.
+     */
+    private fun markedTrack(): String = "ZZ_SCHED_FIXTURE ${System.nanoTime()}"
 
     private fun runWorkerOnce() = runBlocking {
         TestListenableWorkerBuilder<ReactionSyncWorker>(context).build().doWork()
@@ -241,9 +261,30 @@ class ReactionSyncSchedulerTest {
         testDriver.setInitialDelayMet(timer.id)
 
         // It ran. Without this link a parked row has nothing watching a clock for it.
-        assertEquals(
-            WorkInfo.State.SUCCEEDED,
-            workManager.getWorkInfoById(timer.id).get()!!.state,
+        //
+        // Awaited rather than read. Making the work eligible hands it to WorkManager's
+        // executor and returns; reading the state on the next line was a race the test
+        // usually won, and the failure it lost with was `expected:<SUCCEEDED> but
+        // was:<RUNNING>` - the worker observed mid-flight, not a scheduling bug.
+        assertEquals(WorkInfo.State.SUCCEEDED, awaitFinished(timer.id).state)
+    }
+
+    /**
+     * Blocks until [id] reaches a terminal state, or fails with what it was still
+     * doing when the time ran out.
+     *
+     * Driven by `getWorkInfoByIdFlow`, so it returns on the transition itself rather
+     * than on a guessed interval: there is no sleep here to be too short on a loaded
+     * emulator or wasted time on an idle one. The timeout is a failure condition, not
+     * a wait - work that has not finished in ten seconds is a real defect, and saying
+     * which state it was stuck in is the useful half of the report.
+     */
+    private fun awaitFinished(id: UUID, timeoutMs: Long = 10_000): WorkInfo = runBlocking {
+        withTimeoutOrNull(timeoutMs) {
+            workManager.getWorkInfoByIdFlow(id).filterNotNull().first { it.state.isFinished }
+        } ?: throw AssertionError(
+            "work $id did not finish within ${timeoutMs}ms; " +
+                "last observed state was ${workManager.getWorkInfoById(id).get()?.state}"
         )
     }
 

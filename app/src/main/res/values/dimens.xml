@@ -671,11 +671,10 @@
       Entry control: circle 40x40 at x=334,y=12 in the 390x64 band. 390-334-40=16,
       which is the same trailing margin the three headers already carry, so the
       control is simply the last child of the row rather than a positioned view.
-      Its 16x16 glyph sits at x=12,y=12 inside the circle - (40-16)/2 - which is
-      what the inset below is.
+      Its 16x16 glyph sits at x=12,y=12 inside the circle; that inset lives inside
+      the drawable's own 40x40 viewport, so there is no icon-inset dimen here.
     -->
     <dimen name="profile_entry_size">40dp</dimen>
-    <dimen name="profile_entry_icon_inset">12dp</dimen>
 
     <!-- profile-guest 2517:2644 / 2517:3611. -->
     <dimen name="profile_header_height">64dp</dimen>
@@ -692,9 +691,6 @@
     <dimen name="profile_card_radius">24dp</dimen>
     <dimen name="profile_avatar_size">72dp</dimen>
     <dimen name="profile_avatar_margin_top">32dp</dimen>
-    <!-- The 72dp avatar's glyph is the one measurement the export does not carry;
-         it is set to the same 40% ratio the measured 16-in-40 control uses. -->
-    <dimen name="profile_avatar_icon_inset">22dp</dimen>
     <!-- heading y=128, avatar ends at 32+72=104. -->
     <dimen name="profile_card_heading_margin_top">24dp</dimen>
     <!-- b0 y=168, heading ends at 128+32=160. b1 y=190 is contiguous with b0. -->

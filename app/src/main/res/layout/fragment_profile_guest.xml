@@ -31,7 +31,6 @@
   A control that lies about being ready is worse than one that waits.
 -->
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
     <LinearLayout
@@ -114,10 +113,8 @@
                         android:layout_marginTop="@dimen/profile_avatar_margin_top"
                         android:background="@drawable/bg_avatar_guest"
                         android:contentDescription="@null"
-                        android:padding="@dimen/profile_avatar_icon_inset"
                         android:scaleType="fitCenter"
-                        android:src="@drawable/ic_person_generic"
-                        app:tint="@color/avatar_guest_icon" />
+                        android:src="@drawable/ic_profile_guest" />
 
                     <TextView
                         android:id="@+id/profile_guest_heading"
@@ -202,7 +199,7 @@
                         android:layout_height="@dimen/profile_row_icon_size"
                         android:contentDescription="@null"
                         android:scaleType="fitCenter"
-                        android:src="@drawable/ic_profile_sync" />
+                        android:src="@drawable/ic_collection_sync" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -231,7 +228,7 @@
                         android:layout_height="@dimen/profile_row_icon_size"
                         android:contentDescription="@null"
                         android:scaleType="fitCenter"
-                        android:src="@drawable/ic_profile_restore" />
+                        android:src="@drawable/ic_collection_restore" />
 
                     <TextView
                         android:layout_width="0dp"

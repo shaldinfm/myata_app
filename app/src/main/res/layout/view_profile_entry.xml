@@ -10,7 +10,9 @@
   390x64 band. 390-334-40 = 16, which is the trailing padding those headers
   already have, so this is simply the last child of the header row rather than a
   positioned view - and that is why nothing below the band moves when it lands.
-  The 16x16 glyph sits at x=12,y=12 inside the circle, which is the padding here.
+  The 16x16 glyph sits at x=12,y=12 inside the circle - and that inset lives in
+  the artwork's own 40x40 viewport rather than as view padding, so the drawable is
+  the Figma node at 1:1.
 
   Not carried by the populated COLLECTION, which keeps its three-dot overflow
   (2399:31129 / 2444:18376), nor by PLAYER.
@@ -21,8 +23,7 @@
   non-binding layout gets no generated field at all, which is the compile error
   this shape avoids.
 -->
-<layout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
 
     <ImageView
         android:id="@+id/profile_entry_icon"
@@ -30,8 +31,6 @@
         android:layout_height="@dimen/profile_entry_size"
         android:background="@drawable/bg_profile_entry"
         android:contentDescription="@string/profile_entry_description"
-        android:padding="@dimen/profile_entry_icon_inset"
         android:scaleType="fitCenter"
-        android:src="@drawable/ic_person_generic"
-        app:tint="@color/profile_entry_icon" />
+        android:src="@drawable/ic_profile_entry" />
 </layout>

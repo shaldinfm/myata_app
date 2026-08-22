@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The 72x72 guest avatar's person, from the owner's Figma export
+  (`ic_profile_guest.svg`, `Generic avatar` 2518:3932).
+
+  Two paths: the head as a ring (evenodd in the source, which is a hole here) and
+  the shoulders as an arc band. Outlined, not a filled silhouette.
+
+  The shoulders are **wider than the circle** - the source spans x 10.6..61.4 in a
+  72 box - and Figma clips them to the avatar's round frame. The clip-path below
+  is that frame; without it the band runs out past the circle's edge on both
+  sides. This is also why the previous "40% silhouette inset" guess looked wrong:
+  the glyph is not a small icon centred in a circle, it is artwork drawn to the
+  circle's own bounds.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="72dp"
+    android:height="72dp"
+    android:viewportWidth="72"
+    android:viewportHeight="72">
+    <group>
+        <clip-path android:pathData="M36,0a36,36 0 1,0 0,72a36,36 0 1,0 0,-72z" />
+        <path
+            android:fillColor="@color/avatar_guest_icon"
+            android:fillType="evenOdd"
+            android:pathData="M46.8004,28.8C46.8004,34.7647 41.9651,39.6 36.0004,39.6C30.0358,39.6 25.2004,34.7647 25.2004,28.8C25.2004,22.8353 30.0358,18 36.0004,18C41.9651,18 46.8004,22.8353 46.8004,28.8ZM43.2004,28.8C43.2004,32.7764 39.9769,36 36.0004,36C32.024,36 28.8004,32.7764 28.8004,28.8C28.8004,24.8235 32.024,21.6 36.0004,21.6C39.9769,21.6 43.2004,24.8235 43.2004,28.8Z" />
+        <path
+            android:fillColor="@color/avatar_guest_icon"
+            android:pathData="M36.0004,45C24.3465,45 14.4171,51.8911 10.6348,61.5457C11.5562,62.4606 12.5268,63.3261 13.5424,64.1377C16.3589,55.2738 25.1945,48.6 36.0004,48.6C46.8064,48.6 55.642,55.2739 58.4585,64.1377C59.4741,63.3261 60.4447,62.4607 61.3661,61.5457C57.5838,51.8911 47.6544,45 36.0004,45Z" />
+    </group>
+</vector>

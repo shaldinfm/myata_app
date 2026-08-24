@@ -55,6 +55,22 @@ interface ReactionSyncApi {
         current: TrackReaction?,
         listenerId: String,
     ): SyncOutcome
+
+    /**
+     * Removes **every** current-state row [listenerId] owns, in one call.
+     *
+     * The retirement half of an identity handoff, and it has to happen while that
+     * listener's session is still the live one: RLS scopes deletes to `auth.uid()`,
+     * so once the device has switched identities these rows are unreachable forever.
+     *
+     * Idempotent, and the handoff depends on that. Deleting rows that are already
+     * gone is success - the desired state is "none", and none already being there is
+     * that state - which is what lets one `PREPARED` stage cover a crash before,
+     * during or after the delete with a single recovery.
+     *
+     * `reaction_events` is untouched. History stays with the identity that made it.
+     */
+    suspend fun retireAllCurrentState(listenerId: String): SyncOutcome
 }
 
 /**

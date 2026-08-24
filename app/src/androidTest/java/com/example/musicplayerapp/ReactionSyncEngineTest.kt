@@ -55,6 +55,11 @@ private class FakeBackend : ReactionSyncApi {
 
     var listenerSeen: String? = null
 
+    /** Every retirement asked for, in order. */
+    val retirements = mutableListOf<String>()
+
+    var onRetire: (String) -> SyncOutcome = { SyncOutcome.Success }
+
     var onEvent: (ReactionOutboxEntry) -> SyncOutcome = { SyncOutcome.Success }
     var onState: (String) -> SyncOutcome = { SyncOutcome.Success }
 
@@ -81,6 +86,17 @@ private class FakeBackend : ReactionSyncApi {
             val remote = current?.let { ReactionSyncWire.remoteReaction(it.reaction) }
             reconciliations += trackKey to remote
             if (remote == null) state.remove(trackKey) else state[trackKey] = remote
+        }
+        return outcome
+    }
+
+    /** Retirement: every row this listener owns, gone in one call. */
+    override suspend fun retireAllCurrentState(listenerId: String): SyncOutcome {
+        listenerSeen = listenerId
+        val outcome = onRetire(listenerId)
+        if (outcome is SyncOutcome.Success) {
+            retirements += listenerId
+            state.clear()
         }
         return outcome
     }

@@ -96,4 +96,7 @@ private object OfflineReactionSyncApi : ReactionSyncApi {
         current: TrackReaction?,
         listenerId: String,
     ): SyncOutcome = SyncOutcome.AuthUnavailable(WHY)
+
+    override suspend fun retireAllCurrentState(listenerId: String): SyncOutcome =
+        SyncOutcome.AuthUnavailable(WHY)
 }

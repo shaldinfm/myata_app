@@ -76,6 +76,20 @@ abstract class ReactionDao {
     @Query("SELECT reaction FROM track_reaction WHERE track_key = :trackKey")
     abstract fun observeReaction(trackKey: String): Flow<Reaction?>
 
+    /**
+     * Every reaction this install holds, in no particular order.
+     *
+     * Added for the identity handoff, which adopts the whole current state into a new
+     * identity and therefore needs the rows themselves - not the Collection projection
+     * [likedTracks] returns, which is LIKED only and drops the DISLIKED and NEUTRAL
+     * rows the remote schema has held since migration 0002.
+     *
+     * A list rather than a Flow: adoption is a one-shot pass over a snapshot, and a
+     * stream changing underneath it would be a source of surprises, not freshness.
+     */
+    @Query("SELECT * FROM track_reaction")
+    abstract suspend fun allReactions(): List<TrackReaction>
+
     @Query("SELECT * FROM track_reaction WHERE track_key = :trackKey LIMIT 1")
     abstract suspend fun find(trackKey: String): TrackReaction?
 
@@ -95,8 +109,41 @@ abstract class ReactionDao {
      *   nothing moves, no second LIKE is reported for one opinion, and nothing is
      *   queued for the backend either.
      */
-    @Transaction
+    /**
+     * Takes [ReactionWriteGate] **around** the transaction below, never inside it.
+     *
+     * The gate is what gives the identity handoff an ownership boundary: a reaction
+     * either commits before the handoff observes the outbox empty, or after PREPARED
+     * is on disk, and never between. Outside rather than inside because holding a
+     * lock inside would keep a SQLite write transaction open while suspended, which
+     * blocks every other writer behind a lock they cannot see.
+     *
+     * Uncontended in normal use - the only other holder is a cutover measured in
+     * microseconds - so a tap waits on nothing it was not already waiting on.
+     */
     open suspend fun like(
+        trackKey: String,
+        artist: String,
+        title: String,
+        stream: String,
+        likedAt: Long,
+        now: Long = System.currentTimeMillis(),
+        eventId: String = newEventId(),
+    ): Boolean = ReactionWriteGate.withReactionWrite {
+        likeWithinTransaction(
+            trackKey = trackKey,
+            artist = artist,
+            title = title,
+            stream = stream,
+            likedAt = likedAt,
+            now = now,
+            eventId = eventId,
+        )
+    }
+
+    /** The transactional body of [like]. Do not call directly - it takes no lock. */
+    @Transaction
+    open suspend fun likeWithinTransaction(
         trackKey: String,
         artist: String,
         title: String,
@@ -145,8 +192,33 @@ abstract class ReactionDao {
      *
      * @return true if a LIKED row was actually neutralised.
      */
-    @Transaction
+    /**
+     * Takes [ReactionWriteGate] **around** the transaction below, never inside it.
+     *
+     * The gate is what gives the identity handoff an ownership boundary: a reaction
+     * either commits before the handoff observes the outbox empty, or after PREPARED
+     * is on disk, and never between. Outside rather than inside because holding a
+     * lock inside would keep a SQLite write transaction open while suspended, which
+     * blocks every other writer behind a lock they cannot see.
+     *
+     * Uncontended in normal use - the only other holder is a cutover measured in
+     * microseconds - so a tap waits on nothing it was not already waiting on.
+     */
     open suspend fun unlike(
+        trackKey: String,
+        now: Long = System.currentTimeMillis(),
+        eventId: String = newEventId(),
+    ): Boolean = ReactionWriteGate.withReactionWrite {
+        unlikeWithinTransaction(
+            trackKey = trackKey,
+            now = now,
+            eventId = eventId,
+        )
+    }
+
+    /** The transactional body of [unlike]. Do not call directly - it takes no lock. */
+    @Transaction
+    open suspend fun unlikeWithinTransaction(
         trackKey: String,
         now: Long = System.currentTimeMillis(),
         eventId: String = newEventId(),
@@ -176,8 +248,33 @@ abstract class ReactionDao {
      *
      * @return true if a DISLIKED row was actually neutralised.
      */
-    @Transaction
+    /**
+     * Takes [ReactionWriteGate] **around** the transaction below, never inside it.
+     *
+     * The gate is what gives the identity handoff an ownership boundary: a reaction
+     * either commits before the handoff observes the outbox empty, or after PREPARED
+     * is on disk, and never between. Outside rather than inside because holding a
+     * lock inside would keep a SQLite write transaction open while suspended, which
+     * blocks every other writer behind a lock they cannot see.
+     *
+     * Uncontended in normal use - the only other holder is a cutover measured in
+     * microseconds - so a tap waits on nothing it was not already waiting on.
+     */
     open suspend fun undislike(
+        trackKey: String,
+        now: Long = System.currentTimeMillis(),
+        eventId: String = newEventId(),
+    ): Boolean = ReactionWriteGate.withReactionWrite {
+        undislikeWithinTransaction(
+            trackKey = trackKey,
+            now = now,
+            eventId = eventId,
+        )
+    }
+
+    /** The transactional body of [undislike]. Do not call directly - it takes no lock. */
+    @Transaction
+    open suspend fun undislikeWithinTransaction(
         trackKey: String,
         now: Long = System.currentTimeMillis(),
         eventId: String = newEventId(),
@@ -207,8 +304,39 @@ abstract class ReactionDao {
      *
      * @return true if the state changed.
      */
-    @Transaction
+    /**
+     * Takes [ReactionWriteGate] **around** the transaction below, never inside it.
+     *
+     * The gate is what gives the identity handoff an ownership boundary: a reaction
+     * either commits before the handoff observes the outbox empty, or after PREPARED
+     * is on disk, and never between. Outside rather than inside because holding a
+     * lock inside would keep a SQLite write transaction open while suspended, which
+     * blocks every other writer behind a lock they cannot see.
+     *
+     * Uncontended in normal use - the only other holder is a cutover measured in
+     * microseconds - so a tap waits on nothing it was not already waiting on.
+     */
     open suspend fun dislike(
+        trackKey: String,
+        artist: String,
+        title: String,
+        stream: String,
+        now: Long = System.currentTimeMillis(),
+        eventId: String = newEventId(),
+    ): Boolean = ReactionWriteGate.withReactionWrite {
+        dislikeWithinTransaction(
+            trackKey = trackKey,
+            artist = artist,
+            title = title,
+            stream = stream,
+            now = now,
+            eventId = eventId,
+        )
+    }
+
+    /** The transactional body of [dislike]. Do not call directly - it takes no lock. */
+    @Transaction
+    open suspend fun dislikeWithinTransaction(
         trackKey: String,
         artist: String,
         title: String,

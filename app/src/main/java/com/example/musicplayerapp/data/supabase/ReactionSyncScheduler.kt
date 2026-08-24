@@ -210,7 +210,16 @@ object ReactionSyncScheduler {
      * and then schedules a drain, and everything that has been waiting goes out.
      */
     private fun pausedBySignOut(context: Context): Boolean =
-        runCatching { IdentityStore.isSignedOut(context) }.getOrDefault(false)
+        runCatching {
+            // Two reasons to schedule nothing, checked together because the response
+            // is identical: a deliberate sign-out, and an identity handoff in flight.
+            //
+            // The handoff case is the narrower one and it is durable on purpose. It
+            // stops a reaction tapped mid-registration from enqueueing a drain that
+            // would race the retirement, and it keeps stopping after a process death,
+            // which is exactly when a stale work request is most likely to fire.
+            IdentityStore.isSignedOut(context) || IdentityStore.handoffInProgress(context)
+        }.getOrDefault(false)
 
     private fun enqueue(context: Context, why: String) {
         val request = OneTimeWorkRequestBuilder<ReactionSyncWorker>()

@@ -68,7 +68,24 @@ class ReactionSyncEngine(
     private val batchSize: Int = BATCH_SIZE,
 ) {
 
-    suspend fun drain(): DrainResult {
+    /**
+     * One drain, under [SyncLease].
+     *
+     * The lease is taken with `tryAcquire`, never waited on. A drain that cannot
+     * have it is one an identity handoff is deliberately excluding, and queueing
+     * behind that handoff would park a WorkManager thread for the length of somebody
+     * registering - a network round trip - to do work that will be scheduled again
+     * the moment the handoff releases.
+     *
+     * The lease is the *in-process* half of that exclusion. The durable handoff
+     * stage is the other half and is checked by [ReactionSyncWorker] before this is
+     * ever called, because a mutex cannot survive the process and a flag cannot stop
+     * a drain that has already passed it.
+     */
+    suspend fun drain(): DrainResult =
+        SyncLease.tryAcquire { drainHoldingLease() } ?: DrainResult.HandoffInProgress
+
+    private suspend fun drainHoldingLease(): DrainResult {
         // Cheapest possible question first, and the reason it is first is that the
         // answer for most listeners is zero and the next line would otherwise create
         // them a database identity for nothing.
@@ -259,6 +276,19 @@ sealed interface DrainResult {
      * was lost; WorkManager should back off and try again.
      */
     data class RetryLater(val reason: String) : DrainResult
+
+    /**
+     * An identity handoff owns the sync path right now.
+     *
+     * Not a failure and not a pause: it is a short exclusive section - drain, retire,
+     * switch, adopt - during which no drain may touch a remote row, because the
+     * identity those rows belong to is mid-change. **No outbox row was read.**
+     *
+     * The handoff schedules the follow-up when it finishes or rolls back, so this
+     * needs no retry of its own; retrying would only contend for a lease it cannot
+     * have.
+     */
+    data object HandoffInProgress : DrainResult
 
     /**
      * Cloud sync is paused by a deliberate sign-out.

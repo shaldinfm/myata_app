@@ -1,5 +1,6 @@
 package com.example.musicplayerapp
 
+import androidx.test.core.app.ActivityScenario
 import com.example.musicplayerapp.data.ReactionOutboxEntry
 import com.example.musicplayerapp.data.TrackReaction
 import com.example.musicplayerapp.data.supabase.AuthFailure
@@ -291,5 +292,34 @@ internal object TestIsolation {
         ) = SyncOutcome.AuthUnavailable(WHY)
         override suspend fun retireAllCurrentState(listenerId: String) =
             SyncOutcome.AuthUnavailable(WHY)
+    }
+}
+
+/**
+ * Launches MainActivity and tears it down the way this repository's other suites do.
+ *
+ * **Not `use {}`.** `ActivityScenario.close()` times out on the API 24 image with
+ * `Activity never becomes requested state "[DESTROYED]"` - a known, recorded
+ * property of that emulator rather than of any test - and `use {}` turns that into
+ * a hard failure *outside* the test body, where the message does not survive into
+ * the result XML and the run destabilises around it. Eight of this project's nine
+ * ActivityScenario suites already close inside a try/catch for exactly this reason;
+ * these two were the exception, and they were the two that failed.
+ *
+ * It bites hardest on a test that leaves the activity mid-request with a spinner up,
+ * because that is the activity that takes longest to reach DESTROYED - which is why
+ * the visible symptom was a stranded loading screen and the failing test was always
+ * the one holding a deferred open.
+ */
+internal fun withMainActivity(body: (ActivityScenario<MainActivity>) -> Unit) {
+    val scenario = ActivityScenario.launch(MainActivity::class.java)
+    try {
+        body(scenario)
+    } finally {
+        try {
+            scenario.close()
+        } catch (e: Throwable) {
+            android.util.Log.w("AuthQA", "activity close timed out; checks already complete", e)
+        }
     }
 }

@@ -8,6 +8,8 @@ import androidx.room.Room
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
+import androidx.test.runner.lifecycle.Stage
 import com.example.musicplayerapp.data.AppDatabase
 import com.example.musicplayerapp.data.TrackKey
 import com.example.musicplayerapp.data.supabase.AuthFailure
@@ -22,8 +24,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
+import java.util.concurrent.TimeUnit
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.Timeout
 import org.junit.runner.RunWith
 
 /**
@@ -58,6 +63,22 @@ class AuthFormTest {
     private val y = "22222222-2222-4222-8222-222222222222"
 
     private val depeche = TrackKey.of("Depeche Mode", "Enjoy the Silence")!!
+
+    /**
+     * The backstop for exactly the failure this suite just had.
+     *
+     * Every wait in this file is bounded, and the one that was not is fixed - but a
+     * future edit can always introduce another, and an instrumentation test that
+     * blocks forever takes the whole run with it and reports nothing. This turns any
+     * such edit into a failing test with a stuck-thread stack instead of a run that
+     * never ends. Ninety seconds is far longer than the slowest test here needs on
+     * the API 24 image and far shorter than a human waiting on a spinner.
+     */
+    @get:Rule
+    val timeout: Timeout = Timeout.builder()
+        .withTimeout(90, TimeUnit.SECONDS)
+        .withLookingForStuckThread(true)
+        .build()
 
     @Before
     fun open() {
@@ -97,7 +118,7 @@ class AuthFormTest {
             scenario.type(R.id.auth_password, "s3cret!!")
             scenario.tap(R.id.auth_submit)
 
-            scenario.onActivity { activity ->
+            on { activity ->
                 assertEquals(View.VISIBLE, activity.visibilityOf(R.id.auth_email_error))
                 assertEquals(
                     activity.getString(R.string.auth_error_email_format),
@@ -119,7 +140,7 @@ class AuthFormTest {
             scenario.type(R.id.auth_email, "denis@example.com")
             scenario.tap(R.id.auth_submit)
 
-            scenario.onActivity { activity ->
+            on { activity ->
                 assertEquals(
                     activity.getString(R.string.auth_error_password_blank),
                     activity.text(R.id.auth_password_error),
@@ -146,7 +167,7 @@ class AuthFormTest {
             scenario.tap(R.id.auth_submit)
 
             scenario.await("the request to start") { auth.authCalls == 1 }
-            scenario.onActivity {
+            on {
                 assertEquals(View.GONE, it.visibilityOf(R.id.auth_password_error))
             }
 
@@ -163,7 +184,7 @@ class AuthFormTest {
             scenario.type(R.id.auth_password, "short")
             scenario.tap(R.id.auth_submit)
 
-            scenario.onActivity { activity ->
+            on { activity ->
                 assertEquals(
                     activity.getString(R.string.auth_error_name_blank),
                     activity.text(R.id.auth_name_error),
@@ -189,7 +210,7 @@ class AuthFormTest {
     @Test
     fun the_password_rule_is_shown_whenever_the_password_is_not_the_problem() {
         createAccount { scenario ->
-            scenario.onActivity {
+            on {
                 assertEquals("at rest the frame draws it", View.VISIBLE,
                     it.visibilityOf(R.id.auth_password_rule))
             }
@@ -200,7 +221,7 @@ class AuthFormTest {
             scenario.type(R.id.auth_password, "s3cret!!")
             scenario.tap(R.id.auth_submit)
 
-            scenario.onActivity { activity ->
+            on { activity ->
                 assertEquals(View.VISIBLE, activity.visibilityOf(R.id.auth_email_error))
                 assertEquals(View.VISIBLE, activity.visibilityOf(R.id.auth_password_rule))
             }
@@ -255,7 +276,7 @@ class AuthFormTest {
             scenario.tap(R.id.auth_submit)
             scenario.await("the loading state") { it.visibilityOf(R.id.auth_submit_progress) == View.VISIBLE }
 
-            scenario.onActivity { activity ->
+            on { activity ->
                 // The indicator replaces the label in the button's centre - INVISIBLE
                 // rather than GONE, so the 52dp button does not change size.
                 assertEquals(View.INVISIBLE, activity.visibilityOf(R.id.auth_submit_label))
@@ -274,7 +295,7 @@ class AuthFormTest {
 
             // And the disabled controls really do nothing.
             scenario.tap(R.id.auth_create_account)
-            scenario.onActivity { assertEquals(R.id.auth_sign_in, it.currentDestinationId()) }
+            on { assertEquals(R.id.auth_sign_in, it.currentDestinationId()) }
 
             auth.release()
             scenario.await("the request to settle") { it.currentDestinationId() == R.id.profile }
@@ -289,7 +310,7 @@ class AuthFormTest {
             scenario.tap(R.id.auth_submit)
 
             scenario.await("the failure to land") { it.visibilityOf(R.id.auth_form_error) == View.VISIBLE }
-            scenario.onActivity { activity ->
+            on { activity ->
                 assertEquals(View.GONE, activity.visibilityOf(R.id.auth_submit_progress))
                 assertEquals(View.VISIBLE, activity.visibilityOf(R.id.auth_submit_label))
                 assertTrue(activity.findViewById<View>(R.id.auth_submit).isEnabled)
@@ -324,7 +345,7 @@ class AuthFormTest {
                 scenario.tap(R.id.auth_submit)
                 scenario.await("$failure") { it.visibilityOf(R.id.auth_form_error) == View.VISIBLE }
 
-                scenario.onActivity { activity ->
+                on { activity ->
                     assertEquals("$failure", activity.getString(message), activity.text(R.id.auth_form_error))
 
                     // One area, below the form. No dialog and no Toast, and the
@@ -355,7 +376,7 @@ class AuthFormTest {
             scenario.tap(R.id.auth_submit)
             scenario.await("the failure") { it.visibilityOf(R.id.auth_form_error) == View.VISIBLE }
 
-            scenario.onActivity { activity ->
+            on { activity ->
                 val shown = activity.text(R.id.auth_form_error)
                 assertEquals(activity.getString(R.string.auth_error_unknown), shown)
                 assertFalse("server text leaked to the screen", shown.contains("row-level"))
@@ -438,7 +459,7 @@ class AuthFormTest {
             scenario.tap(R.id.auth_submit)
             scenario.await("the rollback", 20_000) { it.visibilityOf(R.id.auth_form_error) == View.VISIBLE }
 
-            scenario.onActivity { activity ->
+            on { activity ->
                 assertEquals(
                     activity.getString(R.string.auth_error_invalid_credentials),
                     activity.text(R.id.auth_form_error),
@@ -477,7 +498,7 @@ class AuthFormTest {
                 it.visibilityOf(R.id.auth_form_error) == View.VISIBLE
             }
 
-            scenario.onActivity { activity ->
+            on { activity ->
                 assertEquals(
                     "a throw is not something a listener can be told about precisely",
                     activity.getString(R.string.auth_error_unknown),
@@ -548,7 +569,7 @@ class AuthFormTest {
                         activity.visibilityOf(R.id.auth_form_error) == View.VISIBLE
                 }
 
-                scenario.onActivity { activity ->
+                on { activity ->
                     if (activity.currentDestinationId() == R.id.auth_sign_in) {
                         assertEquals(
                             "$name left the button spinning",
@@ -579,13 +600,13 @@ class AuthFormTest {
             scenario.await("the loading state") { it.visibilityOf(R.id.auth_submit_progress) == View.VISIBLE }
 
             scenario.tap(R.id.auth_back)
-            scenario.onActivity { assertEquals(R.id.profile, it.currentDestinationId()) }
+            on { assertEquals(R.id.profile, it.currentDestinationId()) }
 
             auth.release()
 
             // Coming back gets a clean form, not the ghost of the cancelled attempt.
             scenario.tap(R.id.profile_sign_in)
-            scenario.onActivity { activity ->
+            on { activity ->
                 assertEquals(R.id.auth_sign_in, activity.currentDestinationId())
                 assertEquals(View.GONE, activity.visibilityOf(R.id.auth_submit_progress))
                 assertEquals(View.GONE, activity.visibilityOf(R.id.auth_form_error))
@@ -613,11 +634,10 @@ class AuthFormTest {
             scenario.tap(R.id.auth_submit)
             scenario.await("the loading state") { it.visibilityOf(R.id.auth_submit_progress) == View.VISIBLE }
 
-            scenario.recreate()
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            recreateActivity()
 
             assertEquals("the request must not be started again", 1, auth.authCalls)
-            scenario.onActivity { activity ->
+            on { activity ->
                 assertEquals("the rebuilt screen must still show it is working",
                     View.VISIBLE, activity.visibilityOf(R.id.auth_submit_progress))
                 assertEquals(R.id.auth_sign_in, activity.currentDestinationId())
@@ -641,10 +661,9 @@ class AuthFormTest {
             scenario.tap(R.id.auth_submit)
             scenario.await("the failure") { it.visibilityOf(R.id.auth_form_error) == View.VISIBLE }
 
-            scenario.recreate()
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            recreateActivity()
 
-            scenario.onActivity { activity ->
+            on { activity ->
                 assertEquals(
                     "an error that vanished on recreation would look like it worked",
                     activity.getString(R.string.auth_error_rate_limited),
@@ -668,11 +687,19 @@ class AuthFormTest {
         destination: Int,
         body: (ActivityScenario<MainActivity>) -> Unit,
     ) {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.tap(R.id.profile_entry)
-            scenario.tap(cta)
-            scenario.onActivity { assertEquals(destination, it.currentDestinationId()) }
-            body(scenario)
+        withMainActivity { scenario ->
+            try {
+                scenario.tap(R.id.profile_entry)
+                scenario.tap(cta)
+                on { assertEquals(destination, it.currentDestinationId()) }
+                body(scenario)
+            } finally {
+                // Whatever the body did or failed to do, nothing parked on the gate
+                // survives it. A pending fake that outlived its test would be handed
+                // to the next one, and no test may depend on teardown to release the
+                // very coroutine teardown is waiting for.
+                auth.release()
+            }
         }
     }
 
@@ -682,14 +709,91 @@ class AuthFormTest {
         type(R.id.auth_password, "s3cret!!")
     }
 
+    /**
+     * The activity, reached without `ActivityScenario.onActivity`.
+     *
+     * **This is the fix for the API 24 hang, and it is not about my own waits.**
+     * `ActivityScenario.onActivity` calls `Instrumentation.waitForIdleSync()`
+     * internally (ActivityScenario.java:801), and an indeterminate `ProgressBar`
+     * never lets the main looper go idle - so on API 24 the *first* `onActivity`
+     * after `auth_submit` is tapped blocks the instrumentation thread with no
+     * timeout, before any assertion and before anything can release the fake. Every
+     * test here that observes a request in flight has to touch the UI while that
+     * indicator is spinning, so every one of them hit it.
+     *
+     * `runOnMainSync` posts and waits for that one message, and asks nothing about
+     * idleness. The activity is looked up from the lifecycle monitor on the main
+     * thread each time rather than captured once, so it stays correct across a
+     * recreation - which one of these tests performs deliberately.
+     */
+    private fun on(block: (MainActivity) -> Unit) {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val current = ActivityLifecycleMonitorRegistry.getInstance()
+                .getActivitiesInStage(Stage.RESUMED)
+                .filterIsInstance<MainActivity>()
+                .firstOrNull() ?: error("no resumed MainActivity")
+            block(current)
+        }
+    }
+
+    /**
+     * Recreates the activity without `ActivityScenario.recreate`.
+     *
+     * The third place androidx.test hides an idle-wait: `recreate` calls
+     * `waitForIdleSync` too (ActivityScenario.java:703), and this test recreates
+     * *while the indicator is spinning*, which is precisely when the looper never
+     * goes idle. So the recreation is driven directly and waited for by watching the
+     * lifecycle monitor hand back a different instance - which is the actual event
+     * being waited on, rather than a proxy for it.
+     */
+    private fun recreateActivity() {
+        var previous: MainActivity? = null
+        on {
+            previous = it
+            it.recreate()
+        }
+
+        val deadline = System.currentTimeMillis() + 15_000
+        while (System.currentTimeMillis() < deadline) {
+            var replaced = false
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                val current = ActivityLifecycleMonitorRegistry.getInstance()
+                    .getActivitiesInStage(Stage.RESUMED)
+                    .filterIsInstance<MainActivity>()
+                    .firstOrNull()
+                replaced = current != null && current !== previous
+            }
+            if (replaced) return
+            Thread.sleep(25)
+        }
+        fail("the activity never came back after recreate()")
+    }
+
+    /**
+     * One round trip through the main thread.
+     *
+     * **Deliberately not `waitForIdleSync`.** That waits for the main looper to go
+     * *idle*, and an indeterminate `ProgressBar` never lets it: the moment
+     * `auth_submit` is tapped the indicator becomes visible and keeps the queue busy,
+     * so on the API 24 image `waitForIdleSync` blocks the instrumentation thread with
+     * no timeout at all - forever, inside the first tap, before any assertion or any
+     * release. That is the whole of the hang: the spinner on screen was not a stuck
+     * request, it was the thing preventing the test from ever looking at it.
+     *
+     * `runOnMainSync` asks a different and sufficient question: has everything posted
+     * before this point run? It returns as soon as the main thread processes one
+     * message, which an animating screen does constantly.
+     */
+    private fun sync() = InstrumentationRegistry.getInstrumentation().runOnMainSync { }
+
     private fun ActivityScenario<MainActivity>.type(id: Int, value: String) {
-        onActivity { it.findViewById<EditText>(id).setText(value) }
-        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        on { it.findViewById<EditText>(id).setText(value) }
+        sync()
     }
 
     private fun ActivityScenario<MainActivity>.tap(id: Int) {
-        onActivity { it.findViewById<View>(id).performClick() }
-        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        on { it.findViewById<View>(id).performClick() }
+        sync()
     }
 
     /**
@@ -707,11 +811,33 @@ class AuthFormTest {
         val deadline = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < deadline) {
             var satisfied = false
-            onActivity { satisfied = check(it) }
+            on { satisfied = check(it) }
             if (satisfied) return
             Thread.sleep(25)
         }
-        fail("timed out after ${timeoutMs}ms waiting for $what")
+
+        // A timeout has to say enough to diagnose itself without a second run: which
+        // screen, whether the button is still spinning, what the fake was asked for
+        // and whether anything is still holding it open.
+        var where = "?"
+        var spinning = "?"
+        runCatching {
+            on {
+                where = it.currentDestinationId()?.let { id ->
+                    runCatching { it.resources.getResourceEntryName(id) }.getOrNull()
+                } ?: "unknown"
+                spinning = if (it.visibilityOf(R.id.auth_submit_progress) == View.VISIBLE) {
+                    "yes"
+                } else {
+                    "no"
+                }
+            }
+        }
+        fail(
+            "timed out after ${timeoutMs}ms waiting for $what " +
+                "(destination=$where, spinner=$spinning, authCalls=${auth.authCalls}, " +
+                "gateHeld=${auth.gate?.isCompleted == false}, state=${IdentityStore.state(context)})"
+        )
     }
 
     private fun MainActivity.text(id: Int): String = findViewById<TextView>(id).text.toString()

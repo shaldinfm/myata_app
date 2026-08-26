@@ -55,7 +55,7 @@ class AuthNavigationTest {
 
     @Test
     fun profile_guest_sign_in_opens_auth_sign_in() {
-        scenario().use { scenario ->
+        scenario { scenario ->
             scenario.openProfile()
 
             scenario.tap(R.id.profile_sign_in)
@@ -77,7 +77,7 @@ class AuthNavigationTest {
 
     @Test
     fun profile_guest_create_account_opens_auth_create_account() {
-        scenario().use { scenario ->
+        scenario { scenario ->
             scenario.openProfile()
 
             scenario.tap(R.id.profile_create_account)
@@ -100,7 +100,7 @@ class AuthNavigationTest {
 
     @Test
     fun the_two_auth_screens_cross_link_both_ways() {
-        scenario().use { scenario ->
+        scenario { scenario ->
             scenario.openProfile()
             scenario.tap(R.id.profile_sign_in)
 
@@ -126,7 +126,7 @@ class AuthNavigationTest {
      */
     @Test
     fun ping_ponging_between_them_leaves_one_entry_on_the_stack() {
-        scenario().use { scenario ->
+        scenario { scenario ->
             scenario.openProfile()
             scenario.tap(R.id.profile_sign_in)
 
@@ -149,7 +149,7 @@ class AuthNavigationTest {
     fun continue_without_account_returns_to_the_profile_and_changes_no_identity() {
         assertEquals(IdentityState.None, IdentityStore.state(context))
 
-        scenario().use { scenario ->
+        scenario { scenario ->
             scenario.openProfile()
             scenario.tap(R.id.profile_sign_in)
 
@@ -173,7 +173,7 @@ class AuthNavigationTest {
         val uid = "11111111-1111-4111-8111-111111111111"
         IdentityStore.adoptAnonymous(context, uid)
 
-        scenario().use { scenario ->
+        scenario { scenario ->
             scenario.openProfile()
             scenario.tap(R.id.profile_create_account)
             scenario.tap(R.id.auth_have_account)
@@ -187,7 +187,7 @@ class AuthNavigationTest {
 
     @Test
     fun back_from_sign_in_returns_to_the_profile_and_leaves_the_bar_hidden() {
-        scenario().use { scenario ->
+        scenario { scenario ->
             scenario.openProfile()
             scenario.tap(R.id.profile_sign_in)
 
@@ -217,7 +217,7 @@ class AuthNavigationTest {
 
     @Test
     fun back_from_create_account_returns_to_the_profile() {
-        scenario().use { scenario ->
+        scenario { scenario ->
             scenario.openProfile()
             scenario.tap(R.id.profile_create_account)
 
@@ -229,12 +229,12 @@ class AuthNavigationTest {
 
     @Test
     fun the_system_back_gesture_leaves_by_the_same_route() {
-        scenario().use { scenario ->
+        scenario { scenario ->
             scenario.openProfile()
             scenario.tap(R.id.profile_sign_in)
 
             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            sync()
 
             scenario.onActivity { assertEquals(R.id.profile, it.currentDestinationId()) }
         }
@@ -252,7 +252,7 @@ class AuthNavigationTest {
      */
     @Test
     fun forgot_password_is_visible_and_deliberately_not_interactive() {
-        scenario().use { scenario ->
+        scenario { scenario ->
             scenario.openProfile()
             scenario.tap(R.id.profile_sign_in)
 
@@ -270,7 +270,7 @@ class AuthNavigationTest {
                 // somebody adding a listener without noticing the two flags above.
                 forgot.performClick()
             }
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            sync()
 
             scenario.onActivity { assertEquals(R.id.auth_sign_in, it.currentDestinationId()) }
         }
@@ -280,7 +280,7 @@ class AuthNavigationTest {
 
     @Test
     fun both_screens_carry_the_strings_their_frames_draw() {
-        scenario().use { scenario ->
+        scenario { scenario ->
             scenario.openProfile()
             scenario.tap(R.id.profile_sign_in)
 
@@ -312,7 +312,7 @@ class AuthNavigationTest {
     fun no_error_row_is_present_until_something_fails() {
         // The frozen geometry is measured with none of them in the layout, so a row
         // that arrived visible-and-empty would move every measurement below it.
-        scenario().use { scenario ->
+        scenario { scenario ->
             scenario.openProfile()
             scenario.tap(R.id.profile_create_account)
 
@@ -333,16 +333,27 @@ class AuthNavigationTest {
 
     // ==================== helpers ====================
 
-    private fun scenario() = ActivityScenario.launch(MainActivity::class.java)
+    /** See [withMainActivity]: `use {}` turns the API 24 close timeout into a hard failure. */
+    private fun scenario(body: (ActivityScenario<MainActivity>) -> Unit) = withMainActivity(body)
 
     private fun ActivityScenario<MainActivity>.openProfile() {
         tap(R.id.profile_entry)
         onActivity { assertEquals(R.id.profile, it.currentDestinationId()) }
     }
 
+    /**
+     * One round trip through the main thread, not a wait for it to go idle.
+     *
+     * Nothing in this class puts an indeterminate indicator on screen, so
+     * `waitForIdleSync` would work here - but it is the call that hung `AuthFormTest`
+     * on API 24 (an animating ProgressBar never lets the looper idle, and it has no
+     * timeout), and leaving one copy of it behind is leaving the trap set.
+     */
+    private fun sync() = InstrumentationRegistry.getInstrumentation().runOnMainSync { }
+
     private fun ActivityScenario<MainActivity>.tap(id: Int) {
         onActivity { it.findViewById<View>(id).performClick() }
-        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        sync()
     }
 
     private fun MainActivity.text(id: Int): String =

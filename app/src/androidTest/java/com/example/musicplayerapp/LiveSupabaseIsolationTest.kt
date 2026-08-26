@@ -1,6 +1,7 @@
 package com.example.musicplayerapp
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.example.musicplayerapp.data.supabase.EmailAuthBackend
 import com.example.musicplayerapp.data.supabase.ReactionSyncBackend
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -37,6 +38,18 @@ class LiveSupabaseIsolationTest {
     }
 
     @Test
+    fun a_normal_run_cannot_create_an_account_in_the_live_project() {
+        if (LiveSupabase.isOptedIn) return
+
+        assertTrue(
+            "MyataTestRunner did not install the offline auth backend - this run can " +
+                "create real auth.users rows, which nothing in this repository can " +
+                "clean up afterwards.",
+            EmailAuthBackend.isOverridden,
+        )
+    }
+
+    @Test
     fun an_opted_in_run_uses_the_real_backend() {
         if (!LiveSupabase.isOptedIn) return
 
@@ -44,6 +57,11 @@ class LiveSupabaseIsolationTest {
             "the offline backend is still installed, so the live validation would " +
                 "not actually be validating anything",
             ReactionSyncBackend.isOverridden,
+        )
+        assertFalse(
+            "the offline auth backend is still installed, so the live validation " +
+                "would not actually be validating anything",
+            EmailAuthBackend.isOverridden,
         )
     }
 }

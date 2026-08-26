@@ -5,11 +5,16 @@ import android.os.Bundle
 import androidx.test.runner.AndroidJUnitRunner
 import com.example.musicplayerapp.data.ReactionOutboxEntry
 import com.example.musicplayerapp.data.TrackReaction
+import com.example.musicplayerapp.data.supabase.AuthFailure
+import com.example.musicplayerapp.data.supabase.AuthResult
+import com.example.musicplayerapp.data.supabase.EmailAuthApi
+import com.example.musicplayerapp.data.supabase.EmailAuthBackend
 import com.example.musicplayerapp.data.supabase.IdentityState
 import com.example.musicplayerapp.data.supabase.IdentityStore
 import com.example.musicplayerapp.data.supabase.ListenerIdentity
 import com.example.musicplayerapp.data.supabase.ReactionSyncApi
 import com.example.musicplayerapp.data.supabase.ReactionSyncBackend
+import com.example.musicplayerapp.data.supabase.RecoveryResult
 import com.example.musicplayerapp.data.supabase.SyncOutcome
 
 /**
@@ -38,7 +43,15 @@ class MyataTestRunner : AndroidJUnitRunner() {
             // Explicitly asked for. The real backend stays in place and the live
             // suites run for real.
             ReactionSyncBackend.overrideForInstrumentation(null, null)
+            EmailAuthBackend.overrideForInstrumentation(null)
         } else {
+            // The auth boundary matters more than the sync one, not less. A stray
+            // reaction row can be deleted with the key the app already ships; a stray
+            // auth.users row cannot be deleted with it at all, so a suite that
+            // registered against production would leave rows nothing in this repo can
+            // clean up.
+            EmailAuthBackend.overrideForInstrumentation { OfflineEmailAuthApi }
+
             ReactionSyncBackend.overrideForInstrumentation(
                 api = { OfflineReactionSyncApi },
                 // The identity half is the important one, and it is not a constant.
@@ -68,7 +81,7 @@ class MyataTestRunner : AndroidJUnitRunner() {
         // is not a detail: ActivityThread calls newApplication *before* onCreate, so
         // a check there runs before the gate is installed and fails every run. This
         // is the hook that is genuinely last.
-        check(optedIn || ReactionSyncBackend.isOverridden) {
+        check(optedIn || (ReactionSyncBackend.isOverridden && EmailAuthBackend.isOverridden)) {
             "the live Supabase gate was not installed before the Application started"
         }
         super.callApplicationOnCreate(app)
@@ -99,4 +112,41 @@ private object OfflineReactionSyncApi : ReactionSyncApi {
 
     override suspend fun retireAllCurrentState(listenerId: String): SyncOutcome =
         SyncOutcome.AuthUnavailable(WHY)
+}
+
+/**
+ * An auth backend that authenticates nobody.
+ *
+ * Every call reports the same refusal, and the refusal is deliberately
+ * [AuthFailure.NetworkFailure] rather than something that reads like a rejected
+ * password: a test that accidentally exercises this gets "there is no network here",
+ * which is true, instead of "those credentials are wrong", which would be a lie the
+ * assertion might well accept.
+ *
+ * A suite that means to drive the repository installs its own fake over this one and
+ * puts this back afterwards. What it must never do is remove the override and leave
+ * the real backend in place - see `EmailAuthBackend`.
+ */
+private object OfflineEmailAuthApi : EmailAuthApi {
+
+    private const val WHY = "live Supabase is disabled for this instrumentation run"
+
+    private val refused = AuthResult.Failed(AuthFailure.NetworkFailure(WHY))
+
+    override suspend fun signUp(email: String, password: String, displayName: String) = refused
+
+    override suspend fun signIn(email: String, password: String) = refused
+
+    override suspend fun requestPasswordReset(email: String): RecoveryResult =
+        RecoveryResult.Failed(AuthFailure.NetworkFailure(WHY))
+
+    override suspend fun verifyRecoveryCode(email: String, code: String): RecoveryResult =
+        RecoveryResult.Failed(AuthFailure.NetworkFailure(WHY))
+
+    override suspend fun updatePassword(newPassword: String): RecoveryResult =
+        RecoveryResult.Failed(AuthFailure.NetworkFailure(WHY))
+
+    override suspend fun currentUid(): String? = null
+
+    override suspend fun signOutLocal(): Boolean = true
 }

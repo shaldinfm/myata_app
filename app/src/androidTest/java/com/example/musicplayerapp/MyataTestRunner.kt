@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.test.runner.AndroidJUnitRunner
 import com.example.musicplayerapp.data.ReactionOutboxEntry
 import com.example.musicplayerapp.data.TrackReaction
+import com.example.musicplayerapp.data.supabase.AccountInfo
 import com.example.musicplayerapp.data.supabase.AuthFailure
 import com.example.musicplayerapp.data.supabase.AuthResult
 import com.example.musicplayerapp.data.supabase.EmailAuthApi
@@ -145,6 +146,8 @@ private object OfflineEmailAuthApi : EmailAuthApi {
 
     override suspend fun updatePassword(newPassword: String): RecoveryResult =
         RecoveryResult.Failed(AuthFailure.NetworkFailure(WHY))
+
+    override suspend fun currentAccount(): AccountInfo? = null
 
     override suspend fun currentUid(): String? = null
 

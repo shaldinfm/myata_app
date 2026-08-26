@@ -1,0 +1,418 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  profile-authenticated 2517:2671 (light) / 2517:3638 (dark), 390x692.
+
+  The screen this whole phase exists for: until it landed, a listener who had just
+  registered came back to the profile and was told `Вы не вошли`.
+
+  ## Geometry
+
+      band                0..64
+      Account card       96..200   (32 below the band, 358x104, r24)
+      Синхронизация     224..244   (24 below the card)
+      Row cloud         252..324   (8 below the label, 358x72)
+      Row last sync     332..404   (8)
+      Аккаунт           428..448   (24 below the row)
+      Row Аватар        456..520   (8, 358x64)
+      Row Сменить       528..592   (8)
+      Row Выйти         600..664   (8)
+
+  Content ends at 664 inside a 692 frame, so it fits a 390dp viewport - but the
+  ScrollView is not decoration: `Облачная синхронизация` is a long label in a 258dp
+  box and wraps below 390dp, and a screen whose `Выйти` cannot be reached would be
+  worse than one that scrolls.
+
+  ## The avatar initial is deliberately not where the frame puts it
+
+  2517:2680 places the initial's 32dp line box at y=18 inside a 64dp circle. Centred
+  would be (64 - 32) / 2 = 16, so the frame draws it two pixels low - a defect the
+  owner spotted and asked not to be reproduced. **This is the only approved deviation
+  from the frames on this screen.**
+
+  `gravity="center"` alone does not fix it: that centres the **line box**, and the
+  32dp line height on a 24sp face plus a capital with no descender leave the ink
+  about 1.9dp low inside it - the same size of error as the frame's, mirrored.
+  So the glyph is centred on its own ink, measured from the font at its current
+  size by `AvatarInitial`, which is right for `Д`, for the `П` fallback and for any
+  letter nobody has thought of yet.
+
+  The circle itself is untouched - 64x64 at (16, 20), r=32, `primary` - which is
+  why it is a separate view from the letter: the correction translates the text,
+  and a shared view would have carried the circle with it.
+
+  ## Three rows that lead nowhere yet
+
+  `Аватар` and `Сменить пароль` carry their exact icons and chevrons and are inert -
+  the screens behind them are not in this PR, and a chevron that acknowledges a tap
+  it did not act on is a worse lie than one that visibly waits. `Выйти` is the
+  exception and is fully wired: it is the only way out of the authenticated state,
+  and a disabled one would strand the listener on this screen.
+-->
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <LinearLayout
+        android:id="@+id/profile_root"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/background"
+        android:orientation="vertical"
+        tools:context=".fragments.ProfileAuthenticatedFragment">
+
+        <!-- `Header - TopAppBar` 390x64, identical to profile-guest's. -->
+        <LinearLayout
+            android:id="@+id/profile_header"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/profile_header_height"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/profile_back_margin_start"
+            android:paddingEnd="@dimen/profile_margin">
+
+            <ImageView
+                android:id="@+id/profile_back"
+                android:layout_width="@dimen/profile_back_size"
+                android:layout_height="@dimen/profile_back_size"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/profile_back_description"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_profile_back" />
+
+            <TextView
+                android:id="@+id/profile_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/profile_title_margin_start"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/profile_title"
+                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.24_32"
+                android:textColor="@color/text_heading" />
+        </LinearLayout>
+
+        <ScrollView
+            android:id="@+id/profile_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:paddingBottom="@dimen/content_bottom_clearance">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/profile_margin"
+                android:paddingEnd="@dimen/profile_margin">
+
+                <!-- `Account card` 2517:2678, 358x104, r=24, 1dp outline. -->
+                <LinearLayout
+                    android:id="@+id/profile_account_card"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_account_card_height"
+                    android:layout_marginTop="@dimen/profile_card_margin_top"
+                    android:background="@drawable/bg_profile_card"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/profile_account_avatar_margin"
+                    android:paddingEnd="@dimen/profile_account_avatar_margin">
+
+                    <!--
+                      The circle and the letter are two views on purpose. The letter
+                      is nudged onto its own optical centre by AvatarInitial, and if
+                      the two shared a view that nudge would move the circle - which
+                      the frame fixes at 64x64, (16, 20), and which must not move.
+                    -->
+                    <FrameLayout
+                        android:id="@+id/profile_account_avatar"
+                        android:layout_width="@dimen/profile_account_avatar_size"
+                        android:layout_height="@dimen/profile_account_avatar_size"
+                        android:background="@drawable/bg_profile_avatar_account">
+
+                        <TextView
+                            android:id="@+id/profile_account_avatar_initial"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:includeFontPadding="false"
+                            android:maxLines="1"
+                            android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.24_32"
+                            android:textColor="@color/on_primary"
+                            tools:text="Д" />
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_account_text_margin_start"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/profile_account_name"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:gravity="center_vertical"
+                            android:maxLines="1"
+                            android:minHeight="@dimen/profile_account_name_box"
+                            android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.17_28"
+                            android:textColor="@color/text_primary"
+                            tools:text="Денис" />
+
+                        <TextView
+                            android:id="@+id/profile_account_email"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:gravity="center_vertical"
+                            android:maxLines="1"
+                            android:minHeight="@dimen/auth_label_box"
+                            android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                            android:textColor="@color/text_secondary"
+                            tools:text="name@example.com" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/profile_section_sync"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/profile_account_section_margin_top"
+                    android:gravity="center_vertical"
+                    android:minHeight="@dimen/auth_label_box"
+                    android:text="@string/profile_account_section_sync"
+                    android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                    android:textColor="@color/profile_section_label" />
+
+                <!-- `Row / Облачная синхронизация` 2517:2684, 358x72. No chevron: it
+                     reports, it does not navigate. -->
+                <LinearLayout
+                    android:id="@+id/profile_row_cloud_sync"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_account_row_tall"
+                    android:layout_marginTop="@dimen/profile_account_row_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/profile_row_icon_margin_start"
+                    android:paddingEnd="@dimen/profile_row_icon_margin_start">
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_row_icon_size"
+                        android:layout_height="@dimen/profile_row_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_collection_sync" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_row_label_margin_start"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:minHeight="@dimen/profile_account_label_box"
+                            android:text="@string/profile_account_cloud_sync"
+                            android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                            android:textColor="@color/profile_row_label" />
+
+                        <TextView
+                            android:id="@+id/profile_row_cloud_sync_state"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:minHeight="@dimen/auth_label_box"
+                            android:text="@string/profile_account_cloud_sync_on"
+                            android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                            android:textColor="@color/text_secondary" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- `Row / Последняя синхронизация` 2517:2689, 358x72. -->
+                <LinearLayout
+                    android:id="@+id/profile_row_last_sync"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_account_row_tall"
+                    android:layout_marginTop="@dimen/profile_account_row_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/profile_row_icon_margin_start"
+                    android:paddingEnd="@dimen/profile_row_icon_margin_start">
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_row_icon_size"
+                        android:layout_height="@dimen/profile_row_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_profile_clock" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_row_label_margin_start"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:minHeight="@dimen/profile_account_label_box"
+                            android:text="@string/profile_account_last_sync"
+                            android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                            android:textColor="@color/profile_row_label" />
+
+                        <TextView
+                            android:id="@+id/profile_row_last_sync_value"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:gravity="center_vertical"
+                            android:maxLines="1"
+                            android:minHeight="@dimen/auth_label_box"
+                            android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                            android:textColor="@color/text_secondary"
+                            tools:text="2 мин назад" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/profile_section_account"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/profile_account_section_margin_top"
+                    android:gravity="center_vertical"
+                    android:minHeight="@dimen/auth_label_box"
+                    android:text="@string/profile_account_section_account"
+                    android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                    android:textColor="@color/profile_section_label" />
+
+                <!-- `Row / Аватар` 2517:2695, 358x64. Inert: profile-avatar is not
+                     in this PR, so the chevron is drawn and does nothing. -->
+                <LinearLayout
+                    android:id="@+id/profile_row_avatar"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_row_height"
+                    android:layout_marginTop="@dimen/profile_account_row_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/profile_row_icon_margin_start"
+                    android:paddingEnd="@dimen/profile_row_icon_margin_start">
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_row_icon_size"
+                        android:layout_height="@dimen/profile_row_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_profile_person" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_row_label_margin_start"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/profile_account_label_box"
+                        android:text="@string/profile_account_avatar"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                        android:textColor="@color/profile_row_label" />
+
+                    <ImageView
+                        android:id="@+id/profile_row_avatar_chevron"
+                        android:layout_width="@dimen/profile_account_chevron_size"
+                        android:layout_height="@dimen/profile_account_chevron_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_profile_chevron" />
+                </LinearLayout>
+
+                <!-- `Row / Сменить пароль` 2517:2701, 358x64. Also inert. -->
+                <LinearLayout
+                    android:id="@+id/profile_row_change_password"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_row_height"
+                    android:layout_marginTop="@dimen/profile_account_row_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/profile_row_icon_margin_start"
+                    android:paddingEnd="@dimen/profile_row_icon_margin_start">
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_row_icon_size"
+                        android:layout_height="@dimen/profile_row_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_profile_document" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_row_label_margin_start"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/profile_account_label_box"
+                        android:text="@string/profile_account_change_password"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                        android:textColor="@color/profile_row_label" />
+
+                    <ImageView
+                        android:id="@+id/profile_row_change_password_chevron"
+                        android:layout_width="@dimen/profile_account_chevron_size"
+                        android:layout_height="@dimen/profile_account_chevron_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_profile_chevron" />
+                </LinearLayout>
+
+                <!-- `Row / Выйти` 2517:2707, 358x64. No chevron - it acts rather than
+                     navigates - and both the glyph and the label are the `error`
+                     token, which is what the frames draw. -->
+                <LinearLayout
+                    android:id="@+id/profile_row_sign_out"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_row_height"
+                    android:layout_marginTop="@dimen/profile_account_row_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/profile_row_icon_margin_start"
+                    android:paddingEnd="@dimen/profile_row_icon_margin_start">
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_row_icon_size"
+                        android:layout_height="@dimen/profile_row_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_profile_logout" />
+
+                    <TextView
+                        android:id="@+id/profile_row_sign_out_label"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_row_label_margin_start"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/profile_account_label_box"
+                        android:text="@string/profile_account_sign_out"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                        android:textColor="@color/error" />
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+</layout>

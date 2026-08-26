@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Avatar` 2517:2679 / 2517:3645 on the account card. A 64dp circle - the frame
+  draws r=32 on a 64x64 box - filled with `primary`, which is #1C4771 light and
+  #5FD9B4 dark, exactly as the two frames have it.
+
+  The initial that sits on it is a TextView filling this whole circle with
+  `gravity="center"`, not a glyph placed at an offset. See the layout for why.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/primary" />
+</shape>

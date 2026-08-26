@@ -172,6 +172,54 @@ object EmailAuthRepository {
     suspend fun updatePassword(context: Context, newPassword: String): RecoveryResult =
         EmailAuthBackend.api(context).updatePassword(newPassword)
 
+    // -------------------------------------------------------------- sign out --
+
+    /**
+     * The frozen LOCAL logout, in the order the contract requires.
+     *
+     * ```
+     * 1  commit SIGN_OUT                 durable, before anything can be lost
+     * 2  api.signOutLocal()              LOCAL scope: this device, no other
+     * 3  IdentityStore.signOut()         SIGNED_OUT(lastUid), one commit
+     * 4  clear the marker                nothing is owed
+     * ```
+     *
+     * Step 1 before step 2 is the whole point, exactly as `PREPARED` precedes the
+     * handoff's first destructive call. Written afterwards, a death between clearing
+     * the session and committing the state would leave `REGISTERED(uid)` with no
+     * session - which is what an offline install looks like - and no way to tell the
+     * two apart. [IdentityReconciler] finishes whatever this did not.
+     *
+     * **Nothing local is touched.** No Room write, no Collection change, no outbox
+     * change, and emphatically no anonymous mint: signing out is not a route back to
+     * [IdentityState.None], and the rows stay exactly where they are so that signing
+     * back in resumes rather than restores.
+     *
+     * `LOCAL` scope means other devices keep their sessions. One person signing out
+     * of their phone is not a statement about their tablet.
+     */
+    suspend fun signOut(context: Context): AuthResult {
+        val state = IdentityStore.state(context)
+        val uid = state.uid
+            ?: return undefined("sign out", state)
+
+        if (state !is IdentityState.Registered) return undefined("sign out", state)
+
+        IdentityStore.markAuthAttempt(context, AuthAttempt.SIGN_OUT)
+
+        // The call is allowed to fail. The token is cleared locally by the plugin
+        // whether or not the server was reachable, and the persisted state is
+        // authoritative regardless - so a listener on a train can still sign out.
+        val cleared = EmailAuthBackend.api(context).signOutLocal()
+        if (!cleared) Log.w(TAG, "the session did not clear cleanly; signing out locally anyway")
+
+        IdentityStore.signOut(context)
+        IdentityStore.clearAuthAttempt(context)
+        Log.d(TAG, "signed out locally; cloud sync paused, local collection untouched")
+
+        return AuthResult.Success(uid)
+    }
+
     // --------------------------------------------------------------- paths --
 
     /**

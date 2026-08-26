@@ -163,6 +163,22 @@
         android:id="@+id/auth_sign_in"
         android:name="com.example.musicplayerapp.fragments.AuthSignInFragment"
         android:label="AuthSignInFragment" >
+        <!--
+          Where a successful sign-in lands. `popUpTo` the profile *inclusive* clears
+          this screen, whichever auth screen preceded it, and the guest profile
+          underneath - so Back from the account card returns to whatever opened the
+          profile in the first place, and the form that has just been satisfied is
+          not sitting behind it.
+        -->
+        <action
+            android:id="@+id/action_auth_sign_in_to_profile_authenticated"
+            app:destination="@id/profile_authenticated"
+            app:popUpTo="@id/profile"
+            app:popUpToInclusive="true"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
         <action
             android:id="@+id/action_auth_sign_in_to_auth_create_account"
             app:destination="@id/auth_create_account"
@@ -179,9 +195,46 @@
         android:name="com.example.musicplayerapp.fragments.AuthCreateAccountFragment"
         android:label="AuthCreateAccountFragment" >
         <action
+            android:id="@+id/action_auth_create_account_to_profile_authenticated"
+            app:destination="@id/profile_authenticated"
+            app:popUpTo="@id/profile"
+            app:popUpToInclusive="true"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
+        <action
             android:id="@+id/action_auth_create_account_to_auth_sign_in"
             app:destination="@id/auth_sign_in"
             app:popUpTo="@id/auth_create_account"
+            app:popUpToInclusive="true"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
+    </fragment>
+
+    <!--
+      profile-authenticated 2517:2671 / 2517:3638 (G-A5a). A pushed destination
+      alongside profile-guest, not instead of it: which one opens is decided by
+      ProfileRoute from the persisted identity, so the 40x40 control keeps one
+      listener and neither screen has to know about the other.
+
+      No bottom bar, like the profile and the two auth screens.
+
+      Both actions below **replace** rather than stack, and for the same reason in
+      each direction: after signing out, Back must not reach an account card that is
+      no longer true; after signing in, it must not reach a guest card or the sign-in
+      form that has just been satisfied.
+    -->
+    <fragment
+        android:id="@+id/profile_authenticated"
+        android:name="com.example.musicplayerapp.fragments.ProfileAuthenticatedFragment"
+        android:label="ProfileAuthenticatedFragment" >
+        <action
+            android:id="@+id/action_profile_authenticated_to_profile"
+            app:destination="@id/profile"
+            app:popUpTo="@id/profile_authenticated"
             app:popUpToInclusive="true"
             app:enterAnim="@anim/fade_in"
             app:exitAnim="@anim/fade_out"

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Icon / clock` on `Row / Последняя синхронизация`, node 2517:2691, converted from the owner's export (ic_profile_clock.svg).
+
+  The path data is the export's own, unmodified. A **stroked** glyph like every
+  other icon on this screen - 1.8 wide with round caps and joins - so the colour is
+  a stroke rather than a fill, and it comes from a token so the glyph inverts with
+  the theme instead of carrying the light value the SVG was exported with.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12 3C7.03 3.003 3.00401 7.033 3.00501 12.002C3.00601 16.972 7.03501 21 12.005 21C16.975 21 21.004 16.972 21.005 12.002C21.006 7.033 16.98 3.003 12.01 3M12 7V12L16 14"
+        android:strokeColor="@color/profile_row_icon"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

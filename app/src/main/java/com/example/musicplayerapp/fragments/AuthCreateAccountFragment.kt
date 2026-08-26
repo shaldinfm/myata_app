@@ -113,7 +113,10 @@ class AuthCreateAccountFragment : Fragment() {
 
         if (state.succeeded) {
             viewModel.consumeSuccess()
-            findNavController().popBackStack()
+            // Not popBackStack: that would land on the guest profile, which is now
+            // false about this listener - the exact state G-A5a exists to remove. The
+            // action replaces this screen and the guest profile both.
+            findNavController().navigate(R.id.action_auth_create_account_to_profile_authenticated)
         }
     }
 

@@ -3,6 +3,7 @@ package com.example.musicplayerapp
 import androidx.test.core.app.ActivityScenario
 import com.example.musicplayerapp.data.ReactionOutboxEntry
 import com.example.musicplayerapp.data.TrackReaction
+import com.example.musicplayerapp.data.supabase.AccountInfo
 import com.example.musicplayerapp.data.supabase.AuthFailure
 import com.example.musicplayerapp.data.supabase.AuthResult
 import com.example.musicplayerapp.data.supabase.EmailAuthApi
@@ -65,6 +66,12 @@ internal class FakeEmailAuthApi : EmailAuthApi {
 
     /** What `currentUid()` reports. Also settable directly, to model a restored session. */
     var session: String? = null
+
+    /** `user_metadata.display_name` on the live session. Null models an account without one. */
+    var accountName: String? = "Денис"
+
+    /** The address on the live session. Null models one that has none to report. */
+    var accountEmail: String? = "name@example.com"
 
     /**
      * Holds an authentication open until a test lets it finish.
@@ -145,6 +152,10 @@ internal class FakeEmailAuthApi : EmailAuthApi {
             RecoveryResult.PasswordUpdated(session ?: uid)
         }
     }
+
+    /** What the account card reads. Null session means null account, as in life. */
+    override suspend fun currentAccount(): AccountInfo? =
+        session?.let { AccountInfo(it, accountName, accountEmail) }
 
     override suspend fun currentUid(): String? = session
 
@@ -278,6 +289,7 @@ internal object TestIsolation {
             RecoveryResult.Failed(AuthFailure.NetworkFailure(WHY))
         override suspend fun updatePassword(newPassword: String): RecoveryResult =
             RecoveryResult.Failed(AuthFailure.NetworkFailure(WHY))
+        override suspend fun currentAccount(): AccountInfo? = null
         override suspend fun currentUid(): String? = null
         override suspend fun signOutLocal(): Boolean = true
     }

@@ -79,6 +79,22 @@ interface EmailAuthApi {
     suspend fun currentUid(): String?
 
     /**
+     * Who the live session says this device is, or null when there is no session.
+     *
+     * The uid alone is not enough for the authenticated profile: it shows a name and
+     * an address, and `markRegistered` deliberately persists neither - an identity is
+     * a uid, and the rest belongs to whoever is holding the token. So the screen asks
+     * the session, and gets null when there is not one rather than a fabricated
+     * account.
+     *
+     * Both fields are nullable inside a present [AccountInfo] for the same reason:
+     * `user_metadata.display_name` is whatever was written at registration and may be
+     * absent, and an address can be missing on an account created by other means.
+     * A session that exists with neither is still a session.
+     */
+    suspend fun currentAccount(): AccountInfo?
+
+    /**
      * Clears this device's session, and only this device's.
      *
      * `LOCAL` scope, per the frozen logout contract in [IdentityState.SignedOut]:
@@ -91,3 +107,16 @@ interface EmailAuthApi {
      */
     suspend fun signOutLocal(): Boolean
 }
+
+/**
+ * What the live session knows about the listener.
+ *
+ * Deliberately three nullable-or-not fields and no behaviour: it crosses the auth
+ * boundary outwards, so anything richer would be the boundary growing a screen's
+ * concerns.
+ */
+data class AccountInfo(
+    val uid: String,
+    val displayName: String?,
+    val email: String?,
+)

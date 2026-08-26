@@ -15,6 +15,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
+import com.example.musicplayerapp.ui.profile.ProfileRoute
 import com.example.musicplayerapp.StreamsViewModel
 import com.example.musicplayerapp.adapters.PlaylistAdapter
 import com.example.musicplayerapp.data.MyataPlaylist
@@ -152,7 +153,7 @@ class MainFragment : Fragment() {
         // in particular it does not touch the identity boundary, so looking at the
         // profile never mints an anonymous uid.
         binding.profileEntry.root.setOnClickListener {
-            findNavController().navigate(R.id.profile)
+            findNavController().navigate(ProfileRoute.destination(requireContext()))
         }
 
 

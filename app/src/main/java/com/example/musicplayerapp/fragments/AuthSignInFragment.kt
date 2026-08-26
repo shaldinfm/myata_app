@@ -141,7 +141,10 @@ class AuthSignInFragment : Fragment() {
             // Consume first. The identity is already committed by the repository, so
             // this only decides whether the navigation happens twice.
             viewModel.consumeSuccess()
-            findNavController().popBackStack()
+            // Not popBackStack: that would land on the guest profile, which is now
+            // false about this listener - the exact state G-A5a exists to remove. The
+            // action replaces this screen and the guest profile both.
+            findNavController().navigate(R.id.action_auth_sign_in_to_profile_authenticated)
         }
     }
 

@@ -128,6 +128,65 @@
     <fragment
         android:id="@+id/profile"
         android:name="com.example.musicplayerapp.fragments.ProfileGuestFragment"
-        android:label="ProfileGuestFragment" />
+        android:label="ProfileGuestFragment" >
+        <action
+            android:id="@+id/action_profile_to_auth_sign_in"
+            app:destination="@id/auth_sign_in"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
+        <action
+            android:id="@+id/action_profile_to_auth_create_account"
+            app:destination="@id/auth_create_account"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
+    </fragment>
+
+    <!--
+      auth-sign-in 2517:2603 / 2517:3570 and auth-create-account 2517:2624 /
+      2517:3591 (G-A4c1). Pushed destinations reached from profile-guest, and like
+      it they have no bottom bar - MainActivity hides it for all three.
+
+      ## The two swap rather than stack
+
+      Each cross-link pops the screen it came from. Without that, Create account
+      then Already have an account then Create account again builds an unbounded
+      pile of auth screens, and Back walks the listener back through every
+      indecisive tap they made. With it there is never more than one auth entry on
+      the stack, so Back from either screen returns to the profile - one rule, and
+      it is the same rule wherever the listener entered from.
+    -->
+    <fragment
+        android:id="@+id/auth_sign_in"
+        android:name="com.example.musicplayerapp.fragments.AuthSignInFragment"
+        android:label="AuthSignInFragment" >
+        <action
+            android:id="@+id/action_auth_sign_in_to_auth_create_account"
+            app:destination="@id/auth_create_account"
+            app:popUpTo="@id/auth_sign_in"
+            app:popUpToInclusive="true"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/auth_create_account"
+        android:name="com.example.musicplayerapp.fragments.AuthCreateAccountFragment"
+        android:label="AuthCreateAccountFragment" >
+        <action
+            android:id="@+id/action_auth_create_account_to_auth_sign_in"
+            app:destination="@id/auth_sign_in"
+            app:popUpTo="@id/auth_create_account"
+            app:popUpToInclusive="true"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
+    </fragment>
 
 </navigation>

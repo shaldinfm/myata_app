@@ -28,14 +28,31 @@ import com.example.musicplayerapp.databinding.FragmentProfileGuestBinding
  * read [com.example.musicplayerapp.data.supabase.IdentityStore] - the persisted
  * local state - and still not the session boundary.
  *
- * ## The two buttons are inert on purpose
+ * ## The two buttons are live as of G-A4c1
  *
- * `Войти` and `Создать аккаунт` are drawn exactly as designed and do nothing.
- * There is no destination to send them to until G-A4 builds one, and deliberately
- * no placeholder toast: a control that acknowledges a tap it did not act on is a
- * worse lie than one that visibly waits. They are not disabled either - the frame
- * draws them in their normal state, and dimming them would be inventing a state
- * the design does not have.
+ * `Войти` and `Создать аккаунт` were drawn exactly as designed and inert
+ * through G-A3, because there was no destination to send them to and a placeholder
+ * toast would have been a worse lie than a control that visibly waits.
+ * auth-sign-in and auth-create-account exist now, so they navigate - and that is
+ * the *only* thing that changed here. This fragment still performs no auth call,
+ * still reads no identity state, and still cannot mint anything.
+ *
+ * ## MUST NOT SHIP BEFORE G-A5
+ *
+ * Signing in returns here, and this screen still renders the guest variant: there
+ * is no `profile-authenticated` implementation to return to, and inventing one
+ * inside a UI PR would be building G-A5 without a design review.
+ *
+ * That makes G-A4c1 **a development milestone rather than a shippable one.** A
+ * listener who has just registered lands on a screen that tells them `Вы не вошли`
+ * and offers them `Войти` - copy that is now false about them, on the one screen
+ * they opened to check. The identity underneath is correct and their Collection is
+ * syncing; only this screen is lying, and only until G-A5 replaces it.
+ *
+ * So: do not put a build carrying these auth screens in front of the public until
+ * the authenticated profile lands. The gap is deliberate, visible and temporary,
+ * and it is recorded here rather than in a tracker because this file is where
+ * somebody would otherwise discover it.
  */
 class ProfileGuestFragment : Fragment() {
 
@@ -82,6 +99,18 @@ class ProfileGuestFragment : Fragment() {
         // COLLECTION - which is what popBackStack does and what a hardcoded
         // destination would get wrong for two of the three.
         binding.profileBack.setOnClickListener { findNavController().popBackStack() }
+
+        // G-A4c1: the two CTAs the G-A3 KDoc said were waiting for a destination now
+        // have one. Nothing else about this screen changed - in particular it still
+        // performs no auth call and no network call of its own, and still does not
+        // read the identity state.
+        binding.profileSignIn.setOnClickListener {
+            findNavController().navigate(R.id.action_profile_to_auth_sign_in)
+        }
+
+        binding.profileCreateAccount.setOnClickListener {
+            findNavController().navigate(R.id.action_profile_to_auth_create_account)
+        }
 
         return binding.root
     }

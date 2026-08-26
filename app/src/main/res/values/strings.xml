@@ -227,4 +227,64 @@
     <string name="profile_benefit_sync">Синхронизация коллекции</string>
     <string name="profile_benefit_restore">Восстановление коллекции</string>
 
+
+    <!--
+      auth-sign-in 2517:2603 / 2517:3570, auth-create-account 2517:2624 /
+      2517:3591. Every visible string is the frame's own text.
+    -->
+    <string name="auth_sign_in_title">Вход</string>
+    <string name="auth_sign_in_body_first">Войдите, чтобы коллекция синхронизировалась</string>
+    <string name="auth_sign_in_body_second">между устройствами.</string>
+    <string name="auth_label_email">Email</string>
+    <string name="auth_label_password">Пароль</string>
+    <string name="auth_label_name">Имя</string>
+    <!--
+      Runtime placeholders, deliberately NOT the strings the frames draw.
+
+      2517:2633 and 2517:2636 show `Денис` and `denis@example.com`, and 2517:2617
+      shows ten bullets. Those are mock content: the designer illustrating a filled
+      form, not copy for an empty one. Shipping a person's name and address as the
+      hint on everybody's create-account screen would put one real-looking identity
+      in front of every listener, so the frames are authoritative for geometry, type
+      and colour here and not for these three values.
+    -->
+    <string name="auth_hint_email">name@example.com</string>
+    <string name="auth_hint_password">Пароль</string>
+    <string name="auth_hint_name">Ваше имя</string>
+    <string name="auth_forgot_password">Забыли пароль?</string>
+    <string name="auth_sign_in_action">Войти</string>
+    <string name="auth_create_account_action">Создать аккаунт</string>
+    <string name="auth_continue_as_guest">Продолжить без аккаунта</string>
+    <string name="auth_create_account_title">Создать аккаунт</string>
+    <string name="auth_password_hint_rule">Минимум 8 символов</string>
+    <string name="auth_have_account">Уже есть аккаунт? Войти</string>
+    <string name="auth_back_description">Назад</string>
+    <string name="auth_progress_description">Выполняется запрос</string>
+
+    <!--
+      Local validation. Attached to the field that failed, because the listener can
+      see which one it was and a general message would make them guess.
+    -->
+    <string name="auth_error_name_blank">Введите имя</string>
+    <string name="auth_error_email_format">Проверьте адрес электронной почты</string>
+    <string name="auth_error_password_short">Пароль должен содержать минимум 8 символов</string>
+    <!--
+      Sign-in only, where the minimum length is deliberately not enforced: an
+      account made before that rule existed still has to be able to sign in, and
+      the only thing this screen genuinely needs is a password to send.
+    -->
+    <string name="auth_error_password_blank">Введите пароль</string>
+
+    <!--
+      Remote failures, one message per AuthFailure case. They go in the single
+      inline area below the form, never in a dialog and never in a Toast, and none
+      of them ever carries a word the server sent: a backend exception is a
+      diagnosis for a log, not something to show somebody trying to sign in.
+    -->
+    <string name="auth_error_invalid_credentials">Неверный email или пароль</string>
+    <string name="auth_error_email_taken">Аккаунт с таким email уже существует</string>
+    <string name="auth_error_network">Нет подключения к интернету. Попробуйте ещё раз</string>
+    <string name="auth_error_rate_limited">Слишком много попыток. Попробуйте позже</string>
+    <string name="auth_error_session">Не удалось войти в аккаунт. Попробуйте ещё раз</string>
+    <string name="auth_error_unknown">Не удалось выполнить действие. Попробуйте ещё раз</string>
 </resources>

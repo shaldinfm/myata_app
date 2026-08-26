@@ -1,0 +1,876 @@
+{
+  "run": "api36",
+  "sdk": 36,
+  "densityDpi": 443,
+  "frames": {
+    "auth-sign-in": {
+      "size": "390x576",
+      "rows": {
+        "b0": 92,
+        "b1": 114,
+        "labelEmail": 156,
+        "inputEmail": 180,
+        "labelPassword": 252,
+        "inputPassword": 276,
+        "forgot": 344,
+        "submit": 388,
+        "createAccount": 456,
+        "guest": 532
+      }
+    },
+    "auth-create-account": {
+      "size": "390x596",
+      "rows": {
+        "labelName": 92,
+        "inputName": 116,
+        "labelEmail": 188,
+        "inputEmail": 212,
+        "labelPassword": 284,
+        "inputPassword": 308,
+        "rule": 372,
+        "submit": 412,
+        "haveAccount": 488
+      }
+    }
+  },
+  "screens": {
+    "auth-sign-in-light": {
+      "shot": "auth-sign-in-light.png",
+      "figma": "2517:2603",
+      "measuredDp": {
+        "auth_root": {
+          "y": 0,
+          "height": 866.8,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_header": {
+          "y": 49.1,
+          "height": 63.9,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_back": {
+          "y": 69,
+          "height": 23.8,
+          "x": 11.9,
+          "width": 23.8
+        },
+        "auth_title": {
+          "y": 66.5,
+          "height": 29.3,
+          "x": 55.6,
+          "width": 318.6
+        },
+        "auth_scroll": {
+          "y": 113,
+          "height": 753.8,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_body_first": {
+          "y": 141.2,
+          "height": 22,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_body_second": {
+          "y": 163.3,
+          "height": 22,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_email_label": {
+          "y": 205.1,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_email": {
+          "y": 229,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password_label": {
+          "y": 300.9,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password": {
+          "y": 324.7,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_forgot_password": {
+          "y": 392.6,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_submit": {
+          "y": 436.3,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_submit_label": {
+          "y": 436.3,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_create_account": {
+          "y": 504.2,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_continue_as_guest": {
+          "y": 580,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        }
+      }
+    },
+    "auth-sign-in-loading-light": {
+      "shot": "auth-sign-in-loading-light.png",
+      "figma": "no frame; transient state on 2517:2603 / 2517:3570"
+    },
+    "auth-sign-in-error-light": {
+      "shot": "auth-sign-in-error-light.png",
+      "figma": "no frame; inline error on 2517:2603 / 2517:3570",
+      "measuredDp": {
+        "auth_root": {
+          "y": 0,
+          "height": 866.8,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_header": {
+          "y": 49.1,
+          "height": 63.9,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_back": {
+          "y": 69,
+          "height": 23.8,
+          "x": 11.9,
+          "width": 23.8
+        },
+        "auth_title": {
+          "y": 66.5,
+          "height": 29.3,
+          "x": 55.6,
+          "width": 318.6
+        },
+        "auth_scroll": {
+          "y": 113,
+          "height": 753.8,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_body_first": {
+          "y": 141.2,
+          "height": 22,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_body_second": {
+          "y": 163.3,
+          "height": 22,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_email_label": {
+          "y": 205.1,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_email": {
+          "y": 229,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password_label": {
+          "y": 300.9,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password": {
+          "y": 324.7,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_forgot_password": {
+          "y": 392.6,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_form_error": {
+          "y": 416.4,
+          "height": 18.1,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_submit": {
+          "y": 458.3,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_submit_label": {
+          "y": 458.3,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_create_account": {
+          "y": 526.2,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_continue_as_guest": {
+          "y": 602.1,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        }
+      }
+    },
+    "auth-create-account-light": {
+      "shot": "auth-create-account-light.png",
+      "figma": "2517:2624",
+      "measuredDp": {
+        "auth_root": {
+          "y": 0,
+          "height": 866.8,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_header": {
+          "y": 49.1,
+          "height": 63.9,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_back": {
+          "y": 69,
+          "height": 23.8,
+          "x": 11.9,
+          "width": 23.8
+        },
+        "auth_title": {
+          "y": 66.5,
+          "height": 29.3,
+          "x": 55.6,
+          "width": 318.6
+        },
+        "auth_scroll": {
+          "y": 113,
+          "height": 753.8,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_name_label": {
+          "y": 141.2,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_name": {
+          "y": 165.1,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_email_label": {
+          "y": 236.9,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_email": {
+          "y": 260.8,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password_label": {
+          "y": 332.6,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password": {
+          "y": 356.5,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password_rule": {
+          "y": 420.4,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_submit": {
+          "y": 460.1,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_submit_label": {
+          "y": 460.1,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_have_account": {
+          "y": 536,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        }
+      }
+    },
+    "auth-create-account-error-light": {
+      "shot": "auth-create-account-error-light.png",
+      "figma": "no frame; field validation on 2517:2624 / 2517:3591",
+      "measuredDp": {
+        "auth_root": {
+          "y": 0,
+          "height": 866.8,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_header": {
+          "y": 49.1,
+          "height": 63.9,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_back": {
+          "y": 69,
+          "height": 23.8,
+          "x": 11.9,
+          "width": 23.8
+        },
+        "auth_title": {
+          "y": 66.5,
+          "height": 29.3,
+          "x": 55.6,
+          "width": 318.6
+        },
+        "auth_scroll": {
+          "y": 113,
+          "height": 753.8,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_name_label": {
+          "y": 141.2,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_name": {
+          "y": 165.1,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_name_error": {
+          "y": 225,
+          "height": 18.1,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_email_label": {
+          "y": 259,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_email": {
+          "y": 282.8,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_email_error": {
+          "y": 342.8,
+          "height": 18.1,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password_label": {
+          "y": 376.7,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password": {
+          "y": 400.5,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password_error": {
+          "y": 460.5,
+          "height": 18.1,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_submit": {
+          "y": 498.4,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_submit_label": {
+          "y": 498.4,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_have_account": {
+          "y": 574.3,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        }
+      }
+    },
+    "auth-sign-in-dark": {
+      "shot": "auth-sign-in-dark.png",
+      "figma": "2517:3570",
+      "measuredDp": {
+        "auth_root": {
+          "y": 0,
+          "height": 866.8,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_header": {
+          "y": 49.1,
+          "height": 63.9,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_back": {
+          "y": 69,
+          "height": 23.8,
+          "x": 11.9,
+          "width": 23.8
+        },
+        "auth_title": {
+          "y": 66.5,
+          "height": 29.3,
+          "x": 55.6,
+          "width": 318.6
+        },
+        "auth_scroll": {
+          "y": 113,
+          "height": 753.8,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_body_first": {
+          "y": 141.2,
+          "height": 22,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_body_second": {
+          "y": 163.3,
+          "height": 22,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_email_label": {
+          "y": 205.1,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_email": {
+          "y": 229,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password_label": {
+          "y": 300.9,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password": {
+          "y": 324.7,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_forgot_password": {
+          "y": 392.6,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_submit": {
+          "y": 436.3,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_submit_label": {
+          "y": 436.3,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_create_account": {
+          "y": 504.2,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_continue_as_guest": {
+          "y": 580,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        }
+      }
+    },
+    "auth-sign-in-loading-dark": {
+      "shot": "auth-sign-in-loading-dark.png",
+      "figma": "no frame; transient state on 2517:2603 / 2517:3570"
+    },
+    "auth-sign-in-error-dark": {
+      "shot": "auth-sign-in-error-dark.png",
+      "figma": "no frame; inline error on 2517:2603 / 2517:3570",
+      "measuredDp": {
+        "auth_root": {
+          "y": 0,
+          "height": 866.8,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_header": {
+          "y": 49.1,
+          "height": 63.9,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_back": {
+          "y": 69,
+          "height": 23.8,
+          "x": 11.9,
+          "width": 23.8
+        },
+        "auth_title": {
+          "y": 66.5,
+          "height": 29.3,
+          "x": 55.6,
+          "width": 318.6
+        },
+        "auth_scroll": {
+          "y": 113,
+          "height": 753.8,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_body_first": {
+          "y": 141.2,
+          "height": 22,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_body_second": {
+          "y": 163.3,
+          "height": 22,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_email_label": {
+          "y": 205.1,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_email": {
+          "y": 229,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password_label": {
+          "y": 300.9,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password": {
+          "y": 324.7,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_forgot_password": {
+          "y": 392.6,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_form_error": {
+          "y": 416.4,
+          "height": 18.1,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_submit": {
+          "y": 458.3,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_submit_label": {
+          "y": 458.3,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_create_account": {
+          "y": 526.2,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_continue_as_guest": {
+          "y": 602.1,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        }
+      }
+    },
+    "auth-create-account-dark": {
+      "shot": "auth-create-account-dark.png",
+      "figma": "2517:3591",
+      "measuredDp": {
+        "auth_root": {
+          "y": 0,
+          "height": 866.8,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_header": {
+          "y": 49.1,
+          "height": 63.9,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_back": {
+          "y": 69,
+          "height": 23.8,
+          "x": 11.9,
+          "width": 23.8
+        },
+        "auth_title": {
+          "y": 66.5,
+          "height": 29.3,
+          "x": 55.6,
+          "width": 318.6
+        },
+        "auth_scroll": {
+          "y": 113,
+          "height": 753.8,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_name_label": {
+          "y": 141.2,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_name": {
+          "y": 165.1,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_email_label": {
+          "y": 236.9,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_email": {
+          "y": 260.8,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password_label": {
+          "y": 332.6,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password": {
+          "y": 356.5,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password_rule": {
+          "y": 420.4,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_submit": {
+          "y": 460.1,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_submit_label": {
+          "y": 460.1,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_have_account": {
+          "y": 536,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        }
+      }
+    },
+    "auth-create-account-error-dark": {
+      "shot": "auth-create-account-error-dark.png",
+      "figma": "no frame; field validation on 2517:2624 / 2517:3591",
+      "measuredDp": {
+        "auth_root": {
+          "y": 0,
+          "height": 866.8,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_header": {
+          "y": 49.1,
+          "height": 63.9,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_back": {
+          "y": 69,
+          "height": 23.8,
+          "x": 11.9,
+          "width": 23.8
+        },
+        "auth_title": {
+          "y": 66.5,
+          "height": 29.3,
+          "x": 55.6,
+          "width": 318.6
+        },
+        "auth_scroll": {
+          "y": 113,
+          "height": 753.8,
+          "x": 0,
+          "width": 390.1
+        },
+        "auth_name_label": {
+          "y": 141.2,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_name": {
+          "y": 165.1,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_name_error": {
+          "y": 225,
+          "height": 18.1,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_email_label": {
+          "y": 259,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_email": {
+          "y": 282.8,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_email_error": {
+          "y": 342.8,
+          "height": 18.1,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password_label": {
+          "y": 376.7,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password": {
+          "y": 400.5,
+          "height": 56,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_password_error": {
+          "y": 460.5,
+          "height": 18.1,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_submit": {
+          "y": 498.4,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_submit_label": {
+          "y": 498.4,
+          "height": 52,
+          "x": 15.9,
+          "width": 358.3
+        },
+        "auth_have_account": {
+          "y": 574.3,
+          "height": 19.9,
+          "x": 15.9,
+          "width": 358.3
+        }
+      }
+    }
+  },
+  "size": "Physical size: 1080x2400",
+  "widthDp": 390.1
+}

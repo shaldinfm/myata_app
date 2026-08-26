@@ -714,4 +714,87 @@
     <!-- label x=56, icon ends at 16+24=40. -->
     <dimen name="profile_row_label_margin_start">16dp</dimen>
 
+
+    <!--
+      auth-sign-in 2517:2603 / 2517:3570 and auth-create-account 2517:2624 /
+      2517:3591, both 390 wide.
+
+      Every value below is the difference between two absolute Figma offsets, so
+      the two screens can be checked by adding them up rather than trusted. The
+      band, the side margin, the 52dp button and its 12dp radius are the same
+      numbers profile-guest already froze - the same component drawn on the next
+      screen - and they deliberately reuse those dimens rather than restating them.
+
+          sign-in                       create-account
+          header        0..64           header        0..64
+          b0            92..114         Label Имя     92..112
+          b1           114..136         Input Имя    116..172
+          Label Email  156..176         Label Email  188..208
+          Input Email  180..236         Input Email  212..268
+          Label Пароль 252..272         Label Пароль 284..304
+          Input Пароль 276..332         Input Пароль 308..364
+          forgot       344..364         hint         372..392
+          Войти        388..440         Создать      412..464
+          Создать      456..508         have         488..508
+          guest        532..552
+    -->
+    <!-- 92 - 64. The first content row on both screens. -->
+    <dimen name="auth_first_row_margin_top">28dp</dimen>
+    <!-- Label to its input: 180 - 176, and 116 - 112. -->
+    <dimen name="auth_label_gap">4dp</dimen>
+    <!-- Input to the next label: 252 - 236, 188 - 172, 284 - 268. -->
+    <dimen name="auth_field_gap">16dp</dimen>
+    <!-- The sign-in body paragraph to the first label: 156 - 136. -->
+    <dimen name="auth_body_to_label">20dp</dimen>
+    <!--
+      The height of a Figma text node, which is not the height an Android TextView
+      gives the same string.
+
+      Figma draws every label on these screens as a fixed box exactly one line high -
+      20 for the 14/20 token, 22 for the 15/22 one - and a TextView with the same
+      token measures its font's natural single-line height instead, which is about
+      2dp short of both. `android:lineHeight` does not close it: it sets the spacing
+      *between* lines, and a label has only one.
+
+      Two decimal places of nothing, except that these screens stack nine such rows
+      and the shortfall accumulates - without this the last control on auth-sign-in
+      lands 11dp above where the frame puts it. So the box is stated as a minimum,
+      which reproduces the frame exactly at one line and still lets a row grow when a
+      narrower screen wraps it.
+    -->
+    <dimen name="auth_label_box">20dp</dimen>
+    <dimen name="auth_body_box">22dp</dimen>
+    <dimen name="auth_input_height">56dp</dimen>
+    <dimen name="auth_input_radius">12dp</dimen>
+    <dimen name="auth_input_padding_horizontal">16dp</dimen>
+    <dimen name="auth_input_stroke">1dp</dimen>
+    <!-- The focused input draws 2dp, as auth-create-account 2517:2638 shows. -->
+    <dimen name="auth_input_stroke_focused">2dp</dimen>
+    <!-- Password input to `Забыли пароль?`: 344 - 332. -->
+    <dimen name="auth_forgot_margin_top">12dp</dimen>
+    <!-- `Забыли пароль?` to the primary button: 388 - 364. -->
+    <dimen name="auth_primary_margin_top">24dp</dimen>
+    <!-- Primary to secondary button: 456 - 440. -->
+    <dimen name="auth_secondary_margin_top">16dp</dimen>
+    <!-- Secondary button to `Продолжить без аккаунта`: 532 - 508. -->
+    <dimen name="auth_guest_margin_top">24dp</dimen>
+    <!-- Password input to `Минимум 8 символов`: 372 - 364. -->
+    <dimen name="auth_hint_margin_top">8dp</dimen>
+    <!-- Hint to the primary button: 412 - 392. -->
+    <dimen name="auth_create_primary_margin_top">20dp</dimen>
+    <!-- Primary button to `Уже есть аккаунт? Войти`: 488 - 464. -->
+    <dimen name="auth_have_account_margin_top">24dp</dimen>
+    <!--
+      The indeterminate indicator that replaces a button label while a request is
+      in flight. 24dp is the icon size this design system uses everywhere else,
+      and it sits inside the 52dp button without changing its geometry.
+    -->
+    <dimen name="auth_progress_size">24dp</dimen>
+    <!--
+      Inline error copy. Not in any Figma frame - there is no approved auth-error
+      screen - so it is drawn in the screen's own style and given the smallest
+      spacing the type scale uses, and it is `gone` until something fails, which
+      is what keeps the frozen geometry above exactly as measured.
+    -->
+    <dimen name="auth_error_margin_top">4dp</dimen>
 </resources>

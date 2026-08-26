@@ -1,0 +1,356 @@
+package com.example.musicplayerapp
+
+import android.content.Context
+import android.view.View
+import android.widget.TextView
+import androidx.test.core.app.ActivityScenario
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.example.musicplayerapp.data.supabase.IdentityState
+import com.example.musicplayerapp.data.supabase.IdentityStore
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+
+/**
+ * Getting to the two auth screens, moving between them, and getting out.
+ *
+ * Driven through the real activity and the real nav graph, from the real entry
+ * point: HOME's 40x40 profile control, then a CTA on profile-guest. Nothing here
+ * stubs navigation, because the thing worth asserting is what a listener's taps
+ * actually do - including the one nobody plans for, which is changing their mind
+ * twice about which screen they wanted.
+ *
+ * No auth backend is installed. Every test here stops short of submitting anything,
+ * so the harness's own refusing backend is the right one and the network boundary is
+ * never reached.
+ */
+@RunWith(AndroidJUnit4::class)
+class AuthNavigationTest {
+
+    private val context: Context
+        get() = InstrumentationRegistry.getInstrumentation().targetContext
+
+    @Before
+    fun freshInstall() {
+        // API 33+ puts a POST_NOTIFICATIONS dialog over the activity on first launch,
+        // and a dialog over the screen makes every click below land on nothing.
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(
+                "pm grant ${context.packageName} android.permission.POST_NOTIFICATIONS"
+            ).close()
+        }
+        IdentityStore.clearForTest(context)
+    }
+
+    @After
+    fun tidy() = IdentityStore.clearForTest(context)
+
+    // ==================== 1 and 2: the guest CTAs are live ====================
+
+    @Test
+    fun profile_guest_sign_in_opens_auth_sign_in() {
+        scenario().use { scenario ->
+            scenario.openProfile()
+
+            scenario.tap(R.id.profile_sign_in)
+
+            scenario.onActivity { activity ->
+                assertEquals(R.id.auth_sign_in, activity.currentDestinationId())
+                assertNotNull(
+                    "auth-sign-in must be showing",
+                    activity.findViewById<View>(R.id.auth_continue_as_guest),
+                )
+                assertEquals(
+                    "the frame has no bottom bar",
+                    View.GONE,
+                    activity.findViewById<View>(R.id.bottomNavView).visibility,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun profile_guest_create_account_opens_auth_create_account() {
+        scenario().use { scenario ->
+            scenario.openProfile()
+
+            scenario.tap(R.id.profile_create_account)
+
+            scenario.onActivity { activity ->
+                assertEquals(R.id.auth_create_account, activity.currentDestinationId())
+                assertNotNull(
+                    "auth-create-account must be showing",
+                    activity.findViewById<View>(R.id.auth_name),
+                )
+                assertEquals(
+                    View.GONE,
+                    activity.findViewById<View>(R.id.bottomNavView).visibility,
+                )
+            }
+        }
+    }
+
+    // ==================== 3: the two screens swap ====================
+
+    @Test
+    fun the_two_auth_screens_cross_link_both_ways() {
+        scenario().use { scenario ->
+            scenario.openProfile()
+            scenario.tap(R.id.profile_sign_in)
+
+            scenario.tap(R.id.auth_create_account)
+            scenario.onActivity {
+                assertEquals(R.id.auth_create_account, it.currentDestinationId())
+            }
+
+            scenario.tap(R.id.auth_have_account)
+            scenario.onActivity {
+                assertEquals(R.id.auth_sign_in, it.currentDestinationId())
+            }
+        }
+    }
+
+    /**
+     * Changing your mind repeatedly must not build a pile of screens.
+     *
+     * Each cross-link pops the screen it came from, so after any number of these the
+     * stack still holds one auth entry and Back returns to the profile. Without the
+     * `popUpTo` this asserts, Back would walk the listener back through every
+     * indecisive tap they ever made.
+     */
+    @Test
+    fun ping_ponging_between_them_leaves_one_entry_on_the_stack() {
+        scenario().use { scenario ->
+            scenario.openProfile()
+            scenario.tap(R.id.profile_sign_in)
+
+            repeat(3) {
+                scenario.tap(R.id.auth_create_account)
+                scenario.tap(R.id.auth_have_account)
+            }
+
+            scenario.onActivity { assertEquals(R.id.auth_sign_in, it.currentDestinationId()) }
+
+            // One Back, and we are at the profile - not three screens deep in it.
+            scenario.tap(R.id.auth_back)
+            scenario.onActivity { assertEquals(R.id.profile, it.currentDestinationId()) }
+        }
+    }
+
+    // ==================== 4: continuing without an account ====================
+
+    @Test
+    fun continue_without_account_returns_to_the_profile_and_changes_no_identity() {
+        assertEquals(IdentityState.None, IdentityStore.state(context))
+
+        scenario().use { scenario ->
+            scenario.openProfile()
+            scenario.tap(R.id.profile_sign_in)
+
+            scenario.tap(R.id.auth_continue_as_guest)
+
+            scenario.onActivity { assertEquals(R.id.profile, it.currentDestinationId()) }
+        }
+
+        // Being a guest is the absence of an account, not another kind of one. This
+        // control creates nothing, and an install that had never signed in has still
+        // never signed in.
+        assertEquals(
+            "continuing without an account minted an identity",
+            IdentityState.None,
+            IdentityStore.state(context),
+        )
+    }
+
+    @Test
+    fun an_anonymous_install_is_not_disturbed_by_visiting_the_auth_screens() {
+        val uid = "11111111-1111-4111-8111-111111111111"
+        IdentityStore.adoptAnonymous(context, uid)
+
+        scenario().use { scenario ->
+            scenario.openProfile()
+            scenario.tap(R.id.profile_create_account)
+            scenario.tap(R.id.auth_have_account)
+            scenario.tap(R.id.auth_continue_as_guest)
+        }
+
+        assertEquals(IdentityState.Anonymous(uid), IdentityStore.state(context))
+    }
+
+    // ==================== 12: back from both screens ====================
+
+    @Test
+    fun back_from_sign_in_returns_to_the_profile_and_leaves_the_bar_hidden() {
+        scenario().use { scenario ->
+            scenario.openProfile()
+            scenario.tap(R.id.profile_sign_in)
+
+            scenario.tap(R.id.auth_back)
+
+            scenario.onActivity { activity ->
+                assertEquals(R.id.profile, activity.currentDestinationId())
+                // profile-guest has no bottom bar either, so it stays hidden - and
+                // the entry that restores it is Back from the profile itself.
+                assertEquals(
+                    View.GONE,
+                    activity.findViewById<View>(R.id.bottomNavView).visibility,
+                )
+            }
+
+            scenario.tap(R.id.profile_back)
+            scenario.onActivity { activity ->
+                assertEquals(R.id.home, activity.currentDestinationId())
+                assertEquals(
+                    "the bar must come back with HOME",
+                    View.VISIBLE,
+                    activity.findViewById<View>(R.id.bottomNavView).visibility,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun back_from_create_account_returns_to_the_profile() {
+        scenario().use { scenario ->
+            scenario.openProfile()
+            scenario.tap(R.id.profile_create_account)
+
+            scenario.tap(R.id.auth_back)
+
+            scenario.onActivity { assertEquals(R.id.profile, it.currentDestinationId()) }
+        }
+    }
+
+    @Test
+    fun the_system_back_gesture_leaves_by_the_same_route() {
+        scenario().use { scenario ->
+            scenario.openProfile()
+            scenario.tap(R.id.profile_sign_in)
+
+            scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+            scenario.onActivity { assertEquals(R.id.profile, it.currentDestinationId()) }
+        }
+    }
+
+    // ==================== the control that is waiting for G-A4c2 ====================
+
+    /**
+     * `Забыли пароль?` is drawn and does nothing, and both halves matter.
+     *
+     * Password recovery is part of v1 and its domain primitives are already merged;
+     * removing the control would misrepresent the product. Leaving it tappable and
+     * silent would misrepresent the build. Disabled is the only one of the three that
+     * is true, and there is deliberately no placeholder toast behind it.
+     */
+    @Test
+    fun forgot_password_is_visible_and_deliberately_not_interactive() {
+        scenario().use { scenario ->
+            scenario.openProfile()
+            scenario.tap(R.id.profile_sign_in)
+
+            scenario.onActivity { activity ->
+                val forgot = activity.findViewById<TextView>(R.id.auth_forgot_password)
+                assertEquals(View.VISIBLE, forgot.visibility)
+                assertEquals(
+                    activity.getString(R.string.auth_forgot_password),
+                    forgot.text.toString(),
+                )
+                assertFalse("it must not be clickable until G-A4c2", forgot.isClickable)
+                assertFalse(forgot.isEnabled)
+
+                // And tapping it goes nowhere, which is the assertion that survives
+                // somebody adding a listener without noticing the two flags above.
+                forgot.performClick()
+            }
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+            scenario.onActivity { assertEquals(R.id.auth_sign_in, it.currentDestinationId()) }
+        }
+    }
+
+    // ==================== the frames' own text ====================
+
+    @Test
+    fun both_screens_carry_the_strings_their_frames_draw() {
+        scenario().use { scenario ->
+            scenario.openProfile()
+            scenario.tap(R.id.profile_sign_in)
+
+            scenario.onActivity { activity ->
+                assertEquals("Вход", activity.text(R.id.auth_title))
+                assertEquals("Email", activity.text(R.id.auth_email_label))
+                assertEquals("Пароль", activity.text(R.id.auth_password_label))
+                assertEquals("Войти", activity.text(R.id.auth_submit_label))
+                assertEquals("Создать аккаунт", activity.text(R.id.auth_create_account))
+                assertEquals("Продолжить без аккаунта", activity.text(R.id.auth_continue_as_guest))
+                assertEquals("Забыли пароль?", activity.text(R.id.auth_forgot_password))
+            }
+
+            scenario.tap(R.id.auth_create_account)
+
+            scenario.onActivity { activity ->
+                assertEquals("Создать аккаунт", activity.text(R.id.auth_title))
+                assertEquals("Имя", activity.text(R.id.auth_name_label))
+                assertEquals("Email", activity.text(R.id.auth_email_label))
+                assertEquals("Пароль", activity.text(R.id.auth_password_label))
+                assertEquals("Минимум 8 символов", activity.text(R.id.auth_password_rule))
+                assertEquals("Создать аккаунт", activity.text(R.id.auth_submit_label))
+                assertEquals("Уже есть аккаунт? Войти", activity.text(R.id.auth_have_account))
+            }
+        }
+    }
+
+    @Test
+    fun no_error_row_is_present_until_something_fails() {
+        // The frozen geometry is measured with none of them in the layout, so a row
+        // that arrived visible-and-empty would move every measurement below it.
+        scenario().use { scenario ->
+            scenario.openProfile()
+            scenario.tap(R.id.profile_create_account)
+
+            scenario.onActivity { activity ->
+                for (id in listOf(R.id.auth_name_error, R.id.auth_email_error,
+                        R.id.auth_password_error, R.id.auth_form_error)) {
+                    assertEquals(View.GONE, activity.findViewById<View>(id).visibility)
+                }
+                assertEquals(
+                    "the indicator is only for a request in flight",
+                    View.GONE,
+                    activity.findViewById<View>(R.id.auth_submit_progress).visibility,
+                )
+                assertTrue(activity.findViewById<View>(R.id.auth_submit).isEnabled)
+            }
+        }
+    }
+
+    // ==================== helpers ====================
+
+    private fun scenario() = ActivityScenario.launch(MainActivity::class.java)
+
+    private fun ActivityScenario<MainActivity>.openProfile() {
+        tap(R.id.profile_entry)
+        onActivity { assertEquals(R.id.profile, it.currentDestinationId()) }
+    }
+
+    private fun ActivityScenario<MainActivity>.tap(id: Int) {
+        onActivity { it.findViewById<View>(id).performClick() }
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+    }
+
+    private fun MainActivity.text(id: Int): String =
+        findViewById<TextView>(id).text.toString()
+
+    private fun MainActivity.currentDestinationId(): Int? {
+        val host = supportFragmentManager.findFragmentById(R.id.navHostFragment)
+            as androidx.navigation.fragment.NavHostFragment
+        return host.navController.currentDestination?.id
+    }
+}

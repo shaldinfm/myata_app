@@ -229,8 +229,17 @@ class MainActivity : AppCompatActivity() {
         // Split mode owns the bar too and sets it directly; the two do not fight,
         // because split mode is not entered while the profile is open.
         navController.addOnDestinationChangedListener { _, destination, _ ->
+            // The two auth screens joined the profile here at G-A4c1. Their frames
+            // have no bottom bar either, and they are reached only from the profile,
+            // so the bar would otherwise appear for the length of a sign-in and
+            // vanish again - offering four destinations to somebody in the middle of
+            // typing a password.
+            val hidesBottomBar = destination.id == R.id.profile ||
+                destination.id == R.id.auth_sign_in ||
+                destination.id == R.id.auth_create_account
+
             binding.bottomNavView.visibility =
-                if (destination.id == R.id.profile) android.view.View.GONE
+                if (hidesBottomBar) android.view.View.GONE
                 else android.view.View.VISIBLE
         }
 

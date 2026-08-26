@@ -65,6 +65,32 @@ internal class FakeEmailAuthApi : EmailAuthApi {
     /** What `currentUid()` reports. Also settable directly, to model a restored session. */
     var session: String? = null
 
+    /**
+     * Holds an authentication open until a test lets it finish.
+     *
+     * The only way to observe a request that is *in flight* - which is what the
+     * loading state, the double-submit guard and the survives-recreation rule are
+     * all claims about. Without it every call returns before the assertion can look,
+     * and a spinner nobody ever saw would pass every test.
+     */
+    var gate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+
+    /** Incremented on entry to every authenticating call, before the gate. */
+    var authCalls = 0
+        private set
+
+    /**
+     * When set, the call throws this instead of returning a result.
+     *
+     * The shape every layer below the ViewModel is supposed to make impossible - a
+     * Room open that failed, a preferences write that failed, a bug - and therefore
+     * exactly the shape worth proving the ViewModel survives. An exception escaping
+     * `viewModelScope` takes the process with it and leaves the button spinning on
+     * the way out, which is a failure mode no amount of care in the layers below can
+     * be relied on to prevent forever.
+     */
+    var throwOnCall: Throwable? = null
+
     val signUps = mutableListOf<SignUp>()
     val signIns = mutableListOf<Credentials>()
     val resetRequests = mutableListOf<String>()
@@ -86,6 +112,11 @@ internal class FakeEmailAuthApi : EmailAuthApi {
     override suspend fun signIn(email: String, password: String): AuthResult {
         signIns += Credentials(email, password)
         return authenticate()
+    }
+
+    /** Completes whatever is waiting on [gate], letting the call return. */
+    fun release() {
+        gate?.complete(Unit)
     }
 
     override suspend fun requestPasswordReset(email: String): RecoveryResult {
@@ -122,7 +153,11 @@ internal class FakeEmailAuthApi : EmailAuthApi {
         return true
     }
 
-    private fun authenticate(): AuthResult {
+    private suspend fun authenticate(): AuthResult {
+        authCalls++
+        gate?.await()
+        throwOnCall?.let { throw it }
+
         val failed = failure
         if (failed != null) {
             if (sessionDespiteFailure) session = uid

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Input / …` on auth-sign-in 2517:2613 / 2517:2616 and auth-create-account
+  2517:2632 / 2517:2635 / 2517:2638, and their dark twins.
+
+  Two states, because the frames draw two. Every resting input is a 1dp `outline`
+  hairline; auth-create-account's password field 2517:2638 is drawn at 2dp in
+  `primary` - #1C4771 light, #5FD9B4 dark - which is the focused input, since it
+  is the field the frame shows a placeholder in rather than a value. So focus is
+  the design's own state and not an invention, and the 1dp/2dp difference is the
+  only thing that changes: the fill and the radius are constant.
+
+  The stroke is drawn inside the bounds, so neither state moves the 56dp box or
+  the text inside it. A focus ring that changed the height would shift every row
+  below it the moment somebody tapped a field.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/surface" />
+            <stroke
+                android:width="@dimen/auth_input_stroke_focused"
+                android:color="@color/primary" />
+            <corners android:radius="@dimen/auth_input_radius" />
+        </shape>
+    </item>
+
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/surface" />
+            <stroke
+                android:width="@dimen/auth_input_stroke"
+                android:color="@color/outline" />
+            <corners android:radius="@dimen/auth_input_radius" />
+        </shape>
+    </item>
+</selector>

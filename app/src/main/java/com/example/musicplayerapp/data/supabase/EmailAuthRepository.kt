@@ -75,7 +75,7 @@ object EmailAuthRepository {
         displayName: String,
     ): AuthResult {
         val api = EmailAuthBackend.api(context)
-        val call: suspend () -> AuthResult = { api.signUp(email, password, displayName) }
+        val call: suspend () -> AuthResult = { confirmed(api, api.signUp(email, password, displayName)) }
 
         return when (val state = IdentityStore.state(context)) {
             is IdentityState.None -> direct(context, AuthAttempt.REGISTER, call)
@@ -89,7 +89,7 @@ object EmailAuthRepository {
     /** Authenticates an existing account, from wherever this install currently is. */
     suspend fun signIn(context: Context, email: String, password: String): AuthResult {
         val api = EmailAuthBackend.api(context)
-        val call: suspend () -> AuthResult = { api.signIn(email, password) }
+        val call: suspend () -> AuthResult = { confirmed(api, api.signIn(email, password)) }
 
         return when (val state = IdentityStore.state(context)) {
             is IdentityState.None,
@@ -135,13 +135,16 @@ object EmailAuthRepository {
         // with sign-in rather than reimplemented: everything above cares that a
         // session was established and by whom, not which endpoint established it.
         val call: suspend () -> AuthResult = {
-            when (val verified = api.verifyRecoveryCode(email, code)) {
-                is RecoveryResult.PasswordResetAuthorized -> AuthResult.Success(verified.uid)
-                is RecoveryResult.Failed -> AuthResult.Failed(verified.failure)
+            val verified = when (val outcome = api.verifyRecoveryCode(email, code)) {
+                is RecoveryResult.PasswordResetAuthorized -> AuthResult.Success(outcome.uid)
+                is RecoveryResult.Failed -> AuthResult.Failed(outcome.failure)
                 else -> AuthResult.Failed(
-                    AuthFailure.Unknown(detail = "unexpected recovery result: $verified")
+                    AuthFailure.Unknown(detail = "unexpected recovery result: $outcome")
                 )
             }
+            // Verifying a RECOVERY OTP establishes a session, so it is held to the
+            // same rule as any other authentication.
+            confirmed(api, verified)
         }
 
         val routed = when (val state = IdentityStore.state(context)) {
@@ -170,6 +173,46 @@ object EmailAuthRepository {
         EmailAuthBackend.api(context).updatePassword(newPassword)
 
     // --------------------------------------------------------------- paths --
+
+    /**
+     * The guard every authentication passes before its uid is allowed anywhere near
+     * [IdentityStore].
+     *
+     * **A reported success is a claim, not a session.** `signUpWith(Email)` returns a
+     * `UserInfo` whenever a row was created in `auth.users`, whether or not a token
+     * came with it, and whether or not one did depends on a dashboard setting this
+     * code cannot see. Committing `REGISTERED(Y)` on the strength of that claim would
+     * leave an install asserting an account it holds no token for - every write
+     * refused by RLS, every screen saying it is signed in, and nothing able to explain
+     * the contradiction.
+     *
+     * So the session is asked, every time, on every path that ends in a persisted
+     * identity: registration, sign-in and recovery verification alike, because a
+     * verified RECOVERY OTP establishes a session exactly as the other two do.
+     *
+     * [SupabaseEmailAuthApi] asks the same question with the value only it can see -
+     * the uid the sign-up response reported. This asks it again of whatever came back
+     * through [EmailAuthApi], which is what makes "a live session for this uid" part
+     * of that interface's contract rather than a property of the one implementation
+     * behind it today.
+     *
+     * Failing here **never** routes anybody into an OTP or confirmation flow.
+     * Email-confirmation registration is not part of v1, and turning a misconfigured
+     * dashboard into "check your mail" would quietly implement it.
+     */
+    private suspend fun confirmed(api: EmailAuthApi, result: AuthResult): AuthResult =
+        when (result) {
+            is AuthResult.Failed -> result
+
+            is AuthResult.Success ->
+                when (val verdict = sessionVerdict(result.uid, api.currentUid())) {
+                    null -> result
+                    else -> {
+                        Log.w(TAG, "authentication left no usable session: ${verdict.reason}")
+                        AuthResult.Failed(verdict)
+                    }
+                }
+        }
 
     /**
      * Authentication with no identity to preserve: [IdentityState.None] or
@@ -239,19 +282,34 @@ object EmailAuthRepository {
                 when (val result = call()) {
                     is AuthResult.Success -> result.uid
 
-                    is AuthResult.Failed -> {
-                        // A failure report is not proof that no session exists. If the
-                        // remote switch actually happened, rolling back would try to
-                        // rebuild X's state under Y's token - refused by RLS - and
-                        // would leave a device whose storage and session disagree. So
-                        // the session is asked directly, and it wins.
-                        val live = api.currentUid()
-                        if (live != null && live != from) {
-                            Log.w(TAG, "auth reported failure but a new session exists; going forward")
-                            live
-                        } else {
+                    is AuthResult.Failed -> when {
+                        // The session was already inspected, and found either absent
+                        // or belonging to somebody who is not the destination. Asking
+                        // again would be asking the question that just came back "no",
+                        // and acting on the answer would commit an identity the
+                        // listener did not ask to become. Roll back instead: X is
+                        // retired at this point and must not stay that way.
+                        result.failure is AuthFailure.SessionNotEstablished -> {
+                            Log.w(TAG, "the destination established no usable session; rolling back")
                             failure = result.failure
                             null
+                        }
+
+                        else -> {
+                            // Any other failure report is not proof that no session
+                            // exists. If the remote switch actually happened, rolling
+                            // back would try to rebuild X's state under Y's token -
+                            // refused by RLS - and would leave a device whose storage
+                            // and session disagree. So the session is asked directly,
+                            // and it wins.
+                            val live = api.currentUid()
+                            if (live != null && live != from) {
+                                Log.w(TAG, "auth reported failure but a new session exists; going forward")
+                                live
+                            } else {
+                                failure = result.failure
+                                null
+                            }
                         }
                     }
                 }

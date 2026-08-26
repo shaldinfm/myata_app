@@ -5,6 +5,7 @@ import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -217,6 +218,56 @@ class AuthFailureMappingTest {
         assertTrue("$failure", failure is AuthFailure.Unknown)
         assertTrue("the class and message are what a bug report needs",
             failure.detail.contains("IllegalStateException") && failure.detail.contains("something odd"))
+    }
+
+    // ==================== a reported user is not a session ====================
+
+    /**
+     * The rule both sides of the auth boundary ask, asserted in one table.
+     *
+     * A pure function of two nullable strings, which is the whole reason it is one:
+     * the claim it makes is about production behaviour on a misconfigured project,
+     * and that is not a thing a device test can arrange.
+     */
+    @Test
+    fun `a session is required before any uid may be committed`() {
+        val y = "22222222-2222-4222-8222-222222222222"
+        val z = "33333333-3333-4333-8333-333333333333"
+
+        // A reported user and no session: what Confirm Email being on looks like.
+        val absent = sessionVerdict(reported = y, session = null)
+        assertEquals(AuthFailure.SessionNotEstablished.Reason.NO_SESSION, absent?.reason)
+
+        // No claim and no session: a sign-in that threw nothing and achieved nothing.
+        val nothing = sessionVerdict(reported = null, session = null)
+        assertEquals(AuthFailure.SessionNotEstablished.Reason.NO_SESSION, nothing?.reason)
+
+        // A session belonging to somebody else. Neither uid is committable.
+        val other = sessionVerdict(reported = y, session = z)
+        assertEquals(AuthFailure.SessionNotEstablished.Reason.SESSION_DISAGREES, other?.reason)
+
+        // The two ways it is safe to proceed.
+        assertNull("agreement is the ordinary case", sessionVerdict(reported = y, session = y))
+        assertNull(
+            "signInWith returns Unit, so no claim to cross-check is not a failure",
+            sessionVerdict(reported = null, session = y),
+        )
+    }
+
+    @Test
+    fun `the session verdict carries no identity in its words`() {
+        val y = "22222222-2222-4222-8222-222222222222"
+        val z = "33333333-3333-4333-8333-333333333333"
+
+        // The reason enum is the diagnosis. A uid in a log line is not something this
+        // codebase writes, and a failure is exactly the thing that gets logged.
+        for (verdict in listOfNotNull(
+            sessionVerdict(reported = y, session = null),
+            sessionVerdict(reported = y, session = z),
+        )) {
+            assertFalse(verdict.detail.contains(y))
+            assertFalse(verdict.detail.contains(z))
+        }
     }
 
     // ==================== diagnostics survive ====================

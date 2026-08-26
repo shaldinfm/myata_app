@@ -142,6 +142,10 @@ sealed interface AuthFailure {
      * asks. It is kept as a distinct case precisely because it is the fingerprint of
      * that setting having drifted back on - a diagnosis that is obvious here and
      * completely opaque if it arrives folded into [Unknown].
+     *
+     * This is the *refusal* form of that drift, which only a sign-in can produce.
+     * The registration form is [SessionNotEstablished]: a sign-up under the same
+     * setting does not fail at all, it succeeds and hands back a user with no session.
      */
     data class EmailNotConfirmed(
         override val detail: String = "",
@@ -186,6 +190,66 @@ sealed interface AuthFailure {
         override val detail: String = "",
         override val cause: Throwable? = null,
     ) : AuthFailure
+
+    /**
+     * The call reported a user, and this device does not hold a usable session for
+     * them.
+     *
+     * The one failure here that is not the server refusing something. Everything
+     * else in this hierarchy is a "no" that arrived over the wire; this is a "yes"
+     * that cannot be acted on, and telling them apart matters because a screen must
+     * not report *that address is taken* or *wrong password* for it.
+     *
+     * ## Why it is checked at all
+     *
+     * `signUpWith(Email)` returning a `UserInfo` is not evidence that registration
+     * completed. It is evidence that a row exists in `auth.users`. Whether a session
+     * came with it depends on a dashboard setting - Confirm Email - that this code
+     * does not control and cannot see. v1 requires it off, and production code must
+     * not corrupt [IdentityState] when the dashboard drifts: committing
+     * `REGISTERED(Y)` on the strength of a row would leave an install claiming an
+     * account it holds no token for, unable to write a single row past RLS, and
+     * unable to explain why.
+     *
+     * The session is the only thing RLS enforces, so the session is what is asked.
+     *
+     * **It never leads to an OTP flow.** Email-confirmation registration is not part
+     * of v1, and turning this into "check your mail" would quietly implement it.
+     */
+    data class SessionNotEstablished(
+        val reason: Reason,
+        override val detail: String = "",
+        override val cause: Throwable? = null,
+    ) : AuthFailure {
+
+        /**
+         * Which half of the check failed.
+         *
+         * Deliberately carries no uid. Everything else in this file is safe to put in
+         * a log line, and an identity is not - see [ReactionSyncEngine]'s parking log
+         * on the same principle. The distinction below is all a diagnosis needs.
+         */
+        enum class Reason {
+
+            /**
+             * A user was reported and no session exists.
+             *
+             * In a correctly configured project this is unreachable. Reached, it
+             * means Confirm Email is on.
+             */
+            NO_SESSION,
+
+            /**
+             * A session exists and belongs to somebody else.
+             *
+             * Either the sign-up did not replace the session that was already there -
+             * the anonymous one, mid-handoff - or two identities are live on one
+             * install. Neither uid may be committed: the reported one has no token
+             * here, and the live one is not who the listener asked to become.
+             */
+            SESSION_DISAGREES,
+        }
+    }
 
     /**
      * Something else. [status] and [code] are kept because they are the difference
@@ -359,5 +423,50 @@ private fun AuthFailure.withCause(t: Throwable): AuthFailure = when (this) {
     is AuthFailure.RateLimited -> copy(cause = t)
     is AuthFailure.InvalidRecoveryCode -> copy(cause = t)
     is AuthFailure.RecoveryCodeExpired -> copy(cause = t)
+    is AuthFailure.SessionNotEstablished -> copy(cause = t)
     is AuthFailure.Unknown -> copy(cause = t)
+}
+
+/**
+ * The one rule for "did that call actually leave this device authenticated as who it
+ * said", in one place.
+ *
+ * Both sides of the auth boundary ask it and neither owns it, which is why it is a
+ * free function rather than a method on either:
+ *
+ *  - [SupabaseEmailAuthApi] asks it with the `UserInfo` a sign-up returned, because
+ *    only it ever sees that value;
+ *  - [EmailAuthRepository] asks it again with whatever uid came back through
+ *    [EmailAuthApi], because the invariant has to hold for *any* implementation of
+ *    that interface and not only for the one that happens to be wired in.
+ *
+ * The second is not redundant. The interface's contract is a uid; this is what makes
+ * "and a live session for it" part of that contract rather than an assumption about
+ * the implementation behind it.
+ *
+ * A pure function of two nullable strings, so the whole table can be asserted in a
+ * unit test - the same split as [classifyAuthError], for the same reason.
+ *
+ * @param reported the uid the call claims. Null when it claimed none, which is not a
+ *   failure on its own: `signInWith` returns `Unit`, so on that path the session is
+ *   the only claim there is and there is nothing to cross-check it against.
+ * @param session the uid this device actually holds a token for, right now.
+ * @return null when it is safe to commit [session], or the reason it is not.
+ */
+internal fun sessionVerdict(
+    reported: String?,
+    session: String?,
+): AuthFailure.SessionNotEstablished? = when {
+    session == null -> AuthFailure.SessionNotEstablished(
+        reason = AuthFailure.SessionNotEstablished.Reason.NO_SESSION,
+        detail = "the call reported a user but this device holds no session; " +
+            "email confirmation appears to be enabled",
+    )
+
+    reported != null && reported != session -> AuthFailure.SessionNotEstablished(
+        reason = AuthFailure.SessionNotEstablished.Reason.SESSION_DISAGREES,
+        detail = "the reported user and the live session are different identities",
+    )
+
+    else -> null
 }

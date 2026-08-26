@@ -183,6 +183,48 @@ class AuthRecoveryTest {
         assertNull(IdentityStore.handoff(context))
     }
 
+    /**
+     * **E.** A verified code that leaves no session is not an authentication.
+     *
+     * RECOVERY OTP is held to the same rule as a sign-in precisely because it
+     * establishes a session in the same way. A "success" without one must never reach
+     * [IdentityStore], or a listener ends up registered to an account they hold no
+     * token for.
+     */
+    @Test
+    fun e_a_recovery_success_without_a_session_never_becomes_registered() = runBlocking {
+        auth.establishesSession = false
+
+        val result = EmailAuthRepository.verifyRecoveryCode(context, "listener@example.com", "123456")
+
+        assertTrue("$result", result is RecoveryResult.Failed)
+        val failure = (result as RecoveryResult.Failed).failure
+        assertTrue("$failure", failure is AuthFailure.SessionNotEstablished)
+        assertEquals(
+            AuthFailure.SessionNotEstablished.Reason.NO_SESSION,
+            (failure as AuthFailure.SessionNotEstablished).reason,
+        )
+        assertEquals(IdentityState.None, IdentityStore.state(context))
+        assertNull(IdentityStore.authAttempt(context))
+        assertEquals("and nothing mints in response", 0, identity.calls)
+    }
+
+    @Test
+    fun a_recovery_without_a_session_from_anonymous_rolls_back_and_restores_x() = runBlocking {
+        IdentityStore.adoptAnonymous(context, x)
+        like(depeche)
+        auth.session = x
+        auth.establishesSession = false
+
+        val result = EmailAuthRepository.verifyRecoveryCode(context, "listener@example.com", "123456")
+
+        assertTrue("$result", result is RecoveryResult.Failed)
+        assertTrue((result as RecoveryResult.Failed).failure is AuthFailure.SessionNotEstablished)
+        assertEquals(IdentityState.Anonymous(x), IdentityStore.state(context))
+        assertEquals("X must not be left retired", setOf(depeche), sync.adoptedBy.getValue(x).keys)
+        assertNull(IdentityStore.handoff(context))
+    }
+
     // ==================== J. setting the new password ====================
 
     @Test

@@ -44,6 +44,24 @@ internal class FakeEmailAuthApi : EmailAuthApi {
     /** Whether a *failed* authentication nonetheless leaves a live session behind. */
     var sessionDespiteFailure: Boolean = false
 
+    /**
+     * Whether a *successful* call leaves a session behind at all.
+     *
+     * False models the shape the guard exists for: `signUpWith` returns a `UserInfo`
+     * because a row was created, and no token came with it because Confirm Email is
+     * on. The call reports a user and this device is authenticated as nobody.
+     */
+    var establishesSession: Boolean = true
+
+    /**
+     * The uid the session ends up holding, when it differs from the reported one.
+     *
+     * Null means they agree, which is every ordinary case. Set, it models the other
+     * half of the guard: a user is reported and the live session belongs to somebody
+     * else - the anonymous identity the sign-up failed to replace, most plausibly.
+     */
+    var sessionUid: String? = null
+
     /** What `currentUid()` reports. Also settable directly, to model a restored session. */
     var session: String? = null
 
@@ -82,7 +100,7 @@ internal class FakeEmailAuthApi : EmailAuthApi {
             if (sessionDespiteFailure) session = uid
             return RecoveryResult.Failed(failed)
         }
-        session = uid
+        if (establishesSession) session = sessionUid ?: uid
         return RecoveryResult.PasswordResetAuthorized(uid)
     }
 
@@ -110,7 +128,7 @@ internal class FakeEmailAuthApi : EmailAuthApi {
             if (sessionDespiteFailure) session = uid
             return AuthResult.Failed(failed)
         }
-        session = uid
+        if (establishesSession) session = sessionUid ?: uid
         return AuthResult.Success(uid)
     }
 }

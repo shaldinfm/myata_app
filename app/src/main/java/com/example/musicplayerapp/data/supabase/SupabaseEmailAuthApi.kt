@@ -31,9 +31,14 @@ import kotlinx.serialization.json.put
  *
  * With Confirm Email off, `signUpWith(Email)` returns a session and the project
  * sends nothing. That is a v1 contract rather than an accident, and it is checked
- * rather than assumed: a sign-up that comes back without a session means the setting
- * has drifted, and this reports it as [AuthFailure.EmailNotConfirmed] instead of
- * handing the caller a uid it cannot use.
+ * rather than assumed.
+ *
+ * A returned `UserInfo` means a row exists in `auth.users`. It does not mean this
+ * device can act as that user, and only the session can - so [sessionVerdict] is
+ * asked on every path that ends in a persisted identity, with the reported uid where
+ * there is one. A sign-up that comes back without a session, or with somebody else's,
+ * is [AuthFailure.SessionNotEstablished] rather than a uid the caller cannot use.
+ * Nothing here routes anybody into a confirmation flow; v1 does not have one.
  */
 class SupabaseEmailAuthApi(private val context: Context) : EmailAuthApi {
 
@@ -57,29 +62,21 @@ class SupabaseEmailAuthApi(private val context: Context) : EmailAuthApi {
             }
         }.fold(
             onSuccess = { created ->
+                // A returned UserInfo says a row exists in auth.users. It does not say
+                // this device can act as that user, and only the session can. Asked
+                // here with the reported uid, because this is the only place that
+                // value is ever visible.
                 val session = auth.currentUserOrNull()?.id
-                when {
-                    session != null -> {
-                        if (created != null && created.id != session) {
-                            // Should be impossible. Said loudly because the only
-                            // readings are "two identities in play" and "a library
-                            // change we have not noticed", and both want a bug report.
-                            Log.w(TAG, "sign-up user differs from the session it produced")
-                        }
+
+                when (val verdict = sessionVerdict(reported = created?.id, session = session)) {
+                    null -> {
                         Log.d(TAG, "registered; session established")
-                        AuthResult.Success(session)
+                        AuthResult.Success(session!!)
                     }
 
                     else -> {
-                        // A created user and no session is exactly what Confirm Email
-                        // being ON looks like. v1 requires it off, so this is a
-                        // configuration diagnosis, not a listener's problem.
-                        Log.w(TAG, "sign-up returned no session; is Confirm Email on?")
-                        AuthResult.Failed(
-                            AuthFailure.EmailNotConfirmed(
-                                "sign-up produced no session; email confirmation appears to be enabled"
-                            )
-                        )
+                        Log.w(TAG, "sign-up did not leave a usable session: ${verdict.reason}")
+                        AuthResult.Failed(verdict)
                     }
                 }
             },
@@ -100,13 +97,19 @@ class SupabaseEmailAuthApi(private val context: Context) : EmailAuthApi {
             auth.currentUserOrNull()?.id
         }.fold(
             onSuccess = { uid ->
-                if (uid != null) {
-                    Log.d(TAG, "signed in")
-                    AuthResult.Success(uid)
-                } else {
-                    AuthResult.Failed(
-                        AuthFailure.Unknown(detail = "sign-in reported success with no session")
-                    )
+                // No exception is not the same as a session. signInWith returns Unit,
+                // so there is nothing to cross-check against - the session is the
+                // entire result, and its absence is the failure.
+                when (val verdict = sessionVerdict(reported = null, session = uid)) {
+                    null -> {
+                        Log.d(TAG, "signed in")
+                        AuthResult.Success(uid!!)
+                    }
+
+                    else -> {
+                        Log.w(TAG, "sign-in did not leave a usable session: ${verdict.reason}")
+                        AuthResult.Failed(verdict)
+                    }
                 }
             },
             onFailure = { AuthResult.Failed(classifyAuthFailure(it, AuthOperation.SIGN_IN)) },
@@ -143,13 +146,20 @@ class SupabaseEmailAuthApi(private val context: Context) : EmailAuthApi {
             auth.currentUserOrNull()?.id
         }.fold(
             onSuccess = { uid ->
-                if (uid != null) {
-                    Log.d(TAG, "recovery code accepted; password may be reset")
-                    RecoveryResult.PasswordResetAuthorized(uid)
-                } else {
-                    RecoveryResult.Failed(
-                        AuthFailure.Unknown(detail = "recovery verified with no session")
-                    )
+                // A verified RECOVERY OTP establishes a session, which makes this an
+                // authentication and subject to exactly the same rule as one. A
+                // verification that reported success without leaving a session must
+                // never reach IdentityState.
+                when (val verdict = sessionVerdict(reported = null, session = uid)) {
+                    null -> {
+                        Log.d(TAG, "recovery code accepted; password may be reset")
+                        RecoveryResult.PasswordResetAuthorized(uid!!)
+                    }
+
+                    else -> {
+                        Log.w(TAG, "recovery left no usable session: ${verdict.reason}")
+                        RecoveryResult.Failed(verdict)
+                    }
                 }
             },
             onFailure = {

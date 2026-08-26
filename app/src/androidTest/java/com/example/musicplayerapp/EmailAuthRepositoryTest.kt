@@ -272,6 +272,160 @@ class EmailAuthRepositoryTest {
         assertEquals(1, outbox.count())
     }
 
+    // ============ the session guard: a reported user is not a session ============
+
+    /**
+     * **A.** Sign-up reports a user and this device is authenticated as nobody.
+     *
+     * The shape a dashboard with Confirm Email switched back on produces. A row now
+     * exists in `auth.users` and no token came with it, so committing `REGISTERED(Y)`
+     * would leave this install asserting an account it cannot write a single row as.
+     */
+    @Test
+    fun a_signup_that_reports_a_user_without_a_session_is_not_a_registration() = runBlocking {
+        auth.establishesSession = false
+
+        val result = EmailAuthRepository.register(context, "listener@example.com", "s3cret!", "Денис")
+
+        assertTrue("$result", result is AuthResult.Failed)
+        val failure = (result as AuthResult.Failed).failure
+        assertTrue("$failure", failure is AuthFailure.SessionNotEstablished)
+        assertEquals(
+            AuthFailure.SessionNotEstablished.Reason.NO_SESSION,
+            (failure as AuthFailure.SessionNotEstablished).reason,
+        )
+
+        // The three things that must not have happened.
+        assertEquals("no identity may be committed", IdentityState.None, IdentityStore.state(context))
+        assertNull("no durable claim may survive", IdentityStore.authAttempt(context))
+        assertEquals("nothing may mint in response", 0, identity.calls)
+    }
+
+    /**
+     * **C.** Sign-up reports Y and the live session is somebody else.
+     *
+     * Neither uid is safe: the reported one has no token here, and the live one is not
+     * who the listener asked to become. Committing either is committing the wrong
+     * identity, so nothing is committed.
+     */
+    @Test
+    fun a_signup_whose_session_belongs_to_someone_else_commits_nothing() = runBlocking {
+        val z = "33333333-3333-4333-8333-333333333333"
+        auth.sessionUid = z
+
+        val result = EmailAuthRepository.register(context, "listener@example.com", "s3cret!", "Денис")
+
+        assertTrue("$result", result is AuthResult.Failed)
+        val failure = (result as AuthResult.Failed).failure
+        assertEquals(
+            AuthFailure.SessionNotEstablished.Reason.SESSION_DISAGREES,
+            (failure as AuthFailure.SessionNotEstablished).reason,
+        )
+        assertEquals(IdentityState.None, IdentityStore.state(context))
+        assertNull(IdentityStore.authAttempt(context))
+    }
+
+    @Test
+    fun a_sign_in_that_leaves_no_session_is_not_a_sign_in() = runBlocking {
+        // No exception is not the same as a session, on any path.
+        auth.establishesSession = false
+
+        val result = EmailAuthRepository.signIn(context, "listener@example.com", "s3cret!")
+
+        assertTrue("$result", result is AuthResult.Failed)
+        assertTrue((result as AuthResult.Failed).failure is AuthFailure.SessionNotEstablished)
+        assertEquals(IdentityState.None, IdentityStore.state(context))
+    }
+
+    /**
+     * **B.** The same failure from an anonymous install, where it is not enough to
+     * decline: X has already been retired by the time the destination is asked.
+     */
+    @Test
+    fun b_a_signup_without_a_session_from_anonymous_rolls_back_and_restores_x() = runBlocking {
+        IdentityStore.adoptAnonymous(context, x)
+        like(depeche)
+        // The session an anonymous install is actually holding when the destination is
+        // asked: X's own. A sign-up that establishes nothing leaves it in place.
+        auth.session = x
+        auth.establishesSession = false
+
+        val result = EmailAuthRepository.register(context, "listener@example.com", "s3cret!", "Денис")
+
+        assertTrue("$result", result is AuthResult.Failed)
+        assertTrue(
+            "the reason must reach the form intact",
+            (result as AuthResult.Failed).failure is AuthFailure.SessionNotEstablished,
+        )
+
+        // Still X, and X is whole again.
+        assertEquals(IdentityState.Anonymous(x), IdentityStore.state(context))
+        assertEquals(listOf(x), sync.retirements)
+        assertEquals(
+            "X must not be left retired",
+            setOf(depeche),
+            sync.adoptedBy.getValue(x).keys,
+        )
+        assertNull(IdentityStore.handoff(context))
+        assertTrue("nothing may be attributed to a destination with no session",
+            sync.eventsBy(y).isEmpty())
+        assertEquals(1, dao.allReactions().size)
+    }
+
+    @Test
+    fun a_destination_whose_session_disagrees_rolls_back_rather_than_adopting_it() = runBlocking {
+        // The forward-going guard must not fire here. It exists for a failure report
+        // that arrived *after* a real switch; this is a report that the switch did not
+        // happen, and the live session is somebody the listener did not ask to be.
+        val z = "33333333-3333-4333-8333-333333333333"
+        IdentityStore.adoptAnonymous(context, x)
+        like(depeche)
+        auth.sessionUid = z
+
+        val result = EmailAuthRepository.register(context, "listener@example.com", "s3cret!", "Денис")
+
+        assertTrue("$result", result is AuthResult.Failed)
+        assertEquals(IdentityState.Anonymous(x), IdentityStore.state(context))
+        assertTrue("neither the reported nor the live uid may be adopted",
+            sync.adoptedBy[y] == null && sync.adoptedBy[z] == null)
+        assertEquals(setOf(depeche), sync.adoptedBy.getValue(x).keys)
+        assertNull(IdentityStore.handoff(context))
+    }
+
+    /**
+     * **D.** Every definitive failure resolves the durable claim.
+     *
+     * A marker that outlived a failure would be read at the next cold start against
+     * whatever session happened to be there, and promoted.
+     */
+    @Test
+    fun d_every_definitive_auth_failure_clears_the_attempt_marker() = runBlocking {
+        val failures = listOf(
+            AuthFailure.InvalidCredentials(),
+            AuthFailure.EmailAlreadyRegistered(),
+            AuthFailure.WeakOrInvalidPassword(),
+            AuthFailure.RateLimited(),
+            AuthFailure.NetworkFailure(),
+            AuthFailure.Unknown(),
+        )
+
+        for (failure in failures) {
+            IdentityStore.clearForTest(context)
+            auth.failure = failure
+            EmailAuthRepository.signIn(context, "listener@example.com", "s3cret!")
+            assertNull("$failure left a marker behind", IdentityStore.authAttempt(context))
+            assertEquals("$failure", IdentityState.None, IdentityStore.state(context))
+        }
+
+        // And the guard's own failure, which is reached through a reported success.
+        IdentityStore.clearForTest(context)
+        auth.failure = null
+        auth.establishesSession = false
+        EmailAuthRepository.register(context, "listener@example.com", "s3cret!", "Денис")
+        assertNull(IdentityStore.authAttempt(context))
+        assertEquals(IdentityState.None, IdentityStore.state(context))
+    }
+
     // ==================== undefined transitions ====================
 
     @Test

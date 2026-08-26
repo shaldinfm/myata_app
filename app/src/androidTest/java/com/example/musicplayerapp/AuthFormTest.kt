@@ -173,8 +173,37 @@ class AuthFormTest {
                     activity.text(R.id.auth_password_error),
                 )
                 assertEquals(View.GONE, activity.visibilityOf(R.id.auth_email_error))
+
+                // The rule and its error are the same sentence. Showing both stacks
+                // one rule twice and reads like a bug, so the error replaces the hint.
+                assertEquals(
+                    "the static rule must give way to its own error",
+                    View.GONE,
+                    activity.visibilityOf(R.id.auth_password_rule),
+                )
             }
             assertEquals(0, auth.authCalls)
+        }
+    }
+
+    @Test
+    fun the_password_rule_is_shown_whenever_the_password_is_not_the_problem() {
+        createAccount { scenario ->
+            scenario.onActivity {
+                assertEquals("at rest the frame draws it", View.VISIBLE,
+                    it.visibilityOf(R.id.auth_password_rule))
+            }
+
+            // A failure that is not about the password leaves the rule alone.
+            scenario.type(R.id.auth_name, "Денис")
+            scenario.type(R.id.auth_email, "not-an-address")
+            scenario.type(R.id.auth_password, "s3cret!!")
+            scenario.tap(R.id.auth_submit)
+
+            scenario.onActivity { activity ->
+                assertEquals(View.VISIBLE, activity.visibilityOf(R.id.auth_email_error))
+                assertEquals(View.VISIBLE, activity.visibilityOf(R.id.auth_password_rule))
+            }
         }
     }
 

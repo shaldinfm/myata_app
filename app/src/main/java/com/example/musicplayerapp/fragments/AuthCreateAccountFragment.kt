@@ -90,6 +90,14 @@ class AuthCreateAccountFragment : Fragment() {
         binding.authPasswordError.setInlineError(state.passwordError)
         binding.authFormError.setInlineError(state.formError)
 
+        // `Минимум 8 символов` is the resting hint, and the password error says the
+        // same sentence in red. Showing both stacks one rule twice and reads like a
+        // bug, so the error replaces the hint rather than joining it - which also
+        // keeps the row count, and therefore everything below, exactly where the
+        // frame puts it.
+        binding.authPasswordRule.visibility =
+            if (state.passwordError == null) View.VISIBLE else View.GONE
+
         val idle = !state.loading
 
         binding.authSubmitLabel.visibility = if (idle) View.VISIBLE else View.INVISIBLE

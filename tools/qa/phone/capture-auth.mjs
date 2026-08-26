@@ -109,8 +109,42 @@ function tap(id) {
   sleep(700);
 }
 
+/** Types into a field found by id, closing the IME afterwards so it never covers a shot. */
+function type(id, value) {
+  const node = dump().get(id);
+  if (!node) throw new Error(`no field ${id}`);
+  sh(["shell", "input", "tap",
+    String(Math.round((node.left + node.right) / 2)),
+    String(Math.round((node.top + node.bottom) / 2))]);
+  sleep(500);
+  sh(["shell", "input", "text", value]);
+  sh(["shell", "input", "keyevent", "111"]); // ESC closes the IME
+  sleep(500);
+}
+
+/** Taps without waiting, so the transient loading state can be caught. */
+function tapNow(id) {
+  const node = dump().get(id);
+  if (!node) throw new Error(`no view ${id}`);
+  sh(["shell", "input", "tap",
+    String(Math.round((node.left + node.right) / 2)),
+    String(Math.round((node.top + node.bottom) / 2))]);
+}
+
 function shot(name) {
   dismissAnr();
+  return shotFast(name);
+}
+
+/**
+ * A screenshot with no dump in front of it.
+ *
+ * `dismissAnr` costs a uiautomator dump - about a second - which is longer than the
+ * state this is used for lasts. The loading state has to be caught in the window
+ * between the tap and the answer, and a shot taken after a dump is a shot of what
+ * came next.
+ */
+function shotFast(name) {
   const png = shBin(["exec-out", "screencap", "-p"]);
   fs.writeFileSync(path.join(OUT, `${name}.png`), png);
   return `${name}.png`;
@@ -159,11 +193,45 @@ try {
       measuredDp: measure(dump(), density),
     };
 
+    // The loading state, caught in the window between the tap and the answer. No
+    // Figma frame draws it - the owner's brief says to use the existing screen with
+    // transient state - so what is being checked is that it changes nothing but the
+    // button's contents.
+    type("auth_email", "zz-ga4c1-probe@example.com");
+    type("auth_password", "zz-probe-password");
+    tapNow("auth_submit");
+    metadata.screens[`auth-sign-in-loading-${theme}`] = {
+      shot: shotFast(`auth-sign-in-loading-${theme}`),
+      figma: "no frame; transient state on 2517:2603 / 2517:3570",
+    };
+
+    // And the settled failure, which is the inline error area doing its job. Also
+    // frameless, and also expected to move nothing above it.
+    sleep(6000);
+    metadata.screens[`auth-sign-in-error-${theme}`] = {
+      shot: shot(`auth-sign-in-error-${theme}`),
+      figma: "no frame; inline error on 2517:2603 / 2517:3570",
+      measuredDp: measure(dump(), density),
+    };
+
     tap("auth_back");
     tap("profile_create_account");
     metadata.screens[`auth-create-account-${theme}`] = {
       shot: shot(`auth-create-account-${theme}`),
       figma: theme === "dark" ? "2517:3591" : "2517:2624",
+      measuredDp: measure(dump(), density),
+    };
+
+    // Local validation, attached to the three fields that failed. `Имя` is left
+    // untouched rather than filled with a space: `adb shell input text " "` does not
+    // survive shell word-splitting, and an empty field is the blank this refuses
+    // anyway.
+    type("auth_email", "not-an-address");
+    type("auth_password", "short");
+    tap("auth_submit");
+    metadata.screens[`auth-create-account-error-${theme}`] = {
+      shot: shot(`auth-create-account-error-${theme}`),
+      figma: "no frame; field validation on 2517:2624 / 2517:3591",
       measuredDp: measure(dump(), density),
     };
   }

@@ -244,6 +244,29 @@ class AuthFormTest {
         }
     }
 
+    /**
+     * `Забыли пароль?` cannot reach the backend, which is the half a visibility check
+     * cannot prove.
+     *
+     * `AuthNavigationTest` asserts it is drawn, disabled and navigates nowhere. This
+     * asserts the thing that would actually cost something if it were wrong: with a
+     * backend installed and watching, tapping it sends no recovery request. Requesting
+     * a recovery mail is the only call in the app that spends the owner's shared SMTP
+     * quota, so a control that could fire one before G-A4c2 wires the flow is not a
+     * dead link - it is a bill.
+     */
+    @Test
+    fun the_recovery_link_cannot_request_anything_before_g_a4c2() {
+        signIn { scenario ->
+            on { it.findViewById<View>(R.id.auth_forgot_password).performClick() }
+            sync()
+
+            assertTrue("no recovery mail may be requested", auth.resetRequests.isEmpty())
+            assertEquals("and no auth call of any kind", 0, auth.authCalls)
+            on { assertEquals(R.id.auth_sign_in, it.currentDestinationId()) }
+        }
+    }
+
     // ==================== 6 and 7: one request, and the screen says so ====================
 
     @Test

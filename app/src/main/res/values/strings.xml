@@ -238,9 +238,19 @@
     <string name="auth_label_email">Email</string>
     <string name="auth_label_password">Пароль</string>
     <string name="auth_label_name">Имя</string>
-    <string name="auth_hint_email">denis@example.com</string>
-    <string name="auth_hint_password">Придумайте пароль</string>
-    <string name="auth_hint_name">Денис</string>
+    <!--
+      Runtime placeholders, deliberately NOT the strings the frames draw.
+
+      2517:2633 and 2517:2636 show `Денис` and `denis@example.com`, and 2517:2617
+      shows ten bullets. Those are mock content: the designer illustrating a filled
+      form, not copy for an empty one. Shipping a person's name and address as the
+      hint on everybody's create-account screen would put one real-looking identity
+      in front of every listener, so the frames are authoritative for geometry, type
+      and colour here and not for these three values.
+    -->
+    <string name="auth_hint_email">name@example.com</string>
+    <string name="auth_hint_password">Пароль</string>
+    <string name="auth_hint_name">Ваше имя</string>
     <string name="auth_forgot_password">Забыли пароль?</string>
     <string name="auth_sign_in_action">Войти</string>
     <string name="auth_create_account_action">Создать аккаунт</string>

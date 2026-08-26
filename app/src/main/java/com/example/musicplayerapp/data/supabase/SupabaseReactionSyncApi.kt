@@ -128,6 +128,21 @@ class SupabaseReactionSyncApi(private val context: Context) : ReactionSyncApi {
         }.getOrElse { classifyFailure(it) }
     }
 
+    override suspend fun retireAllCurrentState(listenerId: String): SyncOutcome {
+        val db = postgrest ?: return SyncOutcome.AuthUnavailable("no supabase client")
+
+        return runCatching {
+            // One DELETE for the whole identity. RLS would scope this to the caller
+            // anyway; the explicit filter is here so the statement says what it does
+            // rather than relying on a policy to make it safe.
+            db.from(ReactionSyncWire.TABLE_REACTIONS).delete {
+                select()
+                filter { eq("listener_id", listenerId) }
+            }
+            SyncOutcome.Success
+        }.getOrElse { classifyFailure(it) }
+    }
+
     /**
      * Removes the remote row, for the one case that still means it: **no local row
      * exists**.

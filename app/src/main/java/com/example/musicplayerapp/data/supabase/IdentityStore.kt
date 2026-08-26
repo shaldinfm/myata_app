@@ -50,6 +50,10 @@ object IdentityStore {
     /** The pre-G-A2 marker. Still written; never the source of truth once state exists. */
     private const val KEY_LEGACY_UID = "listener_uid"
 
+    private const val KEY_HANDOFF_STAGE = "handoff_stage"
+    private const val KEY_HANDOFF_FROM = "handoff_from_uid"
+    private const val KEY_HANDOFF_TO = "handoff_to_uid"
+
     private const val KEY_STATE = "identity_state"
     private const val KEY_UID = "identity_uid"
     private const val KEY_EMAIL = "identity_email"
@@ -189,6 +193,85 @@ object IdentityStore {
     fun resumeAs(context: Context, uid: String, registered: Boolean) =
         write(context, if (registered) REGISTERED else ANONYMOUS, uid)
 
+    // ------------------------------------------------------------ handoff --
+    //
+    // The identity handoff's durable stage, in the same file as the state it will
+    // change - so a stage and an identity can be written in one commit() and cannot
+    // disagree with each other after a process death between two separate writes.
+
+    /**
+     * Records that a handoff from [from] is about to begin.
+     *
+     * **Committed before the first destructive remote action**, and that ordering is
+     * the whole reason this stage exists. Retiring an identity's remote state is a
+     * DELETE; if the marker were written afterwards, a death between the two would
+     * leave a disk with no handoff record at all, startup would find nothing to
+     * recover, and the identity's remote state would stay retired forever with
+     * nothing pointing at the local rows that could rebuild it.
+     *
+     * So `PREPARED` means: *a handoff was intended from this uid; its remote current
+     * state may be intact, partly deleted or wholly deleted; local Room is
+     * authoritative.* One stage covers all three because retiring is idempotent - a
+     * DELETE matching nothing is success - so the three cases have one recovery.
+     */
+    fun markHandoffPrepared(context: Context, from: String) =
+        writeHandoff(context, HandoffStage.PREPARED, from, null)
+
+    /** The destination is about to be authenticated or created. Written before it can exist. */
+    fun markHandoffSwitchPending(context: Context, from: String) =
+        writeHandoff(context, HandoffStage.SWITCH_PENDING, from, null)
+
+    /**
+     * The destination [to] is authenticated. Written together with
+     * [IdentityState.Registered] in **one** commit, so the pair cannot tear.
+     */
+    fun markHandoffSwitched(context: Context, from: String, to: String) {
+        prefs(context).edit(commit = true) {
+            putString(KEY_STATE, REGISTERED)
+            putString(KEY_UID, to)
+            remove(KEY_EMAIL)
+            putString(KEY_LEGACY_UID, to)
+            putString(KEY_HANDOFF_STAGE, HandoffStage.SWITCHED.name)
+            putString(KEY_HANDOFF_FROM, from)
+            putString(KEY_HANDOFF_TO, to)
+        }
+        Log.d(TAG, "handoff switched; adoption owed")
+    }
+
+    /** The handoff finished, or was rolled back. Either way nothing is owed. */
+    fun clearHandoff(context: Context) {
+        prefs(context).edit(commit = true) {
+            remove(KEY_HANDOFF_STAGE); remove(KEY_HANDOFF_FROM); remove(KEY_HANDOFF_TO)
+        }
+    }
+
+    /** The handoff in flight, or null. Authoritative across process death. */
+    fun handoff(context: Context): HandoffRecord? {
+        val prefs = prefs(context)
+        val raw = prefs.getString(KEY_HANDOFF_STAGE, null) ?: return null
+        val from = prefs.getString(KEY_HANDOFF_FROM, null) ?: return null
+        val stage = HandoffStage.entries.firstOrNull { it.name == raw }
+            ?: run {
+                // A stage a newer build wrote. Treated as in-flight rather than
+                // ignored: gating sync for too long is recoverable, letting a drain
+                // run through somebody else's handoff is not.
+                Log.w(TAG, "unrecognised handoff stage; treating as in flight")
+                HandoffStage.PREPARED
+            }
+        return HandoffRecord(stage, from, prefs.getString(KEY_HANDOFF_TO, null))
+    }
+
+    /** True while a handoff is in flight. The gate every sync entry point consults. */
+    fun handoffInProgress(context: Context): Boolean = handoff(context) != null
+
+    private fun writeHandoff(context: Context, stage: HandoffStage, from: String, to: String?) {
+        prefs(context).edit(commit = true) {
+            putString(KEY_HANDOFF_STAGE, stage.name)
+            putString(KEY_HANDOFF_FROM, from)
+            if (to == null) remove(KEY_HANDOFF_TO) else putString(KEY_HANDOFF_TO, to)
+        }
+    }
+
     /** Test-only: return this install to a never-signed-in state. */
     fun clearForTest(context: Context) {
         prefs(context).edit(commit = true) {
@@ -196,6 +279,9 @@ object IdentityStore {
             remove(KEY_UID)
             remove(KEY_EMAIL)
             remove(KEY_LEGACY_UID)
+            remove(KEY_HANDOFF_STAGE)
+            remove(KEY_HANDOFF_FROM)
+            remove(KEY_HANDOFF_TO)
         }
     }
 

@@ -38,6 +38,16 @@ class ReactionSyncWorker(
         // work request for a backend it does not have.
         if (!SupabaseConfig.isConfigured) return Result.success()
 
+        // The durable half of the handoff exclusion, checked before a single row is
+        // read. A worker that was already enqueued when the handoff began - or that
+        // WorkManager restarts after a process death mid-handoff - would otherwise
+        // sail past the scheduler's gate, which only stops *new* enqueues. The
+        // in-memory lease cannot help here: it died with the process.
+        if (IdentityStore.handoffInProgress(applicationContext)) {
+            Log.d(TAG, "identity handoff in progress; not draining")
+            return Result.success()
+        }
+
         val database = AppDatabase.getDatabase(applicationContext)
 
         val engine = ReactionSyncEngine(
@@ -85,6 +95,13 @@ class ReactionSyncWorker(
             is DrainResult.RetryLater -> {
                 Log.d(TAG, "drain deferred: ${result.reason}")
                 Result.retry()
+            }
+
+            is DrainResult.HandoffInProgress -> {
+                // A handoff took the lease between the check above and here. Success
+                // with no reschedule: the handoff owns the follow-up.
+                Log.d(TAG, "identity handoff holds the sync lease; not draining")
+                Result.success()
             }
 
             is DrainResult.Paused -> {

@@ -115,6 +115,17 @@ object IdentityReconciler {
 
         val attempt = IdentityStore.authAttempt(context)
 
+        // A logout that did not finish is resolved before anything else, and it is
+        // resolved the same way whatever the session turned out to be. The listener
+        // asked to be signed out; the only question a crash left open is how much of
+        // it happened, and finishing all of it is idempotent.
+        //
+        // This has to come first because the branches below read a pending attempt as
+        // an interrupted *sign-in* - which is what it always was until logout gained
+        // the same marker - and would otherwise promote a half-signed-out install
+        // straight back to REGISTERED.
+        if (attempt == AuthAttempt.SIGN_OUT) return completeInterruptedSignOut(context)
+
         if (sessionUid == null) {
             // Nothing to reconcile against, and the marker is deliberately **not**
             // cleared. A session can fail to restore because the storage was empty or
@@ -177,6 +188,43 @@ object IdentityReconciler {
             is IdentityState.EmailVerified,
             -> Outcome.Deferred("nothing produces ${state.javaClass.simpleName}")
         }
+    }
+
+    /**
+     * Finishes a logout a process death interrupted.
+     *
+     * Idempotent by construction: clearing a session that is already gone is a no-op,
+     * and committing `SIGNED_OUT` over `SIGNED_OUT` writes the same bytes. So this
+     * runs the whole sequence again rather than recording how far the last attempt
+     * got, which is the same reason [IdentityHandoff]'s adoption is idempotent.
+     *
+     * Every crash point lands here and lands right:
+     *
+     *  - died before the session was cleared - session still live, state still
+     *    `REGISTERED`. Cleared and committed now;
+     *  - died after the session, before the state - the ambiguous one, and the only
+     *    reason the marker exists. Committed now;
+     *  - died after the state, before the marker - already `SIGNED_OUT`; this clears
+     *    the marker and changes nothing else.
+     *
+     * **No anonymous identity is minted and nothing local is touched**, here or
+     * anywhere on this path.
+     */
+    private suspend fun completeInterruptedSignOut(context: Context): Outcome {
+        val last = IdentityStore.state(context).uid
+
+        Log.w(TAG, "a sign-out did not finish; completing it")
+        EmailAuthBackend.api(context).signOutLocal()
+
+        // signOut() refuses when there is no uid to remember, which is right: a
+        // paused install has to keep the uid it was, or the next sync boundary treats
+        // it as new and mints a second identity for one person.
+        if (last != null && IdentityStore.state(context) !is IdentityState.SignedOut) {
+            IdentityStore.signOut(context)
+        }
+        IdentityStore.clearAuthAttempt(context)
+
+        return if (last != null) Outcome.LogoutCompleted(last) else Outcome.Consistent
     }
 
     /** Hands an interrupted handoff to the recovery that was built for it. */

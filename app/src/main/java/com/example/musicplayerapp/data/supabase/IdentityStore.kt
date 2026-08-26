@@ -389,4 +389,17 @@ object IdentityStore {
 enum class AuthAttempt {
     REGISTER,
     SIGN_IN,
+
+    /**
+     * A deliberate local sign-out is under way.
+     *
+     * The same durable bit as the other two, doing the same job in the other
+     * direction. Logout is also two steps - clear the session, then commit
+     * `SIGNED_OUT` - and a death between them leaves `REGISTERED(uid)` on disk with
+     * no session, which is **indistinguishable from an ordinary offline install**.
+     * Promoting every such install to `SIGNED_OUT` would sign people out for losing
+     * wifi; leaving them all alone would strand a half-finished logout forever. Only
+     * a marker written before the first step separates the two.
+     */
+    SIGN_OUT,
 }

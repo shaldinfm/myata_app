@@ -235,6 +235,7 @@ class MainActivity : AppCompatActivity() {
             // vanish again - offering four destinations to somebody in the middle of
             // typing a password.
             val hidesBottomBar = destination.id == R.id.profile ||
+                destination.id == R.id.profile_authenticated ||
                 destination.id == R.id.auth_sign_in ||
                 destination.id == R.id.auth_create_account
 

@@ -80,6 +80,9 @@ class ReactionSyncWorker(
 
             is DrainResult.Drained -> {
                 Log.d(TAG, "delivered ${result.delivered} reaction(s)")
+                // The one place a successful sync is recorded, and only when rows
+                // actually went out. See LastSyncStore for why Idle is not a sync.
+                if (result.delivered > 0) LastSyncStore.recordSuccess(applicationContext)
                 result.nextAttemptAt?.let {
                     ReactionSyncScheduler.scheduleWakeUp(applicationContext, it)
                 }
@@ -88,6 +91,8 @@ class ReactionSyncWorker(
 
             is DrainResult.MoreWorkDue -> {
                 Log.d(TAG, "batch full, ${result.remaining} still due")
+                // A full batch only happens after a full batch was delivered.
+                LastSyncStore.recordSuccess(applicationContext)
                 ReactionSyncScheduler.onBatchFull(applicationContext)
                 Result.success()
             }

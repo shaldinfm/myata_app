@@ -797,4 +797,43 @@
       is what keeps the frozen geometry above exactly as measured.
     -->
     <dimen name="auth_error_margin_top">4dp</dimen>
+
+    <!--
+      profile-authenticated 2517:2671 / 2517:3638, 390x692.
+
+      Absolute Figma offsets, so the screen can be checked by adding the margins up.
+      The band, the 16dp side margin, the 24dp card radius and the 12dp row radius are
+      the numbers profile-guest already froze - the same components on the next screen -
+      and they reuse those dimens rather than restating them.
+
+          band                0..64
+          Account card       96..200   (32 below the band, 358x104, r24)
+          Синхронизация     224..244   (24 below the card)
+          Row cloud         252..324   (8 below the label, 358x72)
+          Row last sync     332..404   (8)
+          Аккаунт           428..448   (24 below the row)
+          Row Аватар        456..520   (8, 358x64)
+          Row Сменить       528..592   (8)
+          Row Выйти         600..664   (8)
+
+      Content ends at 664 inside a 692 frame.
+    -->
+    <dimen name="profile_account_card_height">104dp</dimen>
+    <dimen name="profile_account_avatar_size">64dp</dimen>
+    <dimen name="profile_account_avatar_margin">16dp</dimen>
+    <!-- Avatar trailing edge 16+64=80, name at x=96. -->
+    <dimen name="profile_account_text_margin_start">16dp</dimen>
+    <!-- The name/email block is centred in the 104dp card: 30..78 leaves 26 either side. -->
+    <dimen name="profile_account_section_margin_top">24dp</dimen>
+    <dimen name="profile_account_row_margin_top">8dp</dimen>
+    <!-- `Row / Облачная синхронизация` and `Row / Последняя синхронизация` carry a
+         label and a sub-label, so they are 72 rather than 64. -->
+    <dimen name="profile_account_row_tall">72dp</dimen>
+    <dimen name="profile_account_chevron_size">24dp</dimen>
+    <!-- Figma line boxes, stated as minimums for the same reason the auth screens
+         state theirs: a single-line TextView measures its font's natural height,
+         about 2dp short of the box the design draws, and these screens stack enough
+         rows for that to accumulate. -->
+    <dimen name="profile_account_name_box">28dp</dimen>
+    <dimen name="profile_account_label_box">22dp</dimen>
 </resources>

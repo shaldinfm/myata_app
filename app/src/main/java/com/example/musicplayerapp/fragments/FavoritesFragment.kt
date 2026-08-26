@@ -19,6 +19,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
+import com.example.musicplayerapp.ui.profile.ProfileRoute
 import com.example.musicplayerapp.adapters.FavoritesAdapter
 import com.example.musicplayerapp.data.FavoriteTrack
 import com.example.musicplayerapp.databinding.FragmentFavoritesBinding
@@ -217,7 +218,7 @@ class FavoritesFragment : Fragment() {
         // in particular it does not touch the identity boundary, so looking at the
         // profile never mints an anonymous uid.
         binding.profileEntry.root.setOnClickListener {
-            findNavController().navigate(R.id.profile)
+            ProfileRoute.open(this)
         }
 
 

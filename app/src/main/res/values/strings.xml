@@ -287,4 +287,33 @@
     <string name="auth_error_rate_limited">Слишком много попыток. Попробуйте позже</string>
     <string name="auth_error_session">Не удалось войти в аккаунт. Попробуйте ещё раз</string>
     <string name="auth_error_unknown">Не удалось выполнить действие. Попробуйте ещё раз</string>
+
+    <!-- profile-authenticated 2517:2671 / 2517:3638. -->
+    <string name="profile_account_section_sync">Синхронизация</string>
+    <string name="profile_account_cloud_sync">Облачная синхронизация</string>
+    <string name="profile_account_cloud_sync_on">Включена</string>
+    <string name="profile_account_last_sync">Последняя синхронизация</string>
+    <string name="profile_account_section_account">Аккаунт</string>
+    <string name="profile_account_avatar">Аватар</string>
+    <string name="profile_account_change_password">Сменить пароль</string>
+    <string name="profile_account_sign_out">Выйти</string>
+
+    <!--
+      Fallbacks. Both are shown instead of a uid: a uid is not an identity a listener
+      recognises, and putting one on the account card would be showing them a database
+      key where they expect their name.
+    -->
+    <string name="profile_account_name_fallback">Пользователь</string>
+    <string name="profile_account_email_unavailable">Email недоступен</string>
+
+    <!--
+      Relative last-sync copy, in the abbreviated style the frame uses (`2 мин назад`).
+      The units are abbreviations rather than words precisely so they need no Russian
+      plural agreement - `1 мин назад` and `5 мин назад` are both correct.
+    -->
+    <string name="profile_account_sync_never">Ещё не синхронизировалось</string>
+    <string name="profile_account_sync_just_now">Только что</string>
+    <string name="profile_account_sync_minutes">%d мин назад</string>
+    <string name="profile_account_sync_hours">%d ч назад</string>
+    <string name="profile_account_sync_days">%d дн назад</string>
 </resources>

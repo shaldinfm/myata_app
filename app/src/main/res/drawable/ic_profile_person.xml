@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Icon / person` on `Row / Аватар`, node 2517:2697, converted from the owner's export (ic_profile_person.svg).
+
+  The path data is the export's own, unmodified. A **stroked** glyph like every
+  other icon on this screen - 1.8 wide with round caps and joins - so the colour is
+  a stroke rather than a fill, and it comes from a token so the glyph inverts with
+  the theme instead of carrying the light value the SVG was exported with.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12 4C9.792 4.003 8.004 5.794 8.005 8.002C8.006 10.211 9.797 12 12.005 12C14.213 12 16.004 10.211 16.005 8.002C16.006 5.794 14.218 4.003 12.01 4M4.5 20.5C4.5 16.358 7.858 13 12 13C16.142 13 19.5 16.358 19.5 20.5"
+        android:strokeColor="@color/profile_row_icon"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

@@ -52,6 +52,13 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class AuthFormTest {
 
+    // Since G-A5a a successful sign-in or registration lands on
+    // profile-authenticated rather than the guest profile: the guest card is false
+    // about somebody who has just registered, which is the screen G-A5a exists to
+    // replace. Cancelling mid-request still goes to the guest profile, because
+    // nothing was authenticated.
+
+
     private val context: Context
         get() = InstrumentationRegistry.getInstrumentation().targetContext
 
@@ -172,7 +179,7 @@ class AuthFormTest {
             }
 
             auth.release()
-            scenario.await("the request to settle") { it.currentDestinationId() == R.id.profile }
+            scenario.await("the request to settle") { it.currentDestinationId() == R.id.profile_authenticated }
         }
     }
 
@@ -287,7 +294,7 @@ class AuthFormTest {
             // destroyed window, which the API 24 image does not survive reliably -
             // and an @After release is already one teardown too late.
             auth.release()
-            scenario.await("the request to settle") { it.currentDestinationId() == R.id.profile }
+            scenario.await("the request to settle") { it.currentDestinationId() == R.id.profile_authenticated }
         }
     }
 
@@ -321,7 +328,7 @@ class AuthFormTest {
             on { assertEquals(R.id.auth_sign_in, it.currentDestinationId()) }
 
             auth.release()
-            scenario.await("the request to settle") { it.currentDestinationId() == R.id.profile }
+            scenario.await("the request to settle") { it.currentDestinationId() == R.id.profile_authenticated }
         }
     }
 
@@ -416,7 +423,7 @@ class AuthFormTest {
             scenario.fill()
             scenario.tap(R.id.auth_submit)
 
-            scenario.await("the navigation back") { it.currentDestinationId() == R.id.profile }
+            scenario.await("the navigation back") { it.currentDestinationId() == R.id.profile_authenticated }
         }
 
         assertEquals(IdentityState.Registered(y), IdentityStore.state(context))
@@ -432,7 +439,7 @@ class AuthFormTest {
             scenario.type(R.id.auth_password, "s3cret!!")
             scenario.tap(R.id.auth_submit)
 
-            scenario.await("the navigation back") { it.currentDestinationId() == R.id.profile }
+            scenario.await("the navigation back") { it.currentDestinationId() == R.id.profile_authenticated }
         }
 
         assertEquals(IdentityState.Registered(y), IdentityStore.state(context))
@@ -458,7 +465,7 @@ class AuthFormTest {
         signIn { scenario ->
             scenario.fill()
             scenario.tap(R.id.auth_submit)
-            scenario.await("the handoff to finish", 20_000) { it.currentDestinationId() == R.id.profile }
+            scenario.await("the handoff to finish", 20_000) { it.currentDestinationId() == R.id.profile_authenticated }
         }
 
         assertEquals(IdentityState.Registered(y), IdentityStore.state(context))
@@ -550,7 +557,7 @@ class AuthFormTest {
             // half fixed.
             auth.throwOnCall = null
             scenario.tap(R.id.auth_submit)
-            scenario.await("the retry to succeed") { it.currentDestinationId() == R.id.profile }
+            scenario.await("the retry to succeed") { it.currentDestinationId() == R.id.profile_authenticated }
         }
 
         assertEquals(2, auth.authCalls)
@@ -588,7 +595,7 @@ class AuthFormTest {
                 scenario.tap(R.id.auth_submit)
 
                 scenario.await("$name to settle") { activity ->
-                    activity.currentDestinationId() == R.id.profile ||
+                    activity.currentDestinationId() == R.id.profile_authenticated ||
                         activity.visibilityOf(R.id.auth_form_error) == View.VISIBLE
                 }
 
@@ -669,7 +676,7 @@ class AuthFormTest {
             // And the result still arrives, on the screen that replaced the one that
             // asked for it.
             auth.release()
-            scenario.await("the navigation back") { it.currentDestinationId() == R.id.profile }
+            scenario.await("the navigation back") { it.currentDestinationId() == R.id.profile_authenticated }
         }
 
         assertEquals(1, auth.authCalls)
@@ -712,7 +719,7 @@ class AuthFormTest {
     ) {
         withMainActivity { scenario ->
             try {
-                scenario.tap(R.id.profile_entry)
+                openProfileAndSettle()
                 scenario.tap(cta)
                 on { assertEquals(destination, it.currentDestinationId()) }
                 body(scenario)
@@ -865,7 +872,15 @@ class AuthFormTest {
 
     private fun MainActivity.text(id: Int): String = findViewById<TextView>(id).text.toString()
 
-    private fun MainActivity.visibilityOf(id: Int): Int = findViewById<View>(id).visibility
+    /**
+     * The view's visibility, or GONE if it is not on screen at all.
+     *
+     * Since G-A5a a successful auth lands on profile-authenticated, which has no
+     * submit button - so "the button is not spinning" is satisfied by the button not
+     * being there, and asking for it must not be a crash.
+     */
+    private fun MainActivity.visibilityOf(id: Int): Int =
+        findViewById<View>(id)?.visibility ?: View.GONE
 
     private fun MainActivity.currentDestinationId(): Int? {
         val host = supportFragmentManager.findFragmentById(R.id.navHostFragment)

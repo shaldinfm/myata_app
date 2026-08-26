@@ -7,6 +7,8 @@ import io.github.jan.supabase.auth.SignOutScope
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 /**
@@ -181,6 +183,18 @@ class SupabaseEmailAuthApi(private val context: Context) : EmailAuthApi {
             },
         )
     }
+
+    override suspend fun currentAccount(): AccountInfo? = runCatching {
+        val user = client?.auth?.currentUserOrNull() ?: return null
+        AccountInfo(
+            uid = user.id,
+            // The key the create-account form wrote and the key the Supabase
+            // dashboard displays. `jsonPrimitive.content` rather than `toString()`,
+            // which would hand the screen a quoted JSON string to draw.
+            displayName = user.userMetadata?.get(DISPLAY_NAME)?.jsonPrimitive?.contentOrNull,
+            email = user.email,
+        )
+    }.getOrNull()
 
     override suspend fun currentUid(): String? =
         runCatching { client?.auth?.currentUserOrNull()?.id }.getOrNull()

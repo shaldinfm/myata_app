@@ -128,8 +128,7 @@ class ProfileEntryTest {
     @Test
     fun tapping_the_control_opens_the_guest_profile_and_hides_the_bottom_bar() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { it.findViewById<View>(R.id.profile_entry).performClick() }
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            openProfileAndSettle()
 
             scenario.onActivity { activity ->
                 assertEquals(R.id.profile, activity.currentDestinationId())
@@ -149,8 +148,7 @@ class ProfileEntryTest {
     @Test
     fun back_returns_to_the_screen_that_opened_it_and_restores_the_bar() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { it.findViewById<View>(R.id.profile_entry).performClick() }
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            openProfileAndSettle()
             scenario.onActivity { it.findViewById<View>(R.id.profile_back).performClick() }
             InstrumentationRegistry.getInstrumentation().waitForIdleSync()
 
@@ -171,8 +169,7 @@ class ProfileEntryTest {
         assertEquals(IdentityState.None, IdentityStore.state(context))
 
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { it.findViewById<View>(R.id.profile_entry).performClick() }
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            openProfileAndSettle()
             scenario.onActivity { it.findViewById<View>(R.id.profile_back).performClick() }
             InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         }
@@ -203,8 +200,7 @@ class ProfileEntryTest {
 
     private fun openAndClose() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { it.findViewById<View>(R.id.profile_entry).performClick() }
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            openProfileAndSettle()
             scenario.onActivity { it.findViewById<View>(R.id.profile_back).performClick() }
             InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         }

@@ -50,6 +50,8 @@ object IdentityStore {
     /** The pre-G-A2 marker. Still written; never the source of truth once state exists. */
     private const val KEY_LEGACY_UID = "listener_uid"
 
+    private const val KEY_AUTH_ATTEMPT = "auth_attempt"
+
     private const val KEY_HANDOFF_STAGE = "handoff_stage"
     private const val KEY_HANDOFF_FROM = "handoff_from_uid"
     private const val KEY_HANDOFF_TO = "handoff_to_uid"
@@ -155,8 +157,73 @@ object IdentityStore {
     /** **Reserved for G-A4.** The address is confirmed; no password yet. */
     fun markEmailVerified(context: Context, uid: String) = write(context, EMAIL_VERIFIED, uid)
 
-    /** The account is complete. Same uid throughout - registration never re-keys data. */
+    /**
+     * The account is complete and this install is [uid].
+     *
+     * It used to say "same uid throughout - registration never re-keys data", which
+     * was true of the in-place email upgrade that was planned then and is not true of
+     * what shipped. Supabase will not turn an anonymous user into a password account,
+     * so registering from an anonymous install *is* a change of uid, performed by
+     * [IdentityHandoff] and committed by [markHandoffSwitched] rather than here. This
+     * method is for the paths where no handoff is involved - registering or signing in
+     * from [IdentityState.None] or [IdentityState.SignedOut] - and for
+     * [IdentityReconciler] promoting a state that a process death left behind.
+     */
     fun markRegistered(context: Context, uid: String) = write(context, REGISTERED, uid)
+
+    // ------------------------------------------------------- auth attempt --
+    //
+    // One durable bit, and it exists to answer a question that is otherwise
+    // unanswerable at startup.
+    //
+    // A direct sign-in or registration - one with no handoff, so from NONE or
+    // SIGNED_OUT - is two steps: authenticate remotely, then commit the identity to
+    // disk. A process death between them leaves a device holding a live session for
+    // an identity its own storage has never heard of, and from the disk alone that is
+    // indistinguishable from the *other* thing that produces a live session under a
+    // SIGNED_OUT state: a logout that died after writing the state and before clearing
+    // the token.
+    //
+    // Those two want opposite repairs. One must finish forward into REGISTERED; the
+    // other must finish backwards by clearing the session, which is rule 7 of the
+    // frozen logout contract in IdentityState.SignedOut. Guessing would be wrong half
+    // the time, and the half that is wrong silently signs somebody back in after they
+    // asked not to be.
+    //
+    // So the intent is written down before the remote call, exactly as HandoffStage
+    // writes PREPARED before the action it describes, and for the same reason: what
+    // cannot be inferred afterwards has to be recorded beforehand. The handoff path
+    // needs none of this - SWITCH_PENDING already covers it.
+
+    /**
+     * Records that a direct authentication is about to be attempted.
+     *
+     * **Committed before the remote call**, and cleared once the identity is on disk.
+     * Its presence at startup beside a session means the call succeeded and the commit
+     * did not.
+     */
+    fun markAuthAttempt(context: Context, attempt: AuthAttempt) {
+        prefs(context).edit(commit = true) { putString(KEY_AUTH_ATTEMPT, attempt.name) }
+    }
+
+    /** The direct authentication in flight, or null. Authoritative across process death. */
+    fun authAttempt(context: Context): AuthAttempt? {
+        val raw = prefs(context).getString(KEY_AUTH_ATTEMPT, null) ?: return null
+        return AuthAttempt.entries.firstOrNull { it.name == raw }
+            ?: run {
+                // A kind a newer build wrote. Treated as "some direct authentication
+                // was under way", because the kind only affects a log line, while
+                // losing the fact would send recovery down the interrupted-logout path.
+                Log.w(TAG, "unrecognised auth attempt; treating as in flight")
+                AuthAttempt.SIGN_IN
+            }
+    }
+
+    /** The attempt is resolved, one way or the other. Nothing is owed. */
+    fun clearAuthAttempt(context: Context) {
+        if (prefs(context).getString(KEY_AUTH_ATTEMPT, null) == null) return
+        prefs(context).edit(commit = true) { remove(KEY_AUTH_ATTEMPT) }
+    }
 
     /**
      * Deliberate local sign-out. Cloud sync pauses; nothing local is touched.
@@ -279,6 +346,7 @@ object IdentityStore {
             remove(KEY_UID)
             remove(KEY_EMAIL)
             remove(KEY_LEGACY_UID)
+            remove(KEY_AUTH_ATTEMPT)
             remove(KEY_HANDOFF_STAGE)
             remove(KEY_HANDOFF_FROM)
             remove(KEY_HANDOFF_TO)
@@ -308,4 +376,17 @@ object IdentityStore {
 
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+}
+
+/**
+ * Which direct authentication was under way when the process died.
+ *
+ * The repair is the same for both - promote to [IdentityState.Registered] as the
+ * session's uid - so this is not a branch in the recovery logic. It is kept because
+ * "a registration was interrupted" and "a sign-in was interrupted" are different
+ * sentences in a log, and the log is where an odd identity gets explained.
+ */
+enum class AuthAttempt {
+    REGISTER,
+    SIGN_IN,
 }

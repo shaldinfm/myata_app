@@ -5,6 +5,7 @@ import android.util.Log
 import com.example.musicplayerapp.SecureNetModule
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.FlowType
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.ktor.client.engine.okhttp.OkHttp
@@ -71,6 +72,17 @@ object SupabaseModule {
                 // a refresh token and refreshing it before it expires.
                 alwaysAutoRefresh = true
                 autoLoadFromStorage = true
+
+                // Stated rather than inherited. It is already supabase-kt 3.2.6's
+                // default - read off the resolved artifact, not assumed - but it is
+                // load-bearing for password recovery: PKCE would have the client
+                // prepare a code verifier and ask Supabase for a link to bring it
+                // back, and this app registers no deep link to bring anything back
+                // to. The recovery flow is a typed code out of the mail body
+                // instead, so there must be no verifier waiting for a redirect that
+                // will never arrive. Pinned here so a future version bump that
+                // changes the default fails review rather than the flow.
+                flowType = FlowType.IMPLICIT
             }
 
             install(Postgrest)

@@ -187,6 +187,13 @@ object ListenerSession {
                 } else {
                     Log.d(TAG, "signed in anonymously")
                     IdentityStore.adoptAnonymous(context, user.id)
+                    // A brand-new anonymous identity settles the question any pending
+                    // direct-auth marker was asking. Without this, a registration that
+                    // failed and then died before clearing its marker would leave a
+                    // claim on disk that IdentityReconciler would later read against
+                    // *this* session and promote an anonymous listener to REGISTERED.
+                    // Clearing it here is what keeps that marker unambiguous.
+                    IdentityStore.clearAuthAttempt(context)
                     uid = user.id
                     ListenerIdentity.Available(user.id)
                 }

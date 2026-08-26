@@ -45,7 +45,32 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        @Volatile
+        private var override: AppDatabase? = null
+
+        /**
+         * Instrumentation only: make [getDatabase] hand back a database the test
+         * owns, and `null` to restore the real one.
+         *
+         * The same seam as `ReactionSyncBackend`, one layer down, and it exists for a
+         * reason that arrived with G-A4b2. `EmailAuthRepository` and
+         * `IdentityReconciler` are asked for by a screen, not constructed with
+         * collaborators, so they reach the database themselves - which is right for
+         * production and would otherwise mean a test of registration writing reaction
+         * rows into the real `myata_database` on the device. Those rows are somebody's
+         * Collection on a developer's phone, and the app's own startup drain would
+         * find them.
+         *
+         * Nothing in `src/main` calls this. With no override installed - every state
+         * a shipped build can be in - [getDatabase] is exactly what it always was.
+         */
+        fun overrideForInstrumentation(database: AppDatabase?) {
+            override = database
+        }
+
         fun getDatabase(context: Context): AppDatabase {
+            override?.let { return it }
+
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,

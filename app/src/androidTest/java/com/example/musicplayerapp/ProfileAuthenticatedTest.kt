@@ -143,6 +143,135 @@ class ProfileAuthenticatedTest {
         }
     }
 
+    // ============ session truth at the routing boundary ============
+
+    /**
+     * **B.** `REGISTERED(X)` with no session must never reach the account card.
+     *
+     * The state on disk says this install is an account; the plugin holds no token
+     * for it. That happens for ordinary reasons - revoked elsewhere, deleted, a
+     * logout that died before its commit, an install that has not restored - and in
+     * every one of them an account card would be asserting something this device
+     * cannot prove.
+     *
+     * Asserted as *never*, not as *not eventually*: the destination is decided before
+     * the navigation, so the authenticated screen is not entered and left, it is not
+     * entered.
+     */
+    @Test
+    fun b_registered_without_a_session_never_reaches_the_account_card() {
+        IdentityStore.markRegistered(context, account)
+        auth.session = null
+
+        val seen = mutableSetOf<Int?>()
+        withMainActivity { scenario ->
+            // Tapped directly rather than through `openProfile`, which returns as soon
+            // as either profile is showing. Sampling from the tap itself is what makes
+            // a destination that was entered and then left visible here - and that is
+            // exactly the behaviour being ruled out.
+            scenario.tap(R.id.profile_entry)
+            repeat(60) {
+                runCatching { on { seen += it.currentDestinationId() } }
+                Thread.sleep(25)
+            }
+            on { assertEquals(R.id.profile, it.currentDestinationId()) }
+        }
+
+        assertFalse(
+            "the authenticated profile must never be entered, not even briefly",
+            seen.contains(R.id.profile_authenticated),
+        )
+        assertEquals(0, identity.calls)
+    }
+
+    /**
+     * **C and F.** `REGISTERED(X)` while the session belongs to `Y`.
+     *
+     * X's card must never appear. What happens instead is the existing G-A4b2 rule,
+     * not a new one: the session is what RLS will actually enforce, so reconciliation
+     * adopts `Y` and the routing decision is taken again against the settled state.
+     * Whatever is shown is `Y`'s, and none of `X` leaks into it.
+     */
+    @Test
+    fun c_and_f_a_session_for_another_uid_never_shows_the_first_account() {
+        val other = "33333333-3333-4333-8333-333333333333"
+        IdentityStore.markRegistered(context, account)
+        auth.session = other
+        auth.accountName = "Другой"
+        auth.accountEmail = "other@example.com"
+
+        withMainActivity { scenario ->
+            scenario.openProfile()
+            scenario.await("the route to settle") { it.currentDestinationId() != null }
+
+            on { activity ->
+                if (activity.currentDestinationId() == R.id.profile_authenticated) {
+                    // Reconciliation adopted the live session, which is the contract.
+                    // Nothing of the stale identity may be on the card.
+                    val name = activity.text(R.id.profile_account_name)
+                    val email = activity.text(R.id.profile_account_email)
+                    assertFalse("the stale uid leaked into the card", name.contains(account))
+                    assertFalse("the stale uid leaked into the card", email.contains(account))
+                    assertEquals("Другой", name)
+                    assertEquals("other@example.com", email)
+                }
+            }
+        }
+
+        // Whichever way it resolved, the local state agrees with the live session -
+        // it is never left claiming X while holding Y.
+        assertEquals(IdentityState.Registered(other), IdentityStore.state(context))
+        assertEquals("no identity may be minted deciding this", 0, identity.calls)
+    }
+
+    /**
+     * **E.** Reconciliation, not the persisted state, decides where a tap lands.
+     *
+     * The clearest case: a logout that died between clearing the session and
+     * committing `SIGNED_OUT`. The disk still says `REGISTERED`; the marker says what
+     * was intended. Opening the profile must finish that logout and show the guest
+     * screen, rather than the account card the stale state would have produced.
+     */
+    @Test
+    fun e_reconciliation_decides_the_route() {
+        IdentityStore.markRegistered(context, account)
+        IdentityStore.markAuthAttempt(context, AuthAttempt.SIGN_OUT)
+        auth.session = null
+
+        withMainActivity { scenario ->
+            scenario.openProfile()
+            scenario.await("the guest profile") { it.currentDestinationId() == R.id.profile }
+        }
+
+        assertEquals(IdentityState.SignedOut(account), IdentityStore.state(context))
+        assertEquals(null, IdentityStore.authAttempt(context))
+        assertEquals(0, identity.calls)
+    }
+
+    /** **D.** None of the three cases above may create an identity. */
+    @Test
+    fun d_deciding_the_route_never_mints_an_anonymous_identity() {
+        val other = "33333333-3333-4333-8333-333333333333"
+
+        for (session in listOf(account, null, other)) {
+            IdentityStore.clearForTest(context)
+            IdentityStore.markRegistered(context, account)
+            auth.session = session
+
+            withMainActivity { scenario ->
+                scenario.openProfile()
+                scenario.await("a decision") { it.currentDestinationId() != null }
+            }
+        }
+
+        assertEquals(
+            "the minting boundary is the only thing that can create an identity, " +
+                "and nothing on this path may reach it",
+            0,
+            identity.calls,
+        )
+    }
+
     // ==================== E: nothing here mints ====================
 
     @Test
@@ -562,9 +691,8 @@ class ProfileAuthenticatedTest {
         assertEquals(IdentityState.Registered(account), IdentityStore.state(context))
     }
 
-    private fun ActivityScenario<MainActivity>.openProfile() {
-        tap(R.id.profile_entry)
-    }
+    /** See [openProfileAndSettle]: the route resolves off the tap, so this waits. */
+    private fun ActivityScenario<MainActivity>.openProfile() = openProfileAndSettle()
 
     private fun ActivityScenario<MainActivity>.type(id: Int, value: String) {
         on { it.findViewById<android.widget.EditText>(id).setText(value) }

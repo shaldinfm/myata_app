@@ -1,6 +1,9 @@
 package com.example.musicplayerapp
 
 import androidx.test.core.app.ActivityScenario
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
+import androidx.test.runner.lifecycle.Stage
 import com.example.musicplayerapp.data.ReactionOutboxEntry
 import com.example.musicplayerapp.data.TrackReaction
 import com.example.musicplayerapp.data.supabase.AccountInfo
@@ -334,4 +337,57 @@ internal fun withMainActivity(body: (ActivityScenario<MainActivity>) -> Unit) {
             android.util.Log.w("AuthQA", "activity close timed out; checks already complete", e)
         }
     }
+}
+
+/**
+ * Taps the profile control and waits for the route to resolve.
+ *
+ * Opening a profile is asynchronous, and deliberately so: `ProfileRoute` proves a
+ * matching session before it navigates, rather than entering the authenticated screen
+ * and letting it discover it should not have. That check is local and quick, but it is
+ * not the same main-thread frame as the tap - so a suite that taps and asserts in one
+ * breath reads the destination it started on.
+ *
+ * This waits for *either* profile destination and asserts neither. Which one it landed
+ * on is what the calling test is for, and one case ([ProfileAuthenticatedTest] B) exists
+ * precisely to prove one of them is never entered at all.
+ */
+internal fun openProfileAndSettle(timeoutMs: Long = 15_000) {
+    val instrumentation = InstrumentationRegistry.getInstrumentation()
+    instrumentation.runOnMainSync {
+        resumedMainActivity().findViewById<android.view.View>(R.id.profile_entry).performClick()
+    }
+
+    val deadline = System.currentTimeMillis() + timeoutMs
+    while (System.currentTimeMillis() < deadline) {
+        var landed = false
+        runCatching {
+            instrumentation.runOnMainSync {
+                landed = resumedMainActivity().profileDestination() != null
+            }
+        }
+        if (landed) return
+        Thread.sleep(25)
+    }
+    throw AssertionError("timed out after ${timeoutMs}ms opening the profile")
+}
+
+/**
+ * The resumed activity, rather than `ActivityScenario.onActivity`.
+ *
+ * `onActivity` waits for an idle looper, and on API 24 a screen that is animating or
+ * spinning may never give it one - see the harness note in `AuthFormTest`.
+ */
+internal fun resumedMainActivity(): MainActivity =
+    ActivityLifecycleMonitorRegistry.getInstance()
+        .getActivitiesInStage(Stage.RESUMED)
+        .filterIsInstance<MainActivity>()
+        .firstOrNull() ?: error("no resumed MainActivity")
+
+/** Which profile is showing, or `null` if the route has not resolved yet. */
+internal fun MainActivity.profileDestination(): Int? {
+    val host = supportFragmentManager.findFragmentById(R.id.navHostFragment)
+        as androidx.navigation.fragment.NavHostFragment
+    return host.navController.currentDestination?.id
+        ?.takeIf { it == R.id.profile || it == R.id.profile_authenticated }
 }

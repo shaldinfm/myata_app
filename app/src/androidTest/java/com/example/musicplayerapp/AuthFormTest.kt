@@ -719,7 +719,7 @@ class AuthFormTest {
     ) {
         withMainActivity { scenario ->
             try {
-                scenario.tap(R.id.profile_entry)
+                openProfileAndSettle()
                 scenario.tap(cta)
                 on { assertEquals(destination, it.currentDestinationId()) }
                 body(scenario)

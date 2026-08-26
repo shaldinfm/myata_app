@@ -1,62 +1,102 @@
 package com.example.musicplayerapp.ui.profile
 
 import android.content.Context
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.example.musicplayerapp.R
+import com.example.musicplayerapp.data.supabase.EmailAuthBackend
+import com.example.musicplayerapp.data.supabase.IdentityReconciler
 import com.example.musicplayerapp.data.supabase.IdentityState
 import com.example.musicplayerapp.data.supabase.IdentityStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Which profile a tap on the 40x40 control should open.
  *
- * ## It reads storage and nothing else
+ * ## Local state alone is not enough
  *
- * One `SharedPreferences` lookup - a hash-map read after the first load - and no
- * session call, no network and, critically, **no identity boundary**. Opening the
- * profile must never mint an anonymous `auth.users` row, and the surest way to
- * guarantee that is for this decision to be incapable of it. `ProfileEntryTest` has
- * asserted the property since G-A3 and still does.
+ * `REGISTERED(X)` on disk says this install *believes* it is an account. It is not
+ * evidence of a session, and the two come apart for ordinary reasons: a token revoked
+ * on another device, an account deleted, a logout that died before its commit, or
+ * simply an install that has not restored yet.
  *
- * That also makes it safe on the tap path: the three entry points call it from a
- * click listener, and a suspending answer there would either block the frame or
- * leave the control doing nothing for a moment.
+ * So the decision is made **before** navigating, not after arriving. An earlier
+ * version of this routed on the persisted state and let the destination check itself
+ * and leave - which meant the authenticated screen was entered and painted from stale
+ * state, with the fallback name and address on the card, for as long as the check
+ * took. Rendering an account card for somebody who is not authenticated is the same
+ * class of lie as telling a registered listener `Вы не вошли`, which is the lie this
+ * whole phase exists to remove.
  *
- * ## The session is checked later, not here
+ * The rule is therefore:
  *
- * `REGISTERED` on disk is what this routes on, and it is not proof of a live
- * session - an account whose token was revoked elsewhere still reads `REGISTERED`
- * until something asks. So [com.example.musicplayerapp.fragments.ProfileAuthenticatedFragment]
- * verifies the session when it opens and steps aside to the guest screen if
- * reconciliation says the listener is not authenticated after all. Doing it there
- * rather than here is what keeps this synchronous and mint-proof while still making
- * the authenticated screen honest.
+ * ```
+ * REGISTERED(X)  and  restored session uid == X   ->  profile-authenticated
+ * REGISTERED(X)  and  no session                  ->  profile-guest
+ * REGISTERED(X)  and  session uid Y != X          ->  reconcile, then re-decide
+ * anything else                                   ->  profile-guest
+ * ```
+ *
+ * ## What the check costs, and what it cannot do
+ *
+ * `currentUid()` reads what the Auth plugin already holds - `currentUserOrNull()` -
+ * and makes **no request**. Reconciliation is the same call `MyataApplication` makes
+ * at startup, so there is one reconciliation algorithm in the app rather than two.
+ *
+ * Neither can mint: the only function in the app that creates an identity is
+ * `ListenerSession.identity`, and nothing on this path reaches it. Nothing here
+ * starts a handoff, writes to Room, or touches the Collection. Opening a profile
+ * remains something a listener can do without existing in a database, which
+ * `ProfileEntryTest` has asserted since G-A3 and still does.
  */
 object ProfileRoute {
 
     /**
-     * @return the destination id to navigate to.
+     * Decides, having first established who this device actually is.
      *
-     * | state | destination |
-     * |---|---|
-     * | `Registered` | `profile_authenticated` |
-     * | `None`, `Anonymous`, `SignedOut` | `profile` (guest) |
-     * | `EmailPending`, `EmailVerified` | `profile` (guest) |
-     *
-     * The last row is deliberate. Neither state is produced by anything that ships -
-     * registration with Confirm Email off goes straight to `REGISTERED` - so an
-     * install in one of them has arrived by a route nobody designed, and the guest
-     * screen is the presentation that claims least. It offers a way forward and
-     * asserts nothing false; an authenticated card would assert an account this app
-     * has no evidence for.
+     * Suspending because the truth is not in preferences. It is still cheap - a
+     * plugin field read and a reconciliation that usually concludes immediately -
+     * but it is not free, which is why [open] runs it off the tap.
      */
-    fun destination(context: Context): Int =
-        when (IdentityStore.state(context)) {
-            is IdentityState.Registered -> R.id.profile_authenticated
+    suspend fun destination(context: Context): Int {
+        if (IdentityStore.state(context) !is IdentityState.Registered) return R.id.profile
 
-            is IdentityState.None,
-            is IdentityState.Anonymous,
-            is IdentityState.SignedOut,
-            is IdentityState.EmailPending,
-            is IdentityState.EmailVerified,
-            -> R.id.profile
+        // Local, no network: whatever session the Auth plugin is already holding.
+        val sessionUid = EmailAuthBackend.api(context).currentUid()
+
+        // The existing contract decides what a disagreement means - including the
+        // case where the session belongs to somebody else, which it resolves in the
+        // session's favour because the session is what RLS will actually enforce.
+        IdentityReconciler.reconcile(context, sessionUid)
+
+        // Re-read: reconciliation may have changed the answer, and it is the answer
+        // *after* reconciliation that this routes on.
+        val settled = IdentityStore.state(context)
+        return if (settled is IdentityState.Registered && settled.uid == sessionUid) {
+            R.id.profile_authenticated
+        } else {
+            // No session, or one that still does not match after reconciliation. The
+            // guest screen is the presentation that claims least: it offers a way
+            // forward and asserts nothing this install cannot prove.
+            R.id.profile
         }
+    }
+
+    /**
+     * Opens the right profile from a tap.
+     *
+     * The check is off the main thread because everything under it reads
+     * `SharedPreferences` with `commit()`, and the navigation is back on it. A view
+     * that has gone away in between is left alone rather than navigated.
+     */
+    fun open(fragment: Fragment) {
+        fragment.viewLifecycleOwner.lifecycleScope.launch {
+            val destination = withContext(Dispatchers.IO) { destination(fragment.requireContext()) }
+            if (fragment.view == null) return@launch
+            fragment.findNavController().navigate(destination)
+        }
+    }
 }

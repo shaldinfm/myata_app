@@ -31,12 +31,18 @@ import kotlinx.coroutines.withContext
  * was told `Вы не вошли`, on the one screen they opened to check. The identity
  * underneath was right the whole time; only the presentation was lying.
  *
- * ## It verifies rather than assumes
+ * ## It verifies again, having been routed here on a verified session
  *
- * `REGISTERED` on disk is what routed here, and it is not proof of a live session:
- * a token revoked on another device, or an account deleted, still reads `REGISTERED`
- * locally until something asks. So this asks - through the existing machinery and
- * not a second copy of it - and steps aside to the guest screen if the answer is no.
+ * [com.example.musicplayerapp.ui.profile.ProfileRoute] proves `REGISTERED(X)` and a
+ * restored session for the same `X` **before** navigating, so this screen is not
+ * where that decision is taken. It re-checks anyway, for the cases routing cannot
+ * cover: arriving straight from the auth screens, and a session that ends while the
+ * screen is open. The check goes through the existing machinery rather than a second
+ * copy of it, and steps aside to the guest screen if the answer is no.
+ *
+ * Until the answer arrives the account card is `INVISIBLE` rather than filled with
+ * fallbacks. Painting `Пользователь` on a card for somebody who turns out not to be
+ * authenticated is the same class of lie as `Вы не вошли` to somebody who is.
  *
  * What it must never do while asking is equally fixed, and all of it is inherited
  * rather than re-implemented: no anonymous mint, no handoff, no Room write, no
@@ -69,10 +75,13 @@ class ProfileAuthenticatedFragment : Fragment() {
         binding.profileBack.setOnClickListener { findNavController().popBackStack() }
         binding.profileRowSignOut.setOnClickListener { signOut() }
 
-        // Painted from storage first, so the card is never blank while the session is
-        // being checked. The uid is already known; the name and address are filled in
-        // a moment later if a session can supply them.
-        render(name = null, email = null)
+        // The card is deliberately **not** painted here. ProfileRoute has already
+        // proved a matching session before this destination was navigated to, so the
+        // account arrives in the same frame - and painting fallbacks first would put
+        // `Пользователь` and `Email недоступен` on screen for anyone whose session
+        // turned out to be gone, which is rendering an account card for somebody who
+        // is not authenticated.
+        binding.profileAccountCard.visibility = View.INVISIBLE
         renderLastSync()
 
         return binding.root
@@ -126,6 +135,7 @@ class ProfileAuthenticatedFragment : Fragment() {
             }
 
             render(account.displayName, account.email)
+            binding.profileAccountCard.visibility = View.VISIBLE
         }
     }
 

@@ -183,7 +183,7 @@ class InfoFragment : Fragment() {
         // in particular it does not touch the identity boundary, so looking at the
         // profile never mints an anonymous uid.
         binding.profileEntry.root.setOnClickListener {
-            findNavController().navigate(ProfileRoute.destination(requireContext()))
+            ProfileRoute.open(this)
         }
 
 

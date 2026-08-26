@@ -337,7 +337,9 @@ class AuthNavigationTest {
     private fun scenario(body: (ActivityScenario<MainActivity>) -> Unit) = withMainActivity(body)
 
     private fun ActivityScenario<MainActivity>.openProfile() {
-        tap(R.id.profile_entry)
+        // See [openProfileAndSettle]: `ProfileRoute` proves a session before it
+        // navigates, so the destination is not decided in the tap's own frame.
+        openProfileAndSettle()
         onActivity { assertEquals(R.id.profile, it.currentDestinationId()) }
     }
 

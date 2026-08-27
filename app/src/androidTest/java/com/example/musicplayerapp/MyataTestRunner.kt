@@ -14,6 +14,7 @@ import com.example.musicplayerapp.data.supabase.IdentityState
 import com.example.musicplayerapp.data.supabase.IdentityStore
 import com.example.musicplayerapp.data.supabase.ListenerIdentity
 import com.example.musicplayerapp.data.supabase.BatchOutcome
+import com.example.musicplayerapp.data.supabase.PullPage
 import com.example.musicplayerapp.data.supabase.ReactionSyncApi
 import com.example.musicplayerapp.data.supabase.ReactionSyncBackend
 import com.example.musicplayerapp.data.supabase.RecoveryResult
@@ -114,6 +115,10 @@ private object OfflineReactionSyncApi : ReactionSyncApi {
 
     override suspend fun retireAllCurrentState(listenerId: String): SyncOutcome =
         SyncOutcome.AuthUnavailable(WHY)
+
+    override suspend fun fetchReactionsPage(listenerId: String, afterRev: Long, limit: Int) =
+        PullPage.Failed(SyncOutcome.AuthUnavailable(WHY))
+
 
     override suspend fun applyBatch(
         trackKey: String,

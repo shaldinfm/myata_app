@@ -341,11 +341,13 @@ class ReactionSyncEngine(
      *  2. ask whether anything is still owed for the track;
      *  3. adopt the returned state **only when nothing is**.
      *
-     * Step 3's condition is what stops a stale answer overwriting a newer act. A row
-     * still pending is a local mutation the server has not seen, so by definition the
-     * state that came back predates it. Recording the revision alone would be no
-     * better: a rev is a claim that local state matches that server row, and while a
-     * mutation is outstanding it does not.
+     * Step 3's condition is what stops an answer overwriting an act the listener can
+     * see. A row still pending is a local mutation the server has not been told
+     * about, and by policy that wins - not because the returned state is provably
+     * older, which across devices is not knowable, but because a genuine local act
+     * is not something a settlement may quietly undo. Recording the revision alone
+     * would be no better: a rev is a claim that local state matches that server row,
+     * and while a mutation is outstanding it does not.
      *
      * A null [row] means the track has no remote row at all - data removal, in
      * practice - and there is nothing to adopt. The rows still settle: their events
@@ -382,7 +384,10 @@ class ReactionSyncEngine(
                 reaction = row.reaction,
                 artist = row.artist,
                 title = row.title,
-                stream = row.stream,
+                // An absent remote stream is the server not having recorded one, which
+                // is weaker evidence than what this device already holds. There is
+                // always a local row on this path, so nothing has to be invented.
+                stream = row.stream ?: local.stream,
                 likedAt = row.likedAt,
                 updatedAt = row.updatedAt,
                 rev = row.rev,

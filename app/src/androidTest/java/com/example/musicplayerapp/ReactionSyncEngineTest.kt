@@ -14,6 +14,7 @@ import com.example.musicplayerapp.data.TrackReaction
 import com.example.musicplayerapp.data.supabase.DrainResult
 import com.example.musicplayerapp.data.supabase.ListenerIdentity
 import com.example.musicplayerapp.data.supabase.BatchOutcome
+import com.example.musicplayerapp.data.supabase.PullPage
 import com.example.musicplayerapp.data.supabase.ReactionSyncApi
 import com.example.musicplayerapp.data.supabase.RemoteReaction
 import com.example.musicplayerapp.data.supabase.ReactionSyncEngine
@@ -42,6 +43,17 @@ import org.junit.runner.RunWith
  *    a track with no local row at all reconciles to a delete.
  */
 private class FakeBackend : ReactionSyncApi {
+
+    /**
+     * A suite that does not exercise pull must never reach this.
+     *
+     * An empty page would be a plausible-looking lie: an accidental pull would read as
+     * "the account has nothing" and pass silently, which is exactly how a regression in
+     * the trigger wiring would hide. Failing loudly is the only answer that cannot be
+     * mistaken for a working one.
+     */
+    override suspend fun fetchReactionsPage(listenerId: String, afterRev: Long, limit: Int): PullPage =
+        throw AssertionError("this suite must not pull; fetchReactionsPage was called")
 
     // ------------------------------------------------------- atomic RPC --
 

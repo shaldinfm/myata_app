@@ -469,6 +469,43 @@ abstract class ReactionDao {
     abstract suspend fun recordRemoteRev(trackKey: String, rev: Long): Int
 
     /**
+     * Writes one remote row into local state, and **enqueues nothing**.
+     *
+     * Spelled as an explicit INSERT OR REPLACE rather than routed through one of the
+     * four transitions, because those four exist to record that a listener *did*
+     * something: each writes an outbox row in the same transaction as the state, and
+     * that pairing is a property of the database rather than a convention. Adopting
+     * what the server already holds is not an act. Pushing it back would be telling
+     * the cloud what it just told us, and - since the events would be synthetic -
+     * telling it in a vocabulary that describes acts nobody performed.
+     *
+     * So this is a separate path by construction: there is no branch in it that could
+     * reach [ReactionEvent], and no way for a future edit to add one without moving
+     * the statement.
+     *
+     * Every column comes from the remote row except [stream], which the caller
+     * resolves - see `ReactionPullEngine`, where a NULL remote stream keeps whatever
+     * the local row already had rather than erasing it.
+     */
+    @Query(
+        """
+        INSERT OR REPLACE INTO track_reaction
+            (track_key, artist, title, stream, reaction, liked_at, updated_at, remote_rev)
+        VALUES (:trackKey, :artist, :title, :stream, :reaction, :likedAt, :updatedAt, :rev)
+        """
+    )
+    abstract suspend fun applyRemote(
+        trackKey: String,
+        artist: String,
+        title: String,
+        stream: String,
+        reaction: Reaction,
+        likedAt: Long?,
+        updatedAt: Long,
+        rev: Long,
+    )
+
+    /**
      * Forgets every server revision this device has recorded.
      *
      * A rev identifies one row belonging to one `auth.users` id, so it is a fact
@@ -491,9 +528,12 @@ abstract class ReactionDao {
      *
      * The settlement half of an ALREADY_APPLIED answer: the events this device was
      * holding turned out to have been delivered already, and the row that came back
-     * is newer than anything it can still contribute. Only ever called when the track
-     * has no other pending mutation, because a pending mutation is a local act that
-     * has not been published and must not be overwritten by state that predates it.
+     * is the one the server now holds. Only ever called when the track has no other
+     * pending mutation: a pending mutation is a local act this device has not managed
+     * to publish, and by policy that wins over whatever comes back - not because the
+     * returned state is provably older, which across devices is not knowable, but
+     * because an act the listener can see is not something a background settlement
+     * may quietly undo.
      *
      * **No outbox event is written.** Adopting what the server already holds is not
      * something the listener did, and `reaction_events` is a record of acts.

@@ -16,6 +16,7 @@ import com.example.musicplayerapp.data.supabase.IdentityState
 import com.example.musicplayerapp.data.supabase.IdentityStore
 import com.example.musicplayerapp.data.supabase.ListenerIdentity
 import com.example.musicplayerapp.data.supabase.BatchOutcome
+import com.example.musicplayerapp.data.supabase.PullPage
 import com.example.musicplayerapp.data.supabase.ReactionSyncApi
 import com.example.musicplayerapp.data.supabase.RemoteReaction
 import com.example.musicplayerapp.data.supabase.ReactionSyncBackend
@@ -230,6 +231,18 @@ internal class RecordingSyncApi : ReactionSyncApi {
     /** Every event written as [listenerId]. Asserted empty for a destination. */
     fun eventsBy(listenerId: String) = events.filter { it.second == listenerId }
 
+
+    /**
+     * A suite that does not exercise pull must never reach this.
+     *
+     * An empty page would be a plausible-looking lie: an accidental pull would read as
+     * "the account has nothing" and pass silently, which is exactly how a regression in
+     * the trigger wiring would hide. Failing loudly is the only answer that cannot be
+     * mistaken for a working one.
+     */
+    override suspend fun fetchReactionsPage(listenerId: String, afterRev: Long, limit: Int): PullPage =
+        throw AssertionError("this suite must not pull; fetchReactionsPage was called")
+
     override suspend fun deliverEvent(entry: ReactionOutboxEntry, listenerId: String): SyncOutcome {
         events += entry to listenerId
         return SyncOutcome.Success
@@ -333,6 +346,9 @@ internal object TestIsolation {
         ) = SyncOutcome.AuthUnavailable(WHY)
         override suspend fun retireAllCurrentState(listenerId: String) =
             SyncOutcome.AuthUnavailable(WHY)
+
+        override suspend fun fetchReactionsPage(listenerId: String, afterRev: Long, limit: Int) =
+            PullPage.Failed(SyncOutcome.AuthUnavailable(WHY))
         override suspend fun applyBatch(
             trackKey: String,
             events: List<ReactionOutboxEntry>,

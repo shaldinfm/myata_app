@@ -105,6 +105,25 @@ interface ReactionSyncApi {
     ): BatchOutcome
 
     /**
+     * One page of [listenerId]'s current remote state, oldest revision first.
+     *
+     * The read half of G-A7. Keyset on `rev`, never OFFSET: `rev` is assigned from a
+     * global sequence by a trigger on every insert and update, so a row written or
+     * changed during a scan gets a value **above** anything already read and lands
+     * ahead of the cursor rather than shifting rows underneath it. That is the
+     * property offset pagination does not have, and the reason a mid-scan insert
+     * cannot be skipped.
+     *
+     * A row updated during a scan may therefore be visited twice - once at its old
+     * revision, once at its new one. That is allowed and safe: the local watermark
+     * makes the second visit either a no-op or an upgrade, never a regression.
+     *
+     * @param afterRev exclusive lower bound; a run always starts at 0.
+     * @param limit page size; a short page means the scan is finished.
+     */
+    suspend fun fetchReactionsPage(listenerId: String, afterRev: Long, limit: Int): PullPage
+
+    /**
      * Removes **every** current-state row [listenerId] owns, in one call.
      *
      * The retirement half of an identity handoff, and it has to happen while that
@@ -162,7 +181,14 @@ data class RemoteReaction(
     val likedAt: Long?,
     val artist: String,
     val title: String,
-    val stream: String,
+
+    /**
+     * Nullable, because `reactions.stream` is - and because the empty string is not a
+     * sentinel for anything in this app. Absence stays absence all the way to the
+     * point where it has to be reconciled with a non-null local column, which is the
+     * only place a normalisation is legitimate.
+     */
+    val stream: String?,
     val updatedAt: Long,
     val rev: Long,
 )
@@ -277,6 +303,21 @@ object ReactionSyncWire {
      */
     fun epochMillis(timestamp: String?): Long? =
         timestamp?.let { runCatching { java.time.OffsetDateTime.parse(it).toInstant().toEpochMilli() }.getOrNull() }
+}
+
+/**
+ * One page of remote current state, or why it could not be read.
+ */
+sealed interface PullPage {
+
+    /**
+     * The rows, in ascending `rev`. Fewer than the requested limit means the scan
+     * has reached the end.
+     */
+    data class Rows(val rows: List<RemoteReaction>) : PullPage
+
+    /** Classified exactly as every other remote call is. */
+    data class Failed(val outcome: SyncOutcome) : PullPage
 }
 
 /**

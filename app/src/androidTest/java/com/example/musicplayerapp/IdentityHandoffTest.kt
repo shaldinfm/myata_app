@@ -17,6 +17,7 @@ import com.example.musicplayerapp.data.supabase.HandoffStage
 import com.example.musicplayerapp.data.supabase.IdentityHandoff
 import com.example.musicplayerapp.data.supabase.IdentityState
 import com.example.musicplayerapp.data.supabase.IdentityStore
+import com.example.musicplayerapp.data.supabase.PullPage
 import com.example.musicplayerapp.data.supabase.ReactionSyncApi
 import com.example.musicplayerapp.data.supabase.SyncLease
 import com.example.musicplayerapp.data.supabase.SyncOutcome
@@ -540,6 +541,17 @@ class IdentityHandoffTest {
  * would not be evidence of its absence.
  */
 private class HandoffBackend : ReactionSyncApi {
+
+    /**
+     * A suite that does not exercise pull must never reach this.
+     *
+     * An empty page would be a plausible-looking lie: an accidental pull would read as
+     * "the account has nothing" and pass silently, which is exactly how a regression in
+     * the trigger wiring would hide. Failing loudly is the only answer that cannot be
+     * mistaken for a working one.
+     */
+    override suspend fun fetchReactionsPage(listenerId: String, afterRev: Long, limit: Int): PullPage =
+        throw AssertionError("this suite must not pull; fetchReactionsPage was called")
 
     /** The atomic path, recorded like the legacy one. See [RecordingSyncApi]. */
     override suspend fun applyBatch(

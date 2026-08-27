@@ -125,6 +125,34 @@ object ReactionMigration {
      * this build observes; the existing state belongs to a separate, deliberate
      * backfill if one is ever wanted, and that is not this.
      */
+    /**
+     * The G-A7 protocol cutover: two additive columns, no row read, none rewritten.
+     *
+     * `sync_protocol` arrives with a SQL default of `LEGACY`, and that default is the
+     * whole migration. Every row already in the outbox was written by a build that
+     * delivers through the two-call path, and the atomic RPC deliberately refuses an
+     * event it has seen but never marked - so a migrated row that reached the new
+     * path would be rejected outright. Back-filling them to `LEGACY` in one statement
+     * keeps them on the protocol that wrote them.
+     *
+     * The default never applies to a row this build inserts: Room names every entity
+     * column in its generated INSERT, so the value always comes from
+     * [ReactionDao.enqueue], which chooses it deliberately per track.
+     *
+     * `remote_rev` arrives null for the same reason the outbox started empty at 2->3:
+     * this device has never been told a revision for any of these rows, and inventing
+     * one would be a claim about the server that nothing supports.
+     */
+    val MIGRATION_3_4: Migration = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "ALTER TABLE `reaction_outbox` ADD COLUMN `sync_protocol` " +
+                    "TEXT NOT NULL DEFAULT 'LEGACY'"
+            )
+            db.execSQL("ALTER TABLE `track_reaction` ADD COLUMN `remote_rev` INTEGER")
+        }
+    }
+
     val MIGRATION_2_3: Migration = object : Migration(2, 3) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL(CREATE_REACTION_OUTBOX)

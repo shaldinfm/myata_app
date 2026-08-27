@@ -87,7 +87,11 @@ class ReactionOutboxMigrationTest {
 
     private fun open(): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, dbName)
-            .addMigrations(ReactionMigration.MIGRATION_1_2, ReactionMigration.MIGRATION_2_3)
+            .addMigrations(
+                ReactionMigration.MIGRATION_1_2,
+                ReactionMigration.MIGRATION_2_3,
+                ReactionMigration.MIGRATION_3_4,
+            )
             .build()
 
     // ==================== nothing that exists is disturbed ====================

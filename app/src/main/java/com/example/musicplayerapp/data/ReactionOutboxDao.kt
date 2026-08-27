@@ -100,6 +100,64 @@ interface ReactionOutboxDao {
     @Query("SELECT * FROM reaction_outbox WHERE event_id = :eventId")
     suspend fun find(eventId: String): ReactionOutboxEntry?
 
+    /**
+     * The tracks a sender may work on now, in the order their oldest due row was
+     * written.
+     *
+     * The atomic protocol's unit of delivery is a track, not an event, so the drain
+     * picks tracks rather than rows. `MIN(rowid)` preserves the FIFO property the
+     * per-row drain had: the track whose oldest owed act came first is served first.
+     *
+     * [limit] bounds tracks per run rather than rows, so a listener who reacted to
+     * one track forty times still costs one round trip.
+     */
+    @Query(
+        """
+        SELECT track_key FROM reaction_outbox
+        WHERE next_attempt_at <= :now
+        GROUP BY track_key
+        ORDER BY MIN(rowid) ASC
+        LIMIT :limit
+        """
+    )
+    suspend fun dueTrackKeys(now: Long, limit: Int): List<String>
+
+    /**
+     * Every pending row for one track, oldest act first, whatever protocol owns it.
+     *
+     * Deliberately ignores `next_attempt_at`. A sibling parked by a backoff has to
+     * travel in the same batch as the rows around it: the state application the batch
+     * publishes already carries that sibling's effect, so leaving it behind would let
+     * it surface later as a genuinely unapplied event whose effect had already been
+     * delivered - and re-apply a state the listener has since moved on from.
+     */
+    @Query("SELECT * FROM reaction_outbox WHERE track_key = :trackKey ORDER BY rowid ASC")
+    suspend fun pendingForTrack(trackKey: String): List<ReactionOutboxEntry>
+
+    /** Whether anything at all is still owed for [trackKey]. */
+    @Query("SELECT COUNT(*) FROM reaction_outbox WHERE track_key = :trackKey")
+    suspend fun countForTrack(trackKey: String): Int
+
+    /**
+     * Delivered, as a set.
+     *
+     * The atomic protocol settles a whole batch at once, inside one Room transaction
+     * with the state adoption that follows - so a death cannot leave some rows of a
+     * settled batch behind while others are gone.
+     */
+    @Query("DELETE FROM reaction_outbox WHERE event_id IN (:eventIds)")
+    suspend fun deleteAll(eventIds: List<String>): Int
+
+    /** [recordFailedAttempt] for a whole batch: the batch failed as a unit. */
+    @Query(
+        """
+        UPDATE reaction_outbox
+        SET attempts = attempts + 1, next_attempt_at = :nextAttemptAt
+        WHERE event_id IN (:eventIds)
+        """
+    )
+    suspend fun recordFailedAttempts(eventIds: List<String>, nextAttemptAt: Long): Int
+
     /** Delivered. The only reason a row ever leaves this table. */
     @Query("DELETE FROM reaction_outbox WHERE event_id = :eventId")
     suspend fun delete(eventId: String): Int

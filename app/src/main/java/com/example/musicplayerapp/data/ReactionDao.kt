@@ -407,9 +407,115 @@ abstract class ReactionDao {
                 stream = stream,
                 eventType = event,
                 occurredAt = occurredAt,
+                syncProtocol = protocolFor(trackKey),
             )
         )
     }
+
+    /**
+     * Which delivery protocol a brand-new row for [trackKey] belongs to.
+     *
+     * ```
+     * a pending LEGACY row exists for this track  ->  LEGACY
+     * otherwise                                   ->  ATOMIC_RPC
+     * ```
+     *
+     * Read inside the same [Transaction] as the state change and the outbox insert,
+     * which is what makes the choice atomic with the row it describes. Under
+     * [ReactionWriteGate] too, because every caller of this holds it.
+     *
+     * ## Why the epoch has to extend
+     *
+     * The legacy path publishes the **current** `track_reaction` row, not the event's
+     * own state. So a legacy delivery still owed for track K can carry the effect of
+     * any reaction committed before it runs - including one made after the cutover.
+     * If that later reaction were tagged ATOMIC_RPC, its effect could reach the cloud
+     * through the legacy write, which creates no application marker, and the server
+     * would later see a genuinely unapplied atomic event whose effect had already
+     * been published. That is the stale-replay hole wearing a different costume.
+     *
+     * Inheriting LEGACY closes it: while K owes a legacy delivery, everything on K is
+     * legacy, so nothing atomic can have its effect published unmarked. The moment
+     * the last legacy row for K settles and is deleted, the next reaction on K is
+     * atomic. Per track, one way, and no flag anywhere.
+     *
+     * A consequence worth naming: the pending rows for one track are therefore always
+     * homogeneous. A row can only be LEGACY when a LEGACY row already exists, so a
+     * mixed set cannot be constructed, and once a track has crossed over no LEGACY
+     * row for it can ever be created again.
+     */
+    private suspend fun protocolFor(trackKey: String): SyncProtocol =
+        if (hasPendingLegacy(trackKey)) SyncProtocol.LEGACY else SyncProtocol.ATOMIC_RPC
+
+    /** Whether [trackKey] still owes a pre-cutover delivery. See [protocolFor]. */
+    @Query(
+        """
+        SELECT EXISTS(
+            SELECT 1 FROM reaction_outbox
+            WHERE track_key = :trackKey AND sync_protocol = 'LEGACY'
+        )
+        """
+    )
+    protected abstract suspend fun hasPendingLegacy(trackKey: String): Boolean
+
+    /**
+     * Records the server revision this device has observed for one track.
+     *
+     * Written only by the atomic push's settlement, and only when nothing else is
+     * pending for that track - see `ReactionSyncEngine`. It touches no other column,
+     * so it cannot disturb what the listener currently thinks.
+     */
+    @Query("UPDATE track_reaction SET remote_rev = :rev WHERE track_key = :trackKey")
+    abstract suspend fun recordRemoteRev(trackKey: String, rev: Long): Int
+
+    /**
+     * Forgets every server revision this device has recorded.
+     *
+     * A rev identifies one row belonging to one `auth.users` id, so it is a fact
+     * about a listener and not about a track. The identity handoff calls this because
+     * both of its outcomes invalidate every value at once: the source identity's rows
+     * are deleted outright before the switch, and whatever is written afterwards -
+     * into the destination on success, back into the source on rollback - gets fresh
+     * revisions the device is never told. Carrying the old numbers across would leave
+     * this install asserting a match with rows that no longer exist.
+     *
+     * Only the revisions. Not one reaction, not one word, not one timestamp: the
+     * Collection is never touched by a handoff, and this must not become the
+     * exception.
+     */
+    @Query("UPDATE track_reaction SET remote_rev = NULL WHERE remote_rev IS NOT NULL")
+    abstract suspend fun clearRemoteRevs(): Int
+
+    /**
+     * Adopts remote current state for one track, and its revision, in one statement.
+     *
+     * The settlement half of an ALREADY_APPLIED answer: the events this device was
+     * holding turned out to have been delivered already, and the row that came back
+     * is newer than anything it can still contribute. Only ever called when the track
+     * has no other pending mutation, because a pending mutation is a local act that
+     * has not been published and must not be overwritten by state that predates it.
+     *
+     * **No outbox event is written.** Adopting what the server already holds is not
+     * something the listener did, and `reaction_events` is a record of acts.
+     */
+    @Query(
+        """
+        UPDATE track_reaction
+        SET reaction = :reaction, artist = :artist, title = :title, stream = :stream,
+            liked_at = :likedAt, updated_at = :updatedAt, remote_rev = :rev
+        WHERE track_key = :trackKey
+        """
+    )
+    abstract suspend fun adoptRemote(
+        trackKey: String,
+        reaction: Reaction,
+        artist: String,
+        title: String,
+        stream: String,
+        likedAt: Long?,
+        updatedAt: Long,
+        rev: Long,
+    ): Int
 
     /**
      * The append itself. [OnConflictStrategy.ABORT] - the default - on purpose: an

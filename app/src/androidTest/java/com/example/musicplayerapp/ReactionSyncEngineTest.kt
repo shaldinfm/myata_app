@@ -13,7 +13,9 @@ import com.example.musicplayerapp.data.TrackKey
 import com.example.musicplayerapp.data.TrackReaction
 import com.example.musicplayerapp.data.supabase.DrainResult
 import com.example.musicplayerapp.data.supabase.ListenerIdentity
+import com.example.musicplayerapp.data.supabase.BatchOutcome
 import com.example.musicplayerapp.data.supabase.ReactionSyncApi
+import com.example.musicplayerapp.data.supabase.RemoteReaction
 import com.example.musicplayerapp.data.supabase.ReactionSyncEngine
 import com.example.musicplayerapp.data.supabase.ReactionSyncWire
 import com.example.musicplayerapp.data.supabase.SyncOutcome
@@ -40,6 +42,65 @@ import org.junit.runner.RunWith
  *    a track with no local row at all reconciles to a delete.
  */
 private class FakeBackend : ReactionSyncApi {
+
+    // ------------------------------------------------------- atomic RPC --
+
+    /**
+     * A faithful stand-in for `apply_reaction_event_batch`, including the one
+     * behaviour the whole cutover depends on.
+     *
+     * [applications] is this fake's copy of `reaction_event_applications`: which
+     * event ids have already had their effect committed, and at which revision. The
+     * production table is written inside the same transaction as the state, and so is
+     * this map - so the two can never disagree here either.
+     *
+     * The decision it exists to reproduce: when **every** supplied event is already
+     * applied, nothing is written and the current row comes back unchanged. That is
+     * what stops a device holding rows for a batch that already landed from replaying
+     * them over whatever another device has done since.
+     */
+    val applications = LinkedHashMap<String, Long>()
+
+    /** Every batch the drain sent, as (trackKey, event ids). */
+    val batches = mutableListOf<Pair<String, List<String>>>()
+
+    /** Server-side current rows, keyed by track. What an answer returns. */
+    val rows = LinkedHashMap<String, RemoteReaction>()
+
+    /** Forced answers, by track. A test can make one track fail without the others. */
+    var onBatch: (String) -> SyncOutcome? = { null }
+
+    private var nextRev = 100L
+
+    override suspend fun applyBatch(
+        trackKey: String,
+        events: List<ReactionOutboxEntry>,
+        current: TrackReaction,
+        listenerId: String,
+    ): BatchOutcome {
+        batches += trackKey to events.map { it.eventId }
+        onBatch(trackKey)?.let { return BatchOutcome.Failed(it) }
+
+        // The server refuses a batch it cannot represent, and refuses it whole.
+        if (events.isEmpty() || events.size > 256) {
+            return BatchOutcome.Failed(SyncOutcome.Permanent(400, "event count out of range"))
+        }
+
+        // Immutable history, exactly once on event_id - as the real insert does.
+        for (event in events) history.putIfAbsent(event.eventId, event)
+
+        if (events.all { applications.containsKey(it.eventId) }) {
+            // Already applied: no state write, no new revision.
+            return BatchOutcome.AlreadyApplied(rows[trackKey])
+        }
+
+        val rev = ++nextRev
+        val row = current.asRemote(rev)
+        rows[trackKey] = row
+        state[trackKey] = ReactionSyncWire.remoteReaction(current.reaction)
+        for (event in events) applications.putIfAbsent(event.eventId, rev)
+        return BatchOutcome.Applied(row)
+    }
 
     /** Every event the drain handed over, including redeliveries. */
     val delivered = mutableListOf<ReactionOutboxEntry>()
@@ -154,10 +215,34 @@ class ReactionSyncEngineTest {
     )
 
     private suspend fun like(key: String = depeche, artist: String = "Depeche Mode", title: String = "Enjoy the Silence") =
-        dao.like(key, artist, title, "myata", clock, clock)
+        dao.like(key, artist, title, "myata", clock, clock).also { asLegacy() }
 
     private suspend fun dislike(key: String = depeche, artist: String = "Depeche Mode", title: String = "Enjoy the Silence") =
-        dao.dislike(key, artist, title, "myata", clock)
+        dao.dislike(key, artist, title, "myata", clock).also { asLegacy() }
+
+    /**
+     * Puts every pending row back on the pre-cutover protocol.
+     *
+     * This suite is the legacy path's regression coverage, and the legacy path is the
+     * one that must not change: rows written by a build that had no application log
+     * finish the way they started, one event at a time, `deliverEvent` then
+     * `reconcileCurrentState` then delete. Rows minted by [ReactionDao] on a track
+     * that owes nothing are `ATOMIC_RPC` now - correctly - so a suite that wants to
+     * exercise the old path has to say which protocol it means.
+     *
+     * The atomic path has its own coverage in `SyncProtocolCutoverTest`, including
+     * the parts these tests assert generically: parking, backoff, identity, restart.
+     *
+     * Done in SQL rather than through the DAO on purpose. There is deliberately no
+     * production route from `ATOMIC_RPC` back to `LEGACY` - the epoch is one-way per
+     * track - and adding one so a test could use it would be adding the very thing
+     * the cutover exists to make impossible.
+     */
+    private fun asLegacy() {
+        db.openHelper.writableDatabase.execSQL(
+            "UPDATE reaction_outbox SET sync_protocol = 'LEGACY'"
+        )
+    }
 
     // ==================== the identity gate ====================
 
@@ -778,7 +863,13 @@ class ReactionSyncEngineTest {
             first.reactionDao().like(depeche, "Depeche Mode", "Enjoy the Silence", "myata", 1_000L, 1_000L)
             first.reactionDao().dislike(cave, "Nick Cave", "Red Right Hand", "gold", 2_000L)
 
-            val offline = FakeBackend().apply { onEvent = { SyncOutcome.Transient("offline") } }
+            // Offline for both protocols. These rows are ATOMIC_RPC - the track owes
+            // nothing when they are minted - so the batch call is the one that has to
+            // fail, and this test now covers a restart on the new path.
+            val offline = FakeBackend().apply {
+                onEvent = { SyncOutcome.Transient("offline") }
+                onBatch = { SyncOutcome.Transient("offline") }
+            }
             val result = ReactionSyncEngine(
                 first.reactionDao(), first.reactionOutboxDao(), offline, { ListenerIdentity.Available(listener) }, { 5_000L },
             ).drain()

@@ -57,6 +57,42 @@ interface ReactionSyncApi {
     ): SyncOutcome
 
     /**
+     * Applies one track's whole pending batch in a single server transaction.
+     *
+     * The G-A7 protocol, and the reason it exists: the pre-cutover path delivered an
+     * event and reconciled current state as two calls, so a death between them and a
+     * death after both are indistinguishable afterwards. `apply_reaction_event_batch`
+     * appends the immutable events, writes the current state, and records which
+     * events that state application represents - all or nothing. A retry of a batch
+     * the server already committed answers [BatchOutcome.AlreadyApplied] and writes
+     * nothing, which is what stops a delivered act being replayed over whatever
+     * another device has since done.
+     *
+     * ## Why the whole track, not one event
+     *
+     * [current] is the cumulative result of every transition applied to the track, so
+     * a state application made on behalf of one event also carries the effect of
+     * every other pending event for it. Marking only the sent one would under-report
+     * what the revision represents, and a sibling would later look genuinely
+     * unapplied. [events] is therefore every pending atomic row for the track,
+     * captured with [current] in one local transaction.
+     *
+     * [listenerId] is **not transmitted**. The function takes its identity from
+     * `auth.uid()` in the caller's JWT, so there is nothing for a client to assert or
+     * to get wrong. It is a parameter because a session still has to exist before
+     * anything may be sent - the drain proves one before it builds a batch, exactly
+     * as it does for the other three calls - and because a seam that records who the
+     * drain believed it was is what lets a test assert that no identity wrote
+     * anything it should not have.
+     */
+    suspend fun applyBatch(
+        trackKey: String,
+        events: List<ReactionOutboxEntry>,
+        current: TrackReaction,
+        listenerId: String,
+    ): BatchOutcome
+
+    /**
      * Removes **every** current-state row [listenerId] owns, in one call.
      *
      * The retirement half of an identity handoff, and it has to happen while that
@@ -72,6 +108,52 @@ interface ReactionSyncApi {
      */
     suspend fun retireAllCurrentState(listenerId: String): SyncOutcome
 }
+
+/**
+ * What `apply_reaction_event_batch` did with one track's batch.
+ *
+ * The two successes are deliberately distinct, because the drain does different
+ * things with them. Both settle the rows; only one of them may write state locally.
+ */
+sealed interface BatchOutcome {
+
+    /**
+     * The batch was genuinely unapplied and has now been applied and marked, at
+     * [row]'s revision. Every represented event is recorded against it.
+     */
+    data class Applied(val row: RemoteReaction) : BatchOutcome
+
+    /**
+     * Every represented event had already been applied, so nothing was written.
+     *
+     * The stale-replay guard doing its job: this device is holding rows for a batch
+     * the server committed before it died, and [row] is whatever the track looks like
+     * now - possibly newer, because another device may have moved it since. The rows
+     * are settled, and **no new revision was created**.
+     */
+    data class AlreadyApplied(val row: RemoteReaction?) : BatchOutcome
+
+    /** The call did not land. Classified exactly as every other remote write is. */
+    data class Failed(val outcome: SyncOutcome) : BatchOutcome
+}
+
+/**
+ * One `public.reactions` row as the server currently holds it.
+ *
+ * Returned by the batch RPC so the drain can settle without a second round trip.
+ * [rev] is the server-assigned revision - the cross-device ordering authority since
+ * migration 0003, and the watermark G-A7c's pull will compare against.
+ */
+data class RemoteReaction(
+    val trackKey: String,
+    val reaction: Reaction,
+    val likedAt: Long?,
+    val artist: String,
+    val title: String,
+    val stream: String,
+    val updatedAt: Long,
+    val rev: Long,
+)
 
 /**
  * What one remote write did, classified so the drain can decide what to do next.
@@ -159,6 +241,30 @@ object ReactionSyncWire {
         Reaction.DISLIKED -> "DISLIKED"
         Reaction.NEUTRAL -> "NEUTRAL"
     }
+
+    /** The atomic apply function, live since migration 0003. */
+    const val RPC_APPLY_BATCH = "apply_reaction_event_batch"
+
+    /**
+     * The remote spelling read back. Unknown is null rather than a guess: a fourth
+     * value would mean the schema moved under us, and inventing a mapping would put
+     * the wrong opinion in somebody's Collection.
+     */
+    fun localReaction(remote: String?): Reaction? = when (remote) {
+        "LIKED" -> Reaction.LIKED
+        "DISLIKED" -> Reaction.DISLIKED
+        "NEUTRAL" -> Reaction.NEUTRAL
+        else -> null
+    }
+
+    /**
+     * A `timestamptz` the server rendered, back to device millis.
+     *
+     * `Instant.parse` handles the offset forms PostgREST emits. Null in, null out -
+     * `liked_at` is legitimately absent for every non-LIKED row.
+     */
+    fun epochMillis(timestamp: String?): Long? =
+        timestamp?.let { runCatching { java.time.OffsetDateTime.parse(it).toInstant().toEpochMilli() }.getOrNull() }
 }
 
 /**

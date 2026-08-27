@@ -4,6 +4,8 @@ import android.util.Log
 import com.example.musicplayerapp.data.ReactionDao
 import com.example.musicplayerapp.data.ReactionOutboxDao
 import com.example.musicplayerapp.data.ReactionOutboxEntry
+import com.example.musicplayerapp.data.ReactionWriteGate
+import com.example.musicplayerapp.data.SyncProtocol
 
 /**
  * Draining the outbox to Supabase. The whole algorithm, and no Android in it
@@ -91,8 +93,8 @@ class ReactionSyncEngine(
         // them a database identity for nothing.
         if (outbox.count() == 0) return DrainResult.Idle
 
-        val batch = outbox.due(now(), batchSize)
-        if (batch.isEmpty()) {
+        val tracks = outbox.dueTrackKeys(now(), batchSize)
+        if (tracks.isEmpty()) {
             // Rows exist but every one is serving a backoff. Nothing to send yet, so
             // no identity is requested for it - asking here would mint an anonymous
             // user for somebody whose only pending row is one the server has already
@@ -115,55 +117,32 @@ class ReactionSyncEngine(
 
         var delivered = 0
 
-        for (row in batch) {
-            when (val event = api.deliverEvent(row, listenerId)) {
-                is SyncOutcome.Success -> Unit
+        for (trackKey in tracks) {
+            // A track's pending rows are homogeneous by construction - see
+            // ReactionDao.protocolFor - so this asks which protocol owns the track,
+            // not which owns a row. The legacy branch is checked first anyway: if a
+            // bug ever did produce a mixed set, the safe reading is that the track
+            // still owes a pre-cutover delivery.
+            val pending = outbox.pendingForTrack(trackKey)
+            if (pending.isEmpty()) continue
 
-                is SyncOutcome.Transient -> {
-                    park(row, transient = true, why = event.reason)
-                    return DrainResult.RetryLater("transient on event: ${event.reason}")
-                }
-
-                is SyncOutcome.AuthUnavailable -> {
-                    // The row is blameless: no attempt is counted and no backoff is
-                    // set. Only the run is over.
-                    return DrainResult.RetryLater("auth: ${event.reason}")
-                }
-
-                is SyncOutcome.Permanent -> {
-                    park(row, transient = false, why = "${event.status} ${event.reason}")
-                    // Deliberately not a return. One row the server will never
-                    // accept must not stop the rows behind it, which are almost
-                    // certainly fine.
-                    continue
-                }
+            val outcome = if (pending.any { it.syncProtocol == SyncProtocol.LEGACY }) {
+                drainLegacyTrack(pending, listenerId)
+            } else {
+                drainAtomicTrack(trackKey, listenerId)
             }
 
-            // The current opinion, read now - NEUTRAL included, which since migration
-            // 0002 upserts a row like any other state rather than deleting one. Null
-            // means the local row is gone entirely, which is data removal, not a
-            // withdrawal; that is the only case that still reconciles to a delete.
-            val current = reactions.find(row.trackKey)
+            when (outcome) {
+                is TrackOutcome.Delivered -> delivered += outcome.rows
 
-            when (val state = api.reconcileCurrentState(row.trackKey, current, listenerId)) {
-                is SyncOutcome.Success -> {
-                    // Both halves are in. Only now does the row stop being owed.
-                    outbox.delete(row.eventId)
-                    delivered++
-                }
+                // One track the server will never accept must not stop the tracks
+                // behind it, which are almost certainly fine. Parked and skipped.
+                is TrackOutcome.Parked -> continue
 
-                is SyncOutcome.Transient -> {
-                    park(row, transient = true, why = state.reason)
-                    return DrainResult.RetryLater("transient on state: ${state.reason}")
-                }
-
-                is SyncOutcome.AuthUnavailable ->
-                    return DrainResult.RetryLater("auth: ${state.reason}")
-
-                is SyncOutcome.Permanent -> {
-                    park(row, transient = false, why = "${state.status} ${state.reason}")
-                    continue
-                }
+                // The network or the session, not this track. Nothing else will get
+                // through either, so the run ends here rather than failing every
+                // remaining track in turn.
+                is TrackOutcome.StopRun -> return outcome.result
             }
         }
 
@@ -180,6 +159,253 @@ class ReactionSyncEngine(
             parkedUntil != null -> DrainResult.Waiting(parkedUntil)
             else -> DrainResult.Idle
         }
+    }
+
+    /** What one track's turn concluded, and whether the run may continue. */
+    private sealed interface TrackOutcome {
+        data class Delivered(val rows: Int) : TrackOutcome
+        data object Parked : TrackOutcome
+        data class StopRun(val result: DrainResult) : TrackOutcome
+    }
+
+    // ------------------------------------------------------------ legacy --
+
+    /**
+     * The pre-cutover path, unchanged: deliver the event, reconcile the current
+     * state, delete the row. One row at a time, oldest act first.
+     *
+     * Deliberately untouched except for where the delete happens. These rows were
+     * written by a build that had no application log, and the atomic function refuses
+     * an event it has seen but never marked - correctly, because whether that event's
+     * state write ever landed is undecidable. So they finish the way they started.
+     *
+     * The one change: the delete runs under [ReactionWriteGate]. It is the moment a
+     * track's legacy epoch can end, and a tap choosing its protocol has to serialise
+     * against it. See [ReactionWriteGate.withDeliveryStep].
+     */
+    private suspend fun drainLegacyTrack(
+        pending: List<ReactionOutboxEntry>,
+        listenerId: String,
+    ): TrackOutcome {
+        var delivered = 0
+        val moment = now()
+
+        for (row in pending.filter { it.syncProtocol == SyncProtocol.LEGACY }) {
+            if (row.nextAttemptAt > moment) continue
+
+            when (val event = api.deliverEvent(row, listenerId)) {
+                is SyncOutcome.Success -> Unit
+
+                is SyncOutcome.Transient -> {
+                    park(row, transient = true, why = event.reason)
+                    return TrackOutcome.StopRun(
+                        DrainResult.RetryLater("transient on event: ${event.reason}")
+                    )
+                }
+
+                is SyncOutcome.AuthUnavailable ->
+                    // The row is blameless: no attempt is counted and no backoff is
+                    // set. Only the run is over.
+                    return TrackOutcome.StopRun(DrainResult.RetryLater("auth: ${event.reason}"))
+
+                is SyncOutcome.Permanent -> {
+                    park(row, transient = false, why = "${event.status} ${event.reason}")
+                    continue
+                }
+            }
+
+            // The current opinion, read now - NEUTRAL included, which since migration
+            // 0002 upserts a row like any other state rather than deleting one. Null
+            // means the local row is gone entirely, which is data removal, not a
+            // withdrawal; that is the only case that still reconciles to a delete.
+            val current = reactions.find(row.trackKey)
+
+            when (val state = api.reconcileCurrentState(row.trackKey, current, listenerId)) {
+                is SyncOutcome.Success -> {
+                    // Both halves are in. Only now does the row stop being owed - and
+                    // the delete is gated, because it may be the one that ends this
+                    // track's legacy epoch.
+                    ReactionWriteGate.withDeliveryStep { outbox.delete(row.eventId) }
+                    delivered++
+                }
+
+                is SyncOutcome.Transient -> {
+                    park(row, transient = true, why = state.reason)
+                    return TrackOutcome.StopRun(
+                        DrainResult.RetryLater("transient on state: ${state.reason}")
+                    )
+                }
+
+                is SyncOutcome.AuthUnavailable ->
+                    return TrackOutcome.StopRun(DrainResult.RetryLater("auth: ${state.reason}"))
+
+                is SyncOutcome.Permanent -> {
+                    park(row, transient = false, why = "${state.status} ${state.reason}")
+                    continue
+                }
+            }
+        }
+
+        return if (delivered > 0) TrackOutcome.Delivered(delivered) else TrackOutcome.Parked
+    }
+
+    // ------------------------------------------------------------ atomic --
+
+    /**
+     * One track, one snapshot, one call, one settlement.
+     *
+     * ```
+     * gate:    read the current row + EVERY pending atomic row for this track
+     * ------   release
+     * network: apply_reaction_event_batch
+     * ------
+     * gate:    delete the represented rows, then adopt only if nothing else is owed
+     * ```
+     *
+     * The batch is the whole pending set, not the due subset. A sibling parked by a
+     * backoff has to travel with its neighbours: the state this call publishes
+     * already carries that sibling's effect, so leaving it behind would let it
+     * surface later as a genuinely unapplied event whose effect had already been
+     * delivered - and re-apply a state the listener has since moved past. That is the
+     * defect the whole application log exists to prevent, so the client must not
+     * manufacture it locally.
+     */
+    private suspend fun drainAtomicTrack(trackKey: String, listenerId: String): TrackOutcome {
+        val snapshot = ReactionWriteGate.withDeliveryStep {
+            val current = reactions.find(trackKey)
+            val events = outbox.pendingForTrack(trackKey)
+                .filter { it.syncProtocol == SyncProtocol.ATOMIC_RPC }
+            if (current == null || events.isEmpty()) null else current to events
+        } ?: return TrackOutcome.Parked
+
+        val (current, events) = snapshot
+
+        // The server accepts 1..256 and refuses the whole call above that. Splitting
+        // is not an option and never will be: a prefix of the batch would need the
+        // state as of that prefix, and only the final state exists. So the batch is
+        // parked whole, with every row preserved, and the failure is loud.
+        if (events.size > MAX_BATCH_EVENTS) {
+            parkBatch(events, transient = false, why = "batch of ${events.size} exceeds $MAX_BATCH_EVENTS")
+            return TrackOutcome.Parked
+        }
+
+        return when (val answer = api.applyBatch(trackKey, events, current, listenerId)) {
+            // Genuinely unapplied, now applied and marked. The row that came back is
+            // this device's own write, so adopting its revision is recording what we
+            // just did rather than accepting somebody else's state.
+            is BatchOutcome.Applied -> {
+                settle(trackKey, events, answer.row)
+                TrackOutcome.Delivered(events.size)
+            }
+
+            // Already delivered, and the server wrote nothing. These rows are settled
+            // evidence of a batch that landed before this device died; the answer may
+            // carry a newer row, because another device can have moved the track
+            // since. No new revision was created and none is asked for.
+            is BatchOutcome.AlreadyApplied -> {
+                settle(trackKey, events, answer.row)
+                TrackOutcome.Delivered(events.size)
+            }
+
+            is BatchOutcome.Failed -> when (val outcome = answer.outcome) {
+                is SyncOutcome.Success -> TrackOutcome.Delivered(0)
+
+                is SyncOutcome.Transient -> {
+                    parkBatch(events, transient = true, why = outcome.reason)
+                    TrackOutcome.StopRun(DrainResult.RetryLater("transient: ${outcome.reason}"))
+                }
+
+                // No usable session. The batch did nothing wrong, so nothing is
+                // counted against it and nothing is parked; only the run ends. This
+                // is the branch a null auth.uid() has to reach - see classifyStatus.
+                is SyncOutcome.AuthUnavailable ->
+                    TrackOutcome.StopRun(DrainResult.RetryLater("auth: ${outcome.reason}"))
+
+                is SyncOutcome.Permanent -> {
+                    parkBatch(events, transient = false, why = "${outcome.status} ${outcome.reason}")
+                    TrackOutcome.Parked
+                }
+            }
+        }
+    }
+
+    /**
+     * Settles a delivered batch, and adopts the remote row only if it is still safe
+     * to.
+     *
+     * One Room transaction inside one hold of [ReactionWriteGate], and the ordering
+     * is the whole point:
+     *
+     *  1. delete exactly the rows this batch represented - never "everything pending
+     *     for the track", which would discard a tap that landed during the call;
+     *  2. ask whether anything is still owed for the track;
+     *  3. adopt the returned state **only when nothing is**.
+     *
+     * Step 3's condition is what stops a stale answer overwriting a newer act. A row
+     * still pending is a local mutation the server has not seen, so by definition the
+     * state that came back predates it. Recording the revision alone would be no
+     * better: a rev is a claim that local state matches that server row, and while a
+     * mutation is outstanding it does not.
+     *
+     * A null [row] means the track has no remote row at all - data removal, in
+     * practice - and there is nothing to adopt. The rows still settle: their events
+     * are delivered whatever the current state looks like.
+     */
+    private suspend fun settle(
+        trackKey: String,
+        events: List<ReactionOutboxEntry>,
+        row: RemoteReaction?,
+    ) {
+        ReactionWriteGate.withDeliveryStep {
+            settleWithinTransaction(trackKey, events.map { it.eventId }, row)
+        }
+    }
+
+    private suspend fun settleWithinTransaction(
+        trackKey: String,
+        eventIds: List<String>,
+        row: RemoteReaction?,
+    ) {
+        outbox.deleteAll(eventIds)
+
+        if (row == null) return
+        if (outbox.countForTrack(trackKey) > 0) return
+
+        val local = reactions.find(trackKey) ?: return
+        if (local.reaction == row.reaction && local.updatedAt == row.updatedAt) {
+            // Same state, different bookkeeping: this is the ordinary APPLIED answer
+            // to our own write. Record the revision and leave the row alone.
+            reactions.recordRemoteRev(trackKey, row.rev)
+        } else {
+            reactions.adoptRemote(
+                trackKey = trackKey,
+                reaction = row.reaction,
+                artist = row.artist,
+                title = row.title,
+                stream = row.stream,
+                likedAt = row.likedAt,
+                updatedAt = row.updatedAt,
+                rev = row.rev,
+            )
+        }
+    }
+
+    /** [park], for a batch that failed as a unit. */
+    private suspend fun parkBatch(
+        events: List<ReactionOutboxEntry>,
+        transient: Boolean,
+        why: String,
+    ) {
+        val attempt = (events.maxOfOrNull { it.attempts } ?: 0) + 1
+        val delay = if (transient) transientBackoff(attempt) else permanentBackoff(attempt)
+        outbox.recordFailedAttempts(events.map { it.eventId }, now() + delay)
+
+        val kind = if (transient) "transient" else "permanent"
+        Log.w(
+            TAG,
+            "$kind failure for a batch of ${events.size} on ${events.first().trackKey.take(8)} " +
+                "(attempt $attempt, retry in ${delay / 1000}s): $why"
+        )
     }
 
     /**
@@ -221,6 +447,17 @@ class ReactionSyncEngine(
          * and the worker schedules the next one.
          */
         const val BATCH_SIZE = 50
+
+        /**
+         * What `apply_reaction_event_batch` accepts, and therefore what the
+         * client must not exceed: 1..256 events in one call.
+         *
+         * Unreachable in practice - repeated identical taps enqueue nothing, so
+         * getting here means alternating like/unlike on one track 256 times
+         * offline without a single successful drain. The check exists because
+         * the failure has to be safe rather than partial if it ever happens.
+         */
+        const val MAX_BATCH_EVENTS = 256
 
         private const val SECOND = 1_000L
         private const val MINUTE = 60 * SECOND

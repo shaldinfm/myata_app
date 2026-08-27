@@ -80,6 +80,7 @@ class ReactionMigrationTest {
             .addMigrations(
                 ReactionMigration.MIGRATION_1_2,
                 ReactionMigration.MIGRATION_2_3,
+                ReactionMigration.MIGRATION_3_4,
             )
             .build()
 

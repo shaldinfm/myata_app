@@ -13,6 +13,7 @@ import com.example.musicplayerapp.data.supabase.EmailAuthBackend
 import com.example.musicplayerapp.data.supabase.IdentityState
 import com.example.musicplayerapp.data.supabase.IdentityStore
 import com.example.musicplayerapp.data.supabase.ListenerIdentity
+import com.example.musicplayerapp.data.supabase.BatchOutcome
 import com.example.musicplayerapp.data.supabase.ReactionSyncApi
 import com.example.musicplayerapp.data.supabase.ReactionSyncBackend
 import com.example.musicplayerapp.data.supabase.RecoveryResult
@@ -113,6 +114,13 @@ private object OfflineReactionSyncApi : ReactionSyncApi {
 
     override suspend fun retireAllCurrentState(listenerId: String): SyncOutcome =
         SyncOutcome.AuthUnavailable(WHY)
+
+    override suspend fun applyBatch(
+        trackKey: String,
+        events: List<ReactionOutboxEntry>,
+        current: TrackReaction,
+        listenerId: String,
+    ): BatchOutcome = BatchOutcome.Failed(SyncOutcome.AuthUnavailable(WHY))
 }
 
 /**

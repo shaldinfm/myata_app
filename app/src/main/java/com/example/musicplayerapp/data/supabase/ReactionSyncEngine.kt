@@ -384,7 +384,10 @@ class ReactionSyncEngine(
                 reaction = row.reaction,
                 artist = row.artist,
                 title = row.title,
-                stream = row.stream,
+                // An absent remote stream is the server not having recorded one, which
+                // is weaker evidence than what this device already holds. There is
+                // always a local row on this path, so nothing has to be invented.
+                stream = row.stream ?: local.stream,
                 likedAt = row.likedAt,
                 updatedAt = row.updatedAt,
                 rev = row.rev,

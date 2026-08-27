@@ -4,7 +4,9 @@ import android.util.Log
 import com.example.musicplayerapp.data.Reaction
 import com.example.musicplayerapp.data.ReactionDao
 import com.example.musicplayerapp.data.ReactionOutboxDao
+import com.example.musicplayerapp.data.ReactionMigration
 import com.example.musicplayerapp.data.ReactionWriteGate
+import com.example.musicplayerapp.data.Streams
 
 /**
  * Reading the account back. The whole algorithm, and no Android in it beyond a log
@@ -38,6 +40,32 @@ import com.example.musicplayerapp.data.ReactionWriteGate
  * watermark. A full scan from zero cannot miss it: the next run reads the row like
  * any other. An incremental cursor would turn a microsecond race into permanent
  * silent data loss, which is a poor trade for a few hundred rows.
+ *
+ * ## An absent remote stream, and one honest normalisation
+ *
+ * `reactions.stream` is nullable; `track_reaction.stream` is not. So a remote row
+ * with no stream has to become *something* locally, and the rule is:
+ *
+ * ```
+ * remote stream present     ->  use it
+ * absent, local row exists  ->  keep the local stream
+ * absent, no local row      ->  Streams.DEFAULT
+ * ```
+ *
+ * The middle case is the important one: the server not having recorded a stream is
+ * weaker evidence than what this device already knows, so a restore must not erase
+ * it.
+ *
+ * The last case is a **legacy-compatibility normalisation, and not a faithful
+ * representation of the remote NULL** - the local column cannot hold absence, so
+ * something has to be chosen. `Streams.DEFAULT` is that something because this
+ * project already answered the same question the same way: [ReactionMigration] maps
+ * an absent legacy `favorites.stream` to `Streams.DEFAULT` when it builds a reaction
+ * row. Following the existing convention keeps one answer in the codebase, not two.
+ *
+ * The empty string is deliberately **not** used and means nothing here: no production
+ * code reads `track_reaction.stream == ""` as "unknown", and a value with no meaning
+ * would travel back out through the outbox on the listener's next tap.
  *
  * ## Two locks, two jobs, as everywhere else in this package
  *
@@ -201,25 +229,8 @@ class ReactionPullEngine(
                 trackKey = row.trackKey,
                 artist = row.artist,
                 title = row.title,
-                // A remote NULL stream is "the server did not record one", not "the
-                // stream was nothing". Whatever this device already knew is better
-                // evidence than that, so it is kept.
-                //
-                // The fresh-device fallback is an OPEN QUESTION, not a settled
-                // contract, and this comment says so rather than implying otherwise.
-                // `track_reaction.stream` is non-null, and "" is **not** an
-                // established sentinel anywhere in this app: nothing reads it as
-                // "unknown", and the one historical place that had to represent an
-                // absent stream - ReactionMigration, for legacy `favorites` rows -
-                // chose Streams.DEFAULT instead. A restored "" would also survive a
-                // later unlike/undislike, which copy `existing.stream`, and be pushed
-                // back verbatim - turning the server's NULL into a stored empty
-                // string no other client produces.
-                //
-                // It costs nothing today: every client writes a non-null stream, so
-                // no row this app can produce reaches here with one missing. The
-                // choice is recorded for the owner rather than made silently.
-                stream = row.stream.ifEmpty { local?.stream.orEmpty() },
+                // The stream, normalised for a non-null column. See the header.
+                stream = row.stream ?: local?.stream ?: Streams.DEFAULT,
                 reaction = row.reaction,
                 // The server's own value, never derived. `liked_at` is what orders a
                 // restored Collection, and inventing it from `updated_at` or this

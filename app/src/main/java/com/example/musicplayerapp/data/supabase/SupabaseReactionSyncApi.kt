@@ -256,9 +256,9 @@ class SupabaseReactionSyncApi(private val context: Context) : ReactionSyncApi {
             likedAt = ReactionSyncWire.epochMillis(text("liked_at")),
             artist = text("artist") ?: return null,
             title = text("title") ?: return null,
-            // Nullable in the schema; the local column is not, and "" is what the
-            // rest of the app already means by "no stream recorded".
-            stream = text("stream").orEmpty(),
+            // Nullable in the schema, and kept nullable here. Normalising to a local
+            // value is a decision about local storage, not about what the server said.
+            stream = text("stream"),
             updatedAt = updatedAt,
             rev = rev,
         )

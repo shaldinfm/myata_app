@@ -9,6 +9,7 @@ import com.example.musicplayerapp.data.Reaction
 import com.example.musicplayerapp.data.ReactionDao
 import com.example.musicplayerapp.data.ReactionOutboxDao
 import com.example.musicplayerapp.data.ReactionOutboxEntry
+import com.example.musicplayerapp.data.Streams
 import com.example.musicplayerapp.data.SyncProtocol
 import com.example.musicplayerapp.data.TrackReaction
 import com.example.musicplayerapp.data.supabase.BatchOutcome
@@ -18,6 +19,7 @@ import com.example.musicplayerapp.data.supabase.PullPage
 import com.example.musicplayerapp.data.supabase.PullResult
 import com.example.musicplayerapp.data.supabase.ReactionPullEngine
 import com.example.musicplayerapp.data.supabase.ReactionSyncApi
+import com.example.musicplayerapp.data.supabase.ReactionSyncEngine
 import com.example.musicplayerapp.data.supabase.RemoteReaction
 import com.example.musicplayerapp.data.supabase.SyncLease
 import com.example.musicplayerapp.data.supabase.SyncOutcome
@@ -31,6 +33,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -509,37 +512,107 @@ class ReactionPullTest {
     // ==================== stream compatibility ====================
 
     /**
-     * **AE.** A remote row with no stream neither crashes nor destroys what is known.
+     * The absent-stream contract, in full.
      *
-     * `reactions.stream` is nullable remotely; `track_reaction.stream` is not. The
-     * rule is that a missing remote stream means "the server did not record one",
-     * which is weaker evidence than whatever this device already had - so an existing
-     * local value survives, and only a device that has never seen the track falls back
-     * to the empty string.
+     * `reactions.stream` is nullable; `track_reaction.stream` is not, so a remote row
+     * with no stream has to become something locally:
+     *
+     * ```
+     * remote stream present     ->  use it
+     * absent, local row exists  ->  keep the local stream
+     * absent, no local row      ->  Streams.DEFAULT
+     * ```
+     *
+     * The last is a legacy-compatibility normalisation rather than a faithful
+     * representation of the NULL, and it follows the convention this project already
+     * set: `ReactionMigration` maps an absent legacy `favorites.stream` the same way.
+     * The empty string is deliberately not used - nothing reads it as "unknown", and
+     * it would travel back out through the outbox on the listener's next tap.
      */
+
+    /** **A.** Fresh local, absent remote stream: normalised, and the rest is intact. */
     @Test
-    fun ae_a_null_remote_stream_preserves_a_known_local_one() = runBlocking {
+    fun stream_a_a_fresh_restore_normalises_an_absent_stream() = runBlocking {
+        pull(
+            FakeRemote(
+                RemoteReaction(trackA, Reaction.LIKED, likedAt = 1_700_000L, "Artist", "Title",
+                    stream = null, updatedAt = 9_900_000L, rev = 42),
+            )
+        )
+
+        val row = reactions.find(trackA)!!
+        assertEquals(Streams.DEFAULT, row.stream)
+        assertNotEquals("the empty string means nothing here", "", row.stream)
+        assertEquals(Reaction.LIKED, row.reaction)
+        assertEquals(1_700_000L, row.likedAt)
+        assertEquals(42L, row.remoteRev)
+    }
+
+    /** **B.** An absent remote stream never erases one this device already knows. */
+    @Test
+    fun stream_b_an_absent_remote_stream_preserves_a_known_local_one() = runBlocking {
         reactions.like(trackA, "A", "T", "gold", likedAt = 500L)
         settle()
 
-        pull(FakeRemote(remote(trackA, Reaction.LIKED, rev = 10, stream = "")))
+        pull(FakeRemote(remote(trackA, Reaction.LIKED, rev = 10, stream = null)))
 
         assertEquals(
-            "a stream the device already knew is better evidence than a null",
+            "a stream the device already knew is better evidence than an absent one",
             "gold",
             reactions.find(trackA)!!.stream,
         )
     }
 
-    /** **AE.** And on a fresh device it restores as "not recorded" rather than crashing. */
+    /**
+     * **C and D.** The normalised value survives a later tap and both serializations.
+     *
+     * This is the case that made the empty string unacceptable: `unlike` and
+     * `undislike` copy `existing.stream` into the outbox event, and both push paths
+     * send it verbatim. A meaningless value restored here would leave the device
+     * permanently and turn the server's NULL into something no other client writes.
+     */
     @Test
-    fun ae_a_null_remote_stream_on_a_fresh_device_is_recorded_as_unknown() = runBlocking {
-        pull(FakeRemote(remote(trackA, Reaction.LIKED, rev = 10, stream = "")))
+    fun stream_c_and_d_the_normalised_value_survives_a_later_tap_and_both_pushes() = runBlocking {
+        pull(FakeRemote(remote(trackA, Reaction.LIKED, rev = 42, stream = null)))
 
-        val row = reactions.find(trackA)!!
-        assertNotNull(row)
-        assertEquals("", row.stream)
-        assertEquals(Reaction.LIKED, row.reaction)
+        // The listener taps. The event is built from the restored row.
+        reactions.unlike(trackA)
+
+        val event = outbox.pendingForTrack(trackA).single()
+        assertEquals(Streams.DEFAULT, event.stream)
+        assertNotEquals("", event.stream)
+
+        // ATOMIC_RPC serialization: the batch carries the event and the current row.
+        assertEquals(SyncProtocol.ATOMIC_RPC, event.syncProtocol)
+        val push = CapturingPushApi()
+        ReactionSyncEngine(
+            reactions = reactions,
+            outbox = outbox,
+            api = push,
+            identity = { com.example.musicplayerapp.data.supabase.ListenerIdentity.Available(listener) },
+        ).drain()
+
+        assertEquals(Streams.DEFAULT, push.currentStreams.single())
+        assertEquals(listOf(Streams.DEFAULT), push.eventStreams)
+        assertTrue(
+            "nothing the restore produced may reach the wire as an empty string",
+            push.currentStreams.none { it.isEmpty() } && push.eventStreams.none { it.isEmpty() },
+        )
+
+        // LEGACY serialization reads the same two sources - the outbox row's own
+        // stream and the current TrackReaction - so both are asserted directly.
+        assertEquals(Streams.DEFAULT, reactions.find(trackA)!!.stream)
+    }
+
+    /** **E.** A present remote stream still replaces the local value. */
+    @Test
+    fun stream_e_a_present_remote_stream_still_replaces_the_local_one() = runBlocking {
+        reactions.like(trackA, "A", "T", "gold", likedAt = 500L)
+        settle()
+
+        pull(FakeRemote(remote(trackA, Reaction.LIKED, rev = 10, stream = "myata_hits")))
+
+        assertEquals("myata_hits", reactions.find(trackA)!!.stream)
     }
 
     // ==================== success signal ====================
@@ -613,7 +686,7 @@ class ReactionPullTest {
         track: String,
         reaction: Reaction,
         rev: Long,
-        stream: String = "myata",
+        stream: String? = "myata",
     ) = RemoteReaction(
         trackKey = track,
         reaction = reaction,
@@ -723,4 +796,52 @@ private class FakePagedRemote(
         served++
         return PullPage.Rows(page)
     }
+}
+
+/** Records exactly what an atomic push would put on the wire. */
+private class CapturingPushApi : ReactionSyncApi {
+
+    val currentStreams = mutableListOf<String>()
+    val eventStreams = mutableListOf<String>()
+
+    override suspend fun applyBatch(
+        trackKey: String,
+        events: List<ReactionOutboxEntry>,
+        current: TrackReaction,
+        listenerId: String,
+    ): BatchOutcome {
+        currentStreams += current.stream
+        eventStreams += events.map { it.stream }
+        return BatchOutcome.Applied(
+            RemoteReaction(
+                trackKey = current.trackKey,
+                reaction = current.reaction,
+                likedAt = if (current.reaction == Reaction.LIKED) current.likedAt else null,
+                artist = current.artist,
+                title = current.title,
+                stream = current.stream,
+                updatedAt = current.updatedAt,
+                rev = 999L,
+            )
+        )
+    }
+
+    override suspend fun deliverEvent(entry: ReactionOutboxEntry, listenerId: String): SyncOutcome {
+        eventStreams += entry.stream
+        return SyncOutcome.Success
+    }
+
+    override suspend fun reconcileCurrentState(
+        trackKey: String,
+        current: TrackReaction?,
+        listenerId: String,
+    ): SyncOutcome {
+        current?.let { currentStreams += it.stream }
+        return SyncOutcome.Success
+    }
+
+    override suspend fun retireAllCurrentState(listenerId: String) = SyncOutcome.Success
+
+    override suspend fun fetchReactionsPage(listenerId: String, afterRev: Long, limit: Int): PullPage =
+        throw AssertionError("the push must not pull")
 }

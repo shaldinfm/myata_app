@@ -181,7 +181,14 @@ data class RemoteReaction(
     val likedAt: Long?,
     val artist: String,
     val title: String,
-    val stream: String,
+
+    /**
+     * Nullable, because `reactions.stream` is - and because the empty string is not a
+     * sentinel for anything in this app. Absence stays absence all the way to the
+     * point where it has to be reconciled with a non-null local column, which is the
+     * only place a normalisation is legitimate.
+     */
+    val stream: String?,
     val updatedAt: Long,
     val rev: Long,
 )

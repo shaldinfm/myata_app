@@ -77,13 +77,25 @@ interface ReactionSyncApi {
      * unapplied. [events] is therefore every pending atomic row for the track,
      * captured with [current] in one local transaction.
      *
-     * [listenerId] is **not transmitted**. The function takes its identity from
-     * `auth.uid()` in the caller's JWT, so there is nothing for a client to assert or
-     * to get wrong. It is a parameter because a session still has to exist before
-     * anything may be sent - the drain proves one before it builds a batch, exactly
-     * as it does for the other three calls - and because a seam that records who the
-     * drain believed it was is what lets a test assert that no identity wrote
-     * anything it should not have.
+     * ## [listenerId] is not sent, and is not decoration either
+     *
+     * The function takes its identity from `auth.uid()` in the caller's JWT, so
+     * nothing about ownership is asserted by the client. That is right server-side,
+     * and it removes something the old path had for free.
+     *
+     * The direct writes carried `listener_id` in the body, and every policy's
+     * `with check` compared it against `auth.uid()`. So a batch assembled while this
+     * device believed it was **X**, sent on a session that had since become **Y**,
+     * was refused by the database. The RPC has no such column to disagree with: it
+     * would store X's reactions and X's history under Y, legitimately, because Y is
+     * who asked.
+     *
+     * So the implementation must restore that fail-closed property itself. Before
+     * the call it reads the session it actually holds and refuses unless that uid is
+     * exactly [listenerId] - see [SupabaseReactionSyncApi.applyBatch]. A mismatch is
+     * [SyncOutcome.AuthUnavailable], never [SyncOutcome.Permanent]: the batch is
+     * blameless, the session is simply not the one it was built for, and the identity
+     * machinery is what resolves that.
      */
     suspend fun applyBatch(
         trackKey: String,
@@ -266,6 +278,37 @@ object ReactionSyncWire {
     fun epochMillis(timestamp: String?): Long? =
         timestamp?.let { runCatching { java.time.OffsetDateTime.parse(it).toInstant().toEpochMilli() }.getOrNull() }
 }
+
+/**
+ * Whether the session this device actually holds may send a batch built for
+ * [expected].
+ *
+ * The whole of the ownership check, as one total function, for the same reason
+ * `sessionVerdict` is one in `AuthResult`: the rule is the part worth testing
+ * exhaustively, and it should not need a live project to say what it does.
+ *
+ * `apply_reaction_event_batch` takes its identity from `auth.uid()` and accepts no
+ * `listener_id`. That is correct server-side and it removes a guarantee the direct
+ * writes had for free: they sent `listener_id` in the body and every policy compared
+ * it against `auth.uid()`, so a batch assembled as **X** and sent on a session that
+ * had become **Y** was refused by the database. The RPC has nothing to disagree
+ * with, so it would store X's reactions and X's history under Y - legitimately, as
+ * far as the server can tell, because Y is who asked.
+ *
+ * Both failures are [SyncOutcome.AuthUnavailable] and neither is
+ * [SyncOutcome.Permanent]. That distinction is the difference between a batch parked
+ * for a day and a batch that delivers unchanged the moment the right session is
+ * restored: nothing is wrong with these rows, and a wrong session is exactly the
+ * condition the identity machinery exists to resolve.
+ *
+ * @return null when the session may send, or the outcome to answer with.
+ */
+internal fun ownershipVerdict(session: String?, expected: String): SyncOutcome.AuthUnavailable? =
+    when {
+        session == null -> SyncOutcome.AuthUnavailable("no restored session")
+        session != expected -> SyncOutcome.AuthUnavailable("session is not the batch's listener")
+        else -> null
+    }
 
 /**
  * Which kind of failure an exception is.

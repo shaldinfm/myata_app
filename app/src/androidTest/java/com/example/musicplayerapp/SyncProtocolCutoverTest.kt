@@ -12,11 +12,13 @@ import com.example.musicplayerapp.data.ReactionOutboxEntry
 import com.example.musicplayerapp.data.SyncProtocol
 import com.example.musicplayerapp.data.TrackReaction
 import com.example.musicplayerapp.data.supabase.BatchOutcome
+import com.example.musicplayerapp.data.supabase.DrainResult
 import com.example.musicplayerapp.data.supabase.ListenerIdentity
 import com.example.musicplayerapp.data.supabase.ReactionSyncApi
 import com.example.musicplayerapp.data.supabase.ReactionSyncEngine
 import com.example.musicplayerapp.data.supabase.RemoteReaction
 import com.example.musicplayerapp.data.supabase.SyncOutcome
+import com.example.musicplayerapp.data.supabase.ownershipVerdict
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -58,6 +60,9 @@ class SyncProtocolCutoverTest {
     private val listener = "11111111-1111-4111-8111-111111111111"
     private val trackA = "a".repeat(64)
     private val trackB = "b".repeat(64)
+
+    /** Another account entirely. The uid a mis-restored session would report. */
+    private val stranger = "22222222-2222-4222-8222-222222222222"
 
     @Before
     fun open() {
@@ -453,16 +458,194 @@ class SyncProtocolCutoverTest {
         assertEquals("and it enqueues nothing locally", 0, outbox.count())
     }
 
+    // ==================== last-sync accounting ====================
+
+    /**
+     * Both successful outcomes must remain visible to `Последняя синхронизация`.
+     *
+     * `LastSyncStore` is written by `ReactionSyncWorker` from the drain's verdict:
+     * `Drained` with `delivered > 0`, and `MoreWorkDue`. The batch path feeds the
+     * same counter the per-row path did - `delivered` is incremented by the number of
+     * events a track settled - so nothing about the cutover makes a successful push
+     * invisible to that row.
+     *
+     * ALREADY_APPLIED counts too, and deliberately. Those events *did* reach the
+     * cloud; this device is only learning it now, because the attempt that delivered
+     * them lost its answer. Not counting it would empty the outbox while the profile
+     * still claimed the account had never synchronised.
+     */
+    @Test
+    fun both_successful_outcomes_feed_the_last_sync_counter() = runBlocking {
+        like(trackA)
+        val backend = FakeAtomicBackend()
+
+        val applied = drain(backend)
+        assertTrue("APPLIED must report a delivery: $applied", applied is DrainResult.Drained)
+        assertTrue((applied as DrainResult.Drained).delivered > 0)
+
+        // The same batch again, from a device that lost the first answer.
+        like(trackB)
+        backend.suppressLocalSettlement = true
+        drain(backend)
+        backend.suppressLocalSettlement = false
+        wakeAll()
+
+        val alreadyApplied = drain(backend)
+        assertTrue(
+            "ALREADY_APPLIED must report a delivery too: $alreadyApplied",
+            alreadyApplied is DrainResult.Drained,
+        )
+        assertTrue((alreadyApplied as DrainResult.Drained).delivered > 0)
+    }
+
+    // ==================== ownership at the RPC boundary ====================
+
+    /**
+     * **A.** The ordinary case, stated so the refusals below mean something: a
+     * matching session sends, settles, and records its revision.
+     */
+    @Test
+    fun ao_a_matching_session_delivers_normally() = runBlocking {
+        like(trackA)
+        val backend = FakeAtomicBackend().also { it.session = listener }
+
+        drain(backend)
+
+        assertEquals(1, backend.batches.size)
+        assertEquals(0, backend.refusals.size)
+        assertEquals(0, outbox.count())
+        assertEquals(101L, reactions.find(trackA)!!.remoteRev)
+    }
+
+    /**
+     * **B.** No session: nothing is sent and nothing is settled.
+     *
+     * The rows are blameless, so no attempt is counted and no backoff is set - the
+     * batch delivers the moment a session comes back.
+     */
+    @Test
+    fun bo_no_session_sends_nothing_and_settles_nothing() = runBlocking {
+        like(trackA)
+        val before = reactions.find(trackA)!!
+        val backend = FakeAtomicBackend().also { it.sessionAbsent = true }
+
+        drain(backend)
+
+        assertEquals("the RPC must not be called", 0, backend.batches.size)
+        assertEquals("nothing may be written remotely", 0, backend.rows.size)
+        assertEquals("the batch stays pending", 1, outbox.countForTrack(trackA))
+
+        val row = outbox.pendingForTrack(trackA).single()
+        assertEquals("a blameless row is not penalised", 0, row.attempts)
+        assertEquals(0L, row.nextAttemptAt)
+
+        val after = reactions.find(trackA)!!
+        assertNull("no revision may be recorded", after.remoteRev)
+        assertEquals("and the local state is untouched", before.reaction, after.reaction)
+        assertEquals(before.updatedAt, after.updatedAt)
+    }
+
+    /**
+     * **C.** A session belonging to somebody else.
+     *
+     * This is the hole the guard closes. The RPC takes its identity from
+     * `auth.uid()` and accepts no `listener_id`, so it would store this batch under
+     * the wrong account and be right to - the wrong account is who asked.
+     */
+    @Test
+    fun co_a_foreign_session_sends_nothing_and_writes_nothing_for_it() = runBlocking {
+        like(trackA)
+        val backend = FakeAtomicBackend().also { it.session = stranger }
+
+        drain(backend)
+
+        assertEquals("the RPC must not be called", 0, backend.batches.size)
+        assertEquals("nothing may be attributed to the other listener", 0, backend.rows.size)
+        assertEquals(0, backend.applications.size)
+        assertEquals(0, backend.history.size)
+        assertEquals("the batch stays pending", 1, outbox.countForTrack(trackA))
+        assertNull(reactions.find(trackA)!!.remoteRev)
+    }
+
+    /** **D.** A mismatch must not park the track for a day. */
+    @Test
+    fun do_a_session_mismatch_is_never_permanent() = runBlocking {
+        like(trackA)
+        val backend = FakeAtomicBackend().also { it.session = stranger }
+
+        drain(backend)
+
+        val row = outbox.pendingForTrack(trackA).single()
+        assertEquals(
+            "a permanent classification would park these rows for an hour or more",
+            0,
+            row.attempts,
+        )
+        assertEquals(0L, row.nextAttemptAt)
+    }
+
+    /** **E.** The same batch delivers unchanged once the right session is restored. */
+    @Test
+    fun eo_a_corrected_session_delivers_the_same_batch() = runBlocking {
+        like(trackA)
+        unlike(trackA)
+        val expected = outbox.pendingForTrack(trackA).map { it.eventId }.toSet()
+
+        val backend = FakeAtomicBackend().also { it.session = stranger }
+        drain(backend)
+        assertEquals(0, backend.batches.size)
+        assertEquals(2, outbox.countForTrack(trackA))
+
+        // The identity machinery restores the right session; nothing else changes.
+        backend.session = listener
+        drain(backend)
+
+        assertEquals(1, backend.batches.size)
+        assertEquals(
+            "the same events, unaltered by the refusal",
+            expected,
+            backend.batches.single().second.toSet(),
+        )
+        assertEquals(0, outbox.count())
+    }
+
+    /**
+     * **F.** The guard creates nothing. No identity, no event, no state change.
+     *
+     * The drain still asks who it is once per run - that is the anonymous-mint rule
+     * and it predates this guard. What must not happen is any *write*, local or
+     * remote, arising from a refusal.
+     */
+    @Test
+    fun fo_a_refusal_mints_nothing_and_changes_nothing() = runBlocking {
+        like(trackA)
+        like(trackB)
+        val before = reactions.allReactions().associate { it.trackKey to it.updatedAt }
+
+        val backend = FakeAtomicBackend().also { it.sessionAbsent = true }
+        drain(backend)
+
+        assertEquals("no history may be written", 0, backend.history.size)
+        assertEquals("no application marker may be created", 0, backend.applications.size)
+        assertEquals("no remote state may be written", 0, backend.rows.size)
+        assertEquals("nothing may be enqueued", 2, outbox.count())
+        assertEquals(
+            "and no local row may be touched",
+            before,
+            reactions.allReactions().associate { it.trackKey to it.updatedAt },
+        )
+        assertTrue(reactions.allReactions().all { it.remoteRev == null })
+    }
+
     // ==================== helpers ====================
 
-    private suspend fun drain(backend: FakeAtomicBackend) {
+    private suspend fun drain(backend: FakeAtomicBackend): DrainResult =
         ReactionSyncEngine(
             reactions = reactions,
             outbox = outbox,
             api = backend,
             identity = { ListenerIdentity.Available(listener) },
         ).drain()
-    }
 
     /**
      * Makes every pending row due again.
@@ -531,6 +714,20 @@ private class FakeAtomicBackend : ReactionSyncApi {
     var beforeAnswer: suspend () -> Unit = {}
 
     /**
+     * The session this device actually holds, as `currentUserOrNull()` would report.
+     *
+     * Null means "whoever the batch was built for" - the ordinary case, and the
+     * default so that tests about other things do not have to say so. Set it to a
+     * different uid to model a batch assembled as X reaching a session that has since
+     * become Y, or set [sessionAbsent] to model a signed-out install.
+     */
+    var session: String? = null
+    var sessionAbsent = false
+
+    /** Batches refused before the call. Distinct from [batches], which is what was sent. */
+    val refusals = mutableListOf<String>()
+
+    /**
      * Makes the server commit while the client learns nothing - the process death
      * this protocol exists to survive.
      */
@@ -544,6 +741,15 @@ private class FakeAtomicBackend : ReactionSyncApi {
         current: TrackReaction,
         listenerId: String,
     ): BatchOutcome {
+        // The same production function `SupabaseReactionSyncApi` calls, in the same
+        // place: before anything is sent. Checked here rather than reimplemented, so
+        // the assertions below are about the real rule.
+        val held = if (sessionAbsent) null else (session ?: listenerId)
+        ownershipVerdict(held, listenerId)?.let {
+            refusals += trackKey
+            return BatchOutcome.Failed(it)
+        }
+
         batches += trackKey to events.map { it.eventId }
         beforeAnswer()
         onBatch(trackKey)?.let { return BatchOutcome.Failed(it) }

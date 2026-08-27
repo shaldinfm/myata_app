@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.musicplayerapp.data.Reaction
 import com.example.musicplayerapp.data.ReactionOutboxEntry
 import com.example.musicplayerapp.data.TrackReaction
+import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -165,6 +166,29 @@ class SupabaseReactionSyncApi(private val context: Context) : ReactionSyncApi {
         val db = postgrest ?: return BatchOutcome.Failed(
             SyncOutcome.AuthUnavailable("no supabase client")
         )
+
+        // Ownership, checked here because the RPC has no column to check it with.
+        //
+        // The direct writes sent `listener_id` and every policy compared it against
+        // auth.uid(), so a batch built as X and sent on a session that had become Y
+        // was refused by the database. This function is auth.uid()-only by design,
+        // which means the same batch would be stored under Y - correctly, as far as
+        // the server can tell, because Y is who asked. Restoring the comparison is
+        // the client's job now.
+        //
+        // Local: currentUserOrNull() reads the session the Auth plugin already holds
+        // and makes no request. A mismatch or an absent session leaves the rows
+        // exactly as they are - nothing sent, nothing settled, no revision recorded,
+        // no identity created or repaired from here. Reconciliation belongs to
+        // IdentityReconciler, and the sync backend must never start one.
+        val session = runCatching {
+            SupabaseModule.client(context)?.auth?.currentUserOrNull()?.id
+        }.getOrNull()
+
+        // Deliberately never Permanent: the batch did nothing wrong, this device is
+        // simply not who it was when the batch was built, and a later corrected
+        // session delivers it unchanged.
+        ownershipVerdict(session, listenerId)?.let { return BatchOutcome.Failed(it) }
 
         val payload = buildJsonObject {
             put("p_track_key", trackKey)

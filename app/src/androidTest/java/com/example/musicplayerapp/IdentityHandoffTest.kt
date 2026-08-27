@@ -421,6 +421,49 @@ class IdentityHandoffTest {
         assertNull(IdentityStore.handoff(context))
     }
 
+    /**
+     * A death **after** SWITCHED(Y) must not leave X-scoped revisions on Y's rows.
+     *
+     * This is the crash boundary the forward path's clearing does not by itself
+     * cover: the switch is already durable, so recovery - not `run` - is what
+     * finishes the job. Recovery reaches the same `adopt`, which clears the
+     * revisions before it writes anything, so the handoff cannot be considered
+     * complete with X's numbers still attached.
+     *
+     * Why the numbers are void rather than merely stale: X's remote rows were deleted
+     * before the switch, and the rows adoption writes into Y are given fresh
+     * revisions this device is never told. A rev left behind would have this install
+     * asserting a match with a row that does not exist, which is exactly the claim
+     * G-A7c's pull will use to decide it may skip a page.
+     */
+    @Test
+    fun recovery_after_a_durable_switch_clears_x_scoped_revisions() = runBlocking {
+        like(depeche)
+        like(cave)
+        dao.recordRemoteRev(depeche, 4_242L)
+        dao.recordRemoteRev(cave, 4_243L)
+
+        // Durably switched, then the process died before adoption finished.
+        IdentityStore.markHandoffSwitched(context, x, y)
+        assertEquals(4_242L, dao.find(depeche)!!.remoteRev)
+
+        val result = IdentityHandoff.recover(context, sessionUid = y, reactions = dao, api = api)
+
+        assertEquals(IdentityHandoff.Result.Switched(y), result)
+        assertNull(
+            "a revision belonging to the retired identity is not a fact about the new one",
+            dao.find(depeche)!!.remoteRev,
+        )
+        assertNull(dao.find(cave)!!.remoteRev)
+        assertNull("and only then is the handoff complete", IdentityStore.handoff(context))
+
+        // The Collection is not what a handoff moves, and recovery is not an exception.
+        assertEquals(setOf(depeche, cave), api.adoptedBy.getValue(y).keys)
+        assertEquals(Reaction.LIKED, dao.find(depeche)!!.reaction)
+        assertEquals(Reaction.LIKED, dao.find(cave)!!.reaction)
+        assertTrue("and it invents no history", api.events.isEmpty())
+    }
+
     @Test
     fun death_during_partial_adoption_finishes_it() = runBlocking {
         like(depeche)

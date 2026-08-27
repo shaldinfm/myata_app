@@ -652,16 +652,16 @@ class ReactionPullTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         LastSyncStore.clearForTest(context)
         try {
-            assertNull(LastSyncStore.lastSuccessAt(context))
-            assertNull(LastSyncStore.lastPullAt(context))
+            assertNull(LastSyncStore.lastUploadAt(context, listener))
+            assertNull(LastSyncStore.lastPullAt(context, listener))
 
-            LastSyncStore.recordPullSuccess(context, at = 5_000L)
-            assertEquals(5_000L, LastSyncStore.lastPullAt(context))
-            assertNull("a restore is not an upload", LastSyncStore.lastSuccessAt(context))
+            LastSyncStore.recordPullSuccess(context, listener, at = 5_000L)
+            assertEquals(5_000L, LastSyncStore.lastPullAt(context, listener))
+            assertNull("a restore is not an upload", LastSyncStore.lastUploadAt(context, listener))
 
-            LastSyncStore.recordSuccess(context, at = 9_000L)
-            assertEquals(9_000L, LastSyncStore.lastSuccessAt(context))
-            assertEquals("and an upload does not move the restore", 5_000L, LastSyncStore.lastPullAt(context))
+            LastSyncStore.recordUploadSuccess(context, listener, at = 9_000L)
+            assertEquals(9_000L, LastSyncStore.lastUploadAt(context, listener))
+            assertEquals("and an upload does not move the restore", 5_000L, LastSyncStore.lastPullAt(context, listener))
         } finally {
             LastSyncStore.clearForTest(context)
         }

@@ -95,7 +95,7 @@ class ProfileAuthenticatedCaptureTest {
         IdentityStore.markRegistered(context, account)
         // A real recorded sync, two minutes old, so the row shows what it will show
         // in life rather than the never-synced fallback.
-        LastSyncStore.recordForTest(context, System.currentTimeMillis() - 2 * 60_000L)
+        LastSyncStore.recordForTest(context, account, System.currentTimeMillis() - 2 * 60_000L)
     }
 
     @After

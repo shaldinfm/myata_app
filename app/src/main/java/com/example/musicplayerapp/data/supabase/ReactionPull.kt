@@ -49,7 +49,16 @@ object ReactionPull {
         // ever pushing, and collapsing the two would make that indistinguishable from
         // having done neither. The profile will show the more recent of them; that
         // rendering is not part of this change.
-        if (result is PullResult.Completed) LastSyncStore.recordPullSuccess(app)
+        if (result is PullResult.Completed) {
+            LastSyncStore.recordPullSuccess(app, result.uid)
+
+            // The same condition and the same moment: this account has now been read
+            // through at least once on this install. Nothing in the pull reads it back,
+            // so it gates nothing - a later app start full-scans exactly as it would
+            // have. It exists so that "there is an account" and "this device has
+            // actually restored it" stop being the same question.
+            LastSyncStore.markInitialRestoreComplete(app, result.uid)
+        }
 
         return result
     }

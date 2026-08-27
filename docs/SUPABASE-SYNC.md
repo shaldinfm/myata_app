@@ -25,13 +25,86 @@ above.
 `SECURITY DEFINER` trigger, the `reaction_event_applications` log, and the
 `apply_reaction_event_batch` RPC.
 
-**The G-A7b client cutover is not implemented.** Nothing in the app calls the new RPC
-yet; the shipped delivery path is still the two-call one described below.
+## G-A7 status
 
-**The direct `reactions` INSERT/UPDATE policies deliberately remain.** Installed
+| stage | |
+|---|---|
+| **G-A7a** server `rev`, `liked_at`, application log, `apply_reaction_event_batch` | live on production, verified |
+| **G-A7b** atomic push cutover, per-track LEGACY inheritance | merged |
+| **G-A7c** full-scan pull | merged |
+| **G-A7d** automatic triggers | merged |
+| **G-A7e** initial-restore marker and profile sync state | this change |
+
+**Cross-device reaction and Collection restore is satisfied.** A listener who signs in
+on a second device gets their reactions back, and the Collection follows from them -
+LIKED rows restore it, a stored NEUTRAL removes a stale membership, and there is no
+separate Collection table to keep in step.
+
+**What this is not.** There is no realtime subscription, no periodic worker and no
+foreground or resume trigger, so changes made on another device are not visible the
+instant they happen. The v1 convergence model is exactly:
+
+```
+a successful sign-in, registration or handoff   ->  one full scan
+an ordinary app start with a restored session   ->  one full scan
+```
+
+A listener with two devices sees the other one's changes when they next open the app.
+That is a deliberate trade: nobody pays for a poller, and the failure mode is
+staleness rather than a wrong answer.
+
+The **direct `reactions` INSERT/UPDATE policies deliberately remain**. Installed
 pre-G-A7 clients write the table directly and must keep working for the whole
-rollout. Revoking them in favour of RPC-only writes is a separate, later hardening
+rollout; revoking them in favour of RPC-only writes is a separate, later hardening
 step, and must not happen until the old population has drained.
+
+## What the app can say about its own syncing
+
+Three pieces of state, kept apart because they answer different questions — and all
+three **keyed by listener uid**, because every one of them is a statement about an
+account rather than about a phone:
+
+| key | means | set by |
+|---|---|---|
+| `last_upload_<uid>` | something of *that account's* reached the cloud | a drain that delivered at least one row |
+| `last_pull_<uid>` | this device read *that account* back in full | a **completed** full scan, never a partial one |
+| `initial_restore_complete_<uid>` | it has done so at least once, ever | the same completed scan |
+
+`Последняя синхронизация` shows the **more recent of the first two, for the account
+on the screen**. They are never written into each other: an install can have pushed
+without ever restoring, or restored without ever pushing, and collapsing them would
+make the second read as `Ещё не синхронизировалось` on a device that had just pulled
+a whole Collection down.
+
+### Why per account, and why not cleared
+
+An install that signs out of X and into Y has synchronised nothing as Y. A global
+timestamp would show Y a moment earned by X — the row would be true of the device and
+false of the account it is printed under, which is the same class of untruth this
+phase exists to remove.
+
+Scoping rather than clearing, deliberately. Wiping the timestamps at the identity
+boundary would also answer the question wrongly, just less often: X *did* sync, that
+stays true while Y is signed in, and switching back to X should find X's own history
+where it was. Signing out is not evidence about the past.
+
+Which account an upload belongs to comes from the drain that delivered it —
+`DrainResult.Drained.listenerId`, carried out on the result — and never from whichever
+identity is current when the worker does its bookkeeping. The drain has released
+`SyncLease` by then, so a sign-out and a sign-in as another account can land in the
+gap; asking "who am I now" would file X's delivery under Y.
+
+Pre-G-A7e installs have two unscoped keys, `last_success_at` and `last_pull_at`.
+They are **orphaned, never read and never migrated**: whose sync they record is not
+recoverable, and guessing the current uid would attribute one account's history to
+another. Such an install reads `Ещё не синхронизировалось` once, until its next
+real sync.
+
+`initialRestoreComplete` is durable and per account. It is **not** a cursor, **not**
+the sixty-second trigger debounce, and **not** a claim that the account is current -
+nothing in the pull or the trigger reads it, so a later app start full-scans exactly
+as it would have. It exists so that "there is a registered account" and "this device
+has actually restored it" stop being the same question.
 
 ## The data contract
 

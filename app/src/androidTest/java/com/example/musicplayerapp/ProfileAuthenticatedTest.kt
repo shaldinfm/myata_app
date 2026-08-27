@@ -478,11 +478,58 @@ class ProfileAuthenticatedTest {
 
     // ==================== N-O: the last-sync row ====================
 
+    /**
+     * **G.** A restore alone is a synchronisation, and the row now says so.
+     *
+     * This is the case that used to read `Ещё не синхронизировалось` on a device that
+     * had just pulled somebody's whole Collection down - the last place this screen
+     * still claimed something untrue. G-A7c gave the restore its own timestamp; the
+     * row reports the more recent of the two.
+     */
+    @Test
+    fun a_restore_alone_is_reported_as_a_synchronisation() {
+        IdentityStore.markRegistered(context, account)
+        auth.session = account
+        LastSyncStore.recordPullSuccess(context, account, System.currentTimeMillis() - 3 * 60_000L)
+
+        openAccountCard { activity ->
+            assertEquals("3 мин назад", activity.text(R.id.profile_row_last_sync_value))
+        }
+    }
+
+    /** **H.** Both recorded, the upload newer: the upload is what is shown. */
+    @Test
+    fun the_newer_of_the_two_is_shown_when_it_is_the_upload() {
+        IdentityStore.markRegistered(context, account)
+        auth.session = account
+        val now = System.currentTimeMillis()
+        LastSyncStore.recordPullSuccess(context, account, now - 40 * 60_000L)
+        LastSyncStore.recordForTest(context, account, now - 5 * 60_000L)
+
+        openAccountCard { activity ->
+            assertEquals("5 мин назад", activity.text(R.id.profile_row_last_sync_value))
+        }
+    }
+
+    /** **I.** Both recorded, the restore newer: the restore is what is shown. */
+    @Test
+    fun the_newer_of_the_two_is_shown_when_it_is_the_restore() {
+        IdentityStore.markRegistered(context, account)
+        auth.session = account
+        val now = System.currentTimeMillis()
+        LastSyncStore.recordForTest(context, account, now - 40 * 60_000L)
+        LastSyncStore.recordPullSuccess(context, account, now - 5 * 60_000L)
+
+        openAccountCard { activity ->
+            assertEquals("5 мин назад", activity.text(R.id.profile_row_last_sync_value))
+        }
+    }
+
     @Test
     fun n_a_recorded_sync_renders_as_a_relative_time() {
         IdentityStore.markRegistered(context, account)
         auth.session = account
-        LastSyncStore.recordForTest(context, System.currentTimeMillis() - 2 * 60_000L)
+        LastSyncStore.recordForTest(context, account, System.currentTimeMillis() - 2 * 60_000L)
 
         openAccountCard { activity ->
             assertEquals("2 мин назад", activity.text(R.id.profile_row_last_sync_value))
@@ -502,6 +549,42 @@ class ProfileAuthenticatedTest {
         }
     }
 
+    /**
+     * **C and D.** The row is about the account on the screen, not about the phone.
+     *
+     * An install that signed out of one account and into another has synchronised
+     * nothing as the new one. Showing the previous account's time would be answering
+     * a question nobody asked - and it is the specific case that made these
+     * timestamps user-scoped rather than global.
+     *
+     * Both directions are seeded for the stranger, so neither `lastUploadAt` nor
+     * `lastPullAt` can leak; and X's own history is asserted still on disk afterwards,
+     * because the fix is scoping, not erasure. What was true of X stays true of X.
+     */
+    @Test
+    fun c_and_d_another_accounts_sync_history_is_never_shown_as_this_ones() {
+        val other = "33333333-3333-4333-8333-333333333333"
+        val now = System.currentTimeMillis()
+        LastSyncStore.recordForTest(context, other, now - 2 * 60_000L)
+        LastSyncStore.recordPullSuccess(context, other, now - 60_000L)
+
+        IdentityStore.markRegistered(context, account)
+        auth.session = account
+
+        openAccountCard { activity ->
+            assertEquals(
+                "Ещё не синхронизировалось",
+                activity.text(R.id.profile_row_last_sync_value),
+            )
+        }
+
+        assertEquals(
+            "and the other account keeps its own history - scoped, not cleared",
+            now - 60_000L,
+            LastSyncStore.lastSyncAt(context, other),
+        )
+    }
+
     @Test
     fun opening_the_profile_does_not_record_a_sync() {
         IdentityStore.markRegistered(context, account)
@@ -510,7 +593,7 @@ class ProfileAuthenticatedTest {
         openAccountCard { }
 
         // A row that updated the timestamp it displays would always read "только что".
-        assertEquals(null, LastSyncStore.lastSuccessAt(context))
+        assertEquals(null, LastSyncStore.lastUploadAt(context, account))
     }
 
     // ==================== P-Q: the two rows that lead nowhere ====================

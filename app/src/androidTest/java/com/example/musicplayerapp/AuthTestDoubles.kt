@@ -244,6 +244,13 @@ internal class RecordingSyncApi : ReactionSyncApi {
      */
     var pullPages: List<RemoteReaction>? = null
 
+    /** Set to make the read fail, for the partial-scan cases. */
+    var pullFailure: SyncOutcome? = null
+
+    /** How many pages were asked for. Distinguishes "scanned again" from "was skipped". */
+    var pullRequests = 0
+        private set
+
     override suspend fun fetchReactionsPage(
         listenerId: String,
         afterRev: Long,
@@ -251,6 +258,8 @@ internal class RecordingSyncApi : ReactionSyncApi {
     ): PullPage {
         val account = pullPages
             ?: throw AssertionError("this suite must not pull; fetchReactionsPage was called")
+        pullRequests++
+        pullFailure?.let { return PullPage.Failed(it) }
         return PullPage.Rows(account.filter { it.rev > afterRev })
     }
 

@@ -79,6 +79,16 @@ object ReactionPull {
             return PullIdentity.NotEligible("identity is ${state::class.simpleName}, not an account")
         }
 
+        // An unresolved handoff means this install is mid-switch: X may already be
+        // retired remotely while the local rows have not been adopted into Y, and the
+        // revisions on disk belong to whichever identity is being left behind. Reading
+        // an account back into that is reading into a moving target. The record is
+        // cleared by the handoff itself or by its recovery, and the pull that follows
+        // either of those is the one that should run.
+        IdentityStore.handoff(context)?.let {
+            return PullIdentity.NotEligible("a handoff is unresolved at ${it.stage}")
+        }
+
         val session = runCatching { EmailAuthBackend.api(context).currentUid() }.getOrNull()
             ?: return PullIdentity.Unavailable("no restored session for the account")
 

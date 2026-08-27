@@ -94,6 +94,18 @@ object IdentityReconciler {
             runCatching {
                 val sessionUid = ListenerSession.restore(app)
                 reconcile(app, sessionUid)
+
+                // The account is read back on an ordinary start, and this is the
+                // earliest point at which that is a decidable question: the session
+                // has been restored from storage and the persisted identity has been
+                // repaired around it, so "REGISTERED(X) with a session for X" finally
+                // means something. Anything sooner would be asking before the answer
+                // exists, and no sleep would make it truer.
+                //
+                // Deliberately here and not inside `reconcile`, which is also called
+                // when somebody opens their profile. Opening a screen is not one of
+                // the four moments a pull is allowed to happen.
+                ReactionPullTrigger.requestInBackground(app, "app start")
             }.onFailure { Log.w(TAG, "identity reconciliation failed: ${it.message}") }
         }
     }
@@ -242,7 +254,18 @@ object IdentityReconciler {
         // that survived alongside it describes an older, finished story.
         IdentityStore.clearAuthAttempt(context)
 
-        if (result is IdentityHandoff.Result.Switched) ReactionSyncScheduler.onAppStart(context)
+        if (result is IdentityHandoff.Result.Switched) {
+            ReactionSyncScheduler.onAppStart(context)
+
+            // A handoff an earlier process left unfinished has just been completed
+            // into Y. That is the same moment as a handoff finishing normally and
+            // earns the same pull - reached from here because recovery can also run
+            // outside startup, and the account should not have to wait for the next
+            // launch. When it *is* startup, the trigger below and this one collapse
+            // into a single scan: the sixty-second window is exactly the duplicate
+            // suppression this case needs, and correctness never rests on it.
+            ReactionPullTrigger.requestInBackground(context, "handoff recovery")
+        }
 
         return Outcome.HandoffResolved(result)
     }

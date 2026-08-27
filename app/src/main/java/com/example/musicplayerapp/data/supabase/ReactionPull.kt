@@ -50,7 +50,7 @@ object ReactionPull {
         // having done neither. The profile will show the more recent of them; that
         // rendering is not part of this change.
         if (result is PullResult.Completed) {
-            LastSyncStore.recordPullSuccess(app)
+            LastSyncStore.recordPullSuccess(app, result.uid)
 
             // The same condition and the same moment: this account has now been read
             // through at least once on this install. Nothing in the pull reads it back,

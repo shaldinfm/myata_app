@@ -151,11 +151,11 @@ class ReactionSyncEngine(
         // that reported neither is how a parked row used to be forgotten until the
         // next reaction or the next app start.
         val stillDue = outbox.dueCount(now())
-        if (delivered > 0 && stillDue > 0) return DrainResult.MoreWorkDue(stillDue)
+        if (delivered > 0 && stillDue > 0) return DrainResult.MoreWorkDue(stillDue, listenerId)
 
         val parkedUntil = outbox.earliestAttemptAt()
         return when {
-            delivered > 0 -> DrainResult.Drained(delivered, parkedUntil)
+            delivered > 0 -> DrainResult.Drained(delivered, parkedUntil, listenerId)
             parkedUntil != null -> DrainResult.Waiting(parkedUntil)
             else -> DrainResult.Idle
         }
@@ -508,10 +508,24 @@ sealed interface DrainResult {
      *   null if the outbox is now empty. A run that delivered something can still
      *   leave a poison row behind it, and that row needs its timer just as much.
      */
-    data class Drained(val delivered: Int, val nextAttemptAt: Long?) : DrainResult
+    data class Drained(
+        val delivered: Int,
+        val nextAttemptAt: Long?,
+
+        /**
+         * The identity that owned this drain, carried out rather than looked up later.
+         *
+         * `ReactionSyncWorker` files the upload timestamp under this uid. It cannot
+         * ask who the listener is *now*: the drain has released [SyncLease] by then,
+         * and a sign-out followed by a sign-in as another account can land in the
+         * gap - which would file X's delivery under Y. The only identity that can
+         * answer "whose rows were these" is the one that sent them.
+         */
+        val listenerId: String,
+    ) : DrainResult
 
     /** The batch filled up and more is due now. Schedule another run immediately. */
-    data class MoreWorkDue(val remaining: Int) : DrainResult
+    data class MoreWorkDue(val remaining: Int, val listenerId: String) : DrainResult
 
     /**
      * Could not get on with it - offline, no session, the server is unwell. Nothing

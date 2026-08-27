@@ -60,18 +60,45 @@ step, and must not happen until the old population has drained.
 
 ## What the app can say about its own syncing
 
-Three pieces of state, kept apart because they answer different questions:
+Three pieces of state, kept apart because they answer different questions — and all
+three **keyed by listener uid**, because every one of them is a statement about an
+account rather than about a phone:
 
-| | means | set by |
+| key | means | set by |
 |---|---|---|
-| `lastSuccessfulUpload` | something of mine reached the cloud | a drain that delivered at least one row |
-| `lastSuccessfulPull` | I read the whole account back | a **completed** full scan, never a partial one |
-| `initialRestoreComplete(uid)` | this device has restored *that account* at least once | the same completed scan, per uid |
+| `last_upload_<uid>` | something of *that account's* reached the cloud | a drain that delivered at least one row |
+| `last_pull_<uid>` | this device read *that account* back in full | a **completed** full scan, never a partial one |
+| `initial_restore_complete_<uid>` | it has done so at least once, ever | the same completed scan |
 
-`Последняя синхронизация` shows the **more recent of the first two**. They are never
-written into each other: an install can have pushed without ever restoring, or
-restored without ever pushing, and collapsing them would make the second read as
-`Ещё не синхронизировалось` on a device that had just pulled a whole Collection down.
+`Последняя синхронизация` shows the **more recent of the first two, for the account
+on the screen**. They are never written into each other: an install can have pushed
+without ever restoring, or restored without ever pushing, and collapsing them would
+make the second read as `Ещё не синхронизировалось` on a device that had just pulled
+a whole Collection down.
+
+### Why per account, and why not cleared
+
+An install that signs out of X and into Y has synchronised nothing as Y. A global
+timestamp would show Y a moment earned by X — the row would be true of the device and
+false of the account it is printed under, which is the same class of untruth this
+phase exists to remove.
+
+Scoping rather than clearing, deliberately. Wiping the timestamps at the identity
+boundary would also answer the question wrongly, just less often: X *did* sync, that
+stays true while Y is signed in, and switching back to X should find X's own history
+where it was. Signing out is not evidence about the past.
+
+Which account an upload belongs to comes from the drain that delivered it —
+`DrainResult.Drained.listenerId`, carried out on the result — and never from whichever
+identity is current when the worker does its bookkeeping. The drain has released
+`SyncLease` by then, so a sign-out and a sign-in as another account can land in the
+gap; asking "who am I now" would file X's delivery under Y.
+
+Pre-G-A7e installs have two unscoped keys, `last_success_at` and `last_pull_at`.
+They are **orphaned, never read and never migrated**: whose sync they record is not
+recoverable, and guessing the current uid would attribute one account's history to
+another. Such an install reads `Ещё не синхронизировалось` once, until its next
+real sync.
 
 `initialRestoreComplete` is durable and per account. It is **not** a cursor, **not**
 the sixty-second trigger debounce, and **not** a claim that the account is current -

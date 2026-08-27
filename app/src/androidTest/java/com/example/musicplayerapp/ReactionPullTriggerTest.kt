@@ -593,14 +593,14 @@ class ReactionPullTriggerTest {
             ReactionPullTrigger.request(context, "attempt")
             assertNull(
                 "$outcome must not look like a synchronisation",
-                LastSyncStore.lastPullAt(context),
+                LastSyncStore.lastPullAt(context, x),
             )
         }
 
         // And the trigger itself never writes it. The write belongs to ReactionPull,
         // which is faked out here - so four real attempts produced no timestamp at all.
         assertEquals(4, pulls.size)
-        assertNull("triggering is not syncing", LastSyncStore.lastPullAt(context))
+        assertNull("triggering is not syncing", LastSyncStore.lastPullAt(context, x))
     }
 
     /** **S.** A completed scan records it through G-A7c's own path, exactly once. */
@@ -614,9 +614,9 @@ class ReactionPullTriggerTest {
 
         assertNotNull(
             "a full scan of an empty account is still a completed scan",
-            LastSyncStore.lastPullAt(context),
+            LastSyncStore.lastPullAt(context, x),
         )
-        assertNull("and it is not an upload", LastSyncStore.lastSuccessAt(context))
+        assertNull("and it is not an upload", LastSyncStore.lastUploadAt(context, x))
     }
 
     // ==================== exclusion ====================

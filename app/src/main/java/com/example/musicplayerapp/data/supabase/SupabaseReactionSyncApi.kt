@@ -1,11 +1,19 @@
 package com.example.musicplayerapp.data.supabase
 
 import android.content.Context
+import com.example.musicplayerapp.data.Reaction
 import com.example.musicplayerapp.data.ReactionOutboxEntry
 import com.example.musicplayerapp.data.TrackReaction
+import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
 /**
@@ -126,6 +134,133 @@ class SupabaseReactionSyncApi(private val context: Context) : ReactionSyncApi {
             }
             SyncOutcome.Success
         }.getOrElse { classifyFailure(it) }
+    }
+
+    /**
+     * One call, one server transaction: the whole of a track's pending batch.
+     *
+     * The payload is hand-built like every other one here, for the reason in the
+     * class header. Two shapes matter and both are the schema rather than a
+     * convenience:
+     *
+     *  - **each event carries no `track_key` and no `listener_id`.** One
+     *    `p_track_key` covers the batch, so events and state cannot describe
+     *    different tracks - the disagreement is unrepresentable rather than checked.
+     *    Identity comes from `auth.uid()` inside the function;
+     *  - **the current-state parameters come from [current]**, read from Room at
+     *    snapshot time, never derived from the events. A batch that waited a week in
+     *    somebody's pocket still delivers its week-old history, and still publishes
+     *    what the listener thinks now.
+     *
+     * `updated_at` is the device's own clock, unchanged and deliberately so: 0003
+     * left that column's meaning alone because pre-cutover clients still guard their
+     * pushes with it, and this function keeps writing it the same way for as long as
+     * they exist.
+     */
+    override suspend fun applyBatch(
+        trackKey: String,
+        events: List<ReactionOutboxEntry>,
+        current: TrackReaction,
+        listenerId: String,
+    ): BatchOutcome {
+        val db = postgrest ?: return BatchOutcome.Failed(
+            SyncOutcome.AuthUnavailable("no supabase client")
+        )
+
+        // Ownership, checked here because the RPC has no column to check it with.
+        //
+        // The direct writes sent `listener_id` and every policy compared it against
+        // auth.uid(), so a batch built as X and sent on a session that had become Y
+        // was refused by the database. This function is auth.uid()-only by design,
+        // which means the same batch would be stored under Y - correctly, as far as
+        // the server can tell, because Y is who asked. Restoring the comparison is
+        // the client's job now.
+        //
+        // Local: currentUserOrNull() reads the session the Auth plugin already holds
+        // and makes no request. A mismatch or an absent session leaves the rows
+        // exactly as they are - nothing sent, nothing settled, no revision recorded,
+        // no identity created or repaired from here. Reconciliation belongs to
+        // IdentityReconciler, and the sync backend must never start one.
+        val session = runCatching {
+            SupabaseModule.client(context)?.auth?.currentUserOrNull()?.id
+        }.getOrNull()
+
+        // Deliberately never Permanent: the batch did nothing wrong, this device is
+        // simply not who it was when the batch was built, and a later corrected
+        // session delivers it unchanged.
+        ownershipVerdict(session, listenerId)?.let { return BatchOutcome.Failed(it) }
+
+        val payload = buildJsonObject {
+            put("p_track_key", trackKey)
+            put("p_events", buildJsonArray {
+                for (event in events) {
+                    add(buildJsonObject {
+                        put("event_id", event.eventId)
+                        put("event_type", event.eventType.wire)
+                        put("artist", event.artist)
+                        put("title", event.title)
+                        put("stream", event.stream)
+                        put("occurred_at", ReactionSyncWire.timestamp(event.occurredAt))
+                    })
+                }
+            })
+            put("p_reaction", ReactionSyncWire.remoteReaction(current.reaction))
+            // The server enforces liked_at present iff LIKED, and normalises it in
+            // the trigger; sending the local value for any other state would be
+            // asserting something the schema does not admit.
+            if (current.reaction == Reaction.LIKED) {
+                put("p_liked_at", ReactionSyncWire.timestamp(current.likedAt ?: current.updatedAt))
+            } else {
+                put("p_liked_at", JsonNull)
+            }
+            put("p_artist", current.artist)
+            put("p_title", current.title)
+            put("p_stream", current.stream)
+            put("p_updated_at", ReactionSyncWire.timestamp(current.updatedAt))
+        }
+
+        return runCatching {
+            val answer = db.rpc(ReactionSyncWire.RPC_APPLY_BATCH, payload)
+                .decodeAs<JsonObject>()
+            readOutcome(answer)
+        }.getOrElse { BatchOutcome.Failed(classifyFailure(it)) }
+    }
+
+    /**
+     * The function's answer, or a permanent failure if it is not one we understand.
+     *
+     * An unrecognised outcome is treated as permanent rather than retried: the call
+     * reached the server and the server replied, so repeating it will produce the
+     * same reply, and guessing at the shape is how a settled batch gets replayed.
+     */
+    private fun readOutcome(answer: JsonObject): BatchOutcome {
+        val row = (answer["row"] as? JsonObject)?.let { readRow(it) }
+        return when (answer["outcome"]?.jsonPrimitive?.contentOrNull) {
+            "APPLIED" -> row?.let { BatchOutcome.Applied(it) }
+                ?: BatchOutcome.Failed(SyncOutcome.Permanent(200, "APPLIED without a row"))
+            "ALREADY_APPLIED" -> BatchOutcome.AlreadyApplied(row)
+            else -> BatchOutcome.Failed(SyncOutcome.Permanent(200, "unknown outcome"))
+        }
+    }
+
+    /** One `reactions` row out of the function's answer, or null if it is malformed. */
+    private fun readRow(row: JsonObject): RemoteReaction? {
+        fun text(name: String): String? = row[name]?.jsonPrimitive?.contentOrNull
+        val reaction = ReactionSyncWire.localReaction(text("reaction")) ?: return null
+        val rev = row["rev"]?.jsonPrimitive?.longOrNull ?: return null
+        val updatedAt = ReactionSyncWire.epochMillis(text("updated_at")) ?: return null
+        return RemoteReaction(
+            trackKey = text("track_key") ?: return null,
+            reaction = reaction,
+            likedAt = ReactionSyncWire.epochMillis(text("liked_at")),
+            artist = text("artist") ?: return null,
+            title = text("title") ?: return null,
+            // Nullable in the schema; the local column is not, and "" is what the
+            // rest of the app already means by "no stream recorded".
+            stream = text("stream").orEmpty(),
+            updatedAt = updatedAt,
+            rev = rev,
+        )
     }
 
     override suspend fun retireAllCurrentState(listenerId: String): SyncOutcome {

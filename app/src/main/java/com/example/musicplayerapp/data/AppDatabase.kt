@@ -18,6 +18,12 @@ import androidx.room.RoomDatabase
  * harmed by it, and every listener starts with an empty queue rather than a
  * back-filled history of acts that were already reported elsewhere.
  *
+ * Version 4 is the G-A7 protocol cutover. `reaction_outbox.sync_protocol` records
+ * which delivery protocol owns each row, so rows written before the cutover keep
+ * being delivered the way they were written; `track_reaction.remote_rev` holds the
+ * server-assigned revision this device last observed. Both are additive and
+ * [ReactionMigration.MIGRATION_3_4] reads no existing row.
+ *
  * The two reaction tables answer different questions and neither substitutes for the
  * other: `track_reaction` is what a listener currently thinks, `reaction_outbox` is
  * what they did and the backend has not been told yet.
@@ -32,7 +38,7 @@ import androidx.room.RoomDatabase
  */
 @Database(
     entities = [TrackReaction::class, ReactionOutboxEntry::class],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -80,6 +86,7 @@ abstract class AppDatabase : RoomDatabase() {
                     .addMigrations(
                         ReactionMigration.MIGRATION_1_2,
                         ReactionMigration.MIGRATION_2_3,
+                        ReactionMigration.MIGRATION_3_4,
                     )
                     .build()
                 INSTANCE = instance

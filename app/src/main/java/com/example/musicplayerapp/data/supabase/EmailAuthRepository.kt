@@ -77,11 +77,17 @@ object EmailAuthRepository {
         val api = EmailAuthBackend.api(context)
         val call: suspend () -> AuthResult = { confirmed(api, api.signUp(email, password, displayName)) }
 
-        return when (val state = IdentityStore.state(context)) {
-            is IdentityState.None -> direct(context, AuthAttempt.REGISTER, call)
-            is IdentityState.Anonymous -> viaHandoff(context, state.uid, api, call)
-            else -> undefined("register", state)
-        }
+        return route(
+            context = context,
+            what = "register",
+            attempt = AuthAttempt.REGISTER,
+            api = api,
+            call = call,
+            // Registration from SIGNED_OUT is deliberately undefined: that install
+            // already knows an account, and creating a second one for the same person
+            // is the thing the identity model exists to prevent.
+            mayAuthenticateDirectly = { it is IdentityState.None },
+        )
     }
 
     // ------------------------------------------------------------- sign in --
@@ -91,15 +97,16 @@ object EmailAuthRepository {
         val api = EmailAuthBackend.api(context)
         val call: suspend () -> AuthResult = { confirmed(api, api.signIn(email, password)) }
 
-        return when (val state = IdentityStore.state(context)) {
-            is IdentityState.None,
-            is IdentityState.SignedOut,
-            -> direct(context, AuthAttempt.SIGN_IN, call)
-
-            is IdentityState.Anonymous -> viaHandoff(context, state.uid, api, call)
-
-            else -> undefined("sign in", state)
-        }
+        return route(
+            context = context,
+            what = "sign in",
+            attempt = AuthAttempt.SIGN_IN,
+            api = api,
+            call = call,
+            mayAuthenticateDirectly = {
+                it is IdentityState.None || it is IdentityState.SignedOut
+            },
+        )
     }
 
     // ------------------------------------------------------------ recovery --
@@ -147,15 +154,16 @@ object EmailAuthRepository {
             confirmed(api, verified)
         }
 
-        val routed = when (val state = IdentityStore.state(context)) {
-            is IdentityState.None,
-            is IdentityState.SignedOut,
-            -> direct(context, AuthAttempt.SIGN_IN, call)
-
-            is IdentityState.Anonymous -> viaHandoff(context, state.uid, api, call)
-
-            else -> undefined("verify a recovery code", state)
-        }
+        val routed = route(
+            context = context,
+            what = "verify a recovery code",
+            attempt = AuthAttempt.SIGN_IN,
+            api = api,
+            call = call,
+            mayAuthenticateDirectly = {
+                it is IdentityState.None || it is IdentityState.SignedOut
+            },
+        )
 
         return when (routed) {
             is AuthResult.Success -> RecoveryResult.PasswordResetAuthorized(routed.uid)
@@ -263,15 +271,94 @@ object EmailAuthRepository {
         }
 
     /**
+     * Where one authentication goes, decided once and under [SyncLease].
+     *
+     * ## Why the lease, and not just a state read
+     *
+     * Two races live here, and they need the same answer.
+     *
+     * **The uid cannot change under a drain.** `apply_reaction_event_batch` takes its
+     * identity from `auth.uid()` and accepts no `listener_id`, so the client checks
+     * ownership itself just before the call - see `ownershipVerdict`. That check is
+     * only worth something if nothing can authenticate as somebody else between it
+     * and the request leaving. The drain holds the lease across its whole run,
+     * including the call, so making direct authentication hold the lease too is what
+     * turns "X's batch cannot execute as Y" from a hope into an invariant. Before
+     * this, `direct` took no lease at all: a sign-out and a sign-in as another
+     * account could land while a batch built for X was in flight, and the request
+     * would carry the new account's token.
+     *
+     * **The route cannot be decided on stale state.** Reading the identity, then
+     * waiting for the lease, then acting on what was read is the same bug one level
+     * up: a drain that mints an anonymous identity while the sign-in waits would
+     * leave that sign-in still believing it had nothing to preserve, and it would
+     * authenticate directly and orphan the identity the drain had just created. So
+     * the read happens **inside** the critical section, and it is the read that
+     * decides.
+     *
+     * ## Why the handoff branch leaves the lease
+     *
+     * [IdentityHandoff.run] drains **before** it takes the lease - that is step one
+     * of the frozen G-A4b1 ordering, and a drain cannot run while this holds the
+     * lease. So the handoff branch cannot be executed here even in principle, and
+     * calling it from inside would deadlock on a non-reentrant mutex rather than
+     * merely being untidy.
+     *
+     * Only the decision needs the lease, and only the direct branch needs to *stay*
+     * under it: the direct branch is the one that authenticates here. The handoff
+     * branch carries a uid out to [viaHandoff], which re-establishes exclusion itself
+     * and re-validates under it - the outbox emptiness check and the `PREPARED`
+     * commit happen in one critical section it owns. Nothing is decided twice and
+     * nothing is decided outside a lock.
+     */
+    private suspend fun route(
+        context: Context,
+        what: String,
+        attempt: AuthAttempt,
+        api: EmailAuthApi,
+        call: suspend () -> AuthResult,
+        mayAuthenticateDirectly: (IdentityState) -> Boolean,
+    ): AuthResult {
+        val decision = SyncLease.withExclusive {
+            when (val fresh = IdentityStore.state(context)) {
+                // An identity to preserve. Decided here, performed outside - see above.
+                is IdentityState.Anonymous -> Route.ViaHandoff(fresh.uid)
+
+                else ->
+                    if (mayAuthenticateDirectly(fresh)) {
+                        Route.Settled(directHoldingLease(context, attempt, call))
+                    } else {
+                        Route.Settled(undefined(what, fresh))
+                    }
+            }
+        }
+
+        return when (decision) {
+            is Route.Settled -> decision.result
+            is Route.ViaHandoff -> viaHandoff(context, decision.uid, api, call)
+        }
+    }
+
+    /** What [route] concluded while it held the lease. */
+    private sealed interface Route {
+        data class Settled(val result: AuthResult) : Route
+        data class ViaHandoff(val uid: String) : Route
+    }
+
+    /**
      * Authentication with no identity to preserve: [IdentityState.None] or
      * [IdentityState.SignedOut].
+     *
+     * **Runs with [SyncLease] held**, and must. See [route]: the lease is what stops a
+     * drain's in-flight batch, built and ownership-checked as X, from being dispatched
+     * on a session this call has just made Y.
      *
      * The durable attempt marker is committed **before** the remote call and cleared
      * after the identity is on disk, so the window between "the server says you are
      * Y" and "this device says it is Y" is recorded rather than inferred. See the
      * auth-attempt section of [IdentityStore] for why inference is not available.
      */
-    private suspend fun direct(
+    private suspend fun directHoldingLease(
         context: Context,
         attempt: AuthAttempt,
         call: suspend () -> AuthResult,

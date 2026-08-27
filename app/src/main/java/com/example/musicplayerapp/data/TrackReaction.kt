@@ -36,6 +36,20 @@ import androidx.room.PrimaryKey
  *   the list - which is how Undo puts a removed row back where it was instead of at
  *   the top. It is the old `favorites.addedAt` under a name that says what it means.
  * @property updatedAt when the reaction last changed, whatever it changed to.
+ * @property remoteRev the server-assigned `reactions.rev` this device last observed
+ *   for this row, or null if it has never seen one. Migration 0003 made `rev` the
+ *   cross-device ordering authority - a value from a global sequence taken by a
+ *   trigger on every write - precisely so ordering stops depending on two device
+ *   clocks agreeing.
+ *
+ *   It is **listener-scoped**: a rev is a fact about one row belonging to one
+ *   `auth.users` id, so it says nothing about a different one. When this device
+ *   changes identity, [com.example.musicplayerapp.data.supabase.IdentityHandoff]
+ *   clears every value rather than carrying them across.
+ *
+ *   Nothing reads it yet. The atomic push writes it so that G-A7c's pull has a
+ *   watermark, which is what will stop a page fetched before a local write from
+ *   regressing local state.
  */
 @Entity(tableName = "track_reaction")
 data class TrackReaction(
@@ -61,6 +75,9 @@ data class TrackReaction(
 
     @ColumnInfo(name = "updated_at")
     val updatedAt: Long,
+
+    @ColumnInfo(name = "remote_rev")
+    val remoteRev: Long? = null,
 )
 
 /**

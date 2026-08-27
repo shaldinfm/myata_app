@@ -201,6 +201,19 @@ object IdentityHandoff {
      *
      * **No event is written.** `reaction_events` is history, and none of this is
      * something the listener did just now.
+     *
+     * ## The revisions go first
+     *
+     * `track_reaction.remote_rev` records the server revision this device last saw
+     * for a row, and a revision belongs to one listener's copy of that row. By the
+     * time this runs, every value on disk is void: the source identity's remote rows
+     * were deleted before the switch, and the rows written below - into the
+     * destination here, or back into the source on rollback - are given fresh
+     * revisions that this path never learns. Clearing them is how the device stops
+     * claiming a match with rows that are gone.
+     *
+     * Nothing else about the local state is touched. The Collection survives a
+     * handoff intact, which is the property this whole file exists to protect.
      */
     private suspend fun adopt(
         context: Context,
@@ -208,6 +221,8 @@ object IdentityHandoff {
         reactions: ReactionDao,
         api: ReactionSyncApi,
     ) {
+        reactions.clearRemoteRevs()
+
         val rows = reactions.allReactions()
         var written = 0
         for (row in rows) {

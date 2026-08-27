@@ -61,6 +61,34 @@ object ReactionWriteGate {
      */
     suspend fun <T> withOwnershipCutover(block: suspend () -> T): T = mutex.withLockSuspending(block)
 
+    /**
+     * Runs one local step of a delivery: taking a batch snapshot, deleting a settled
+     * legacy row, or settling a batch after its answer came back.
+     *
+     * The same lock again, named apart for the same reason [withOwnershipCutover] is.
+     * Two properties depend on it, and neither is obvious from the call sites alone:
+     *
+     * **The protocol epoch cannot be straddled.** A tap chooses LEGACY or ATOMIC_RPC
+     * by asking whether the track still owes a legacy delivery, inside its own write
+     * transaction. The legacy delete that ends the epoch is the other half of that
+     * question, so the two must serialise. They do here, which leaves exactly two
+     * orders: the tap sees the row and inherits LEGACY, or the delete has already
+     * committed - and with it the remote write that preceded it - and the tap is
+     * atomic. There is no order in which a row is tagged ATOMIC_RPC while a legacy
+     * push can still read and publish its state.
+     *
+     * **A settled answer cannot overwrite a newer tap.** Settlement deletes the rows
+     * a batch represented and then asks whether anything else is still pending for
+     * the track; a tap that lands between those two questions would otherwise be
+     * invisible to the second, and the remote row - which predates it - would be
+     * written over it.
+     *
+     * Held across local work only. The network call happens after the snapshot's
+     * block returns and before the settlement's begins, which is what keeps a tap
+     * from ever waiting on a round trip.
+     */
+    suspend fun <T> withDeliveryStep(block: suspend () -> T): T = mutex.withLockSuspending(block)
+
     private suspend fun <T> Mutex.withLockSuspending(block: suspend () -> T): T {
         lock()
         try {

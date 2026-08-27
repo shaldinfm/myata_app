@@ -5,12 +5,14 @@ import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.musicplayerapp.data.AppDatabase
+import com.example.musicplayerapp.data.Reaction
 import com.example.musicplayerapp.data.ReactionDao
 import com.example.musicplayerapp.data.ReactionOutboxDao
 import com.example.musicplayerapp.data.ReactionOutboxEntry
 import com.example.musicplayerapp.data.ReactionWriteGate
 import com.example.musicplayerapp.data.TrackKey
 import com.example.musicplayerapp.data.TrackReaction
+import com.example.musicplayerapp.data.supabase.BatchOutcome
 import com.example.musicplayerapp.data.supabase.HandoffStage
 import com.example.musicplayerapp.data.supabase.IdentityHandoff
 import com.example.musicplayerapp.data.supabase.IdentityState
@@ -90,6 +92,54 @@ class IdentityHandoffTest {
 
     private suspend fun like(key: String = depeche, at: Long = 1_000L) =
         dao.like(key, "Artist", "Title", "myata", at, at)
+
+    /**
+     * **W.** Every recorded server revision is forgotten at the identity boundary.
+     *
+     * A rev identifies one row belonging to one `auth.users` id, so it is a fact
+     * about a listener rather than about a track. Both outcomes of a handoff void
+     * every value at once: the source's remote rows are deleted before the switch,
+     * and whatever is written afterwards - into the destination on success, back into
+     * the source on rollback - gets fresh revisions this device is never told.
+     * Carrying the old numbers across would leave the install asserting a match with
+     * rows that no longer exist, and G-A7c's pull would then skip a page it needed.
+     *
+     * The Collection itself is untouched, which the rest of this suite already
+     * asserts row by row and this re-checks for the row it moved.
+     */
+    @Test
+    fun remote_revisions_are_cleared_when_the_identity_changes() = runBlocking {
+        like()
+        dao.recordRemoteRev(depeche, 4_242L)
+        assertEquals(4_242L, dao.find(depeche)!!.remoteRev)
+
+        val result = handoff(destination = { y })
+
+        assertTrue("$result", result is IdentityHandoff.Result.Switched)
+        val row = dao.find(depeche)!!
+        assertNull(
+            "a revision belonging to the retired identity is not a fact about the new one",
+            row.remoteRev,
+        )
+        assertEquals("and the Collection is not what a handoff moves", Reaction.LIKED, row.reaction)
+        assertEquals(1_000L, row.likedAt)
+    }
+
+    /** The same clearing happens when the switch fails and the state goes back to X. */
+    @Test
+    fun remote_revisions_are_cleared_on_a_rollback_too() = runBlocking {
+        like()
+        dao.recordRemoteRev(depeche, 4_242L)
+
+        val result = handoff(destination = { null })
+
+        assertTrue("$result", result is IdentityHandoff.Result.RolledBack)
+        assertNull(
+            "X's rows were deleted and rebuilt, so the old revisions describe nothing",
+            dao.find(depeche)!!.remoteRev,
+        )
+        assertEquals(Reaction.LIKED, dao.find(depeche)!!.reaction)
+    }
 
     private suspend fun handoff(
         drain: suspend () -> Boolean = cleanDrain,
@@ -371,6 +421,49 @@ class IdentityHandoffTest {
         assertNull(IdentityStore.handoff(context))
     }
 
+    /**
+     * A death **after** SWITCHED(Y) must not leave X-scoped revisions on Y's rows.
+     *
+     * This is the crash boundary the forward path's clearing does not by itself
+     * cover: the switch is already durable, so recovery - not `run` - is what
+     * finishes the job. Recovery reaches the same `adopt`, which clears the
+     * revisions before it writes anything, so the handoff cannot be considered
+     * complete with X's numbers still attached.
+     *
+     * Why the numbers are void rather than merely stale: X's remote rows were deleted
+     * before the switch, and the rows adoption writes into Y are given fresh
+     * revisions this device is never told. A rev left behind would have this install
+     * asserting a match with a row that does not exist, which is exactly the claim
+     * G-A7c's pull will use to decide it may skip a page.
+     */
+    @Test
+    fun recovery_after_a_durable_switch_clears_x_scoped_revisions() = runBlocking {
+        like(depeche)
+        like(cave)
+        dao.recordRemoteRev(depeche, 4_242L)
+        dao.recordRemoteRev(cave, 4_243L)
+
+        // Durably switched, then the process died before adoption finished.
+        IdentityStore.markHandoffSwitched(context, x, y)
+        assertEquals(4_242L, dao.find(depeche)!!.remoteRev)
+
+        val result = IdentityHandoff.recover(context, sessionUid = y, reactions = dao, api = api)
+
+        assertEquals(IdentityHandoff.Result.Switched(y), result)
+        assertNull(
+            "a revision belonging to the retired identity is not a fact about the new one",
+            dao.find(depeche)!!.remoteRev,
+        )
+        assertNull(dao.find(cave)!!.remoteRev)
+        assertNull("and only then is the handoff complete", IdentityStore.handoff(context))
+
+        // The Collection is not what a handoff moves, and recovery is not an exception.
+        assertEquals(setOf(depeche, cave), api.adoptedBy.getValue(y).keys)
+        assertEquals(Reaction.LIKED, dao.find(depeche)!!.reaction)
+        assertEquals(Reaction.LIKED, dao.find(cave)!!.reaction)
+        assertTrue("and it invents no history", api.events.isEmpty())
+    }
+
     @Test
     fun death_during_partial_adoption_finishes_it() = runBlocking {
         like(depeche)
@@ -447,6 +540,22 @@ class IdentityHandoffTest {
  * would not be evidence of its absence.
  */
 private class HandoffBackend : ReactionSyncApi {
+
+    /** The atomic path, recorded like the legacy one. See [RecordingSyncApi]. */
+    override suspend fun applyBatch(
+        trackKey: String,
+        events: List<ReactionOutboxEntry>,
+        current: TrackReaction,
+        listenerId: String,
+    ): BatchOutcome {
+        for (event in events) this.events += event
+        val outcome = onReconcile(trackKey)
+        if (outcome !is SyncOutcome.Success) return BatchOutcome.Failed(outcome)
+        adoptedBy.getOrPut(listenerId) { linkedMapOf() }[trackKey] = current.reaction.name
+        return BatchOutcome.Applied(current.asRemote(++rev))
+    }
+
+    private var rev = 0L
 
     val retirements = mutableListOf<String>()
     val adoptedBy = linkedMapOf<String, MutableMap<String, String>>()

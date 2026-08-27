@@ -4,6 +4,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
 import androidx.test.runner.lifecycle.Stage
+import com.example.musicplayerapp.data.Reaction
 import com.example.musicplayerapp.data.ReactionOutboxEntry
 import com.example.musicplayerapp.data.TrackReaction
 import com.example.musicplayerapp.data.supabase.AccountInfo
@@ -14,7 +15,9 @@ import com.example.musicplayerapp.data.supabase.EmailAuthBackend
 import com.example.musicplayerapp.data.supabase.IdentityState
 import com.example.musicplayerapp.data.supabase.IdentityStore
 import com.example.musicplayerapp.data.supabase.ListenerIdentity
+import com.example.musicplayerapp.data.supabase.BatchOutcome
 import com.example.musicplayerapp.data.supabase.ReactionSyncApi
+import com.example.musicplayerapp.data.supabase.RemoteReaction
 import com.example.musicplayerapp.data.supabase.ReactionSyncBackend
 import com.example.musicplayerapp.data.supabase.RecoveryResult
 import com.example.musicplayerapp.data.supabase.SyncOutcome
@@ -194,6 +197,29 @@ internal class FakeEmailAuthApi : EmailAuthApi {
  */
 internal class RecordingSyncApi : ReactionSyncApi {
 
+    /**
+     * The atomic path, recorded exactly as the legacy one is.
+     *
+     * Every represented event lands in [events] attributed to [listenerId], so the
+     * "no synthetic events as the destination" assertions keep their meaning after
+     * the cutover: the two protocols write history through different calls, and a
+     * fake that only watched one of them would stop being evidence.
+     */
+    override suspend fun applyBatch(
+        trackKey: String,
+        events: List<ReactionOutboxEntry>,
+        current: TrackReaction,
+        listenerId: String,
+    ): BatchOutcome {
+        for (event in events) this.events += event to listenerId
+        val outcome = onReconcile(trackKey)
+        if (outcome !is SyncOutcome.Success) return BatchOutcome.Failed(outcome)
+        adoptedBy.getOrPut(listenerId) { linkedMapOf() }[trackKey] = current.reaction.name
+        return BatchOutcome.Applied(current.asRemote(++rev))
+    }
+
+    private var rev = 0L
+
     val retirements = mutableListOf<String>()
     val adoptedBy = linkedMapOf<String, MutableMap<String, String>>()
     val events = mutableListOf<Pair<ReactionOutboxEntry, String>>()
@@ -307,6 +333,12 @@ internal object TestIsolation {
         ) = SyncOutcome.AuthUnavailable(WHY)
         override suspend fun retireAllCurrentState(listenerId: String) =
             SyncOutcome.AuthUnavailable(WHY)
+        override suspend fun applyBatch(
+            trackKey: String,
+            events: List<ReactionOutboxEntry>,
+            current: TrackReaction,
+            listenerId: String,
+        ) = BatchOutcome.Failed(SyncOutcome.AuthUnavailable(WHY))
     }
 }
 
@@ -391,3 +423,21 @@ internal fun MainActivity.profileDestination(): Int? {
     return host.navController.currentDestination?.id
         ?.takeIf { it == R.id.profile || it == R.id.profile_authenticated }
 }
+
+/**
+ * A local row as the server would hand it back, for fakes that answer the atomic RPC.
+ *
+ * The production function returns the `reactions` row it just wrote, so a fake that
+ * returned nothing would let a settlement bug through: the drain only records a
+ * revision, or adopts remote state, when a row comes back.
+ */
+internal fun TrackReaction.asRemote(rev: Long) = RemoteReaction(
+    trackKey = trackKey,
+    reaction = reaction,
+    likedAt = if (reaction == Reaction.LIKED) (likedAt ?: updatedAt) else null,
+    artist = artist,
+    title = title,
+    stream = stream,
+    updatedAt = updatedAt,
+    rev = rev,
+)

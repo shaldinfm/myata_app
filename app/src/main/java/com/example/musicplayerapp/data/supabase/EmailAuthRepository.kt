@@ -333,10 +333,30 @@ object EmailAuthRepository {
             }
         }
 
-        return when (decision) {
+        val result = when (decision) {
             is Route.Settled -> decision.result
             is Route.ViaHandoff -> viaHandoff(context, decision.uid, api, call)
         }
+
+        // The account is read back after an authentication settles, and only after.
+        //
+        // Here rather than inside the branches because both of them end the same way
+        // when they end well - REGISTERED on disk, a session that agrees - and because
+        // this is outside the lease. `directHoldingLease` runs inside it, and a pull
+        // takes the same lease: triggering there would deadlock on a non-reentrant
+        // mutex rather than merely being early. The handoff branch has already
+        // released it too, and by this point has adopted the local rows into Y and
+        // cleared its durable record.
+        //
+        // Fire and forget. A sign-in that worked is a sign-in that worked whether or
+        // not the account could be read afterwards, and ReactionPull decides for
+        // itself whether it may run at all - a failed authentication leaves the
+        // identity untouched, so there is nothing for it to be eligible for.
+        if (result is AuthResult.Success) {
+            ReactionPullTrigger.requestInBackground(context, "after $what")
+        }
+
+        return result
     }
 
     /** What [route] concluded while it held the lease. */

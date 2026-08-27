@@ -233,15 +233,26 @@ internal class RecordingSyncApi : ReactionSyncApi {
 
 
     /**
-     * A suite that does not exercise pull must never reach this.
+     * The account this fake will hand back, or null to refuse being read at all.
      *
-     * An empty page would be a plausible-looking lie: an accidental pull would read as
-     * "the account has nothing" and pass silently, which is exactly how a regression in
-     * the trigger wiring would hide. Failing loudly is the only answer that cannot be
-     * mistaken for a working one.
+     * Null is the default and the point: a suite that does not exercise pull must not
+     * be able to reach a pull silently. An empty page would be a plausible-looking lie
+     * - an accidental read would look like "the account has nothing" and pass - which
+     * is exactly how a regression in the trigger wiring would hide.
+     *
+     * A suite that genuinely drives a pull sets this, and says so by setting it.
      */
-    override suspend fun fetchReactionsPage(listenerId: String, afterRev: Long, limit: Int): PullPage =
-        throw AssertionError("this suite must not pull; fetchReactionsPage was called")
+    var pullPages: List<RemoteReaction>? = null
+
+    override suspend fun fetchReactionsPage(
+        listenerId: String,
+        afterRev: Long,
+        limit: Int,
+    ): PullPage {
+        val account = pullPages
+            ?: throw AssertionError("this suite must not pull; fetchReactionsPage was called")
+        return PullPage.Rows(account.filter { it.rev > afterRev })
+    }
 
     override suspend fun deliverEvent(entry: ReactionOutboxEntry, listenerId: String): SyncOutcome {
         events += entry to listenerId

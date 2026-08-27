@@ -6,6 +6,7 @@ import com.example.musicplayerapp.data.ReactionOutboxEntry
 import com.example.musicplayerapp.data.TrackReaction
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
@@ -261,6 +262,55 @@ class SupabaseReactionSyncApi(private val context: Context) : ReactionSyncApi {
             updatedAt = updatedAt,
             rev = rev,
         )
+    }
+
+    /**
+     * One keyset page of [listenerId]'s current state, oldest revision first.
+     *
+     * `rev > cursor` rather than an offset, because `rev` is assigned from a global
+     * sequence by a trigger on every write: a row inserted or updated during a scan
+     * takes a value above everything already read and lands **ahead** of the cursor,
+     * where it will be seen. An offset would shift rows underneath the scan instead,
+     * and a mid-scan insert could push one past the window unread.
+     *
+     * The ownership check is here for the same reason it is on the write: the
+     * function cannot state whose data it wants beyond `auth.uid()`. RLS would keep
+     * another account's rows out, so the failure would be an *empty* page rather than
+     * a leak - but an empty page reads as "the server has nothing", and this pull is
+     * about to write what it reads into somebody's Collection. Refusing is the honest
+     * answer to a session that is not the one the scan was started for.
+     */
+    override suspend fun fetchReactionsPage(
+        listenerId: String,
+        afterRev: Long,
+        limit: Int,
+    ): PullPage {
+        val db = postgrest ?: return PullPage.Failed(
+            SyncOutcome.AuthUnavailable("no supabase client")
+        )
+
+        val session = runCatching {
+            SupabaseModule.client(context)?.auth?.currentUserOrNull()?.id
+        }.getOrNull()
+
+        ownershipVerdict(session, listenerId)?.let { return PullPage.Failed(it) }
+
+        return runCatching {
+            val rows = db.from(ReactionSyncWire.TABLE_REACTIONS).select {
+                filter {
+                    eq("listener_id", listenerId)
+                    gt("rev", afterRev)
+                }
+                order("rev", Order.ASCENDING)
+                limit(limit.toLong())
+            }.decodeList<JsonObject>()
+
+            // A row this client cannot read is dropped rather than guessed at. It
+            // would mean the schema moved underneath us, and writing a half-understood
+            // row into a Collection is worse than not writing it: the next scan sees
+            // it again, and until then local state is merely unchanged.
+            PullPage.Rows(rows.mapNotNull { readRow(it) })
+        }.getOrElse { PullPage.Failed(classifyFailure(it)) }
     }
 
     override suspend fun retireAllCurrentState(listenerId: String): SyncOutcome {

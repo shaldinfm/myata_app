@@ -17,6 +17,7 @@ import com.example.musicplayerapp.data.supabase.HandoffStage
 import com.example.musicplayerapp.data.supabase.IdentityHandoff
 import com.example.musicplayerapp.data.supabase.IdentityState
 import com.example.musicplayerapp.data.supabase.IdentityStore
+import com.example.musicplayerapp.data.supabase.PullPage
 import com.example.musicplayerapp.data.supabase.ReactionSyncApi
 import com.example.musicplayerapp.data.supabase.SyncLease
 import com.example.musicplayerapp.data.supabase.SyncOutcome
@@ -540,6 +541,9 @@ class IdentityHandoffTest {
  * would not be evidence of its absence.
  */
 private class HandoffBackend : ReactionSyncApi {
+
+    override suspend fun fetchReactionsPage(listenerId: String, afterRev: Long, limit: Int) =
+        PullPage.Rows(emptyList())
 
     /** The atomic path, recorded like the legacy one. See [RecordingSyncApi]. */
     override suspend fun applyBatch(

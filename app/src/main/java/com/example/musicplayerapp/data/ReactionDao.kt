@@ -469,6 +469,43 @@ abstract class ReactionDao {
     abstract suspend fun recordRemoteRev(trackKey: String, rev: Long): Int
 
     /**
+     * Writes one remote row into local state, and **enqueues nothing**.
+     *
+     * Spelled as an explicit INSERT OR REPLACE rather than routed through one of the
+     * four transitions, because those four exist to record that a listener *did*
+     * something: each writes an outbox row in the same transaction as the state, and
+     * that pairing is a property of the database rather than a convention. Adopting
+     * what the server already holds is not an act. Pushing it back would be telling
+     * the cloud what it just told us, and - since the events would be synthetic -
+     * telling it in a vocabulary that describes acts nobody performed.
+     *
+     * So this is a separate path by construction: there is no branch in it that could
+     * reach [ReactionEvent], and no way for a future edit to add one without moving
+     * the statement.
+     *
+     * Every column comes from the remote row except [stream], which the caller
+     * resolves - see `ReactionPullEngine`, where a NULL remote stream keeps whatever
+     * the local row already had rather than erasing it.
+     */
+    @Query(
+        """
+        INSERT OR REPLACE INTO track_reaction
+            (track_key, artist, title, stream, reaction, liked_at, updated_at, remote_rev)
+        VALUES (:trackKey, :artist, :title, :stream, :reaction, :likedAt, :updatedAt, :rev)
+        """
+    )
+    abstract suspend fun applyRemote(
+        trackKey: String,
+        artist: String,
+        title: String,
+        stream: String,
+        reaction: Reaction,
+        likedAt: Long?,
+        updatedAt: Long,
+        rev: Long,
+    )
+
+    /**
      * Forgets every server revision this device has recorded.
      *
      * A rev identifies one row belonging to one `auth.users` id, so it is a fact

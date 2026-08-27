@@ -14,6 +14,7 @@ import com.example.musicplayerapp.data.TrackReaction
 import com.example.musicplayerapp.data.supabase.BatchOutcome
 import com.example.musicplayerapp.data.supabase.DrainResult
 import com.example.musicplayerapp.data.supabase.ListenerIdentity
+import com.example.musicplayerapp.data.supabase.PullPage
 import com.example.musicplayerapp.data.supabase.ReactionSyncApi
 import com.example.musicplayerapp.data.supabase.ReactionSyncEngine
 import com.example.musicplayerapp.data.supabase.RemoteReaction
@@ -704,6 +705,9 @@ class SyncProtocolCutoverTest {
  * produces no new revision.
  */
 private class FakeAtomicBackend : ReactionSyncApi {
+
+    override suspend fun fetchReactionsPage(listenerId: String, afterRev: Long, limit: Int) =
+        PullPage.Rows(emptyList())
 
     val batches = mutableListOf<Pair<String, List<String>>>()
     val applications = LinkedHashMap<String, Long>()

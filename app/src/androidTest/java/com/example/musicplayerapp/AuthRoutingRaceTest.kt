@@ -336,4 +336,7 @@ private class BlockingBatchApi(
 
     override suspend fun retireAllCurrentState(listenerId: String) =
         com.example.musicplayerapp.data.supabase.SyncOutcome.Success
+
+    override suspend fun fetchReactionsPage(listenerId: String, afterRev: Long, limit: Int) =
+        com.example.musicplayerapp.data.supabase.PullPage.Rows(emptyList())
 }

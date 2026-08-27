@@ -1,6 +1,7 @@
 package com.example.musicplayerapp.data.supabase
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -54,7 +55,18 @@ object ReactionPullTrigger {
     internal const val WINDOW_MS = 60_000L
 
     /**
-     * Last attempt per listener, in memory only.
+     * One invocation's claim on one listener's window.
+     *
+     * A plain class, never a `data class`, and the difference is load-bearing: two
+     * triggers can be minted in the same millisecond - certainly under a fixed test
+     * clock - and a value comparison could not tell "I claimed it" from "somebody else
+     * claimed it at the same instant". Identity can, and the release below depends on
+     * telling those apart.
+     */
+    private class Claim(val at: Long)
+
+    /**
+     * The current claim per listener, in memory only.
      *
      * **Deliberately not persisted.** A durable marker here would be one edit away
      * from becoming a cursor, and a bug in it would silently stop an account ever
@@ -65,10 +77,36 @@ object ReactionPullTrigger {
      * Keyed by uid, so one listener's debounce says nothing about another's: signing
      * out of X and into Y reads Y immediately.
      */
-    private val lastAttempt = ConcurrentHashMap<String, Long>()
+    private val claims = ConcurrentHashMap<String, Claim>()
 
-    /** Test seams. Nothing in `src/main` sets either. */
-    internal var clock: () -> Long = { System.currentTimeMillis() }
+    /**
+     * Elapsed time, not wall-clock time.
+     *
+     * The window is a debounce measured in this process's own lifetime, so it must not
+     * move when the device's clock does. `System.currentTimeMillis()` can jump
+     * backwards on an NTP correction or a timezone change - and a backwards jump would
+     * make an existing claim look like it was made in the future, suppressing every
+     * pull for up to the size of the jump. `elapsedRealtime()` only ever advances.
+     */
+    internal var clock: () -> Long = { SystemClock.elapsedRealtime() }
+
+    /**
+     * Where the background attempt runs.
+     *
+     * An unowned application-lived scope, which is the existing pattern in this
+     * package - `IdentityReconciler.startupInBackground`,
+     * `ListenerSession.restoreInBackground` and `ReactionSyncScheduler` all launch the
+     * same way. It must outlive the caller: an authentication returning is not a
+     * reason to cancel the read that follows it.
+     *
+     * A seam because a test needs to be able to *end* one. These launches touch
+     * process-wide state - the claim map, the identity store - so one still in flight
+     * when the next test sets up will write into it, which looks exactly like a bug in
+     * the throttle and is not one.
+     */
+    internal var scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+
+    /** Test seams, with [clock] and [scope]. Nothing in `src/main` sets any of them. */
     internal var runner: suspend (Context) -> PullResult = { ReactionPull.run(it) }
     internal var onRequest: ((String) -> Unit)? = null
 
@@ -83,7 +121,7 @@ object ReactionPullTrigger {
     fun requestInBackground(context: Context, why: String) {
         val app = context.applicationContext
         onRequest?.invoke(why)
-        CoroutineScope(Dispatchers.IO).launch {
+        scope.launch {
             runCatching { request(app, why) }
                 .onFailure { Log.w(TAG, "pull trigger failed: ${it.message}") }
         }
@@ -115,13 +153,18 @@ object ReactionPullTrigger {
         // all is ReactionPull's decision, asked below and not second-guessed here.
         val uid = (IdentityStore.state(context) as? IdentityState.Registered)?.uid ?: return null
 
-        val now = clock()
-        val previous = lastAttempt[uid]
-        if (previous != null && now - previous < WINDOW_MS) {
+        // Check and claim in one indivisible step. `compute` holds the bin lock for
+        // this key across the read and the write, which a get-then-put does not: two
+        // triggers arriving together would both read a stale entry, both write, and
+        // both go on to read the account.
+        val mine = Claim(clock())
+        val holder = claims.compute(uid) { _, existing ->
+            if (existing != null && mine.at - existing.at < WINDOW_MS) existing else mine
+        }
+        if (holder !== mine) {
             Log.d(TAG, "pull skipped ($why): within the ${WINDOW_MS / 1000}s window")
             return null
         }
-        lastAttempt[uid] = now
 
         val result = runner(context)
 
@@ -131,7 +174,18 @@ object ReactionPullTrigger {
             is PullResult.NotEligible,
             -> {
                 // Nothing was read, so nothing is owed the window back.
-                if (previous == null) lastAttempt.remove(uid) else lastAttempt[uid] = previous
+                //
+                // Conditional, and only ever a removal. An unconditional remove would
+                // delete a claim a later invocation had already made, and writing the
+                // previous timestamp back would be worse - it would overwrite a newer
+                // claim with an older value. `remove(key, value)` touches the mapping
+                // only while it is still this invocation's own.
+                //
+                // The old timestamp is not restored, deliberately. It was necessarily
+                // outside the window - that is why this claim succeeded - so restoring
+                // it and removing it are indistinguishable to every future check, and
+                // removing cannot race.
+                claims.remove(uid, mine)
             }
 
             else -> Unit
@@ -143,8 +197,9 @@ object ReactionPullTrigger {
 
     /** Test-only: forget every debounce. */
     internal fun resetForTest() {
-        lastAttempt.clear()
-        clock = { System.currentTimeMillis() }
+        claims.clear()
+        scope = CoroutineScope(Dispatchers.IO)
+        clock = { SystemClock.elapsedRealtime() }
         runner = { ReactionPull.run(it) }
         onRequest = null
     }

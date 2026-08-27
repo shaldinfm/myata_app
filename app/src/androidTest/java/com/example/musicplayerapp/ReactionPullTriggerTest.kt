@@ -22,6 +22,7 @@ import com.example.musicplayerapp.data.supabase.SyncLease
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -61,8 +62,14 @@ class ReactionPullTriggerTest {
     private lateinit var sync: RecordingSyncApi
     private lateinit var identity: CountingIdentity
 
-    /** Every pull the trigger actually started, in order. */
-    private val pulls = mutableListOf<String>()
+    /**
+     * Every pull the trigger actually started.
+     *
+     * Synchronised because the concurrency tests below write it from several
+     * coroutines at once - an unsynchronised list would make those tests flaky in a
+     * way that looked like the code under test.
+     */
+    private val pulls: MutableList<String> = java.util.Collections.synchronizedList(mutableListOf())
 
     /** Every trigger fired at a call site, whether or not it survived the throttle. */
     private val fired = mutableListOf<String>()
@@ -72,6 +79,17 @@ class ReactionPullTriggerTest {
     private val track = "a".repeat(64)
 
     private var now = 1_000_000L
+
+    /**
+     * The scope the trigger's background attempts run in, owned by this test.
+     *
+     * Production uses an unowned application-lived scope, which is right there and
+     * wrong here: a launch still in flight when the next test sets up would write to
+     * the claim map and the identity store after they were cleared, and the resulting
+     * failure looks like a throttle bug rather than a leak. This one is cancelled and
+     * joined in [close].
+     */
+    private lateinit var triggerScope: kotlinx.coroutines.CoroutineScope
 
     // Set in [open] rather than here: `completed()` reads [x], and a field
     // initializer would run before [x] exists.
@@ -100,6 +118,10 @@ class ReactionPullTriggerTest {
 
         answer = completed()
         ReactionPullTrigger.resetForTest()
+        triggerScope = kotlinx.coroutines.CoroutineScope(
+            Dispatchers.IO + kotlinx.coroutines.SupervisorJob()
+        )
+        ReactionPullTrigger.scope = triggerScope
         ReactionPullTrigger.clock = { now }
         ReactionPullTrigger.runner = { pulls += "pull"; answer }
         ReactionPullTrigger.onRequest = { fired += it }
@@ -107,6 +129,11 @@ class ReactionPullTriggerTest {
 
     @After
     fun close() {
+        // Before anything is cleared: a background attempt still running would write
+        // into state the next test is about to set up.
+        if (::triggerScope.isInitialized) runBlocking {
+            triggerScope.coroutineContext[kotlinx.coroutines.Job]?.cancelAndJoin()
+        }
         ReactionPullTrigger.resetForTest()
         IdentityStore.clearForTest(context)
         LastSyncStore.clearForTest(context)
@@ -346,6 +373,206 @@ class ReactionPullTriggerTest {
         ReactionPullTrigger.request(context, "second")
 
         assertEquals(1, pulls.size)
+    }
+
+    // ==================== the claim is atomic ====================
+
+    /**
+     * **A.** Eight triggers for one listener at once produce exactly one scan.
+     *
+     * The case the old implementation got wrong. A get-then-put let two triggers both
+     * read a stale entry, both write, and both go on to read the account;
+     * `ConcurrentHashMap.compute` holds the bin lock across both halves, so exactly
+     * one can win.
+     *
+     * The winner is held inside the runner while the others try, so this is a real
+     * race rather than a sequence dressed as one.
+     */
+    @Test
+    fun ca_concurrent_triggers_for_one_listener_produce_one_scan() = runBlocking {
+        IdentityStore.markRegistered(context, x)
+
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        ReactionPullTrigger.runner = {
+            pulls += "pull"
+            entered.complete(Unit)
+            release.await()
+            completed()
+        }
+
+        val triggers = (1..8).map {
+            async(Dispatchers.IO) { ReactionPullTrigger.request(context, "trigger $it") }
+        }
+        withTimeout(10_000) { entered.await() }
+        release.complete(Unit)
+        val results = triggers.map { it.await() }
+
+        assertEquals("exactly one may read the account", 1, pulls.size)
+        assertEquals("and exactly one may claim the window", 1, results.count { it != null })
+    }
+
+    /** **B.** Two listeners in flight at the same moment each get their own scan. */
+    @Test
+    fun cb_concurrent_triggers_for_two_listeners_each_run() = runBlocking {
+        val enteredX = CompletableDeferred<Unit>()
+        val enteredY = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val scanned = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+        ReactionPullTrigger.runner = { ctx ->
+            val who = (IdentityStore.state(ctx) as IdentityState.Registered).uid
+            pulls += "pull"
+            scanned += who
+            if (who == x) enteredX.complete(Unit) else enteredY.complete(Unit)
+            release.await()
+            completed()
+        }
+
+        IdentityStore.markRegistered(context, x)
+        val forX = async(Dispatchers.IO) { ReactionPullTrigger.request(context, "x") }
+        withTimeout(10_000) { enteredX.await() }
+
+        // While X's scan is still in flight, this install becomes Y.
+        IdentityStore.markRegistered(context, y)
+        val forY = async(Dispatchers.IO) { ReactionPullTrigger.request(context, "y") }
+        withTimeout(10_000) { enteredY.await() }
+
+        release.complete(Unit)
+        forX.await()
+        forY.await()
+
+        assertEquals("one listener's window says nothing about another's", 2, pulls.size)
+        assertEquals(setOf(x, y), scanned)
+    }
+
+    /**
+     * **C.** A slow invocation that read nothing cannot clear a claim made after it.
+     *
+     * The second half of the old bug: the release was an unconditional `remove`, so an
+     * invocation finishing late would delete whatever was in the map - including a
+     * newer claim. `remove(key, value)` touches the mapping only while it is still
+     * this invocation's own.
+     */
+    @Test
+    fun cc_a_late_invocation_cannot_clear_a_newer_claim() = runBlocking {
+        IdentityStore.markRegistered(context, x)
+
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val calls = java.util.concurrent.atomic.AtomicInteger()
+        ReactionPullTrigger.runner = {
+            pulls += "pull"
+            if (calls.getAndIncrement() == 0) {
+                entered.complete(Unit)
+                release.await()
+                PullResult.Busy          // read nothing, so it will try to release
+            } else {
+                completed()
+            }
+        }
+
+        val slow = async(Dispatchers.IO) { ReactionPullTrigger.request(context, "slow") }
+        withTimeout(10_000) { entered.await() }
+
+        // Its window expires and a newer trigger legitimately claims.
+        now += ReactionPullTrigger.WINDOW_MS
+        assertNotNull("the newer trigger claims", ReactionPullTrigger.request(context, "newer"))
+
+        // Only now does the slow one finish, and try to hand its window back.
+        release.complete(Unit)
+        slow.await()
+
+        assertNull(
+            "the newer claim must survive: a third trigger is still inside its window",
+            ReactionPullTrigger.request(context, "third"),
+        )
+        assertEquals(2, pulls.size)
+    }
+
+    /**
+     * **E.** Two claims minted at the identical instant are still told apart.
+     *
+     * The clock never moves in this test. A claim compared by value could not
+     * distinguish "the window I just released" from "a window somebody else holds",
+     * which is why [ReactionPullTrigger] keys on object identity.
+     */
+    @Test
+    fun ce_claims_at_the_same_instant_are_distinguished_by_identity() = runBlocking {
+        IdentityStore.markRegistered(context, x)
+
+        answer = PullResult.Busy
+        val first = ReactionPullTrigger.request(context, "first")
+        assertNotNull(
+            "claims, reads nothing, releases (state=${IdentityStore.state(context)} pulls=${pulls.size})",
+            first,
+        )
+
+        answer = completed()
+        assertNotNull(
+            "claims again at the same instant, and reads",
+            ReactionPullTrigger.request(context, "second"),
+        )
+
+        assertNull("the second claim holds", ReactionPullTrigger.request(context, "third"))
+        assertEquals(2, pulls.size)
+    }
+
+    // ==================== recovery earns a pull ====================
+
+    /**
+     * A handoff left at PREPARED, whose switch had actually taken, recovers into Y and
+     * gets its pull.
+     *
+     * `IdentityHandoff.recover` reaches this through its second branch - a session
+     * that is not the source means the switch succeeded before the process died - and
+     * that branch commits SWITCHED, adopts, and clears the record before returning
+     * `Result.Switched`. `resolveHandoff` fires the trigger on exactly that result, so
+     * both recovery routes converge on one condition.
+     */
+    @Test
+    fun prepared_recovery_into_the_destination_fires_the_trigger() = runBlocking {
+        dao.like(track, "Artist", "Title", "myata", likedAt = 1_000L)
+        dao.recordRemoteRev(track, 4_242L)
+        IdentityStore.adoptAnonymous(context, x)
+        IdentityStore.markHandoffPrepared(context, x)
+
+        com.example.musicplayerapp.data.supabase.IdentityReconciler.reconcile(context, y)
+
+        assertEquals(IdentityState.Registered(y), IdentityStore.state(context))
+        assertNull("the record must be cleared first", IdentityStore.handoff(context))
+        assertNull("and X's revisions with it", dao.find(track)!!.remoteRev)
+        assertEquals(Reaction.LIKED, dao.find(track)!!.reaction)
+        assertEquals(listOf("handoff recovery"), fired)
+    }
+
+    /** A handoff already at SWITCHED recovers the same way, and earns the same pull. */
+    @Test
+    fun switched_recovery_fires_the_trigger() = runBlocking {
+        dao.like(track, "Artist", "Title", "myata", likedAt = 1_000L)
+        dao.recordRemoteRev(track, 4_242L)
+        IdentityStore.markHandoffSwitched(context, x, y)
+
+        com.example.musicplayerapp.data.supabase.IdentityReconciler.reconcile(context, y)
+
+        assertNull(IdentityStore.handoff(context))
+        assertNull(dao.find(track)!!.remoteRev)
+        assertEquals(mapOf(track to Reaction.LIKED.name), sync.adoptedBy[y])
+        assertEquals(listOf("handoff recovery"), fired)
+    }
+
+    /** A recovery that rolls back to X earns nothing: X is not an account. */
+    @Test
+    fun a_rolled_back_recovery_fires_no_trigger() = runBlocking {
+        dao.like(track, "Artist", "Title", "myata", likedAt = 1_000L)
+        IdentityStore.adoptAnonymous(context, x)
+        IdentityStore.markHandoffPrepared(context, x)
+
+        // Still the source: the switch never took.
+        com.example.musicplayerapp.data.supabase.IdentityReconciler.reconcile(context, x)
+
+        assertEquals(IdentityState.Anonymous(x), IdentityStore.state(context))
+        assertEquals("nothing to read back for an anonymous install", emptyList<String>(), fired)
     }
 
     // ==================== last sync ====================

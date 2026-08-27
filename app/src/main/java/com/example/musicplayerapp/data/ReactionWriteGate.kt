@@ -77,11 +77,13 @@ object ReactionWriteGate {
      * atomic. There is no order in which a row is tagged ATOMIC_RPC while a legacy
      * push can still read and publish its state.
      *
-     * **A settled answer cannot overwrite a newer tap.** Settlement deletes the rows
-     * a batch represented and then asks whether anything else is still pending for
-     * the track; a tap that lands between those two questions would otherwise be
-     * invisible to the second, and the remote row - which predates it - would be
-     * written over it.
+     * **A settled answer cannot overwrite a tap.** Settlement deletes the rows a
+     * batch represented and then asks whether anything else is still pending for the
+     * track; a tap that lands between those two questions would otherwise be
+     * invisible to the second, and the returned row would be written over it. That a
+     * pending local act wins is policy rather than chronology - see
+     * `ReactionPullEngine` - and this lock is what makes the question answerable at
+     * all.
      *
      * Held across local work only. The network call happens after the snapshot's
      * block returns and before the settlement's begins, which is what keeps a tap

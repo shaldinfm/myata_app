@@ -150,12 +150,19 @@ class ReactionPullEngine(
      *
      * Three decisions per row, in this order, and the order is the contract:
      *
-     * 1. **A pending local mutation wins, always.** Any outbox row for this track -
-     *    either protocol, due or parked, retryable or poisoned - means the listener
-     *    did something the server has not been told. The remote row therefore
-     *    predates it by definition, and applying it would overwrite an act with the
-     *    state it replaced. Nothing is touched: not the reaction, not the watermark,
-     *    not the outbox.
+     * 1. **A pending local mutation wins, and it wins by policy.** Any outbox row for
+     *    this track - either protocol, due or parked, retryable or poisoned - means
+     *    the listener did something this device has not managed to publish, and it is
+     *    what they are looking at right now.
+     *
+     *    Deliberately **not** justified as "the remote row is older". Across devices
+     *    that is not knowable: the remote row may carry a numerically higher `rev`
+     *    written seconds ago on somebody's tablet, and this rule still holds. The
+     *    reason is the same one the push side settles conflicts by - a genuine local
+     *    act the server has not seen is not something a background read may quietly
+     *    undo - and it is a choice about whose intent survives, not a claim about
+     *    chronology. Nothing is touched: not the reaction, not the watermark, not the
+     *    outbox.
      * 2. **The watermark.** With nothing pending, the row applies only if its
      *    revision is above what this device has already recorded for that track. That
      *    is what makes a page fetched before a local push harmless, and what makes a
@@ -196,9 +203,22 @@ class ReactionPullEngine(
                 title = row.title,
                 // A remote NULL stream is "the server did not record one", not "the
                 // stream was nothing". Whatever this device already knew is better
-                // evidence than that, so it is kept; only a device that has never
-                // seen the track falls back to the empty string, which is what the
-                // rest of the app already reads as "not recorded".
+                // evidence than that, so it is kept.
+                //
+                // The fresh-device fallback is an OPEN QUESTION, not a settled
+                // contract, and this comment says so rather than implying otherwise.
+                // `track_reaction.stream` is non-null, and "" is **not** an
+                // established sentinel anywhere in this app: nothing reads it as
+                // "unknown", and the one historical place that had to represent an
+                // absent stream - ReactionMigration, for legacy `favorites` rows -
+                // chose Streams.DEFAULT instead. A restored "" would also survive a
+                // later unlike/undislike, which copy `existing.stream`, and be pushed
+                // back verbatim - turning the server's NULL into a stored empty
+                // string no other client produces.
+                //
+                // It costs nothing today: every client writes a non-null stream, so
+                // no row this app can produce reaches here with one missing. The
+                // choice is recorded for the owner rather than made silently.
                 stream = row.stream.ifEmpty { local?.stream.orEmpty() },
                 reaction = row.reaction,
                 // The server's own value, never derived. `liked_at` is what orders a

@@ -337,6 +337,8 @@ private class BlockingBatchApi(
     override suspend fun retireAllCurrentState(listenerId: String) =
         com.example.musicplayerapp.data.supabase.SyncOutcome.Success
 
-    override suspend fun fetchReactionsPage(listenerId: String, afterRev: Long, limit: Int) =
-        com.example.musicplayerapp.data.supabase.PullPage.Rows(emptyList())
+    /** See the other fakes: an accidental pull must be loud, not plausible. */
+    override suspend fun fetchReactionsPage(listenerId: String, afterRev: Long, limit: Int):
+        com.example.musicplayerapp.data.supabase.PullPage =
+        throw AssertionError("this suite must not pull; fetchReactionsPage was called")
 }

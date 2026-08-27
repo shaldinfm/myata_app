@@ -706,8 +706,16 @@ class SyncProtocolCutoverTest {
  */
 private class FakeAtomicBackend : ReactionSyncApi {
 
-    override suspend fun fetchReactionsPage(listenerId: String, afterRev: Long, limit: Int) =
-        PullPage.Rows(emptyList())
+    /**
+     * A suite that does not exercise pull must never reach this.
+     *
+     * An empty page would be a plausible-looking lie: an accidental pull would read as
+     * "the account has nothing" and pass silently, which is exactly how a regression in
+     * the trigger wiring would hide. Failing loudly is the only answer that cannot be
+     * mistaken for a working one.
+     */
+    override suspend fun fetchReactionsPage(listenerId: String, afterRev: Long, limit: Int): PullPage =
+        throw AssertionError("this suite must not pull; fetchReactionsPage was called")
 
     val batches = mutableListOf<Pair<String, List<String>>>()
     val applications = LinkedHashMap<String, Long>()

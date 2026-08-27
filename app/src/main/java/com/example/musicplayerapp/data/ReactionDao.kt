@@ -528,9 +528,12 @@ abstract class ReactionDao {
      *
      * The settlement half of an ALREADY_APPLIED answer: the events this device was
      * holding turned out to have been delivered already, and the row that came back
-     * is newer than anything it can still contribute. Only ever called when the track
-     * has no other pending mutation, because a pending mutation is a local act that
-     * has not been published and must not be overwritten by state that predates it.
+     * is the one the server now holds. Only ever called when the track has no other
+     * pending mutation: a pending mutation is a local act this device has not managed
+     * to publish, and by policy that wins over whatever comes back - not because the
+     * returned state is provably older, which across devices is not knowable, but
+     * because an act the listener can see is not something a background settlement
+     * may quietly undo.
      *
      * **No outbox event is written.** Adopting what the server already holds is not
      * something the listener did, and `reaction_events` is a record of acts.

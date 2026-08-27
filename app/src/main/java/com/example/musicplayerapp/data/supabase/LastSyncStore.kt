@@ -61,6 +61,9 @@ object LastSyncStore {
      */
     private const val KEY_PULL_AT = "last_pull_at"
 
+    /** Prefixes one durable flag per account. See [markInitialRestoreComplete]. */
+    private const val KEY_RESTORED_PREFIX = "initial_restore_complete_"
+
     /** Records a successful delivery. Called only from the drain's own verdict. */
     fun recordSuccess(context: Context, at: Long = System.currentTimeMillis()) {
         prefs(context).edit { putLong(KEY_AT, at) }
@@ -86,9 +89,77 @@ object LastSyncStore {
     fun lastPullAt(context: Context): Long? =
         prefs(context).getLong(KEY_PULL_AT, 0L).takeIf { it > 0L }
 
-    /** Test-only: return this install to never-synced, in both directions. */
+    /**
+     * The more recent of the two, or null if neither has ever happened.
+     *
+     * What `Последняя синхронизация` shows. The two facts stay stored apart - they
+     * answer different questions and one install can have done either without the
+     * other - but the row asks a third question, "when did this device last exchange
+     * anything with the cloud", and that is their maximum.
+     *
+     * Combining them only here is what keeps the storage honest. Writing one into the
+     * other would make a device that restored an account but never pushed
+     * indistinguishable from one that has done neither, which is the false
+     * "never synchronised" this phase exists to stop showing.
+     */
+    fun lastSyncAt(context: Context): Long? {
+        val upload = lastSuccessAt(context)
+        val pull = lastPullAt(context)
+        return when {
+            upload == null -> pull
+            pull == null -> upload
+            else -> maxOf(upload, pull)
+        }
+    }
+
+    /**
+     * Records that [uid] has been read back in full at least once on this install.
+     *
+     * ## What it means, and the four things it is not
+     *
+     * True only after a complete [ReactionPull] scan for that account - the same
+     * condition, in the same place, as [recordPullSuccess]. A push cannot set it, nor
+     * can a trigger firing, nor `Busy`, `AuthUnavailable`, `NotEligible`, a transient
+     * failure, or a scan that applied some pages and then stopped.
+     *
+     * It is **not a cursor**: nothing in the pull reads it, so a later app start
+     * full-scans exactly as it would have. It is **not the throttle** - that is a
+     * sixty-second debounce in memory, and this is durable. It is **not a claim that
+     * the account is current**, only that it has been read through once. And it does
+     * **not** suppress anything.
+     *
+     * ## Per account, and deliberately
+     *
+     * Keyed by uid, so completing X says nothing about Y. An install that switches
+     * accounts has restored nothing for the new one until the new one is read, and a
+     * sign-out cannot mark anybody complete because nothing on that path writes here.
+     */
+    fun markInitialRestoreComplete(context: Context, uid: String) {
+        prefs(context).edit { putBoolean(restoreKey(uid), true) }
+    }
+
+    /** Whether [uid] has ever been read back in full on this install. */
+    fun isInitialRestoreComplete(context: Context, uid: String): Boolean =
+        prefs(context).getBoolean(restoreKey(uid), false)
+
+    /**
+     * One key per account rather than a set of uids.
+     *
+     * A set would be a read-modify-write, and two accounts completing at once could
+     * lose one of them. A key per uid cannot.
+     */
+    private fun restoreKey(uid: String) = "$KEY_RESTORED_PREFIX$uid"
+
+    /**
+     * Test-only: return this install to never-synced, in both directions, for every
+     * account.
+     *
+     * Clears the whole file rather than named keys, because the per-account restore
+     * flags are not enumerable from here and a test that left one behind would leak
+     * into the next.
+     */
     fun clearForTest(context: Context) {
-        prefs(context).edit { remove(KEY_AT); remove(KEY_PULL_AT) }
+        prefs(context).edit { clear() }
     }
 
     /** Test-only: put a known moment on disk without running a drain. */

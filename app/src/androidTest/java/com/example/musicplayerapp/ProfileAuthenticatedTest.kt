@@ -478,6 +478,53 @@ class ProfileAuthenticatedTest {
 
     // ==================== N-O: the last-sync row ====================
 
+    /**
+     * **G.** A restore alone is a synchronisation, and the row now says so.
+     *
+     * This is the case that used to read `Ещё не синхронизировалось` on a device that
+     * had just pulled somebody's whole Collection down - the last place this screen
+     * still claimed something untrue. G-A7c gave the restore its own timestamp; the
+     * row reports the more recent of the two.
+     */
+    @Test
+    fun a_restore_alone_is_reported_as_a_synchronisation() {
+        IdentityStore.markRegistered(context, account)
+        auth.session = account
+        LastSyncStore.recordPullSuccess(context, System.currentTimeMillis() - 3 * 60_000L)
+
+        openAccountCard { activity ->
+            assertEquals("3 мин назад", activity.text(R.id.profile_row_last_sync_value))
+        }
+    }
+
+    /** **H.** Both recorded, the upload newer: the upload is what is shown. */
+    @Test
+    fun the_newer_of_the_two_is_shown_when_it_is_the_upload() {
+        IdentityStore.markRegistered(context, account)
+        auth.session = account
+        val now = System.currentTimeMillis()
+        LastSyncStore.recordPullSuccess(context, now - 40 * 60_000L)
+        LastSyncStore.recordForTest(context, now - 5 * 60_000L)
+
+        openAccountCard { activity ->
+            assertEquals("5 мин назад", activity.text(R.id.profile_row_last_sync_value))
+        }
+    }
+
+    /** **I.** Both recorded, the restore newer: the restore is what is shown. */
+    @Test
+    fun the_newer_of_the_two_is_shown_when_it_is_the_restore() {
+        IdentityStore.markRegistered(context, account)
+        auth.session = account
+        val now = System.currentTimeMillis()
+        LastSyncStore.recordForTest(context, now - 40 * 60_000L)
+        LastSyncStore.recordPullSuccess(context, now - 5 * 60_000L)
+
+        openAccountCard { activity ->
+            assertEquals("5 мин назад", activity.text(R.id.profile_row_last_sync_value))
+        }
+    }
+
     @Test
     fun n_a_recorded_sync_renders_as_a_relative_time() {
         IdentityStore.markRegistered(context, account)

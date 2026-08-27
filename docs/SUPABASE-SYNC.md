@@ -25,13 +25,59 @@ above.
 `SECURITY DEFINER` trigger, the `reaction_event_applications` log, and the
 `apply_reaction_event_batch` RPC.
 
-**The G-A7b client cutover is not implemented.** Nothing in the app calls the new RPC
-yet; the shipped delivery path is still the two-call one described below.
+## G-A7 status
 
-**The direct `reactions` INSERT/UPDATE policies deliberately remain.** Installed
+| stage | |
+|---|---|
+| **G-A7a** server `rev`, `liked_at`, application log, `apply_reaction_event_batch` | live on production, verified |
+| **G-A7b** atomic push cutover, per-track LEGACY inheritance | merged |
+| **G-A7c** full-scan pull | merged |
+| **G-A7d** automatic triggers | merged |
+| **G-A7e** initial-restore marker and profile sync state | this change |
+
+**Cross-device reaction and Collection restore is satisfied.** A listener who signs in
+on a second device gets their reactions back, and the Collection follows from them -
+LIKED rows restore it, a stored NEUTRAL removes a stale membership, and there is no
+separate Collection table to keep in step.
+
+**What this is not.** There is no realtime subscription, no periodic worker and no
+foreground or resume trigger, so changes made on another device are not visible the
+instant they happen. The v1 convergence model is exactly:
+
+```
+a successful sign-in, registration or handoff   ->  one full scan
+an ordinary app start with a restored session   ->  one full scan
+```
+
+A listener with two devices sees the other one's changes when they next open the app.
+That is a deliberate trade: nobody pays for a poller, and the failure mode is
+staleness rather than a wrong answer.
+
+The **direct `reactions` INSERT/UPDATE policies deliberately remain**. Installed
 pre-G-A7 clients write the table directly and must keep working for the whole
-rollout. Revoking them in favour of RPC-only writes is a separate, later hardening
+rollout; revoking them in favour of RPC-only writes is a separate, later hardening
 step, and must not happen until the old population has drained.
+
+## What the app can say about its own syncing
+
+Three pieces of state, kept apart because they answer different questions:
+
+| | means | set by |
+|---|---|---|
+| `lastSuccessfulUpload` | something of mine reached the cloud | a drain that delivered at least one row |
+| `lastSuccessfulPull` | I read the whole account back | a **completed** full scan, never a partial one |
+| `initialRestoreComplete(uid)` | this device has restored *that account* at least once | the same completed scan, per uid |
+
+`Последняя синхронизация` shows the **more recent of the first two**. They are never
+written into each other: an install can have pushed without ever restoring, or
+restored without ever pushing, and collapsing them would make the second read as
+`Ещё не синхронизировалось` on a device that had just pulled a whole Collection down.
+
+`initialRestoreComplete` is durable and per account. It is **not** a cursor, **not**
+the sixty-second trigger debounce, and **not** a claim that the account is current -
+nothing in the pull or the trigger reads it, so a later app start full-scans exactly
+as it would have. It exists so that "there is a registered account" and "this device
+has actually restored it" stop being the same question.
 
 ## The data contract
 

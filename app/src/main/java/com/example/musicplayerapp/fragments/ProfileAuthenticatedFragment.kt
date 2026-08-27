@@ -158,7 +158,11 @@ class ProfileAuthenticatedFragment : Fragment() {
      * timestamp it displays would always read "только что".
      */
     private fun renderLastSync() {
-        val at = LastSyncStore.lastSuccessAt(requireContext())
+        // The more recent of the two, not the upload alone. Until G-A7c there was only
+        // one direction to report; now a device that has restored an account but not
+        // yet pushed anything has genuinely synchronised, and saying otherwise was the
+        // last place this screen still claimed something untrue.
+        val at = LastSyncStore.lastSyncAt(requireContext())
 
         binding.profileRowLastSyncValue.text = when (val ago = ProfileAccount.relativeSync(at)) {
             is ProfileAccount.Relative.Never -> getString(R.string.profile_account_sync_never)

@@ -1,2 +1,8 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Supabase migrations are applied to a live database byte-for-byte and their
+# SHA256 is verified before execution, so they must never be line-ending
+# converted. `text` keeps them diffable in review; `eol=lf` pins the working
+# tree to LF on every platform regardless of core.autocrlf.
+supabase/migrations/*.sql text eol=lf

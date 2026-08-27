@@ -8,6 +8,31 @@ Google Sheets telemetry is untouched and independent. A real transition now upda
 Room, emits its Sheets report, enters the outbox, and asynchronously reaches
 Supabase. Neither reporting path waits on the other and neither can fail the other.
 
+## Migration status
+
+| | |
+|---|---|
+| Applied to production | **`0003_rev_and_atomic_apply.sql`** |
+| SHA256 of the applied file | `4ac40f03a1e93d862f61864a034a72b480fa8abe21ad04388803b11bb778b37f` |
+| Post-migration verification | **PASS** (`verdict.overall = true`) |
+
+`supabase/migrations/0003_rev_and_atomic_apply.sql` in this repository is the exact
+file that was executed, byte for byte - which is why `.gitattributes` pins the
+migration directory to LF, so a checkout on any platform still hashes to the value
+above.
+
+0003 adds `reactions.liked_at`, the server-assigned `reactions.rev`, its sequence and
+`SECURITY DEFINER` trigger, the `reaction_event_applications` log, and the
+`apply_reaction_event_batch` RPC.
+
+**The G-A7b client cutover is not implemented.** Nothing in the app calls the new RPC
+yet; the shipped delivery path is still the two-call one described below.
+
+**The direct `reactions` INSERT/UPDATE policies deliberately remain.** Installed
+pre-G-A7 clients write the table directly and must keep working for the whole
+rollout. Revoking them in favour of RPC-only writes is a separate, later hardening
+step, and must not happen until the old population has drained.
+
 ## The data contract
 
 | table | what it is | how it is written |
@@ -132,6 +157,13 @@ let one person react from two devices, so it is an explicit conflict-resolution
 item for **G-A7**, to be answered there with a server-assigned time or a version
 counter. Widening this PR into a clock redesign would put an unproven ordering
 scheme underneath a schema change that does not need one.
+
+**Answered, server side, by migration 0003.** `reactions.rev` is assigned from a
+global sequence by a trigger on every insert and update, so cross-device ordering no
+longer depends on any device clock. `updated_at` is deliberately untouched - old
+clients still guard their pushes with it, and changing its meaning underneath them
+would break their writes. The client half of that answer is G-A7b and has not
+shipped.
 
 ## FIFO order: `rowid`, not the clock
 

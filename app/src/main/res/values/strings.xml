@@ -106,13 +106,26 @@
     <!--
       HOME, frozen 3.6.6 canonical.
 
-      The section headings are verbatim from the canonical frame. The greeting is
-      not: the frozen `Heading 1` reads "Привет, Денис!" and personalisation needs
-      the account system, which is Phase G. Until there is a name to greet, the
-      band carries the greeting without one - decided by the owner rather than
-      inferred, since the frozen design has no signed-out HOME header.
+      The section headings are verbatim from the canonical frame, and now so is the
+      greeting: the frozen `Heading 1` reads "Привет, Денис!", which needed the account
+      system, which is Phase G. G-A7 shipped it, so `home_greeting_named` is the
+      canonical string and the frame is drawn as drawn.
+
+      `home_greeting` stays, and is not a leftover. The frozen design has no
+      signed-out HOME header, so what a guest sees was an owner decision rather than
+      a reading of the frame - and it is still the right one: the plain greeting is
+      the only one that claims nothing. It is what a guest, a signed-out install, an
+      account with no display name and an install whose session has not restored all
+      get. See `com.example.musicplayerapp.ui.HomeGreeting` for which is which.
     -->
     <string name="home_greeting">Привет!</string>
+    <!--
+      The named form. One argument, the display name exactly as
+      `ProfileAccount.displayName` settled it - trimmed, never blank, never a uid.
+      The header truncates rather than wraps (maxLines 1, ellipsize end), so a long
+      name shortens the greeting instead of growing the 64dp band.
+    -->
+    <string name="home_greeting_named">Привет, %1$s!</string>
     <string name="home_streams_heading">Наши потоки</string>
     <string name="home_playlists_heading">Мятные плейлисты</string>
     <string name="home_stream_myata">Поток MYATA</string>

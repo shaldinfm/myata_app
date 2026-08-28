@@ -233,6 +233,30 @@ class IdentityStateTest {
         assertEquals(IdentityState.Registered(uid), IdentityStore.state(context))
     }
 
+    /**
+     * The shape the live G-A7 run actually produced, which the test above did not
+     * cover: the uid is the **same** one.
+     *
+     * `ListenerSession.reconcile` passes the uid of the session that just proved
+     * itself, and on a healthy registered install that is exactly the uid already on
+     * disk. It used to reach the guard and be refused - correctly, but at WARN, on
+     * every push, drain and restore. The caller now returns before asking, so this
+     * asserts the property that has to hold either way and would be the real damage
+     * if it ever stopped: **a registered install is still registered afterwards.**
+     *
+     * Deliberately calling the guard directly rather than through reconcile. The
+     * point is that the refusal did not move into the caller and get weaker on the
+     * way: whatever asks, from wherever, an account state survives.
+     */
+    @Test
+    fun an_account_is_not_demoted_even_by_its_own_uid() {
+        IdentityStore.markRegistered(context, uid)
+
+        IdentityStore.adoptAnonymous(context, uid)
+
+        assertEquals(IdentityState.Registered(uid), IdentityStore.state(context))
+    }
+
     @Test
     fun email_states_are_not_demoted_either() {
         IdentityStore.markEmailPending(context, uid, "listener@example.com")

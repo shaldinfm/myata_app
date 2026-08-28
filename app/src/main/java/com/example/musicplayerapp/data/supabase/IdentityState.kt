@@ -134,6 +134,22 @@ sealed interface IdentityState {
      */
     val syncEnabled: Boolean
         get() = this !is SignedOut
+
+    /**
+     * Whether this state is an **account** rather than a device-scoped identity.
+     *
+     * The one definition of the set the anti-demotion guard protects, so that the
+     * guard and the callers that avoid tripping it cannot come to disagree about what
+     * an account is. [IdentityStore.adoptAnonymous] refuses every state in here;
+     * [ListenerSession] uses the same predicate to know there is nothing to adopt, so
+     * adding a state to the set repairs both sides at once.
+     *
+     * [SignedOut] is deliberately **not** an account state here even though it is
+     * usually reached from one: what it records is that this install is not currently
+     * anybody, and the paths that consult this have already short-circuited on it.
+     */
+    val isAccount: Boolean
+        get() = this is EmailPending || this is EmailVerified || this is Registered
 }
 
 /**

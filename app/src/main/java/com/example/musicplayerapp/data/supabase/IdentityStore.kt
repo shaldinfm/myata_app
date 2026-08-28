@@ -136,18 +136,24 @@ object IdentityStore {
      * account would hide it.
      */
     fun adoptAnonymous(context: Context, uid: String) {
-        when (val current = state(context)) {
-            is IdentityState.Registered,
-            is IdentityState.EmailVerified,
-            is IdentityState.EmailPending -> {
-                Log.w(TAG, "refusing to demote an account state to ANONYMOUS")
-                return
-            }
-            else -> {
-                if (current is IdentityState.Anonymous && current.uid == uid) return
-                write(context, ANONYMOUS, uid)
-            }
+        val current = state(context)
+
+        // Fail closed, and loudly. The set is IdentityState.isAccount rather than a
+        // list written out here, so a state added to the account family cannot be
+        // added to this guard and forgotten in the caller that avoids tripping it.
+        //
+        // Reaching this is a bug by construction: every caller that could legitimately
+        // arrive holding an account state now checks first, so a WARN here means an
+        // anonymous sign-in genuinely happened underneath a real account. That is the
+        // only reading left, which is what makes the severity right - it was not, back
+        // when an ordinary registered drain produced one of these on every sync.
+        if (current.isAccount) {
+            Log.w(TAG, "refusing to demote an account state to ANONYMOUS")
+            return
         }
+
+        if (current is IdentityState.Anonymous && current.uid == uid) return
+        write(context, ANONYMOUS, uid)
     }
 
     /** **Reserved for G-A4.** Records an unconfirmed email claim against [uid]. */

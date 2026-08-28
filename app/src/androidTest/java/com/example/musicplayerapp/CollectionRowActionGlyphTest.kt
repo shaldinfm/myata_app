@@ -5,6 +5,8 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.drawable.Drawable
 import android.view.LayoutInflater
 import android.view.View
@@ -24,36 +26,45 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * The COLLECTION row's trailing action draws the canonical arrow, and not the one
- * that merely looks like it.
+ * The COLLECTION row's trailing action draws the **authoritative** arrow.
  *
- * ## What went wrong, and why a layout test did not catch it
+ * ## What this asserts, and what it deliberately stopped asserting
  *
- * The frozen canonical node is an `arrow_forward` instance rotated 45 degrees inside
- * a 40x40 ring. `arrow_forward` names two different Material glyphs - the legacy
- * **Material Icons** one and the current **Material Symbols** one - and this
- * repository shipped the legacy drawing. Every geometry assertion in
- * `CollectionLayoutTest` still passed, because all of them are about the ring: its
- * 40dp box, its position against the cover, its 48dp touch target. None of them can
- * see the drawing inside it, and the two arrows share a shaft and a tip, so even
- * their rotated bounding boxes come out identical.
+ * The first version of this test measured the glyph's ink area and checked it was
+ * nearer one Material candidate than the other. That was the same mistake the
+ * drawable itself was making, one level up: it could tell two families apart and it
+ * could not tell a correct path from a close one. Both candidates were wrong.
  *
- * ## What actually separates them
+ * So the reference here is the owner's Figma export -
+ * `tools/figma-export/collection-icons/owner-final/collection_row_action_arrow.svg` -
+ * transcribed vertex for vertex below and rasterised independently. The drawable is
+ * rasterised the same way and the two are compared pixel by pixel. Nothing about a
+ * Material glyph enters into it.
  *
- * The arrowhead, and therefore the ink:
+ * ## What this cannot see, and where that is checked instead
  *
- *   Material Icons (legacy)   box 16 x 12 at (4,6)   area 55.368
- *   Material Symbols          box 16 x 16 at (4,4)   area 66.508
+ * Rendering tests have a floor, and it is worth stating rather than discovering. The
+ * difference between the export and the Material path it was closest to is 0.025 of
+ * a 40 viewport at one vertex - 0.09 square units of area, nine pixels at this
+ * raster, against the 131 that must be allowed for two rasterisers disagreeing about
+ * anti-aliased edges. No achievable raster closes that: the difference and the noise
+ * it hides in grow together.
  *
- * The canonical export records the box and not the geometry, and all six instances -
- * 2409:31572 / 31560 / 31542 light, 2444:18398 / 18410 / 18422 dark - report 16x16 at
- * (4,4) on every edge. That is what identifies the generation; the areas above are
- * what a test can measure, and they differ by 20.1%, which no tolerance worth having
- * can straddle.
+ * **`CollectionRowActionAssetTest` is what proves the path is exactly the export**,
+ * by comparing the two source files character for character. This suite proves the
+ * things only a device can: that the resource compiles to that shape, and that the
+ * row draws it at the right size, in the right place, in both themes.
  *
- * So this rasterises the glyph and counts its ink. Rotation preserves area, so the
- * expected count is the path area scaled by the raster - it does not depend on the
- * 45 degrees, on the ring, or on where the row puts it.
+ * Between them the failure modes are covered. Measured against the 24-viewport
+ * Material version this replaced, this suite reports 17864 differing pixels of 6534
+ * reference ink.
+ *
+ * ## Three claims
+ *
+ *  1. the drawable's filled region is the exported shape, to the pixel;
+ *  2. the row still draws it in the same place and at the same size as before the
+ *     viewport changed from 24 to 40 - the ink lands on the exported coordinates;
+ *  3. both themes draw the same geometry, tinted differently.
  */
 @RunWith(AndroidJUnit4::class)
 class CollectionRowActionGlyphTest {
@@ -61,49 +72,64 @@ class CollectionRowActionGlyphTest {
     private val context: Context
         get() = InstrumentationRegistry.getInstrumentation().targetContext
 
-    /** The raster the ink is counted on. 10x the 24 viewport. */
-    private val raster = 240
+    /**
+     * The exported path, vertex for vertex.
+     *
+     * Verbatim from the `d` of `collection_row_action_arrow.svg`, expanded only where
+     * SVG's shorthand is - `H25.6568` is a line to x with y held, `V25.6569` a line to
+     * y with x held - so every number below appears in the export as written.
+     */
+    private val exported = listOf(
+        23.6593f to 17.7549f,
+        15.0502f to 26.3640f,
+        13.6360f to 24.9497f,
+        22.2451f to 16.3407f,
+        14.3255f to 16.3407f,
+        14.3431f to 14.3431f,
+        25.6568f to 14.3431f, // H25.6568
+        25.6568f to 25.6569f, // V25.6569
+        23.6593f to 25.6745f,
+        23.6593f to 17.7549f,
+    )
+
+    /** The export's own viewport. */
+    private val viewport = 40f
+
+    /** 10x the viewport, so a coordinate difference of 0.025 is a quarter of a pixel. */
+    private val raster = 400
 
     /**
-     * Shoelace area of Material Symbols `arrow_forward` in its 24 viewport, times the
-     * raster scale squared. Derived in `ic_collection_row_action.xml`.
+     * What an anti-aliased edge can move at the control's own resolution, which is
+     * where the placement is measured. Well under the 2.4 units that would be needed
+     * to hide a wrongly scaled glyph.
      */
-    private val canonicalInk = (66.508 * 10 * 10).roundToInt()
+    private val placementTolerance = 0.75f
 
-    /** The same for the legacy arrow this used to be, which must not pass. */
-    private val legacyInk = (55.368 * 10 * 10).roundToInt()
-
-    /**
-     * Anti-aliased edges are split either side of the alpha threshold, so the count
-     * lands within a percent or so of the true area. 5% is comfortably inside the
-     * 20.1% that separates the two candidates.
-     */
-    private val tolerance = 0.05
-
-    // ==================== the resource ====================
+    // ==================== 1. the drawable is the exported path ====================
 
     @Test
-    fun the_glyph_resource_is_the_canonical_arrow() {
-        val ink = inkOf(drawable(context, R.drawable.ic_collection_row_action))
-        assertCanonical("ic_collection_row_action", ink)
+    fun the_drawable_is_the_exported_figma_path() {
+        val actual = rasterise(drawable(context, R.drawable.ic_collection_row_action), raster)
+        val reference = rasteriseExport(raster)
+
+        assertCoverageMatches("ic_collection_row_action", actual, reference)
     }
 
     @Test
-    fun the_glyph_is_still_a_24dp_vector() {
-        // The ring, its position and its touch target are CollectionLayoutTest's to
-        // assert. This is the one dimension that belongs to the glyph itself, and it
-        // is here so that "replace only the drawing" stays true: a 24dp box in, a
-        // 24dp box out.
+    fun the_drawable_carries_the_exports_own_viewport() {
+        // 40dp in, 40dp out. The ImageView is 40dp with scaleType=center, so this is
+        // what makes the export's coordinates and the control's coordinates the same
+        // numbers - and what the placement assertion below then measures.
         val glyph = drawable(context, R.drawable.ic_collection_row_action)
-        val expected = (24 * context.resources.displayMetrics.density).roundToInt()
+        val expected = (viewport * context.resources.displayMetrics.density).roundToInt()
         assertEquals("glyph width", expected, glyph.intrinsicWidth)
         assertEquals("glyph height", expected, glyph.intrinsicHeight)
     }
 
-    // ==================== the row that uses it ====================
+    // ============ 2 and 3. the row draws it, in place, in both themes ============
 
     @Test
-    fun the_row_action_draws_the_canonical_arrow_in_both_themes() {
+    fun the_row_draws_the_exported_arrow_where_the_export_puts_it() {
         onMainActivity { activity ->
             for (night in listOf(false, true)) {
                 val theme = if (night) "dark" else "light"
@@ -111,54 +137,145 @@ class CollectionRowActionGlyphTest {
 
                 assertNotNull("$theme: the row must carry an action glyph", action.drawable)
 
-                // The view tints with SRC_IN, which repaints the ink without moving
-                // it, so the count is the same measurement in both themes - which is
-                // also the assertion that the glyph has no per-theme variant hiding
-                // behind it.
-                assertCanonical("$theme row action", inkOf(action.drawable))
+                // The control itself is unchanged and CollectionLayoutTest owns it;
+                // this is here because the placement assertion below is stated as a
+                // fraction of it.
+                val size = (viewport * activity.resources.displayMetrics.density).roundToInt()
+                assertEquals("$theme: the control is still 40dp", size, action.width)
+
+                // The ring is the view's background and would count as ink. Dropping
+                // it leaves the glyph alone in the 40dp box, which is exactly the
+                // frame the export's coordinates are in.
+                action.background = null
+                val ink = inkBounds(rasteriseView(action), action.width)
+                val expectedBounds = exportedBounds()
+                val edges = listOf("left", "top", "right", "bottom")
+
+                for (i in edges.indices) {
+                    assertTrue(
+                        "$theme: the glyph's ${edges[i]} edge is at ${ink[i]}, the export " +
+                            "puts it at ${expectedBounds[i]} (40dp viewport units)",
+                        abs(ink[i] - expectedBounds[i]) <= placementTolerance,
+                    )
+                }
+
+                // And the drawing itself, not only its box. Tint is SRC_IN, so it
+                // repaints the ink without moving it and the coverage is comparable
+                // in both themes.
+                assertCoverageMatches(
+                    "$theme row action",
+                    rasterise(action.drawable, raster),
+                    rasteriseExport(raster),
+                )
             }
         }
     }
 
     // ==================== helpers ====================
 
-    private fun assertCanonical(what: String, ink: Int) {
-        val low = (canonicalInk * (1 - tolerance)).roundToInt()
-        val high = (canonicalInk * (1 + tolerance)).roundToInt()
+    private fun exportedBounds(): FloatArray {
+        val xs = exported.map { it.first }
+        val ys = exported.map { it.second }
+        return floatArrayOf(xs.min(), ys.min(), xs.max(), ys.max())
+    }
 
-        assertTrue(
-            "$what: ink $ink is not the canonical Material Symbols arrow_forward " +
-                "($canonicalInk +/- ${(tolerance * 100).roundToInt()}%, so $low..$high). " +
-                "The legacy Material Icons arrow measures about $legacyInk here.",
-            ink in low..high,
-        )
+    /**
+     * Fails unless [actual] and [reference] cover the same pixels.
+     *
+     * Compared as coverage rather than colour: the drawable is tinted in the row and
+     * the reference is not, and the question is which pixels are painted.
+     */
+    private fun assertCoverageMatches(what: String, actual: IntArray, reference: IntArray) {
+        require(actual.size == reference.size)
 
-        // Said separately so a failure names the actual regression rather than only a
-        // number out of range. This is the exact drawing G-A7 live validation found.
+        var differing = 0
+        var referenceInk = 0
+        for (i in reference.indices) {
+            val a = Color.alpha(actual[i]) > 128
+            val r = Color.alpha(reference[i]) > 128
+            if (r) referenceInk++
+            if (a != r) differing++
+        }
+
+        // Everything that can legitimately differ is on the boundary: two rasterisers
+        // splitting anti-aliased edge pixels either side of the threshold. The
+        // perimeter is about 600 pixels at this raster against roughly 6650 of ink,
+        // so 2% is generous for jitter and still well below what the one 0.025 vertex
+        // difference moves.
+        val allowed = (referenceInk * 0.02).roundToInt()
         assertTrue(
-            "$what: ink $ink matches the LEGACY Material Icons arrow ($legacyInk), " +
-                "which is the glyph this test exists to keep out",
-            abs(ink - legacyInk) > abs(ink - canonicalInk),
+            "$what: $differing of $referenceInk reference ink pixels disagree with the " +
+                "exported Figma path (at most $allowed allowed for anti-aliasing). " +
+                "The drawable is not collection_row_action_arrow.svg.",
+            differing <= allowed,
         )
     }
 
-    /** Non-transparent pixels when the drawable is painted alone on nothing. */
-    private fun inkOf(source: Drawable): Int {
-        val glyph = source.constantState?.newDrawable()?.mutate() ?: source
-        val bitmap = Bitmap.createBitmap(raster, raster, Bitmap.Config.ARGB_8888)
+    /** The exported path, filled by this test rather than by the resource. */
+    private fun rasteriseExport(size: Int): IntArray {
+        val scale = size / viewport
+        val path = Path()
+        exported.forEachIndexed { i, vertex ->
+            val x = vertex.first * scale
+            val y = vertex.second * scale
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        path.close()
+
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         bitmap.eraseColor(Color.TRANSPARENT)
+        Canvas(bitmap).drawPath(
+            path,
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.FILL
+                color = Color.WHITE
+            },
+        )
+        return bitmap.pixels().also { bitmap.recycle() }
+    }
 
-        glyph.setBounds(0, 0, raster, raster)
+    private fun rasterise(source: Drawable, size: Int): IntArray {
+        val glyph = source.constantState?.newDrawable()?.mutate() ?: source
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        bitmap.eraseColor(Color.TRANSPARENT)
+        glyph.setBounds(0, 0, size, size)
         glyph.draw(Canvas(bitmap))
+        return bitmap.pixels().also { bitmap.recycle() }
+    }
 
-        val pixels = IntArray(raster * raster)
-        bitmap.getPixels(pixels, 0, raster, 0, 0, raster, raster)
-        bitmap.recycle()
+    /** The view as it really draws, at its laid-out size. */
+    private fun rasteriseView(view: View): IntArray {
+        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        bitmap.eraseColor(Color.TRANSPARENT)
+        view.draw(Canvas(bitmap))
+        return bitmap.pixels().also { bitmap.recycle() }
+    }
 
-        // Half opacity as the boundary: an anti-aliased edge pixel that is more than
-        // half covered counts, one that is less does not, which is what makes the
-        // count approximate the area rather than the silhouette.
-        return pixels.count { Color.alpha(it) > 128 }
+    private fun Bitmap.pixels(): IntArray =
+        IntArray(width * height).also { getPixels(it, 0, width, 0, 0, width, height) }
+
+    /** The painted region of a square raster, expressed in viewport units. */
+    private fun inkBounds(pixels: IntArray, size: Int): FloatArray {
+        var left = size
+        var top = size
+        var right = -1
+        var bottom = -1
+
+        for (i in pixels.indices) {
+            if (Color.alpha(pixels[i]) <= 128) continue
+            val x = i % size
+            val y = i / size
+            if (x < left) left = x
+            if (x > right) right = x
+            if (y < top) top = y
+            if (y > bottom) bottom = y
+        }
+
+        assertTrue("nothing was painted", right >= 0)
+
+        val unit = size / viewport
+        // +1 on the far edges because a painted pixel covers up to its own far side.
+        return floatArrayOf(left / unit, top / unit, (right + 1) / unit, (bottom + 1) / unit)
     }
 
     private fun drawable(context: Context, id: Int): Drawable =

@@ -3,21 +3,62 @@
   COLLECTION track row, trailing action glyph.
 
   Frozen canonical: `Track Item N` > `Container` > `Button` > `Container` >
-  `arrow_forward`, light node 2409:31572, dark 2444:18186. The instance is
-  Material's `arrow_forward` at 24x24 and carries **rotation: 45** - the only
-  rotation on either canonical page, and confirmed on all three track items. Its
-  wrapper is 33.94 square, which is 24 * sqrt(2), the bounding box of a 24 square
-  turned through 45 degrees; that is the arithmetic that makes the rotation a
-  measurement rather than a reading of the preview.
+  `arrow_forward`, light node 2409:31572, dark 2444:18186. The instance is an
+  `arrow_forward` at 24x24 and carries **rotation: 45** - the only rotation on
+  either canonical page, and confirmed on all three track items in both themes.
+  Its wrapper is 33.94 square, which is 24 * sqrt(2), the bounding box of a 24
+  square turned through 45 degrees; that is the arithmetic that makes the rotation
+  a measurement rather than a reading of the preview.
 
   So the arrow points north-east, not east. Figma's rotation is positive
   counter-clockwise and Android's is positive clockwise, hence -45 here for the
   same glyph direction.
 
+  ## Which `arrow_forward`
+
   Unlike the empty-state illustration and the header overflow dots, this one is
   not authored from its box: `arrow_forward` is a named Material instance, so the
   Material path is the path, exactly as docs/COLLECTION-3.6.6.md took Material's
   `favorite` for the empty-state heart.
+
+  That left one thing unsettled, and it was settled the wrong way until G-A7. There
+  are two Material glyphs under that name - the legacy **Material Icons** one and
+  the current **Material Symbols** one - and they are not the same drawing. Their
+  bounding boxes inside the 24 box differ, which is exactly the evidence the
+  canonical export does record:
+
+    Material Icons (legacy)    16 x 12   at (4,6)    <- what this file used to hold
+    Material Symbols           16 x 16   at (4,4)
+    canonical `icon` child     16 x 16   at (4,4)    <- 2409:31572, and five more
+
+  All six instances - 2409:31572 / 31560 / 31542 light, 2444:18398 / 18410 / 18422
+  dark - report the same 16x16 at (4,4), on all four edges. The legacy arrow is
+  16x12: a shaft with a small chevron, four units short of the canonical box top
+  and bottom. So the family was right and the generation was wrong, and the frozen
+  design has been drawn with a flatter, lighter arrowhead than the one it specifies.
+
+  This is the same identification method docs/COLLECTION-3.6.6.md used for the
+  heart - "20x18.35, which is the bounding box of Material's `favorite` path to the
+  decimal, so the family is not a guess" - applied to the one property that tells
+  the two arrows apart. The canonical exporter records no geometry for any node
+  (see tools/figma-export/nav-icons/README.md), so a box that matches on every edge
+  is the strongest evidence this repository can hold without an owner-run plugin.
+
+  ## The path
+
+  Material Symbols `arrow_forward`, weight 400, grade 0, optical size 24, whose
+  source viewport is `0 -960 960 960`:
+
+    M647-440H160v-80h487L423-744l57-56 320 320-320 320-56-56 223-224Z
+
+  mapped onto 24 by x/40 and (y+960)/40, which is the standard transform between
+  the two viewports and is exact here - every control point lands on a multiple of
+  0.025. Extremes: x 4..20, y 4..20.
+
+  Rotated 45 degrees about (12,12) the glyph spans 16*sqrt(2) = 22.63, centred, so
+  it occupies 0.69..23.31 and nothing is clipped by the 24 viewport. The legacy
+  arrow spanned 19.8 the same way, so the ring, its size, its position and its
+  touch target are all untouched by this - only the drawing inside it changes.
 
   Tint comes from the view; the fill here is only what an untinted preview shows.
 -->
@@ -33,6 +74,6 @@
         android:rotation="-45">
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M14,18 L12.6,16.55 L16.15,13 L4,13 L4,11 L16.15,11 L12.6,7.45 L14,6 L20,12 Z" />
+            android:pathData="M16.175,13 L4,13 L4,11 L16.175,11 L10.575,5.4 L12,4 L20,12 L12,20 L10.6,18.6 Z" />
     </group>
 </vector>

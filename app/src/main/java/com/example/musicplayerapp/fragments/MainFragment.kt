@@ -11,10 +11,14 @@ import android.view.ViewGroup
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
+import com.example.musicplayerapp.data.supabase.EmailAuthBackend
+import com.example.musicplayerapp.data.supabase.IdentityStore
+import com.example.musicplayerapp.ui.HomeGreeting
 import com.example.musicplayerapp.ui.profile.ProfileRoute
 import com.example.musicplayerapp.StreamsViewModel
 import com.example.musicplayerapp.adapters.PlaylistAdapter
@@ -24,6 +28,9 @@ import com.example.musicplayerapp.ui.HomePlaylistSection
 import com.example.musicplayerapp.ui.HomePlaylistsState
 import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.utils.ServiceUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 class MainFragment : Fragment() {
@@ -177,10 +184,50 @@ class MainFragment : Fragment() {
         // on regardless of whether there was anything to put in them, which would
         // have overwritten the section's state on every return to HOME.
         renderPlaylistSection()
-        
+
+        // Every return to HOME, not once at inflation. Sign-in, registration, a
+        // logout and a switch to another account all end with HOME resumed and none
+        // of them notifies it, so re-asking is what keeps the header honest - and in
+        // particular is what stops the previous listener's name surviving a logout.
+        renderGreeting()
+
         // MediaController automatically syncs state when re-connected
 
         super.onResume()
+    }
+
+    /**
+     * `Привет!` or `Привет, <name>!`, from the account the profile already trusts.
+     *
+     * [HomeGreeting] owns which of the two this is; everything here is the resource
+     * lookup it deliberately does not do, so the copy stays in `strings.xml` and a
+     * future locale gets its own.
+     *
+     * Off the main thread for the same reason `ProfileRoute` is: everything under it
+     * reads `SharedPreferences`, and the auth boundary is suspending. Neither can
+     * mint - `currentAccount` reads the session the Auth plugin is already holding
+     * and makes no request - so drawing HOME still never creates an identity, which
+     * `ProfileEntryTest` asserts for the whole screen.
+     *
+     * The header is **not** cleared first. The plain greeting is a safe value, not a
+     * blank one, so the alternative would be flashing `Привет!` at a signed-in
+     * listener on every single return to HOME to protect against a stale name that
+     * survives at most the millisecond these two local reads take.
+     */
+    private fun renderGreeting() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val context = requireContext()
+            val name = withContext(Dispatchers.IO) {
+                HomeGreeting.name(IdentityStore.state(context)) {
+                    EmailAuthBackend.api(context).currentAccount()
+                }
+            }
+
+            if (view == null || !::binding.isInitialized) return@launch
+            binding.homeGreeting.text =
+                if (name == null) getString(R.string.home_greeting)
+                else getString(R.string.home_greeting_named, name)
+        }
     }
 
 

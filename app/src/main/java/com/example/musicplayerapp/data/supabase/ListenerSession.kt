@@ -222,11 +222,30 @@ object ListenerSession {
     /**
      * Brings the stored state into line with a session that just proved itself.
      *
-     * [IdentityStore.adoptAnonymous] refuses to demote an account state, so a restored
-     * [IdentityState.Registered] session stays registered and only [IdentityState.None]
-     * is filled in - which is the case that matters: preferences cleared while the
+     * Only [IdentityState.None] and [IdentityState.Anonymous] have anything to bring
+     * into line. The case that matters is the first: preferences cleared while the
      * Auth plugin kept its session. Adopting the live uid there is what stops the next
      * boundary deciding this is a fresh install and minting a duplicate.
+     *
+     * ## Why an account state returns instead of asking
+     *
+     * [IdentityStore.adoptAnonymous] refuses to demote an account, so this used to
+     * call it unconditionally and let the guard say no. That was correct and it was
+     * noisy: **every** sync a registered listener performed came through here - the
+     * outbox drain and the pull via [identity], the startup restore via [restore] -
+     * so an ordinary, entirely healthy account emitted `refusing to demote an account
+     * state to ANONYMOUS` at WARN on each one. G-A7 live validation is where that
+     * became untenable: the log the run was being read from was mostly this line.
+     *
+     * The fix is to stop asking, not to stop answering. The guard is untouched and
+     * still fail-closed; what changed is that the happy path no longer makes a request
+     * it knows is invalid, so a WARN from it means what it says again. The write
+     * behaviour is identical either way - `adoptAnonymous` was already a no-op for
+     * every state [IdentityState.isAccount] covers - so this narrows the logging and
+     * nothing else.
+     *
+     * The uid disagreement above is reported first and separately, because that one is
+     * genuinely worth hearing: it is reached whether or not an account is involved.
      */
     private fun reconcile(context: Context, sessionUid: String) {
         val stored = IdentityStore.state(context)
@@ -237,6 +256,7 @@ object ListenerSession {
             Log.w(TAG, "stored uid differs from the live session; adopting the session's")
         }
         uid = sessionUid
+        if (stored.isAccount) return
         IdentityStore.adoptAnonymous(context, sessionUid)
     }
 }

@@ -31,6 +31,21 @@ Last updated: 2026-08-08.
 - **Issue #15 — playback can stop by itself during continuous listening. OPEN.** Recovery was substantially improved (bounded, network-aware reconnect; `STATE_ENDED` on a live stream now treated as a disconnect), but **the root cause of the user reports is not proven**. Closing it needs a `MyataPlayback` log from a real affected device showing the stop with its cause and then automatic recovery.
 - **Playback diagnostics are in `main`**: every playback decision is logged under one tag — `adb logcat | grep MyataPlayback`. This is what #15 will be diagnosed with.
 - **Phase 2 / 3.6.6 — not implemented.** Design source lives in `tools/figma-export/` (approved dark screens, light/dark semantic tokens, plugin sources, rendered previews). No Phase 2 code exists yet: the app is still Material Components (M2), XML Views, with no `values-night/` and no `dimens.xml`.
+- **`liked_at` positional memory is asymmetric across devices. UNRESOLVED product/ordering decision — no code change proposed.**
+  Recorded during G-A7 live validation and deliberately left alone by the follow-up
+  PR: nothing about Room, the schema or sync behaviour was touched for it.
+  A local neutralisation keeps the row's `liked_at`
+  (`ReactionDao`'s NEUTRAL update sets `reaction` and `updated_at` only), which is
+  what lets a track that is liked again return to where it sat rather than jumping
+  to the top — the same positional memory a DISLIKE keeps on purpose. The server
+  side of a NEUTRAL does not keep it, so a **cross-device** NEUTRAL pulled back
+  restores `liked_at` as NULL and the position is gone.
+  The result is that the same action produces different Collection ordering
+  depending on whether the other device saw it, which is a question about what a
+  Collection's order *means* rather than a defect with an obvious fix. Both
+  behaviours are defensible; picking one is an owner call, and implementing it
+  changes either the local write or the server contract.
+  **Needs a decision before it needs code.**
 - **Repository hygiene, needs owner decision**: `app/release/` and `app/src_backup_best_version/` are still tracked; no CI (build/lint on PRs); no release runbook.
 - **Typography audit — RecyclerView rows never receive the typography contract. FUTURE, not fixed.**
   `MyataTypography.Factory` is installed on the Activity's inflater in

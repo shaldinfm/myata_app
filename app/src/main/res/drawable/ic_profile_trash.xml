@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Icon / trash` on `Row / Удалить аккаунт`.
+
+  Drawn here rather than converted from an export: the frozen 3.6.6 frames have no
+  delete row on the authenticated profile, so there is no owner SVG to convert. The
+  geometry is taken from the trash glyph the `settings-sync` proposal already
+  specifies - lid, body, two tines - so the one new icon on this screen is the same
+  shape the design language already uses for a destructive removal rather than an
+  invention.
+
+  Stroked like every other icon on this screen - 1.8 wide, round caps and joins - and
+  the colour is a token rather than a literal, so the glyph inverts with the theme
+  exactly as `ic_profile_logout` beside it does.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M4 7 L20 7 M9 7 L9 4 L15 4 L15 7 M6 7 L7 20 L17 20 L18 7 M10 11 L10 16 M14 11 L14 16"
+        android:strokeColor="@color/error"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

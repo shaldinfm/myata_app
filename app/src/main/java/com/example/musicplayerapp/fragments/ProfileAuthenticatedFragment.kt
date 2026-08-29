@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.musicplayerapp.R
@@ -18,7 +19,15 @@ import com.example.musicplayerapp.data.supabase.LastSyncStore
 import com.example.musicplayerapp.databinding.FragmentProfileAuthenticatedBinding
 import com.example.musicplayerapp.ui.auth.applyAuthInsets
 import com.example.musicplayerapp.ui.profile.AvatarInitial
+import com.example.musicplayerapp.ui.profile.DeleteAccountViewModel
 import com.example.musicplayerapp.ui.profile.ProfileAccount
+import com.example.musicplayerapp.ui.profile.leavesTheAccountScreen
+import com.example.musicplayerapp.ui.profile.message
+import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import android.view.View.GONE
+import android.view.View.VISIBLE
+import android.widget.Toast
 import java.util.Date
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -63,6 +72,29 @@ class ProfileAuthenticatedFragment : Fragment() {
     private var _binding: FragmentProfileAuthenticatedBinding? = null
     private val binding get() = _binding!!
 
+    /**
+     * Scoped to the fragment, not the view, and that is the point: a rotation destroys
+     * the view and rebuilds the row, while the deletion request underneath carries on.
+     * The guard that stops a second request lives with the work, not with the button.
+     */
+    private val deletion: DeleteAccountViewModel by viewModels()
+
+    /** The address the final confirmation names. Filled by [render]; null until then. */
+    private var accountEmail: String? = null
+
+    /**
+     * The confirmation currently on screen, so it can be dismissed with the view.
+     *
+     * A dialog outlives the fragment's view otherwise, and a rotation with one open
+     * leaks its window - `android.view.WindowLeaked`, and on the way out the listener
+     * loses a confirmation they were half way through. Kept `internal` rather than
+     * private because the instrumentation drives these buttons directly: Espresso's
+     * root picker needs the dialog window to take focus, and on the emulator it does
+     * not, which is a fact about the harness rather than about this screen.
+     */
+    internal var confirmation: AlertDialog? = null
+        private set
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -74,6 +106,7 @@ class ProfileAuthenticatedFragment : Fragment() {
 
         binding.profileBack.setOnClickListener { findNavController().popBackStack() }
         binding.profileRowSignOut.setOnClickListener { signOut() }
+        binding.profileRowDeleteAccount.setOnClickListener { confirmDeletion() }
 
         // The card is deliberately **not** painted here. ProfileRoute has already
         // proved a matching session before this destination was navigated to, so the
@@ -98,6 +131,93 @@ class ProfileAuthenticatedFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         verifySession()
+        observeDeletion()
+    }
+
+    // ------------------------------------------------- account deletion --
+
+    /**
+     * `Удалить аккаунт` - the first of two confirmations, and it deletes nothing.
+     *
+     * Two steps because the contract requires them, and they are genuinely different
+     * questions: the first states what is destroyed, the second names the account and
+     * asks whether to do it anyway. Both are dismissible; only the second's
+     * destructive button reaches [AccountDeletion].
+     *
+     * `MaterialAlertDialogBuilder` rather than a custom layout: the app's dialog idiom
+     * is a themed bottom sheet for *choices*, and this is a confirmation, which is
+     * exactly what the Material dialog is for. Nothing here needs a bespoke surface.
+     */
+    private fun confirmDeletion() {
+        if (deletion.isBusy) return
+
+        confirmation = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.delete_account_confirm_title)
+            .setMessage(R.string.delete_account_confirm_body)
+            .setNegativeButton(R.string.delete_account_cancel, null)
+            .setPositiveButton(R.string.delete_account_confirm_continue) { _, _ ->
+                confirmDeletionFinally()
+            }
+            .show()
+    }
+
+    /**
+     * The last question, naming the account, and the only place the orchestrator is
+     * invoked.
+     *
+     * `setCancelable(true)` up to the moment the destructive button is pressed - after
+     * that the durable marker is already committed and there is nothing left to
+     * cancel, which the row's disabled state and its spinner then say.
+     */
+    private fun confirmDeletionFinally() {
+        if (deletion.isBusy) return
+
+        val email = accountEmail
+            ?: getString(R.string.profile_account_email_unavailable)
+
+        confirmation = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.delete_account_final_title)
+            .setMessage(getString(R.string.delete_account_final_body, email))
+            .setNegativeButton(R.string.delete_account_cancel, null)
+            .setPositiveButton(R.string.delete_account_final_confirm) { _, _ ->
+                deletion.delete()
+            }
+            .show()
+    }
+
+    /**
+     * The row's two states and the five outcomes.
+     *
+     * `viewLifecycleOwner`, so a rotation re-subscribes rather than leaking - and the
+     * ViewModel outlives that, which is what makes the in-flight request survive.
+     */
+    private fun observeDeletion() {
+        deletion.state.observe(viewLifecycleOwner) { state ->
+            if (_binding == null) return@observe
+
+            // Disabled *and* visibly busy. The disabled flag is what stops a second
+            // tap on this view; the ViewModel's job is what stops a second request.
+            binding.profileRowDeleteAccount.isEnabled = !state.loading
+            binding.profileRowDeleteAccount.isClickable = !state.loading
+            binding.profileRowDeleteAccountProgress.visibility =
+                if (state.loading) VISIBLE else GONE
+
+            val outcome = state.outcome ?: return@observe
+
+            outcome.message()?.let {
+                Toast.makeText(requireContext(), it, Toast.LENGTH_LONG).show()
+            }
+
+            // Consumed before navigating, so a rotation cannot replay it.
+            deletion.consumeOutcome()
+
+            if (outcome.leavesTheAccountScreen()) {
+                // The same exit the sign-out uses. Where the listener lands is decided
+                // by the guest screen itself, which reads the deletion marker -
+                // deleted, or one of the two pending presentations.
+                leaveForGuest()
+            }
+        }
     }
 
     /**
@@ -126,11 +246,11 @@ class ProfileAuthenticatedFragment : Fragment() {
 
             if (account == null) {
                 // Not an account any more - a logout finished by reconciliation, a
-                // revoked token, a state nobody designed. The guest screen is the
-                // presentation that claims least, and this destination is replaced
-                // rather than stacked so Back cannot come back to a card that is no
-                // longer true.
-                findNavController().navigate(R.id.action_profile_authenticated_to_profile)
+                // revoked token, a state nobody designed, or a deletion that has just
+                // finished underneath this check. The guest screen is the presentation
+                // that claims least, and the destination is replaced rather than
+                // stacked so Back cannot come back to a card that is no longer true.
+                leaveForGuest()
                 return@launch
             }
 
@@ -141,6 +261,9 @@ class ProfileAuthenticatedFragment : Fragment() {
 
     private fun render(name: String?, email: String?) {
         val fallbackName = getString(R.string.profile_account_name_fallback)
+        // Kept for the final confirmation, which names the account rather than asking
+        // about it in the abstract.
+        accountEmail = ProfileAccount.email(email)
 
         binding.profileAccountName.text = ProfileAccount.displayName(name) ?: fallbackName
         binding.profileAccountEmail.text =
@@ -201,13 +324,40 @@ class ProfileAuthenticatedFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             withContext(Dispatchers.IO) { EmailAuthRepository.signOut(requireContext()) }
 
-            if (_binding == null) return@launch
-            findNavController().navigate(R.id.action_profile_authenticated_to_profile)
+            leaveForGuest()
         }
     }
 
+    /**
+     * Leaves for the guest profile, at most once.
+     *
+     * Three things can now decide this screen should not be on display: the session
+     * check concluding this install is not an account, a sign-out, and a deletion that
+     * ended the account. They run on different coroutines and any two can finish in
+     * either order - and the second one to call `navigate` used to crash, because by
+     * then the current destination is already `profile` and the action does not exist
+     * there.
+     *
+     * That is not hypothetical: it is what a rotation during a deletion produces. The
+     * recreated fragment starts a fresh session check, the deletion settles underneath
+     * it, and whichever resumes second finds the other has already left.
+     *
+     * The guard is the destination itself rather than a flag, because a flag would be
+     * a second copy of a fact the NavController already holds - and one that a
+     * recreation resets while the NavController's does not.
+     */
+    private fun leaveForGuest() {
+        if (_binding == null) return
+        val controller = findNavController()
+        if (controller.currentDestination?.id != R.id.profile_authenticated) return
+        controller.navigate(R.id.action_profile_authenticated_to_profile)
+    }
+
+
     override fun onDestroyView() {
         super.onDestroyView()
+        confirmation?.dismiss()
+        confirmation = null
         _binding = null
     }
 }

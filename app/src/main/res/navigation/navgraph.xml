@@ -143,6 +143,28 @@
             app:exitAnim="@anim/fade_out"
             app:popEnterAnim="@anim/fade_in"
             app:popExitAnim="@anim/fade_out" />
+        <!--
+          G-A8d. The one way back up, and it exists for exactly one situation: this
+          screen was showing the pending-deletion presentation, the deletion was then
+          refused, and the account it belongs to is still there. `ProfileRoute` makes
+          that decision - the same one that routes every other entry - and this is how
+          its answer is acted on.
+
+          `popUpTo` the guest profile inclusive, like the two auth actions land: the
+          screen that was showing "checking your deletion" must not be reachable by
+          Back once it is known there is nothing to check.
+
+          It is an action, not a destination. Nothing new is navigable.
+        -->
+        <action
+            android:id="@+id/action_profile_to_profile_authenticated"
+            app:destination="@id/profile_authenticated"
+            app:popUpTo="@id/profile"
+            app:popUpToInclusive="true"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
     </fragment>
 
     <!--

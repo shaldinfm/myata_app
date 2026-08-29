@@ -412,6 +412,72 @@
                         android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
                         android:textColor="@color/error" />
                 </LinearLayout>
+
+                <!--
+                  Row / Удалить аккаунт (G-A8d).
+
+                  The one row on this screen with no frozen Figma node behind it: the
+                  3.6.6 frames stop at `Выйти`. It is built from the same parts as the
+                  row above it - same background, same height, same icon box, same
+                  error colour - so the addition is the design language repeating
+                  itself rather than a new idiom.
+
+                  It sits after `Выйти` deliberately. The two are not variants of one
+                  another: signing out keeps the account and the Collection, and this
+                  ends both. The destructive one goes last, where a mis-tap is least
+                  likely to find it.
+
+                  REGISTERED-only is structural rather than a visibility rule. This
+                  row exists only in this layout, and this layout is only reachable
+                  through `ProfileRoute`, which routes anything that is not a
+                  registered account with a matching session to the guest screen.
+                -->
+                <LinearLayout
+                    android:id="@+id/profile_row_delete_account"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_row_height"
+                    android:layout_marginTop="@dimen/profile_account_row_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/profile_row_icon_margin_start"
+                    android:paddingEnd="@dimen/profile_row_icon_margin_start">
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_row_icon_size"
+                        android:layout_height="@dimen/profile_row_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_profile_trash" />
+
+                    <TextView
+                        android:id="@+id/profile_row_delete_account_label"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_row_label_margin_start"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/profile_account_label_box"
+                        android:text="@string/profile_account_delete"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                        android:textColor="@color/error" />
+
+                    <!--
+                      The inline progress the brief asks for, in place of a modal.
+                      GONE except while a deletion request is in flight, so the row's
+                      resting geometry is unchanged and the frozen sweep still measures
+                      the same box.
+                    -->
+                    <ProgressBar
+                        android:id="@+id/profile_row_delete_account_progress"
+                        style="?android:attr/progressBarStyleSmall"
+                        android:layout_width="@dimen/profile_row_icon_size"
+                        android:layout_height="@dimen/profile_row_icon_size"
+                        android:indeterminateTint="@color/error"
+                        android:visibility="gone" />
+                </LinearLayout>
             </LinearLayout>
         </ScrollView>
     </LinearLayout>

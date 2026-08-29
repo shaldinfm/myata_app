@@ -10,6 +10,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.data.supabase.AccountDeletion
 import com.example.musicplayerapp.data.supabase.AccountDeletionResult
+import com.example.musicplayerapp.data.supabase.DeletionStage
+import com.example.musicplayerapp.data.supabase.IdentityStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -152,7 +154,7 @@ class DeleteAccountViewModel(application: Application) : AndroidViewModel(applic
                 // an `Error` means the process or the build is already broken, and
                 // hiding that behind "попробуйте позже" helps nobody.
                 Log.w(TAG, "account deletion failed unexpectedly: ${failure.javaClass.simpleName}")
-                _state.value = State(outcome = Outcome.NotEligible)
+                _state.value = State(outcome = outcomeAfterFailure())
             } finally {
                 inFlight = null
             }
@@ -168,6 +170,36 @@ class DeleteAccountViewModel(application: Application) : AndroidViewModel(applic
     fun consumeOutcome() {
         if (_state.value?.outcome != null) _state.value = State()
     }
+
+    /**
+     * What an unexpected exception means, decided by the durable marker rather than by
+     * the exception.
+     *
+     * **The marker is authoritative and the exception is not.** By the time anything
+     * can throw, the orchestrator may already have committed `REQUESTED` - it is
+     * written before the destructive call, deliberately - or `CONFIRMED`, after the
+     * server confirmed the deletion. Reporting either as "not available, try later"
+     * would tell somebody their account is intact and the row is safe to press again,
+     * when in fact the install is sync-dead and a second press would mint a second
+     * token for one deletion.
+     *
+     * So the failure is mapped to what is actually owed:
+     *
+     * | marker | outcome |
+     * |---|---|
+     * | none | [Outcome.NotEligible] - nothing was started, the row is safe again |
+     * | `REQUESTED` | [Outcome.Unresolved] - outcome unknown, no retry, pending screen |
+     * | `CONFIRMED` | [Outcome.CleanupDeferred] - the account is gone, cleanup is owed |
+     *
+     * Nothing about the exception itself reaches the user; only which of the three
+     * states this install is in.
+     */
+    private fun outcomeAfterFailure(): Outcome =
+        when (IdentityStore.deletion(getApplication())?.stage) {
+            null -> Outcome.NotEligible
+            DeletionStage.REQUESTED -> Outcome.Unresolved
+            DeletionStage.CONFIRMED -> Outcome.CleanupDeferred
+        }
 
     private fun map(result: AccountDeletionResult): Outcome = when (result) {
         is AccountDeletionResult.Deleted -> Outcome.Deleted

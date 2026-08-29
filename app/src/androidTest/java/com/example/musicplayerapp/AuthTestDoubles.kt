@@ -201,6 +201,9 @@ internal class FakeEmailAuthApi : EmailAuthApi {
      */
     var signOutGate: CompletableDeferred<Unit>? = null
 
+    /** When set, the sign-out throws - a failure *after* CONFIRMED was committed. */
+    var signOutThrows: Throwable? = null
+
     /** Completed the moment a sign-out begins, so a test can wait for that instant. */
     var signOutStarted: CompletableDeferred<Unit>? = null
 
@@ -208,6 +211,7 @@ internal class FakeEmailAuthApi : EmailAuthApi {
         localSignOuts++
         signOutStarted?.complete(Unit)
         signOutGate?.await()
+        signOutThrows?.let { throw it }
         if (!signOutSucceeds) return false
         session = null
         return true
@@ -246,10 +250,21 @@ internal class FakeEmailAuthApi : EmailAuthApi {
      */
     var deleteGate: CompletableDeferred<Unit>? = null
 
+    /**
+     * When set, the deletion throws instead of returning an outcome.
+     *
+     * The shape every layer below is meant to make impossible - and therefore the one
+     * worth proving the ViewModel handles, because by the time it can happen the
+     * orchestrator has already committed a durable marker. An install that is
+     * sync-dead must never be told to try again.
+     */
+    var deleteThrows: Throwable? = null
+
     override suspend fun deleteAccount(requestId: String): DeleteAccountOutcome {
         deleteCalls++
         lastDeleteRequestId = requestId
         deleteGate?.await()
+        deleteThrows?.let { throw it }
         return deleteOutcome
     }
 

@@ -361,6 +361,77 @@ class DeleteAccountUiTest {
         assertGuestControlsVisible(true)
     }
 
+    // ============ an unexpected exception respects the durable marker ============
+
+    /**
+     * **E.** A throw after `REQUESTED` was committed is `Unresolved`, not a retry.
+     *
+     * The marker is written before the destructive call, so by the time anything can
+     * throw the install may already be sync-dead. Reporting "not available, try later"
+     * would tell somebody their account is intact and the row is safe to press again -
+     * and a second press would mint a second token for one deletion.
+     */
+    @Test
+    fun q_a_throw_after_requested_is_unresolved() {
+        auth.deleteThrows = IllegalStateException("room went away")
+
+        onTheAccountScreen {
+            confirmBothSteps()
+            awaitOn("the guest profile") { it.currentDestinationId() == R.id.profile }
+        }
+
+        val record = IdentityStore.deletion(context)
+        assertNotNull("the marker must survive the exception", record)
+        assertEquals(DeletionStage.REQUESTED, record!!.stage)
+        assertPendingHeading(R.string.profile_deletion_pending_heading)
+    }
+
+    /** **F.** A throw after `CONFIRMED` is `CleanupDeferred` - the account is gone. */
+    @Test
+    fun r_a_throw_after_confirmed_is_cleanup_deferred() {
+        auth.deleteOutcome = DeleteAccountOutcome.AlreadyDeleted
+        auth.signOutThrows = IllegalStateException("the plugin blew up")
+
+        onTheAccountScreen {
+            confirmBothSteps()
+            awaitOn("the guest profile") { it.currentDestinationId() == R.id.profile }
+        }
+
+        val record = IdentityStore.deletion(context)
+        assertNotNull(record)
+        assertEquals(DeletionStage.CONFIRMED, record!!.stage)
+        assertPendingHeading(R.string.profile_deletion_confirmed_heading)
+    }
+
+    /**
+     * **G.** A throw before any marker exists is still the generic refusal.
+     *
+     * Provoked at the boundary factory, which the orchestrator reaches before it
+     * writes anything - so nothing is owed and the row is genuinely safe again.
+     */
+    @Test
+    fun s_a_throw_before_any_marker_is_not_eligible() {
+        onTheAccountScreen {
+            EmailAuthBackend.overrideForInstrumentation { error("no backend") }
+            confirmBothSteps()
+
+            awaitOn("the row to come back") { activity ->
+                activity.findViewById<View>(R.id.profile_row_delete_account).isEnabled
+            }
+            on { activity ->
+                assertEquals(
+                    "nothing was started, so the screen stays",
+                    R.id.profile_authenticated,
+                    activity.currentDestinationId(),
+                )
+            }
+        }
+
+        assertNull("no marker may have been written", IdentityStore.deletion(context))
+        assertEquals(IdentityState.Registered(account), IdentityStore.state(context))
+        EmailAuthBackend.overrideForInstrumentation { auth }
+    }
+
     // ==================== the mapping, asserted directly ====================
 
     /**
@@ -467,6 +538,9 @@ class DeleteAccountUiTest {
             .firstOrNull()
         return profile?.confirmation
     }
+
+    /** The guest screen's heading, after an outcome has taken the listener there. */
+    private fun assertPendingHeading(heading: Int) = assertPendingCopy(heading)
 
     private fun assertPendingCopy(heading: Int) {
         withMainActivity {

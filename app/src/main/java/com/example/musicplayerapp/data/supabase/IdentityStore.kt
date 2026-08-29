@@ -468,6 +468,60 @@ object IdentityStore {
         Log.d(TAG, "deleted account forgotten; this install is a guest again")
     }
 
+    /**
+     * Watches the deletion marker for changes, for as long as the handle is open.
+     *
+     * ## Why this lives here
+     *
+     * A screen that wanted the same thing would have to know the preferences file and
+     * the three key names - private details of this object, and ones that a later
+     * change here would silently desynchronise. The watcher keeps them where they
+     * belong and hands out the value, not the storage.
+     *
+     * ## Not a poll
+     *
+     * `SharedPreferences` already reports its own writes, so this is a registration
+     * rather than a loop: nothing runs until something changes, and a marker that
+     * never moves costs nothing at all.
+     *
+     * [watcher] is invoked with the record as it stands **after** the change, and null
+     * once the deletion is resolved. It fires on the thread that made the write - the
+     * cleanup runs on IO - so a caller that touches a view must hop to the main thread
+     * itself. That is deliberately not done here: this object has no opinion about
+     * who is listening.
+     *
+     * A single resolution writes several keys in one `commit()`, so more than one
+     * callback for one logical change is normal. Callers de-duplicate on the value.
+     *
+     * @return a handle that unregisters. Closing it twice is safe. The listener is
+     *   held strongly by the handle because `SharedPreferences` keeps only a weak
+     *   reference to it - one collected mid-deletion would simply stop reporting.
+     */
+    fun watchDeletion(context: Context, watcher: (DeletionRecord?) -> Unit): AutoCloseable {
+        val prefs = prefs(context)
+
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            // `key` is null when the whole file is cleared, which `clearForTest` does -
+            // and a clear is as much a change to the marker as a write is.
+            if (key == null || key in DELETION_KEYS) watcher(deletion(context))
+        }
+
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+
+        return object : AutoCloseable {
+            // The strong reference the registry does not keep.
+            private var held: SharedPreferences.OnSharedPreferenceChangeListener? = listener
+
+            override fun close() {
+                held?.let { prefs.unregisterOnSharedPreferenceChangeListener(it) }
+                held = null
+            }
+        }
+    }
+
+    private val DELETION_KEYS =
+        setOf(KEY_DELETION_STAGE, KEY_DELETION_REQUEST_ID, KEY_DELETION_UID)
+
     private fun writeDeletion(
         context: Context,
         stage: DeletionStage,

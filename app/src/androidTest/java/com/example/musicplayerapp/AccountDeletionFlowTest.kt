@@ -292,9 +292,11 @@ class AccountDeletionFlowTest {
         assertEquals(DeletionStage.CONFIRMED, record!!.stage)
         // None must NOT have been written.
         assertTrue(IdentityStore.state(context) is IdentityState.Registered)
-        // The rows before the sign-out did go - that half is idempotent and already done.
-        assertEquals(0, db.reactionDao().allReactions().size)
-        // The per-account facts must NOT have been removed yet.
+        // And nothing local was touched at all. The sign-out now runs *before* the
+        // cutover, so a failure stops while the Collection is still intact - which the
+        // earlier order could not offer, having already erased it by this point.
+        assertEquals(1, db.reactionDao().allReactions().size)
+        assertEquals(1, db.reactionOutboxDao().count())
         assertEquals(1_000L, LastSyncStore.lastUploadAt(context, x))
     }
 

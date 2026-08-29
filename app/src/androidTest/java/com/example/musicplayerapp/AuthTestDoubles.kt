@@ -11,6 +11,7 @@ import com.example.musicplayerapp.data.supabase.AccountInfo
 import com.example.musicplayerapp.data.supabase.AuthFailure
 import com.example.musicplayerapp.data.supabase.AuthResult
 import com.example.musicplayerapp.data.supabase.DeleteAccountOutcome
+import kotlinx.coroutines.CompletableDeferred
 import com.example.musicplayerapp.data.supabase.DeletionStatusOutcome
 import com.example.musicplayerapp.data.supabase.EmailAuthApi
 import com.example.musicplayerapp.data.supabase.EmailAuthBackend
@@ -190,8 +191,23 @@ internal class FakeEmailAuthApi : EmailAuthApi {
      */
     var signOutSucceeds: Boolean = true
 
+    /**
+     * When set, a sign-out parks here until it completes.
+     *
+     * Models the fact the real one hides: `signOut(SignOutScope.LOCAL)` issues an HTTP
+     * `POST /logout?scope=local` whenever a session exists, so it can take as long as
+     * the network does. A suite uses this to hold the deletion cleanup at exactly that
+     * point and prove a reaction tap is *not* waiting behind it.
+     */
+    var signOutGate: CompletableDeferred<Unit>? = null
+
+    /** Completed the moment a sign-out begins, so a test can wait for that instant. */
+    var signOutStarted: CompletableDeferred<Unit>? = null
+
     override suspend fun signOutLocal(): Boolean {
         localSignOuts++
+        signOutStarted?.complete(Unit)
+        signOutGate?.await()
         if (!signOutSucceeds) return false
         session = null
         return true

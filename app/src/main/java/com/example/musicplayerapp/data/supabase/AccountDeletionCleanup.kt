@@ -19,22 +19,44 @@ import com.example.musicplayerapp.data.ReactionWriteGate
  * ## The order is the design
  *
  * ```
- * 1  outbox and Collection, in one Room transaction, under ReactionWriteGate
- * 2  signOutLocal()            <- stops here if it fails
- * 3  LastSyncStore.forget(uid)
- * 4  IdentityStore.forgetDeletedAccount()
+ * 1  signOutLocal()                     <- NETWORK. Outside the gate. Stops here if it fails.
+ * 2  ReactionWriteGate.withDeliveryStep {
+ * 2a     one Room transaction: clear reaction_outbox, then track_reaction
+ * 2b     LastSyncStore.forget(uid)
+ * 2c     IdentityStore.forgetDeletedAccount()   <- LAST
+ *    }
  * ```
  *
- * **Room before identity.** Step 4 writes [IdentityState.None], and `None` is the one
- * state [ListenerSession.identity] may mint an anonymous uid from. Reversing 1 and 4
- * would open a window in which a drain finds leftover outbox rows, creates a brand-new
- * listener, and uploads the deleted account's reactions into it. `SyncLease` - held by
- * both callers across this whole routine - closes that window; doing the rows first
- * closes it again, and the second lock is the one that survives a process death.
+ * **The sign-out is a network call, which is why it goes first and outside the gate.**
+ * `signOut(SignOutScope.LOCAL)` is local in *scope* - it invalidates this device's
+ * session and nobody else's - but not in the network sense: supabase-kt issues an HTTP
+ * `POST /logout?scope=local` whenever a session exists, and skips it only when there is
+ * none. Read off the resolved 3.2.6 artifact, where the single branch in
+ * `AuthImpl.signOut` is on session presence and the scope is merely a request
+ * parameter. Holding the gate across that would make a listener tapping Like wait on a
+ * round trip, up to the client's read timeout - the one thing the gate exists to
+ * prevent.
  *
- * **The gate wraps local work only.** [ReactionWriteGate.withDeliveryStep] is held
- * across the Room transaction and nothing else. No network call happens under it, so a
- * listener tapping Like never waits on one - the rule the gate exists to keep.
+ * **Everything after it is ONE gate section, and that section is the cutover.** An
+ * earlier version took the gate for the purge alone and released it before the identity
+ * was cleared, so a tap landing in between committed a `track_reaction` and an outbox
+ * row *after* the purge - and those rows survived the deletion, belonging to an account
+ * that no longer existed. One section from the purge through
+ * [IdentityStore.forgetDeletedAccount] closes it: a tap either lands before the gate is
+ * taken, and the purge removes it, or it waits and lands after this install is already
+ * a guest, where it is an ordinary new guest-side action rather than a survivor of a
+ * deleted account. There is no third possibility, because the mutex admits no
+ * interleaving.
+ *
+ * **Room before identity, inside that section.** 2c writes [IdentityState.None], and
+ * `None` is the one state [ListenerSession.identity] may mint an anonymous uid from.
+ * Reversing 2a and 2c would let a drain find leftover outbox rows, create a brand-new
+ * listener, and upload the deleted account's reactions into it. `SyncLease` - held by
+ * both callers across this whole routine - closes that window against sync; the gate
+ * closes it against taps, which `SyncLease` does not serialise at all.
+ *
+ * **No network call happens inside the gate.** 2a, 2b and 2c are Room and
+ * `SharedPreferences` only.
  *
  * ## Why a failed sign-out stops everything
  *
@@ -42,14 +64,17 @@ import com.example.musicplayerapp.data.ReactionWriteGate
  * credentials for an account that no longer exists. Carrying on would write `None`
  * over an install that can still present a token, and the marker that says cleanup is
  * owed would be gone with it - so nothing would ever come back to finish the job.
- * Stopping leaves `CONFIRMED` durable and every later start retries from the top,
- * which is safe because steps 1 and 3 are idempotent.
+ *
+ * Stopping now happens **before anything local is touched**: no purge, no forgotten
+ * timestamps, no identity change. That is a strictly better place to stop than the
+ * previous order allowed, where the Collection had already been erased by the time the
+ * sign-out was even attempted.
  *
  * ## Idempotence, step by step
  *
- * A process death between any two steps is repaired by running the whole thing again:
- * deleting from an empty table is zero rows, signing out with no session succeeds,
- * removing absent preference keys is a no-op, and step 4 rewrites the same values.
+ * A process death anywhere is repaired by running the whole thing again: signing out
+ * with no session succeeds without a request, deleting from an empty table is zero
+ * rows, removing absent preference keys is a no-op, and 2c rewrites the same values.
  * There is no progress marker inside this routine, deliberately - one more durable
  * thing to get wrong, for a sequence that is cheap to repeat.
  */
@@ -82,31 +107,56 @@ internal object AccountDeletionCleanup {
         val app = context.applicationContext
         val database = AppDatabase.getDatabase(app)
 
-        // 1. Local rows, in one transaction so a death cannot empty one table and
-        //    leave the other. Under the write gate, which a tap also takes, so this
-        //    cannot interleave with a reaction being committed.
-        ReactionWriteGate.withDeliveryStep {
-            database.withTransaction {
-                val events = database.reactionOutboxDao().clearAll()
-                val reactions = database.reactionDao().clearAll()
-                Log.d(TAG, "account deletion: cleared $events pending event(s), $reactions reaction(s)")
-            }
-        }
-
-        // 2. The session. LOCAL scope, like every other sign-out in this app.
+        // 1. The session, first and OUTSIDE the gate, because this is a network call.
+        //    Nothing local has been touched yet, so a failure here costs nothing: the
+        //    rows, the timestamps and the CONFIRMED marker all stand, and a later start
+        //    runs the whole routine again.
         if (!EmailAuthBackend.api(app).signOutLocal()) {
             Log.w(TAG, "account deletion: the session did not clear; cleanup stays owed")
             return Outcome.Deferred("the session did not clear")
         }
 
-        // 3. What this account had synchronised. Named keys, so another account on the
-        //    same install keeps its own history.
-        LastSyncStore.forget(app, uid)
+        // 2. The cutover. One gate section, no network inside it, and nothing may
+        //    interleave: a tap is either purged by 2a or lands after 2c, by which time
+        //    this install is already a guest.
+        ReactionWriteGate.withDeliveryStep {
+            // 2a. One transaction, so a death cannot empty one table and leave the other.
+            database.withTransaction {
+                val events = database.reactionOutboxDao().clearAll()
+                val reactions = database.reactionDao().clearAll()
+                Log.d(TAG, "account deletion: cleared $events pending event(s), $reactions reaction(s)")
+            }
 
-        // 4. Last, and the only place the marker may be cleared. One commit: identity,
-        //    legacy marker and deletion record cannot disagree afterwards.
-        IdentityStore.forgetDeletedAccount(app)
+            // Test seam. Nothing in `src/main` sets it; a suite uses it to observe the
+            // inside of the cutover, which is the only place the exclusion property is
+            // visible - from outside, a tap that was correctly excluded and one that
+            // interleaved leave identical final state.
+            insideCutover?.invoke()
+
+            // 2b. What this account had synchronised. Named keys, so another account on
+            //     the same install keeps its own history.
+            LastSyncStore.forget(app, uid)
+
+            // 2c. Last, and the only place the marker may be cleared. One commit:
+            //     identity, legacy marker and deletion record cannot disagree after it.
+            IdentityStore.forgetDeletedAccount(app)
+        }
+
         Log.d(TAG, "account deletion: local cleanup complete")
         return Outcome.Completed
     }
+
+    /**
+     * Invoked inside the cutover, after the purge and before the identity is cleared.
+     *
+     * The same kind of seam as `ReactionPullTrigger.clock` and `ReactionSyncEngine.now`,
+     * and it exists because this property cannot be observed any other way: a tap that
+     * was correctly excluded from the cutover and one that interleaved with it leave
+     * **identical** final state, so only an observation taken from inside tells them
+     * apart.
+     *
+     * Null in every shipped build; nothing in `src/main` assigns it.
+     */
+    @Volatile
+    internal var insideCutover: (suspend () -> Unit)? = null
 }

@@ -201,11 +201,13 @@ SyncLease.withExclusive {                            // 1 in-flight drains/pulls
     when (result) {
         Deleted, AlreadyDeleted -> {
             IdentityStore.markDeletionConfirmed(R, X)    // 6 before anything local is touched
-            ReactionWriteGate.withDeliveryStep {         // 7 local only, no network
+            api.signOutLocal()                           // 7 NETWORK - outside the gate
+            //    false here -> Deferred: nothing local is touched at all
+            ReactionWriteGate.withDeliveryStep {         // 8 one section, no network inside
                 purge reaction_outbox; clear track_reaction
+                LastSyncStore.forget(X)
+                IdentityStore.forgetDeletedAccount()     // 9 -> None, marker cleared. LAST
             }
-            api.signOutLocal()                           // 8
-            IdentityStore.forgetDeletedAccount()         // 9 -> None, marker cleared
         }
         Inconclusive      -> { /* REQUESTED stands; nothing local changes */ }
         DefinitiveRefusal -> { IdentityStore.clearDeletionMarker() }
@@ -214,15 +216,32 @@ SyncLease.withExclusive {                            // 1 in-flight drains/pulls
 ```
 
 The lease stops what is running; the durable marker stops what would start. Only
-`SyncLease` is held across the network call — `ReactionWriteGate` is not, so a listener
-tapping Like never waits on it. Holding the lease across a request follows
+`SyncLease` is held across a network call — `ReactionWriteGate` is not, so a listener
+tapping Like never waits on one. Holding the lease across a request follows
 `IdentityHandoff.finish`, which does the same.
 
-The outbox is purged **before** the identity is cleared. `forgetDeletedAccount()`
-writes `None`, the one state from which a new anonymous uid may be minted, and
-reversing the two would open a window in which a drain could mint an identity and
-upload the dead account's pending events. The lease closes that window; the ordering
-closes it again.
+**`signOutLocal()` is a network call.** `signOut(SignOutScope.LOCAL)` is local in
+*scope* — it invalidates this device's session and nobody else's — but supabase-kt
+issues an HTTP `POST /logout?scope=local` whenever a session exists, skipping it only
+when there is none. So it runs **first, and outside the gate**: holding the gate across
+it would make a Like wait on a round trip, up to the client's read timeout. A failure
+there returns `Deferred` before anything local is touched — no purge, no forgotten
+timestamps, no identity change — and a later start retries the whole routine.
+
+**Everything after it is one gate section, and that section is the cutover.** Purge,
+`LastSyncStore.forget(X)` and `forgetDeletedAccount()` are held together, with no
+network inside. `SyncLease` does not serialise ordinary reaction writes, so without
+this a tap landing after the purge and before the identity was cleared would commit a
+`track_reaction` and an outbox row that survived the deletion, belonging to an account
+that no longer existed. With one section there is no such instant: a tap either lands
+before the gate is taken and the purge removes it, or it waits and lands afterwards, on
+an install that is already a guest, where it is an ordinary new guest-side action.
+
+**Room before identity, inside that section.** `forgetDeletedAccount()` writes `None`,
+the one state from which a new anonymous uid may be minted, and reversing the two would
+open a window in which a drain could mint an identity and upload the dead account's
+pending events. The lease closes that window against sync; the gate closes it against
+taps.
 
 `deletionInFlight` is consulted by `ListenerSession.identity`, `ReactionSyncEngine`,
 `ReactionPull` / `ReactionPullTrigger`, `ReactionSyncScheduler`, `IdentityHandoff` and

@@ -148,6 +148,27 @@ interface ReactionOutboxDao {
     @Query("DELETE FROM reaction_outbox WHERE event_id IN (:eventIds)")
     suspend fun deleteAll(eventIds: List<String>): Int
 
+    /**
+     * Discards every pending row. **Account deletion only.**
+     *
+     * Every other delete in this class removes rows that have been *delivered*. This
+     * one throws away work that never will be, and it is correct for exactly one
+     * reason: the identity those events belong to is gone, so there is nobody left for
+     * them to be delivered as.
+     *
+     * Leaving them would be worse than losing them. The rows carry no `listener_id` -
+     * ownership is attached at send time - so a later anonymous identity would happily
+     * adopt them and upload the deleted account's reactions under a new uid. The gates
+     * stop that while the deletion marker exists; this is what stops it afterwards.
+     *
+     * Deleting from an empty table is zero rows and no error, so the cleanup can be
+     * re-run after a process death.
+     *
+     * @return how many rows went, for the log.
+     */
+    @Query("DELETE FROM reaction_outbox")
+    suspend fun clearAll(): Int
+
     /** [recordFailedAttempt] for a whole batch: the batch failed as a unit. */
     @Query(
         """

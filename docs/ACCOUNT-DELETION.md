@@ -4,8 +4,10 @@ Permanent deletion of a **registered** Radio Myata account: the authentication
 identity and every app-owned row keyed to it, removed together, provably.
 
 This document is the frozen design. The server half ships in
-[`supabase/migrations/0004_account_deletion.sql`](../supabase/migrations/0004_account_deletion.sql);
-**no client code exists yet** — see [Not implemented yet](#not-implemented-yet).
+[`supabase/migrations/0004_account_deletion.sql`](../supabase/migrations/0004_account_deletion.sql),
+applied to production. The client boundary, the sync gates, the orchestrator, the
+recovery and the local cleanup are implemented; **no UI reaches any of it yet** — see
+[Implementation status](#implementation-status).
 
 Related: [SUPABASE-FOUNDATION.md](SUPABASE-FOUNDATION.md) (schema, RLS, grants),
 [SUPABASE-SYNC.md](SUPABASE-SYNC.md) (drain, pull, the lease).
@@ -241,6 +243,7 @@ reentrant.
 A successful sign-in as X proves the account exists and therefore that deletion did not
 complete: clear the marker, restore normal operation, report. That is an *available*
 resolution, never a required one — the primary path needs no session at all.
+**Not implemented; deferred — see [Implementation status](#implementation-status).**
 
 **Accepted limit.** An uninstall while `REQUESTED` takes the marker and the token with
 it. If the deletion had not committed, the account survives with nothing pointing at
@@ -319,19 +322,35 @@ Query 8 is the only one that calls a new function, and it reads. **Do not valida
 to the live, double-gated instrumentation test in a later PR, against a fixture
 account created for it — which this migration finally makes cleanable.
 
-## Not implemented yet
+## Implementation status
 
-This PR is the server half only. Still to come, in order:
+| | |
+|---|---|
+| **G-A8a** server: receipts table, `delete_my_account`, `account_deletion_status` | applied to production, verified |
+| **G-A8b** client boundary and sync gates | implemented |
+| **G-A8c** orchestrator, reconciler recovery, local cleanup | implemented |
+| **UI** — the destructive row, two confirmations, progress and failure states | **outstanding** |
+| **Live validation** — double-gated, opt-in, against a fixture account | **outstanding** |
 
-1. **Client boundary and gates** — `deleteAccount` / `checkDeletionStatus` on the auth
-   interface, the durable deletion marker and `forgetDeletedAccount()`,
-   `LastSyncStore.forget(uid)`, and `deletionInFlight` wired into every sync entry
-   point. No UI.
-2. **Orchestrator and recovery** — the flow above, the reconciler resolution, and the
-   regression tests that matter: pending outbox plus an unresolved deletion mints
-   nothing and drains nothing; a lost response followed by an expired token resolves
-   through the status route.
-3. **UI** — the destructive row, two confirmations, progress and failure states.
-4. **Live validation** — double-gated, opt-in.
+`AccountDeletion.request(context)` is the entry point and is complete, but **nothing
+in `src/main` calls it**: without the UI phase there is no way for a listener to reach
+it, and no code path in a shipped build invokes `delete_my_account` at all.
 
-Nothing in the Android app calls anything in `0004` today.
+Everything above has been exercised offline only. **No production RPC has ever been
+executed and no account has been deleted** — the first real execution will be the live
+validation phase, against a fixture account created for it.
+
+### Deferred: resolving a deletion by signing in again
+
+The [Recovery](#recovery) section describes an *optional* resolution — a successful
+sign-in as X proving the account still exists, which retracts an unresolved deletion.
+**That path is not implemented**, and it is deferred rather than dropped.
+
+The reason is a collision with a different frozen contract: authentication from
+`IdentityState.Registered` is not a defined transition in the G-A4 routing rules, so an
+explicit sign-in while a deletion is unresolved is refused locally before any request
+is made. Making it a defined transition changes the auth contract, not this one, and
+would risk the generic router adopting an unrelated account.
+
+Nothing depends on it. The primary resolution — the session-less status route — needs
+no credentials at all, which is the whole reason the receipt exists.

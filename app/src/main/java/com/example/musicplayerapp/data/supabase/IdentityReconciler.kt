@@ -118,6 +118,13 @@ object IdentityReconciler {
      *   "there is no identity", and is why nothing here treats it as one.
      */
     suspend fun reconcile(context: Context, sessionUid: String?): Outcome {
+        // An unresolved deletion outranks even the handoff, and is checked before any
+        // identity repair whatever. The reason is that every branch below *repairs* an
+        // identity - promotes it, adopts a session's uid, finishes a logout - and an
+        // identity that is in the middle of being destroyed must not be repaired into
+        // anything. Whatever resolves the deletion owns this install until it does.
+        IdentityStore.deletion(context)?.let { return resolveDeletion(context, it, sessionUid) }
+
         // A handoff record outranks everything else here. It describes remote state
         // that may already have changed, G-A4b1 knows every stage-and-session
         // combination there is - including the SWITCH_PENDING(X)-with-a-session-for-Y
@@ -222,6 +229,107 @@ object IdentityReconciler {
      * **No anonymous identity is minted and nothing local is touched**, here or
      * anywhere on this path.
      */
+    /**
+     * Finishes an account deletion that a process death, or a lost response, left
+     * unresolved.
+     *
+     * Takes [SyncLease] itself - it performs remote calls and destructive local work,
+     * and a drain must be interleaved with neither. It is not nested inside any other
+     * recovery: this branch returns before `resolveHandoff` is reached, and the mutex
+     * is not reentrant.
+     *
+     * ## What each stage may do
+     *
+     * `CONFIRMED` is **local only, forever**. The server has already answered; asking
+     * again could only reintroduce doubt, and there is nothing left to ask about.
+     *
+     * `REQUESTED` asks - but which question depends on what this device can prove it
+     * is. With a restored session for X it retries `deleteAccount` with the **same**
+     * token; the call is idempotent by design and answers `ALREADY_DELETED` if the
+     * first attempt landed.
+     *
+     * ## A session for Y is not a session for X
+     *
+     * With no session, or a session belonging to somebody else, the retry is not
+     * available: `auth.uid()` decides whose account dies, so re-sending as Y would ask
+     * the server to delete Y. So those two cases take the same route - the
+     * session-less status check, which needs no credentials at all and answers about
+     * the pair `(R, X)` and nothing else.
+     *
+     * Y is never adopted, the identity is never mutated toward it, and the deletion
+     * marker is never cleared on its account. Resolving an unresolved deletion by
+     * explicitly authenticating again is a separate, deferred slice; nothing here
+     * implements it.
+     */
+    private suspend fun resolveDeletion(
+        context: Context,
+        record: DeletionRecord,
+        sessionUid: String?,
+    ): Outcome = SyncLease.withExclusive {
+        val api = EmailAuthBackend.api(context)
+
+        when (record.stage) {
+            // The server has spoken. Finish what this device owes and never ask again.
+            DeletionStage.CONFIRMED ->
+                deletionOutcome(AccountDeletion.finishHoldingLease(context, record.deletedUid))
+
+            DeletionStage.REQUESTED ->
+                if (sessionUid != null && sessionUid == record.deletedUid) {
+                    // A usable session for X. Same token, deliberately: a fresh one
+                    // would ask about a deletion the server holds no receipt for.
+                    deletionOutcome(
+                        AccountDeletion.settleHoldingLease(
+                            context = context,
+                            outcome = api.deleteAccount(record.requestId),
+                            requestId = record.requestId,
+                            uid = record.deletedUid,
+                        )
+                    )
+                } else {
+                    resolveByReceipt(context, api, record)
+                }
+        }
+    }
+
+    /**
+     * Asks the receipt whether the deletion completed, with no session at all.
+     *
+     * The path that exists for the case the whole design is built around: the account
+     * is gone, so nothing can authenticate, and absence of a session is not evidence
+     * of anything. Only the pair `(R, X)` having a receipt is.
+     */
+    private suspend fun resolveByReceipt(
+        context: Context,
+        api: EmailAuthApi,
+        record: DeletionRecord,
+    ): Outcome = when (api.checkDeletionStatus(record.requestId, record.deletedUid)) {
+
+        is DeletionStatusOutcome.Completed -> {
+            Log.d(TAG, "a receipt confirms the deletion; finishing local cleanup")
+            IdentityStore.markDeletionConfirmed(context, record.requestId, record.deletedUid)
+            deletionOutcome(AccountDeletion.finishHoldingLease(context, record.deletedUid))
+        }
+
+        // No receipt for this pair. **Not evidence that the deletion did not happen** -
+        // the answer is deliberately the same for a pair that never existed and one
+        // whose deletion never committed. The marker stays and the install stays
+        // sync-dead until something can answer.
+        is DeletionStatusOutcome.Unknown ->
+            Outcome.Deferred("no receipt yet for this deletion")
+
+        is DeletionStatusOutcome.Failed ->
+            Outcome.Deferred("could not reach the deletion receipt")
+    }
+
+    /** One [AccountDeletionResult] as something this class already reports. */
+    private fun deletionOutcome(result: AccountDeletionResult): Outcome = when (result) {
+        is AccountDeletionResult.Deleted -> Outcome.Consistent
+        is AccountDeletionResult.CleanupDeferred -> Outcome.Deferred(result.why)
+        is AccountDeletionResult.Refused -> Outcome.Consistent
+        is AccountDeletionResult.Unresolved -> Outcome.Deferred(result.why)
+        is AccountDeletionResult.NotEligible -> Outcome.Deferred(result.why)
+    }
+
     private suspend fun completeInterruptedSignOut(context: Context): Outcome {
         val last = IdentityStore.state(context).uid
 

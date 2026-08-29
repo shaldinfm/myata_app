@@ -180,8 +180,19 @@ internal class FakeEmailAuthApi : EmailAuthApi {
         return session
     }
 
+    /**
+     * Whether a local sign-out actually clears the session.
+     *
+     * False models the one case that stops an account deletion's cleanup half way:
+     * the account is gone on the server, but this device still holds a token for it,
+     * so writing `None` would leave an install that can present credentials for an
+     * account nobody can reach - with the marker saying cleanup is owed gone too.
+     */
+    var signOutSucceeds: Boolean = true
+
     override suspend fun signOutLocal(): Boolean {
         localSignOuts++
+        if (!signOutSucceeds) return false
         session = null
         return true
     }

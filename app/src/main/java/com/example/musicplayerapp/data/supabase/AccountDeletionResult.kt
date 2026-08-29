@@ -8,17 +8,18 @@ package com.example.musicplayerapp.data.supabase
  * a test should have to manufacture a Ktor `HttpResponse` to express "the network
  * was down".
  *
- * ## What is deliberately absent
+ * ## The one split that exists, and the evidence behind it
  *
- * **There is no failure taxonomy here yet.** G-A8b ships the boundary, not the
- * orchestrator, and deciding which failures are *definitive refusals* - the ones that
- * clear the deletion marker and leave the install registered - and which are
- * *inconclusive* - the ones that leave it sync-dead until it can ask again - is a
- * policy decision that belongs with the code that acts on it. Splitting [Failed] into
- * those two families before anything consumes them would freeze a guess.
+ * A non-success is either [Refused] - proof that the deletion transaction did **not**
+ * commit - or [Failed], which proves nothing either way. Getting that line wrong in
+ * the permissive direction is unrecoverable: clearing a deletion marker for a
+ * deletion that actually committed leaves an install believing it still owns an
+ * account that no longer exists.
  *
- * So every non-success is [Failed] carrying the classified [AuthFailure] this package
- * already produces. The orchestrator adds the split when it exists.
+ * So [Refused] is granted only on a specific, observable piece of evidence, and
+ * everything else - every transport failure, every gateway page, every unparseable
+ * body, every SQLSTATE this build does not recognise - is [Failed]. See
+ * [SupabaseEmailAuthApi.deleteAccount] for the exact rule.
  */
 sealed interface DeleteAccountOutcome {
 
@@ -46,7 +47,29 @@ sealed interface DeleteAccountOutcome {
      */
     data object AlreadyDeleted : DeleteAccountOutcome
 
-    /** The call did not produce a definitive answer. See the file header. */
+    /**
+     * The server ran the function and it refused. **Nothing was deleted.**
+     *
+     * Granted only for a SQLSTATE that `delete_my_account` raises itself. A plpgsql
+     * `RAISE` aborts the enclosing transaction, and PostgREST runs one request in one
+     * transaction - so receiving one of those codes is proof that no row, and no
+     * receipt, was committed. That is what makes it safe to clear a deletion marker
+     * on this outcome and leave the install registered.
+     *
+     * @property sqlState the five-character code, and deliberately nothing else. The
+     *   PostgREST `message`, `details` and `hint` are **not** carried: they are
+     *   server-authored text that a caller may log, and none of them is needed to
+     *   decide anything. The code alone is the evidence.
+     */
+    data class Refused(val sqlState: String) : DeleteAccountOutcome
+
+    /**
+     * The call did not produce a definitive answer, in either direction.
+     *
+     * **Not "the deletion failed".** It may have committed and the response been
+     * lost, which is precisely the case the receipt exists for. A caller must leave
+     * its deletion marker exactly where it is.
+     */
     data class Failed(val failure: AuthFailure) : DeleteAccountOutcome
 }
 

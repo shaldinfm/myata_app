@@ -646,6 +646,7 @@ class SyncProtocolCutoverTest {
             outbox = outbox,
             api = backend,
             identity = { ListenerIdentity.Available(listener) },
+            deletionInFlight = { false },
         ).drain()
 
     /**

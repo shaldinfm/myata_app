@@ -62,6 +62,24 @@ object ProfileRoute {
      * but it is not free, which is why [open] runs it off the tap.
      */
     suspend fun destination(context: Context): Int {
+        // First, and before any session read or reconciliation. An install with an
+        // unresolved deletion may still hold `REGISTERED(X)` and a live session, so
+        // every check below would pass and open the authenticated screen for an
+        // account that is being destroyed - offering `Выйти` and a sync row for
+        // something that may no longer exist.
+        //
+        // It comes before `IdentityReconciler.reconcile` deliberately, not merely
+        // early: reconciliation repairs an identity around whatever session restored,
+        // and repairing an identity that a deletion is in the middle of removing is
+        // two algorithms writing the same state. Whatever resolves a deletion owns
+        // that, and opening a screen must not pre-empt it.
+        //
+        // Guest is the presentation that claims least - the same rule this file
+        // already applies to a state it cannot prove. What the screen should
+        // eventually *say* about a deletion in progress is a later phase's decision;
+        // asserting nothing is the honest interim.
+        if (IdentityStore.deletionInFlight(context)) return R.id.profile
+
         if (IdentityStore.state(context) !is IdentityState.Registered) return R.id.profile
 
         // Local, no network: whatever session the Auth plugin is already holding.

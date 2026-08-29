@@ -48,6 +48,15 @@ class ReactionSyncWorker(
             return Result.success()
         }
 
+        // The same argument one step stronger. A deletion marker outlives the process
+        // too, and a worker restarted mid-deletion must not deliver rows belonging to
+        // an account that is going away. Success rather than retry: there is nothing
+        // to come back for, and the deletion flow schedules whatever follows it.
+        if (IdentityStore.deletionInFlight(applicationContext)) {
+            Log.d(TAG, "account deletion in flight; not draining")
+            return Result.success()
+        }
+
         val database = AppDatabase.getDatabase(applicationContext)
 
         val engine = ReactionSyncEngine(
@@ -58,6 +67,10 @@ class ReactionSyncWorker(
             // line used to name; under instrumentation it is what keeps the app's own
             // startup drain off the live project. See ReactionSyncBackend.
             api = ReactionSyncBackend.api(applicationContext),
+            // The durable deletion gate, read fresh on every drain rather than
+            // captured once: a deletion can begin while a worker is queued, and the
+            // engine asks before it reads a single row.
+            deletionInFlight = { IdentityStore.deletionInFlight(applicationContext) },
             // The identity boundary, reached only once the engine has established
             // that there is something to own.
             identity = { ReactionSyncBackend.identity(applicationContext) },
@@ -119,6 +132,14 @@ class ReactionSyncWorker(
                 // backoff schedule, until the listener signs in - and the sign-in is
                 // what will schedule the drain. The rows are untouched.
                 Log.d(TAG, "cloud sync paused: signed out")
+                Result.success()
+            }
+
+            is DrainResult.DeletionInProgress -> {
+                // A deletion began between the durable check above and the engine's
+                // own. Success with no reschedule, for the same reason as Paused:
+                // there is nothing a later wake-up could accomplish.
+                Log.d(TAG, "account deletion in flight; nothing drained")
                 Result.success()
             }
         }

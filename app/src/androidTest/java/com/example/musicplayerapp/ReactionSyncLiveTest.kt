@@ -120,7 +120,10 @@ class ReactionSyncLiveTest {
     }
 
     private fun engine(api: SupabaseReactionSyncApi = SupabaseReactionSyncApi(context)) =
-        ReactionSyncEngine(db.reactionDao(), db.reactionOutboxDao(), api, { ListenerIdentity.Available(listener) })
+        ReactionSyncEngine(
+            db.reactionDao(), db.reactionOutboxDao(), api,
+            { ListenerIdentity.Available(listener) }, { false },
+        )
 
     private suspend fun remoteState(key: String): JsonObject? =
         SupabaseModule.client(context)!!.postgrest.from("reactions").select {

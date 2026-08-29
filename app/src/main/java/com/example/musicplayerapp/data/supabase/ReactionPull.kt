@@ -98,6 +98,15 @@ object ReactionPull {
             return PullIdentity.NotEligible("a handoff is unresolved at ${it.stage}")
         }
 
+        // An unresolved deletion outranks the session check below, and is deliberately
+        // NotEligible rather than Unavailable: Unavailable means "ask again shortly",
+        // and there is nothing to come back for. Reading the account back would write
+        // rows into a Collection that is about to be cleared - or, if the account is
+        // already gone, ask a server that has nothing to answer with.
+        IdentityStore.deletion(context)?.let {
+            return PullIdentity.NotEligible("an account deletion is unresolved at ${it.stage}")
+        }
+
         val session = runCatching { EmailAuthBackend.api(context).currentUid() }.getOrNull()
             ?: return PullIdentity.Unavailable("no restored session for the account")
 

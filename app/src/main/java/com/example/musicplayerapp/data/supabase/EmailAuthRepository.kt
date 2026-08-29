@@ -512,6 +512,7 @@ object EmailAuthRepository {
             outbox = database.reactionOutboxDao(),
             api = ReactionSyncBackend.api(context),
             identity = { ReactionSyncBackend.identity(context) },
+            deletionInFlight = { IdentityStore.deletionInFlight(context) },
         )
 
         repeat(DRAIN_PAGES) {
@@ -533,6 +534,11 @@ object EmailAuthRepository {
                 is DrainResult.Waiting,
                 is DrainResult.RetryLater,
                 is DrainResult.Paused,
+                // An unresolved deletion joins the list for the same reason the others
+                // are on it: it will not resolve inside a registration, and a handoff
+                // that cannot drain must not start. IdentityHandoff.run refuses on the
+                // same marker, so this is the earlier of two closed doors.
+                is DrainResult.DeletionInProgress,
                 -> return false
             }
         }

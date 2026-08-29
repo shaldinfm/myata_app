@@ -278,6 +278,17 @@ enum class AuthOperation {
     RECOVERY_REQUEST,
     RECOVERY_VERIFY,
     PASSWORD_UPDATE,
+
+    /**
+     * `delete_my_account`. A PostgREST call rather than a GoTrue one, so it produces
+     * no `AuthRestException` and lands in the classifier's general case - which is
+     * the right answer for it, because nothing about a failed deletion is a
+     * credential problem to explain to somebody.
+     */
+    ACCOUNT_DELETE,
+
+    /** `account_deletion_status`. Read-only, unauthenticated, same reasoning. */
+    DELETION_STATUS,
 }
 
 /**

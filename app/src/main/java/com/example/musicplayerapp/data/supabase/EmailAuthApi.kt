@@ -95,6 +95,45 @@ interface EmailAuthApi {
     suspend fun currentAccount(): AccountInfo?
 
     /**
+     * Permanently deletes the account this session authenticates as.
+     *
+     * `public.delete_my_account(p_request_id)`, migration 0004. One transaction on
+     * the server: the `auth.users` row, every app row keyed to it, and a receipt for
+     * `(requestId, uid)`. A failure anywhere rolls back all of it, so there is no
+     * outcome in which the identity survives its data or the data survives its
+     * identity.
+     *
+     * **[requestId] is not an argument the server trusts.** It never chooses whose
+     * account is deleted - that comes from `auth.uid()` inside the transaction, and
+     * the function has no uid parameter at all. What the token does is make the
+     * outcome *provable later*: deleting the auth row invalidates the refresh
+     * credentials at once, so a device whose response is lost and whose access token
+     * then expires has nothing left to authenticate with. The receipt is what
+     * [checkDeletionStatus] can then read without a session.
+     *
+     * The caller must therefore mint [requestId] and commit it durably **before**
+     * calling this, and retry with the *same* token. See `docs/ACCOUNT-DELETION.md`.
+     *
+     * Registered accounts only: the server refuses an anonymous caller.
+     */
+    suspend fun deleteAccount(requestId: String): DeleteAccountOutcome
+
+    /**
+     * Asks whether one deletion completed, **without a session**.
+     *
+     * `public.account_deletion_status(p_request_id, p_deleted_uid)`, migration 0004,
+     * granted to `anon`. This is the only call in the app deliberately designed to
+     * work for a device that has no credentials at all, because that is exactly the
+     * state a device is in when it needs the answer.
+     *
+     * Both halves are required and neither is an authorisation claim: they select a
+     * row, and no privilege anywhere derives from [deletedUid]. Knowing a uid without
+     * its 122-bit token answers nothing, and the reverse is equally useless - which
+     * is what stops one account's deletion certifying another's.
+     */
+    suspend fun checkDeletionStatus(requestId: String, deletedUid: String): DeletionStatusOutcome
+
+    /**
      * Clears this device's session, and only this device's.
      *
      * `LOCAL` scope, per the frozen logout contract in [IdentityState.SignedOut]:

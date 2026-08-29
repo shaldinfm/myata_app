@@ -222,6 +222,7 @@ class ReactionSyncEngineTest {
         outbox = outbox,
         api = backend,
         identity = { identityCalls++; identity },
+        deletionInFlight = { false },
         now = { clock },
         batchSize = batchSize,
     )
@@ -883,7 +884,8 @@ class ReactionSyncEngineTest {
                 onBatch = { SyncOutcome.Transient("offline") }
             }
             val result = ReactionSyncEngine(
-                first.reactionDao(), first.reactionOutboxDao(), offline, { ListenerIdentity.Available(listener) }, { 5_000L },
+                first.reactionDao(), first.reactionOutboxDao(), offline, { ListenerIdentity.Available(listener) },
+                { false }, { 5_000L },
             ).drain()
 
             assertTrue(result is DrainResult.RetryLater)
@@ -900,6 +902,7 @@ class ReactionSyncEngineTest {
             val online = FakeBackend()
             val result = ReactionSyncEngine(
                 second.reactionDao(), second.reactionOutboxDao(), online, { ListenerIdentity.Available(listener) },
+                { false },
                 // Past the 30s backoff the first run recorded.
                 { 5_000L + 60_000L },
             ).drain()

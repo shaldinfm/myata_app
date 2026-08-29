@@ -226,6 +226,7 @@ class SyncStateTest {
             outbox = db.reactionOutboxDao(),
             api = sync,
             identity = { com.example.musicplayerapp.data.supabase.ListenerIdentity.Available(x) },
+            deletionInFlight = { false },
         ).drain()
 
         assertTrue("$result", result is com.example.musicplayerapp.data.supabase.DrainResult.Drained)
@@ -269,6 +270,7 @@ class SyncStateTest {
             outbox = db.reactionOutboxDao(),
             api = sync,
             identity = { com.example.musicplayerapp.data.supabase.ListenerIdentity.Available(x) },
+            deletionInFlight = { false },
         )
 
         val applied = engine().drain()

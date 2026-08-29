@@ -3,6 +3,7 @@ package com.example.musicplayerapp
 import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.example.musicplayerapp.SecureNetModule
 import com.example.musicplayerapp.data.supabase.DeletionStatusOutcome
 import com.example.musicplayerapp.data.supabase.SupabaseEmailAuthApi
 import kotlinx.coroutines.runBlocking
@@ -46,7 +47,9 @@ import org.junit.runner.RunWith
  *
  * ## No network, no real project
  *
- * Every request is short-circuited by an OkHttp interceptor that answers from memory.
+ * Every request is short-circuited by an OkHttp interceptor that answers from memory,
+ * appended to the **production** `SecureNetModule` client so the capture sees whatever
+ * that client would really have sent - see [Capture].
  * The base URL and key are **synthetic** - the real ones are never read, so this suite
  * cannot reach production even by mistake, and needs no `liveSupabase` opt-in.
  */
@@ -62,12 +65,31 @@ class DeletionStatusTransportTest {
     private val request = "99999999-9999-4999-8999-999999999999"
     private val uid = "11111111-1111-4111-8111-111111111111"
 
-    /** What the interceptor saw, and what it answered with. */
+    /**
+     * What the interceptor saw, and what it answered with.
+     *
+     * ## Built from the production client, not a bare one
+     *
+     * `SecureNetModule.getOkHttpClient(context).newBuilder()` keeps every setting and
+     * every interceptor the shipped client carries; the capture is then appended, so
+     * it is the **last** application interceptor and observes the request *after* all
+     * of them have run. A bare `OkHttpClient.Builder()` would only have proved that
+     * the request builder adds no `Authorization` header - it would say nothing about
+     * the client that actually sends it, and an interceptor added to
+     * `SecureNetModule` later for some unrelated reason could reintroduce one without
+     * a single test noticing.
+     *
+     * The one thing this still cannot observe is a *network* interceptor, because the
+     * capture short-circuits and never calls `chain.proceed` - no connection is
+     * opened, so no network interceptor runs. That is the same reason no real request
+     * can escape this suite, and it is the trade being made deliberately: a network
+     * interceptor cannot add a header to a request that is never sent.
+     */
     private class Capture(private val body: String, private val code: Int = 200) {
         var seen: Request? = null
         var requestBody: String? = null
 
-        fun client(): OkHttpClient = OkHttpClient.Builder()
+        fun client(base: OkHttpClient): OkHttpClient = base.newBuilder()
             .addInterceptor(Interceptor { chain ->
                 val req = chain.request()
                 seen = req
@@ -83,9 +105,13 @@ class DeletionStatusTransportTest {
             .build()
     }
 
+    /** The real shipped client, with the capture appended to its interceptor chain. */
+    private fun captured(capture: Capture): OkHttpClient =
+        capture.client(SecureNetModule.getOkHttpClient(context))
+
     private fun api(capture: Capture) = SupabaseEmailAuthApi(
         context = context,
-        statusHttpClient = capture.client(),
+        statusHttpClient = captured(capture),
         statusBaseUrl = syntheticBaseUrl,
         statusApiKey = syntheticKey,
     )
@@ -201,7 +227,7 @@ class DeletionStatusTransportTest {
 
         val result = SupabaseEmailAuthApi(
             context = context,
-            statusHttpClient = capture.client(),
+            statusHttpClient = captured(capture),
             statusBaseUrl = "",
             statusApiKey = "",
         ).checkDeletionStatus(request, uid)
@@ -217,7 +243,7 @@ class DeletionStatusTransportTest {
 
         SupabaseEmailAuthApi(
             context = context,
-            statusHttpClient = capture.client(),
+            statusHttpClient = captured(capture),
             statusBaseUrl = "$syntheticBaseUrl/",
             statusApiKey = syntheticKey,
         ).checkDeletionStatus(request, uid)

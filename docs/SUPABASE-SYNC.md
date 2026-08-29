@@ -28,13 +28,15 @@ to LF, so a checkout on any platform still hashes to the value recorded here.
 here only because this is where applied-migration provenance lives; the design is
 [ACCOUNT-DELETION.md](ACCOUNT-DELETION.md).
 
-Post-apply verification covered **posture only**, and specifically:
-`account_deletion_receipts` has RLS enabled, FORCE RLS disabled, zero policies, no
-foreign key, and no direct privileges for `anon`, `authenticated` or `PUBLIC`;
-`delete_my_account` takes `p_request_id uuid` and no uid, is `SECURITY DEFINER` with
-an empty `search_path`, and grants EXECUTE to `authenticated` only - not `anon`, not
-`PUBLIC`; `account_deletion_status` takes two `uuid` arguments, is `SECURITY DEFINER`
-and `STABLE` with an empty `search_path`, grants EXECUTE to `anon` and
+Post-apply verification covered schema and privilege posture, one functional probe,
+and data preservation. Specifically: `account_deletion_receipts` has RLS enabled,
+FORCE RLS disabled, zero policies, no foreign key, and no direct privileges for
+`anon`, `authenticated` or `PUBLIC`; `delete_my_account` takes `p_request_id uuid`
+and no uid, is `SECURITY DEFINER` with an empty `search_path`, and its only client
+EXECUTE is `authenticated` - `anon` and `PUBLIC` have none, while the production ACL
+also showed the administrative roles `postgres` and `service_role`;
+`account_deletion_status` takes two `uuid` arguments, is `SECURITY DEFINER` and
+`STABLE` with an empty `search_path`, grants client EXECUTE to `anon` and
 `authenticated` but not `PUBLIC`, and returned `{"outcome": "UNKNOWN"}` for one
 random non-existent pair. The three reaction tables were unchanged across the apply
 at 6 / 13 / 13.

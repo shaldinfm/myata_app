@@ -171,7 +171,7 @@ index in `user_metadata` and is deleted with the auth row.
 
 ## Client state machine
 
-Frozen here; **implemented in a later PR.** One durable marker in the
+Frozen here; **implemented across G-A8b and G-A8c.** One durable marker in the
 `supabase_identity` preferences file, written with `commit()`.
 
 | Durable marker | + identity state | Meaning | Sync |

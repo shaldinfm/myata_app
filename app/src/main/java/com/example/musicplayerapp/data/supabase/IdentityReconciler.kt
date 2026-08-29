@@ -123,7 +123,9 @@ object IdentityReconciler {
         // identity - promotes it, adopts a session's uid, finishes a logout - and an
         // identity that is in the middle of being destroyed must not be repaired into
         // anything. Whatever resolves the deletion owns this install until it does.
-        IdentityStore.deletion(context)?.let { return resolveDeletion(context, it, sessionUid) }
+        // The read here decides only *whether to look*, never what to do. Everything
+        // the resolution acts on is re-read inside the lease - see [resolveDeletion].
+        if (IdentityStore.deletionInFlight(context)) return resolveDeletion(context)
 
         // A handoff record outranks everything else here. It describes remote state
         // that may already have changed, G-A4b1 knows every stage-and-session
@@ -260,12 +262,36 @@ object IdentityReconciler {
      * marker is never cleared on its account. Resolving an unresolved deletion by
      * explicitly authenticating again is a separate, deferred slice; nothing here
      * implements it.
+     *
+     * ## Nothing read before the lease is authority
+     *
+     * This function takes **no** record and **no** session from its caller, and that
+     * is the point rather than tidiness. Both facts are re-read after the lease is
+     * held, because both can change while this coroutine waits for it - and what
+     * happens next is destructive and irreversible.
+     *
+     * **The marker.** Another resolution can finish, or a refusal can retract the
+     * request, between the caller's check and this acquiring the lease. Acting on the
+     * stale copy would re-send a deletion for a request that is already settled. A
+     * marker that is gone by the time the lease is held means there is nothing to do,
+     * and nothing is asked of the server at all.
+     *
+     * **The session.** `auth.uid()` inside `delete_my_account` decides whose account
+     * dies, so the only session that may authorise a retry is the one this device
+     * holds *now*. A uid captured before the lease - at startup, several suspensions
+     * ago - can belong to an account that has since been signed out of or replaced.
+     * Retrying on that snapshot would ask the server to delete whoever is live now.
+     * So the uid is read fresh, inside the lease, and compared with the freshly-read
+     * record; the caller's `sessionUid` is a startup hint for the branches below and
+     * authorises nothing here.
      */
-    private suspend fun resolveDeletion(
-        context: Context,
-        record: DeletionRecord,
-        sessionUid: String?,
-    ): Outcome = SyncLease.withExclusive {
+    private suspend fun resolveDeletion(context: Context): Outcome = SyncLease.withExclusive {
+        // Re-read under the lease. Between the caller's check and this line another
+        // resolution may have completed the deletion, or a definitive refusal may have
+        // retracted it.
+        val record = IdentityStore.deletion(context)
+            ?: return@withExclusive Outcome.Consistent
+
         val api = EmailAuthBackend.api(context)
 
         when (record.stage) {
@@ -273,8 +299,13 @@ object IdentityReconciler {
             DeletionStage.CONFIRMED ->
                 deletionOutcome(AccountDeletion.finishHoldingLease(context, record.deletedUid))
 
-            DeletionStage.REQUESTED ->
-                if (sessionUid != null && sessionUid == record.deletedUid) {
+            DeletionStage.REQUESTED -> {
+                // The live uid, read here and nowhere earlier. A failure to read it is
+                // not a match: it is exactly the "cannot prove who this device is"
+                // case, and the receipt route needs no proof at all.
+                val current = runCatching { api.currentUid() }.getOrNull()
+
+                if (current != null && current == record.deletedUid) {
                     // A usable session for X. Same token, deliberately: a fresh one
                     // would ask about a deletion the server holds no receipt for.
                     deletionOutcome(
@@ -288,6 +319,7 @@ object IdentityReconciler {
                 } else {
                     resolveByReceipt(context, api, record)
                 }
+            }
         }
     }
 

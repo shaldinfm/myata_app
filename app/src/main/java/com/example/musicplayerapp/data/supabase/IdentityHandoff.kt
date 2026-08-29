@@ -102,6 +102,17 @@ object IdentityHandoff {
         drain: suspend () -> Boolean,
         destination: DestinationIdentity,
     ): Result {
+        // Before the first drain and before anything is written. A handoff moves a
+        // device from one identity to another and rebuilds remote state from Room; an
+        // install whose account is being deleted must do neither. Running one here
+        // would retire rows the deletion is about to remove anyway, and - on the
+        // rollback path - write them straight back into an account that may already be
+        // gone. Aborted, not deferred: nothing schedules a retry, because the deletion
+        // is what decides what happens next.
+        if (IdentityStore.deletionInFlight(context)) {
+            return Result.Aborted("an account deletion is unresolved")
+        }
+
         repeat(MAX_ATTEMPTS) { attempt ->
             // 1. Drain by the ordinary path, holding nothing. The engine takes the
             //    lease itself, so this cannot be called from inside the exclusive

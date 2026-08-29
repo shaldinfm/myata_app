@@ -683,6 +683,7 @@ class ReactionPullTriggerTest {
             outbox = outbox,
             api = sync,
             identity = { com.example.musicplayerapp.data.supabase.ListenerIdentity.Available(x) },
+            deletionInFlight = { false },
         ).drain()
 
         // Opening the profile, which reconciles identity on the way.

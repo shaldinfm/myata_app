@@ -149,6 +149,16 @@ object ReactionPullTrigger {
      * to end differently; the next start retries normally.
      */
     internal suspend fun request(context: Context, why: String): PullResult? {
+        // An unresolved deletion stops the trigger before it claims the window. The
+        // pull would refuse anyway - ReactionPull checks the same marker - but a claim
+        // made here and released there is a debounce slot spent on a read that was
+        // never going to happen, and this is also the cheaper answer: no coroutine is
+        // launched and no engine is built.
+        if (IdentityStore.deletionInFlight(context)) {
+            Log.d(TAG, "pull skipped ($why): account deletion in flight")
+            return null
+        }
+
         // Only enough identity to name the throttle key. Whether the pull may run at
         // all is ReactionPull's decision, asked below and not second-guessed here.
         val uid = (IdentityStore.state(context) as? IdentityState.Registered)?.uid ?: return null

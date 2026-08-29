@@ -66,6 +66,15 @@ class ReactionSyncEngine(
     private val outbox: ReactionOutboxDao,
     private val api: ReactionSyncApi,
     private val identity: suspend () -> ListenerIdentity,
+    /**
+     * Whether a permanent account deletion is unresolved on this install.
+     *
+     * A predicate rather than a `Context`, so the algorithm still needs no Android -
+     * the same reason [identity] is injected. Deliberately **not defaulted**: a drain
+     * constructed without a deliberate answer would default to "no deletion", which
+     * is the unsafe direction and exactly the bug this parameter exists to prevent.
+     */
+    private val deletionInFlight: suspend () -> Boolean,
     private val now: () -> Long = { System.currentTimeMillis() },
     private val batchSize: Int = BATCH_SIZE,
 ) {
@@ -88,6 +97,12 @@ class ReactionSyncEngine(
         SyncLease.tryAcquire { drainHoldingLease() } ?: DrainResult.HandoffInProgress
 
     private suspend fun drainHoldingLease(): DrainResult {
+        // Before the outbox is even counted. An install whose account is being deleted
+        // must not deliver anything: the rows belong to an identity that is going away
+        // or has already gone, and the server would refuse them or - worse - accept
+        // them under a replacement identity. **No row is read.**
+        if (deletionInFlight()) return DrainResult.DeletionInProgress
+
         // Cheapest possible question first, and the reason it is first is that the
         // answer for most listeners is zero and the next line would otherwise create
         // them a database identity for nothing.
@@ -556,4 +571,21 @@ sealed interface DrainResult {
      * check happens before the batch is touched.
      */
     data object Paused : DrainResult
+
+    /**
+     * A permanent account deletion is unresolved on this install.
+     *
+     * Closer to [Paused] than to [HandoffInProgress]: there is nothing to wait for and
+     * nothing to retry. Either the account is gone and these rows will never be
+     * delivered by anybody, or the outcome is not yet known and delivering would be
+     * pushing into an account somebody has asked to destroy. A worker that retried
+     * this on a backoff would wake the device forever to do nothing.
+     *
+     * **No outbox row was read or written** - the check happens before the count.
+     *
+     * It is distinct from [Paused] because the two are not the same situation and a
+     * log that conflated them would send the next reader looking for a sign-out that
+     * never happened.
+     */
+    data object DeletionInProgress : DrainResult
 }

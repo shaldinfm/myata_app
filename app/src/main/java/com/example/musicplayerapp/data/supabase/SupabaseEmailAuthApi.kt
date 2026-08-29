@@ -6,6 +6,8 @@ import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.SignOutScope
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -184,6 +186,109 @@ class SupabaseEmailAuthApi(private val context: Context) : EmailAuthApi {
         )
     }
 
+    /**
+     * `delete_my_account(p_request_id)`.
+     *
+     * Sent as `authenticated`: the session's token is what `auth.uid()` reads inside
+     * the function, and it is the *only* thing that decides whose account is deleted.
+     * The payload carries the request token and nothing else - there is no uid field
+     * in the signature to fill in.
+     *
+     * The payload is built by hand for the same reason every PostgREST body in this
+     * package is - see [SupabaseReactionSyncApi] - and because one string does not
+     * need a compiler plugin.
+     */
+    override suspend fun deleteAccount(requestId: String): DeleteAccountOutcome {
+        val db = client?.postgrest ?: return DeleteAccountOutcome.Failed(noClientFailure())
+
+        val payload = buildJsonObject { put(PARAM_REQUEST_ID, requestId) }
+
+        return runCatching {
+            val answer = db.rpc(RPC_DELETE_ACCOUNT, payload).decodeAs<JsonObject>()
+            when (answer[OUTCOME]?.jsonPrimitive?.contentOrNull) {
+                OUTCOME_DELETED -> {
+                    Log.d(TAG, "account deleted")
+                    DeleteAccountOutcome.Deleted(
+                        reactions = answer.count("reactions"),
+                        events = answer.count("events"),
+                        applications = answer.count("applications"),
+                    )
+                }
+
+                // The second of two devices, or a retry whose original answer was
+                // lost. A receipt for this request exists either way, which is the
+                // only thing that separates this from an error.
+                OUTCOME_ALREADY_DELETED -> {
+                    Log.d(TAG, "account was already deleted; receipt recorded for this request")
+                    DeleteAccountOutcome.AlreadyDeleted
+                }
+
+                // The call reached the server and the server replied with something
+                // this build does not know. Guessing at the shape is how a deletion
+                // gets reported as done when it was not.
+                else -> {
+                    Log.w(TAG, "unrecognised deletion outcome")
+                    DeleteAccountOutcome.Failed(
+                        AuthFailure.Unknown(detail = "unrecognised delete_my_account outcome")
+                    )
+                }
+            }
+        }.getOrElse {
+            DeleteAccountOutcome.Failed(classifyAuthFailure(it, AuthOperation.ACCOUNT_DELETE))
+        }
+    }
+
+    /**
+     * `account_deletion_status(p_request_id, p_deleted_uid)`.
+     *
+     * **Works with no session, and that is the requirement.** supabase-kt resolves a
+     * request's bearer token as `jwtToken ?: client.accessToken ?: session token ?:
+     * supabaseKey`, with the key fallback on by default, so once the session is gone
+     * this goes out on the publishable key - which is what the `anon` grant in
+     * migration 0004 exists for. Verified against the resolved 3.2.6 artifact rather
+     * than assumed; see the G-A8b PR.
+     */
+    override suspend fun checkDeletionStatus(
+        requestId: String,
+        deletedUid: String,
+    ): DeletionStatusOutcome {
+        val db = client?.postgrest ?: return DeletionStatusOutcome.Failed(noClientFailure())
+
+        val payload = buildJsonObject {
+            put(PARAM_REQUEST_ID, requestId)
+            put(PARAM_DELETED_UID, deletedUid)
+        }
+
+        return runCatching {
+            val answer = db.rpc(RPC_DELETION_STATUS, payload).decodeAs<JsonObject>()
+            when (answer[OUTCOME]?.jsonPrimitive?.contentOrNull) {
+                OUTCOME_COMPLETED -> DeletionStatusOutcome.Completed
+
+                // UNKNOWN is an answer, not a failure: the pair has no receipt. It is
+                // deliberately indistinguishable from a malformed request, so it is
+                // never read as evidence that the deletion did not happen.
+                OUTCOME_UNKNOWN -> DeletionStatusOutcome.Unknown
+
+                else -> DeletionStatusOutcome.Failed(
+                    AuthFailure.Unknown(detail = "unrecognised account_deletion_status outcome")
+                )
+            }
+        }.getOrElse {
+            DeletionStatusOutcome.Failed(classifyAuthFailure(it, AuthOperation.DELETION_STATUS))
+        }
+    }
+
+    /**
+     * One count out of the deletion's receipt, defaulting to zero.
+     *
+     * A missing or non-numeric field is reported as zero rather than failing the
+     * whole call: the deletion has already committed by the time this is read, and
+     * refusing to acknowledge it over a malformed statistic would turn a success into
+     * a retry of something that cannot be repeated.
+     */
+    private fun JsonObject.count(name: String): Long =
+        this[name]?.jsonPrimitive?.contentOrNull?.toLongOrNull() ?: 0L
+
     override suspend fun currentAccount(): AccountInfo? = runCatching {
         val user = client?.auth?.currentUserOrNull() ?: return null
         AccountInfo(
@@ -241,5 +346,23 @@ class SupabaseEmailAuthApi(private val context: Context) : EmailAuthApi {
          * test against the string GoTrue actually expects.
          */
         val RECOVERY_OTP: OtpType.Email = OtpType.Email.RECOVERY
+
+        // ------------------------------------------------ account deletion --
+        //
+        // Wire names for migration 0004. Constants for the same reason DISPLAY_NAME
+        // is: they are strings two sides have to agree on, and a typo in one of them
+        // compiles perfectly and fails only against a live project.
+
+        const val RPC_DELETE_ACCOUNT = "delete_my_account"
+        const val RPC_DELETION_STATUS = "account_deletion_status"
+
+        const val PARAM_REQUEST_ID = "p_request_id"
+        const val PARAM_DELETED_UID = "p_deleted_uid"
+
+        private const val OUTCOME = "outcome"
+        private const val OUTCOME_DELETED = "DELETED"
+        private const val OUTCOME_ALREADY_DELETED = "ALREADY_DELETED"
+        private const val OUTCOME_COMPLETED = "COMPLETED"
+        private const val OUTCOME_UNKNOWN = "UNKNOWN"
     }
 }

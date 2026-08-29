@@ -144,6 +144,19 @@ object ListenerSession {
      *  5. only [IdentityState.None] signs in anonymously.
      */
     suspend fun identity(context: Context): ListenerIdentity {
+        // Before everything, including the signed-out check: this is the one function
+        // in the app that can create an `auth.uid()`, so it is the one place where a
+        // deletion gate is load-bearing rather than defensive.
+        //
+        // An install mid-deletion reaches IdentityState.None the moment the account is
+        // forgotten. None is the only state a mint is allowed from - so without this,
+        // a drain finding leftover outbox rows would sign in anonymously and upload
+        // the deleted account's pending reactions under a brand-new listener. The
+        // marker outlives the process; the lease held by the orchestrator does not.
+        if (IdentityStore.deletionInFlight(context)) {
+            return ListenerIdentity.Unavailable("account deletion in flight")
+        }
+
         val persisted = IdentityStore.state(context)
         if (persisted is IdentityState.SignedOut) {
             return ListenerIdentity.Paused(persisted.lastUid)
@@ -154,7 +167,11 @@ object ListenerSession {
 
         return mutex.withLock {
             // Re-read inside the lock. A concurrent caller may have signed in - or
-            // signed out - between the check above and here.
+            // signed out, or begun a deletion - between the check above and here.
+            if (IdentityStore.deletionInFlight(context)) {
+                return@withLock ListenerIdentity.Unavailable("account deletion in flight")
+            }
+
             val current = IdentityStore.state(context)
             if (current is IdentityState.SignedOut) {
                 return@withLock ListenerIdentity.Paused(current.lastUid)

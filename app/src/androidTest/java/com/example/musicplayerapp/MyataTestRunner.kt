@@ -8,6 +8,8 @@ import com.example.musicplayerapp.data.TrackReaction
 import com.example.musicplayerapp.data.supabase.AccountInfo
 import com.example.musicplayerapp.data.supabase.AuthFailure
 import com.example.musicplayerapp.data.supabase.AuthResult
+import com.example.musicplayerapp.data.supabase.DeleteAccountOutcome
+import com.example.musicplayerapp.data.supabase.DeletionStatusOutcome
 import com.example.musicplayerapp.data.supabase.EmailAuthApi
 import com.example.musicplayerapp.data.supabase.EmailAuthBackend
 import com.example.musicplayerapp.data.supabase.IdentityState
@@ -165,4 +167,22 @@ private object OfflineEmailAuthApi : EmailAuthApi {
     override suspend fun currentUid(): String? = null
 
     override suspend fun signOutLocal(): Boolean = true
+
+    /**
+     * Refused before any test exists, and this is the most important refusal in the
+     * file.
+     *
+     * `delete_my_account` against the live project destroys a real `auth.users` row
+     * and everything it owns, in one committed transaction, with no undo - and unlike
+     * a stray reaction row, nothing in this repository could put it back. This object
+     * is installed before `Application.onCreate`, so even code no test controls cannot
+     * reach it.
+     */
+    override suspend fun deleteAccount(requestId: String): DeleteAccountOutcome =
+        DeleteAccountOutcome.Failed(AuthFailure.NetworkFailure(WHY))
+
+    override suspend fun checkDeletionStatus(
+        requestId: String,
+        deletedUid: String,
+    ): DeletionStatusOutcome = DeletionStatusOutcome.Failed(AuthFailure.NetworkFailure(WHY))
 }

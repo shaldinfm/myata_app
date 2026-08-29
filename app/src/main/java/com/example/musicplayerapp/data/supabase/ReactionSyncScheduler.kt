@@ -211,14 +211,24 @@ object ReactionSyncScheduler {
      */
     private fun pausedBySignOut(context: Context): Boolean =
         runCatching {
-            // Two reasons to schedule nothing, checked together because the response
-            // is identical: a deliberate sign-out, and an identity handoff in flight.
+            // Three reasons to schedule nothing, checked together because the response
+            // is identical: a deliberate sign-out, an identity handoff in flight, and
+            // an unresolved account deletion.
+            //
+            // The deletion case is durable like the handoff and for the same reason -
+            // it must keep stopping enqueues after a process death, which is exactly
+            // when a stale work request is most likely to fire. It is checked here as
+            // well as in the worker and the engine because this is the layer that
+            // stops the request being *created*: a wake-up that only fails later still
+            // woke the device.
             //
             // The handoff case is the narrower one and it is durable on purpose. It
             // stops a reaction tapped mid-registration from enqueueing a drain that
             // would race the retirement, and it keeps stopping after a process death,
             // which is exactly when a stale work request is most likely to fire.
-            IdentityStore.isSignedOut(context) || IdentityStore.handoffInProgress(context)
+            IdentityStore.isSignedOut(context) ||
+                IdentityStore.handoffInProgress(context) ||
+                IdentityStore.deletionInFlight(context)
         }.getOrDefault(false)
 
     private fun enqueue(context: Context, why: String) {

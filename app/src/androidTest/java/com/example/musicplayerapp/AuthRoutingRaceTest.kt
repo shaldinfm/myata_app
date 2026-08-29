@@ -119,6 +119,7 @@ class AuthRoutingRaceTest {
                 outbox = outbox,
                 api = backend,
                 identity = { ListenerIdentity.Available(x) },
+                deletionInFlight = { false },
             ).drain()
         }
         withTimeout(10_000) { inFlight.await() }

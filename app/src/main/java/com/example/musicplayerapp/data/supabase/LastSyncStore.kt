@@ -149,6 +149,30 @@ object LastSyncStore {
         prefs(context).getBoolean(KEY_RESTORED_PREFIX + uid, false)
 
     /**
+     * Removes every fact this store holds about [uid], and nothing about anyone else.
+     *
+     * For permanent account deletion: once the account is gone, "when did it last
+     * sync" is a question about something that no longer exists, and an install that
+     * later registered a *new* account would otherwise carry a stranger's timestamps
+     * under a stranger's uid forever.
+     *
+     * Named keys rather than a file wipe, which is the whole point of it and the
+     * difference from [clearForTest]. The three keys are reconstructible from the uid,
+     * so one account's history can be removed without touching another's - and a
+     * device that has used two accounts must keep the survivor's.
+     *
+     * Deleting an absent key is a no-op, so this is idempotent and safe to re-run
+     * after an interrupted cleanup.
+     */
+    fun forget(context: Context, uid: String) {
+        prefs(context).edit {
+            remove(KEY_UPLOAD_PREFIX + uid)
+            remove(KEY_PULL_PREFIX + uid)
+            remove(KEY_RESTORED_PREFIX + uid)
+        }
+    }
+
+    /**
      * Test-only: return this install to never-synced, for every account.
      *
      * Clears the whole file rather than named keys: the per-account keys are not

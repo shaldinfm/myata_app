@@ -590,6 +590,7 @@ class ReactionPullTest {
             outbox = outbox,
             api = push,
             identity = { com.example.musicplayerapp.data.supabase.ListenerIdentity.Available(listener) },
+            deletionInFlight = { false },
         ).drain()
 
         assertEquals(Streams.DEFAULT, push.currentStreams.single())

@@ -56,6 +56,10 @@ object IdentityStore {
     private const val KEY_HANDOFF_FROM = "handoff_from_uid"
     private const val KEY_HANDOFF_TO = "handoff_to_uid"
 
+    private const val KEY_DELETION_STAGE = "deletion_stage"
+    private const val KEY_DELETION_REQUEST_ID = "deletion_request_id"
+    private const val KEY_DELETION_UID = "deletion_uid"
+
     private const val KEY_STATE = "identity_state"
     private const val KEY_UID = "identity_uid"
     private const val KEY_EMAIL = "identity_email"
@@ -337,6 +341,147 @@ object IdentityStore {
     /** True while a handoff is in flight. The gate every sync entry point consults. */
     fun handoffInProgress(context: Context): Boolean = handoff(context) != null
 
+    // --------------------------------------------------- account deletion --
+    //
+    // The durable half of the G-A8 deletion contract, in the same file as the
+    // identity it will eventually erase - so a stage and an identity can be written
+    // in one commit() and cannot disagree after a process death between two separate
+    // writes. The same argument that put the handoff triple here.
+    //
+    // Two stages and no third. `docs/ACCOUNT-DELETION.md` is explicit that "deletion
+    // outcome unknown" is **not** persisted: once the RPC has been dispatched the
+    // device cannot distinguish "the request never left" from "it committed and the
+    // response was lost", so a durable UNKNOWN would be storing a guess. Unknown is
+    // derived at runtime - REQUESTED plus an inconclusive attempt or no usable
+    // session - and is never evidence of anything.
+
+    /**
+     * Records that a deletion has been requested for [deletedUid] under [requestId].
+     *
+     * **Committed before the destructive RPC**, exactly as [markHandoffPrepared] is
+     * and for exactly the same reason: what cannot be inferred afterwards has to be
+     * recorded beforehand. From the moment this returns, [deletionInFlight] is true
+     * and every sync entry point is closed - before any network call, not after one.
+     *
+     * [requestId] is the token the eventual receipt is keyed by. It must be minted
+     * once per deletion request and reused on every retry; a fresh token on a retry
+     * would ask the server about a deletion it has no receipt for.
+     */
+    fun markDeletionRequested(context: Context, requestId: String, deletedUid: String) =
+        writeDeletion(context, DeletionStage.REQUESTED, requestId, deletedUid)
+
+    /**
+     * The server has confirmed the deletion; local cleanup is owed.
+     *
+     * Committed **before** anything local is touched, so a death during cleanup
+     * resumes at "cleanup owed" and never re-asks the server. Recorded here rather
+     * than inferred, because the two stages want different recoveries: REQUESTED may
+     * still need to ask, CONFIRMED must never ask again.
+     */
+    fun markDeletionConfirmed(context: Context, requestId: String, deletedUid: String) =
+        writeDeletion(context, DeletionStage.CONFIRMED, requestId, deletedUid)
+
+    /** The deletion record in flight, or null. Authoritative across process death. */
+    fun deletion(context: Context): DeletionRecord? {
+        val prefs = prefs(context)
+        val raw = prefs.getString(KEY_DELETION_STAGE, null) ?: return null
+        val requestId = prefs.getString(KEY_DELETION_REQUEST_ID, null) ?: return null
+        val uid = prefs.getString(KEY_DELETION_UID, null) ?: return null
+
+        val stage = DeletionStage.entries.firstOrNull { it.name == raw }
+            ?: run {
+                // A stage a newer build wrote. Treated as in flight rather than
+                // ignored, which is the safe direction: staying sync-dead too long is
+                // recoverable, letting a drain run through a deletion is not.
+                Log.w(TAG, "unrecognised deletion stage; treating as in flight")
+                DeletionStage.REQUESTED
+            }
+        return DeletionRecord(stage, requestId, uid)
+    }
+
+    /**
+     * True while a deletion is unresolved. **The gate every sync entry point consults.**
+     *
+     * Both stages count. A CONFIRMED deletion whose local cleanup has not finished is
+     * every bit as sync-dead as a REQUESTED one - the account is gone on the server,
+     * so a drain would push into nothing and a mint would create a second listener
+     * for somebody who just asked to stop existing.
+     */
+    fun deletionInFlight(context: Context): Boolean = deletion(context) != null
+
+    /**
+     * Abandons a deletion that will not proceed, leaving the identity untouched.
+     *
+     * For a server refusal the account survives - the install is still whoever it
+     * was, and sync resumes. It deliberately does **not** touch [KEY_STATE]: this
+     * says "no deletion is owed", not "something happened to the account".
+     */
+    fun clearDeletionMarker(context: Context) {
+        if (prefs(context).getString(KEY_DELETION_STAGE, null) == null) return
+        prefs(context).edit(commit = true) {
+            remove(KEY_DELETION_STAGE)
+            remove(KEY_DELETION_REQUEST_ID)
+            remove(KEY_DELETION_UID)
+        }
+    }
+
+    /**
+     * The account is gone and this install is nobody again.
+     *
+     * **The only route back to [IdentityState.None] in this class**, and it is a
+     * deliberate breach of the rule stated on [signOut]: signing out is not a way
+     * back to None, and there is no method here that is - because minting a second
+     * uid for one person is the failure the whole marker exists to prevent.
+     *
+     * A confirmed deletion is the one case where that argument does not apply. The
+     * uid is gone from `auth.users`; there is no longer an identity to split, and no
+     * account for a later sign-in to resume. Leaving the install as `SIGNED_OUT(X)`
+     * would keep sync paused forever against an account that cannot come back, and
+     * offer a way in that cannot work. None is the truthful state: a clean guest,
+     * free to mint a fresh anonymous identity if the listener reacts to something.
+     *
+     * Everything goes in **one commit()**: the identity, the legacy marker, any auth
+     * attempt, any handoff record, and the deletion marker itself. A partial write
+     * here is an install that is simultaneously nobody and mid-deletion, and no
+     * recovery reads that pair sensibly.
+     *
+     * **Local data is not touched.** Clearing the Collection and the outbox is the
+     * cleanup contract's job and is not implemented in this phase; a caller that
+     * invokes this without having cleared them first would leave a drain free to mint
+     * an identity and upload the deleted account's pending events - see the ordering
+     * rule in `docs/ACCOUNT-DELETION.md`.
+     */
+    fun forgetDeletedAccount(context: Context) {
+        prefs(context).edit(commit = true) {
+            putString(KEY_STATE, NONE)
+            remove(KEY_UID)
+            remove(KEY_EMAIL)
+            remove(KEY_LEGACY_UID)
+            remove(KEY_AUTH_ATTEMPT)
+            remove(KEY_HANDOFF_STAGE)
+            remove(KEY_HANDOFF_FROM)
+            remove(KEY_HANDOFF_TO)
+            remove(KEY_DELETION_STAGE)
+            remove(KEY_DELETION_REQUEST_ID)
+            remove(KEY_DELETION_UID)
+        }
+        Log.d(TAG, "deleted account forgotten; this install is a guest again")
+    }
+
+    private fun writeDeletion(
+        context: Context,
+        stage: DeletionStage,
+        requestId: String,
+        deletedUid: String,
+    ) {
+        prefs(context).edit(commit = true) {
+            putString(KEY_DELETION_STAGE, stage.name)
+            putString(KEY_DELETION_REQUEST_ID, requestId)
+            putString(KEY_DELETION_UID, deletedUid)
+        }
+        Log.d(TAG, "account deletion at $stage")
+    }
+
     private fun writeHandoff(context: Context, stage: HandoffStage, from: String, to: String?) {
         prefs(context).edit(commit = true) {
             putString(KEY_HANDOFF_STAGE, stage.name)
@@ -356,6 +501,9 @@ object IdentityStore {
             remove(KEY_HANDOFF_STAGE)
             remove(KEY_HANDOFF_FROM)
             remove(KEY_HANDOFF_TO)
+            remove(KEY_DELETION_STAGE)
+            remove(KEY_DELETION_REQUEST_ID)
+            remove(KEY_DELETION_UID)
         }
     }
 
@@ -392,6 +540,47 @@ object IdentityStore {
  * "a registration was interrupted" and "a sign-in was interrupted" are different
  * sentences in a log, and the log is where an odd identity gets explained.
  */
+/**
+ * How far a permanent account deletion has got, durably.
+ *
+ * Two stages, and the absence of a third is the design. `docs/ACCOUNT-DELETION.md`
+ * treats "requested" and "outcome unknown" as one durable stage on purpose: from the
+ * moment the RPC is dispatched, the device cannot tell "the request never left" from
+ * "it committed and the response was lost", and persisting them apart would persist a
+ * guess. Unknown is derived at runtime and is never used as evidence.
+ */
+enum class DeletionStage {
+
+    /**
+     * The intent is committed and the outcome is not known.
+     *
+     * Written before the destructive call. The device is sync-dead from here.
+     */
+    REQUESTED,
+
+    /**
+     * The server confirmed the deletion. Local cleanup is owed.
+     *
+     * Recovery must never ask the server again from this stage: the answer is already
+     * known, and asking after the receipt has been read would only reintroduce doubt.
+     */
+    CONFIRMED,
+}
+
+/**
+ * One unresolved deletion: how far it got, the token its receipt is keyed by, and
+ * whose account it is.
+ *
+ * The uid is stored rather than read from [IdentityState] because the two come apart
+ * by design - [IdentityStore.forgetDeletedAccount] clears the identity - and because
+ * the status route needs the pair, not one half of it.
+ */
+data class DeletionRecord(
+    val stage: DeletionStage,
+    val requestId: String,
+    val deletedUid: String,
+)
+
 enum class AuthAttempt {
     REGISTER,
     SIGN_IN,

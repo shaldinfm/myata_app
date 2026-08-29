@@ -10,6 +10,8 @@ import com.example.musicplayerapp.data.TrackReaction
 import com.example.musicplayerapp.data.supabase.AccountInfo
 import com.example.musicplayerapp.data.supabase.AuthFailure
 import com.example.musicplayerapp.data.supabase.AuthResult
+import com.example.musicplayerapp.data.supabase.DeleteAccountOutcome
+import com.example.musicplayerapp.data.supabase.DeletionStatusOutcome
 import com.example.musicplayerapp.data.supabase.EmailAuthApi
 import com.example.musicplayerapp.data.supabase.EmailAuthBackend
 import com.example.musicplayerapp.data.supabase.IdentityState
@@ -164,12 +166,62 @@ internal class FakeEmailAuthApi : EmailAuthApi {
     override suspend fun currentAccount(): AccountInfo? =
         session?.let { AccountInfo(it, accountName, accountEmail) }
 
-    override suspend fun currentUid(): String? = session
+    /**
+     * How many times the session was asked for.
+     *
+     * Zero is an assertion in its own right: a gate that must run *before* any session
+     * lookup - `ProfileRoute` under a deletion marker, which must not reconcile - can
+     * only be proved by nobody having asked.
+     */
+    var currentUidCalls: Int = 0
+
+    override suspend fun currentUid(): String? {
+        currentUidCalls++
+        return session
+    }
 
     override suspend fun signOutLocal(): Boolean {
         localSignOuts++
         session = null
         return true
+    }
+
+    // ------------------------------------------------ account deletion --
+    //
+    // G-A8b ships the boundary, not the orchestrator, so nothing in `src/main` calls
+    // either of these yet. They are here so the interface is implementable and so a
+    // test can assert the one property that matters today: **the gates do not depend
+    // on them.** A deletion marker makes this install sync-dead whether or not either
+    // call was ever made, which is why `deleteCalls` starts at zero and is expected to
+    // stay there in every G-A8b test.
+
+    /** What the next [deleteAccount] returns. */
+    var deleteOutcome: DeleteAccountOutcome = DeleteAccountOutcome.AlreadyDeleted
+
+    /** What the next [checkDeletionStatus] returns. */
+    var statusOutcome: DeletionStatusOutcome = DeletionStatusOutcome.Unknown
+
+    /** How many times each was called. Asserted to be zero by the gate tests. */
+    var deleteCalls: Int = 0
+    var statusCalls: Int = 0
+
+    /** The arguments the last call carried, so a test can prove the token round-trips. */
+    var lastDeleteRequestId: String? = null
+    var lastStatusPair: Pair<String, String>? = null
+
+    override suspend fun deleteAccount(requestId: String): DeleteAccountOutcome {
+        deleteCalls++
+        lastDeleteRequestId = requestId
+        return deleteOutcome
+    }
+
+    override suspend fun checkDeletionStatus(
+        requestId: String,
+        deletedUid: String,
+    ): DeletionStatusOutcome {
+        statusCalls++
+        lastStatusPair = requestId to deletedUid
+        return statusOutcome
     }
 
     private suspend fun authenticate(): AuthResult {
@@ -354,6 +406,20 @@ internal object TestIsolation {
         override suspend fun currentAccount(): AccountInfo? = null
         override suspend fun currentUid(): String? = null
         override suspend fun signOutLocal(): Boolean = true
+
+        // Refused like every other remote call, and this pair matters more than the
+        // rest: `delete_my_account` against the live project would destroy a real
+        // `auth.users` row and everything it owns, irreversibly, from a test run that
+        // merely forgot an opt-in. That is precisely the hole EmailAuthBackend exists
+        // to close, which is why account deletion was put behind this seam rather than
+        // given one of its own.
+        override suspend fun deleteAccount(requestId: String): DeleteAccountOutcome =
+            DeleteAccountOutcome.Failed(AuthFailure.NetworkFailure(WHY))
+
+        override suspend fun checkDeletionStatus(
+            requestId: String,
+            deletedUid: String,
+        ): DeletionStatusOutcome = DeletionStatusOutcome.Failed(AuthFailure.NetworkFailure(WHY))
     }
 
     private object OfflineSync : ReactionSyncApi {

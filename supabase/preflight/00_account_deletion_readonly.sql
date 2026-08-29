@@ -32,6 +32,7 @@
 --
 --     current_user            postgres           auth.users owner  supabase_auth_admin
 --     can_use_auth_schema     true               bypasses_rls      true
+--     can_read_auth_users     true
 --     can_delete_auth_users   true
 --     FKs -> auth.users       all CASCADE
 --     buckets 0   objects 0   objects_with_an_owner 0

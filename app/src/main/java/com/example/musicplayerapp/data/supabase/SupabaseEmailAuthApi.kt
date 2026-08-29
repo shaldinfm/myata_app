@@ -7,11 +7,20 @@ import io.github.jan.supabase.auth.SignOutScope
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.postgrest
+import com.example.musicplayerapp.SecureNetModule
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
  * The real auth calls, against supabase-kt 3.2.6.
@@ -44,7 +53,22 @@ import kotlinx.serialization.json.put
  * is [AuthFailure.SessionNotEstablished] rather than a uid the caller cannot use.
  * Nothing here routes anybody into a confirmation flow; v1 does not have one.
  */
-class SupabaseEmailAuthApi(private val context: Context) : EmailAuthApi {
+class SupabaseEmailAuthApi(
+    private val context: Context,
+    /**
+     * The client the unauthenticated status call travels on.
+     *
+     * The app's own shared, fully validating OkHttp client - the same one
+     * [SupabaseModule] hands to the Ktor engine, so this request gets the identical
+     * TLS configuration and the bundled trust anchors that make Supabase reachable on
+     * API 24. A parameter only so a test can capture the request without a network.
+     */
+    private val statusHttpClient: OkHttpClient = SecureNetModule.getOkHttpClient(context),
+    /** The project origin. A parameter only so a test never needs the real one. */
+    private val statusBaseUrl: String = SupabaseConfig.url,
+    /** The publishable key, sent as `apikey`. Never logged, never returned. */
+    private val statusApiKey: String = SupabaseConfig.publishableKey,
+) : EmailAuthApi {
 
     private val client get() = SupabaseModule.client(context)
 
@@ -239,42 +263,116 @@ class SupabaseEmailAuthApi(private val context: Context) : EmailAuthApi {
     }
 
     /**
-     * `account_deletion_status(p_request_id, p_deleted_uid)`.
+     * `account_deletion_status(p_request_id, p_deleted_uid)`, sent **without** an
+     * `Authorization` header.
      *
-     * **Works with no session, and that is the requirement.** supabase-kt resolves a
-     * request's bearer token as `jwtToken ?: client.accessToken ?: session token ?:
-     * supabaseKey`, with the key fallback on by default, so once the session is gone
-     * this goes out on the publishable key - which is what the `anon` grant in
-     * migration 0004 exists for. Verified against the resolved 3.2.6 artifact rather
-     * than assumed; see the G-A8b PR.
+     * ## Why this one call does not go through supabase-kt
+     *
+     * It is the only call in the app that must work with **no session**, and
+     * supabase-kt 3.2.6 cannot express that request correctly for this project's key.
+     *
+     * Its `AuthenticatedSupabaseApi` resolves a bearer token as `jwtToken ?:
+     * client.accessToken ?: session token ?: supabaseKey`, with the key fallback on by
+     * default. With no session that puts the **publishable key** in
+     * `Authorization: Bearer`, alongside the same value in `apikey`. Supabase
+     * documents exactly that shape as failing: a `sb_publishable_...` key is not a
+     * JWT, and a request carrying one as a bearer token "will be forwarded down to
+     * your project's database, but will be rejected as the value is not a JWT".
+     *
+     * This is a known defect rather than a reading of the docs: supabase-kt 3.7.0
+     * added `SupabaseClient.checkIsNewApiKey` and an opt-in `useNewApiKeyAsFallback`
+     * precisely so a new-format key is *not* used as a bearer token. 3.2.6 predates
+     * the concept - the string `sb_publishable_` appears nowhere in it - and the
+     * version is pinned by a Kotlin-toolchain constraint recorded in `build.gradle`.
+     *
+     * So this one request is built directly, against the same
+     * [SecureNetModule] client every other Supabase call already travels on - the same
+     * TLS configuration, the same `network_security_config` trust anchors that make
+     * API 24 work, the same pool and timeouts. **No second Supabase abstraction is
+     * introduced**, and nothing else in this file changes: [deleteAccount] runs with a
+     * live session, so its bearer token is a real JWT and supabase-kt handles it
+     * correctly.
+     *
+     * ## The header shape, which is the whole point
+     *
+     * ```
+     * POST <project>/rest/v1/rpc/account_deletion_status
+     * apikey: <publishable key>
+     * Accept: application/json
+     * Content-Type: application/json
+     * (no Authorization header at all)
+     *
+     * {"p_request_id": "...", "p_deleted_uid": "..."}
+     * ```
+     *
+     * The absence of `Authorization` is asserted by a test, not assumed: adding one
+     * back - or letting some future refactor route this through the authenticated
+     * path - would break the call in a way no offline suite would otherwise notice.
+     *
+     * The key is written into a header and never logged, never included in a failure
+     * message, and never part of the returned value.
      */
     override suspend fun checkDeletionStatus(
         requestId: String,
         deletedUid: String,
     ): DeletionStatusOutcome {
-        val db = client?.postgrest ?: return DeletionStatusOutcome.Failed(noClientFailure())
+        if (statusBaseUrl.isBlank() || statusApiKey.isBlank()) {
+            return DeletionStatusOutcome.Failed(noClientFailure())
+        }
 
         val payload = buildJsonObject {
             put(PARAM_REQUEST_ID, requestId)
             put(PARAM_DELETED_UID, deletedUid)
         }
 
+        val request = Request.Builder()
+            .url(statusBaseUrl.trimEnd('/') + STATUS_PATH)
+            .post(payload.toString().toRequestBody(JSON_MEDIA_TYPE))
+            .header(HEADER_APIKEY, statusApiKey)
+            .header("Accept", "application/json")
+            // Deliberately no Authorization header. See the KDoc above.
+            .build()
+
         return runCatching {
-            val answer = db.rpc(RPC_DELETION_STATUS, payload).decodeAs<JsonObject>()
-            when (answer[OUTCOME]?.jsonPrimitive?.contentOrNull) {
-                OUTCOME_COMPLETED -> DeletionStatusOutcome.Completed
-
-                // UNKNOWN is an answer, not a failure: the pair has no receipt. It is
-                // deliberately indistinguishable from a malformed request, so it is
-                // never read as evidence that the deletion did not happen.
-                OUTCOME_UNKNOWN -> DeletionStatusOutcome.Unknown
-
-                else -> DeletionStatusOutcome.Failed(
-                    AuthFailure.Unknown(detail = "unrecognised account_deletion_status outcome")
-                )
+            // OkHttp's execute() blocks, and this is a suspend function that callers
+            // reach from arbitrary dispatchers.
+            withContext(Dispatchers.IO) {
+                statusHttpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        // The status code only. A body could echo request content, and
+                        // this failure is read by code that may go on to log it.
+                        return@use DeletionStatusOutcome.Failed(
+                            AuthFailure.Unknown(
+                                detail = "account_deletion_status returned ${response.code}"
+                            )
+                        )
+                    }
+                    readStatus(response.body?.string().orEmpty())
+                }
             }
         }.getOrElse {
             DeletionStatusOutcome.Failed(classifyAuthFailure(it, AuthOperation.DELETION_STATUS))
+        }
+    }
+
+    /**
+     * The one word the status route returns.
+     *
+     * `UNKNOWN` is an answer, not a failure: the pair has no receipt. It is
+     * deliberately indistinguishable from a malformed request, so it is never read as
+     * evidence that the deletion did not happen.
+     */
+    private fun readStatus(body: String): DeletionStatusOutcome {
+        val outcome = runCatching {
+            Json.parseToJsonElement(body).jsonObject[OUTCOME]?.jsonPrimitive?.contentOrNull
+        }.getOrNull()
+
+        return when (outcome) {
+            OUTCOME_COMPLETED -> DeletionStatusOutcome.Completed
+            OUTCOME_UNKNOWN -> DeletionStatusOutcome.Unknown
+            else -> DeletionStatusOutcome.Failed(
+                AuthFailure.Unknown(detail = "unrecognised account_deletion_status outcome")
+            )
         }
     }
 
@@ -355,6 +453,20 @@ class SupabaseEmailAuthApi(private val context: Context) : EmailAuthApi {
 
         const val RPC_DELETE_ACCOUNT = "delete_my_account"
         const val RPC_DELETION_STATUS = "account_deletion_status"
+
+        /**
+         * The status route's own path, because it does not go through supabase-kt.
+         *
+         * PostgREST's RPC convention, the same one `db.rpc(name, …)` builds for every
+         * other call in this package - written out here only because this request is
+         * constructed directly. See [checkDeletionStatus] for why.
+         */
+        const val STATUS_PATH = "/rest/v1/rpc/$RPC_DELETION_STATUS"
+
+        /** The header a publishable key belongs in, and the only one it is sent in. */
+        const val HEADER_APIKEY = "apikey"
+
+        private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
 
         const val PARAM_REQUEST_ID = "p_request_id"
         const val PARAM_DELETED_UID = "p_deleted_uid"

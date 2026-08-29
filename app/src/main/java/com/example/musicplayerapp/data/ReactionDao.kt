@@ -524,6 +524,28 @@ abstract class ReactionDao {
     abstract suspend fun clearRemoteRevs(): Int
 
     /**
+     * Removes every reaction this device holds. **Account deletion only.**
+     *
+     * The one bulk delete in this class, and the comment above `clearRemoteRevs`
+     * states the rule it is the exception to: a handoff never touches the Collection,
+     * and nothing on the ordinary reaction path deletes a row - since migration 0002 a
+     * withdrawal is a stored NEUTRAL, precisely so absence never has to mean anything.
+     *
+     * Permanent account deletion is the single case where absence is the intent. The
+     * listener has asked for the account and its data to stop existing, and leaving
+     * the rows here would not merely be untidy: the next account this install
+     * registers would adopt them through `IdentityHandoff` and push data that was
+     * reported deleted back into the cloud.
+     *
+     * Deleting from an empty table is zero rows and no error, which is what makes the
+     * cleanup re-runnable after a process death.
+     *
+     * @return how many rows went, for the log.
+     */
+    @Query("DELETE FROM track_reaction")
+    abstract suspend fun clearAll(): Int
+
+    /**
      * Adopts remote current state for one track, and its revision, in one statement.
      *
      * The settlement half of an ALREADY_APPLIED answer: the events this device was

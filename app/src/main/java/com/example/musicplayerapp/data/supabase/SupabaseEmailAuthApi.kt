@@ -6,6 +6,7 @@ import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.SignOutScope
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.postgrest.exception.PostgrestRestException
 import io.github.jan.supabase.postgrest.postgrest
 import com.example.musicplayerapp.SecureNetModule
 import kotlinx.coroutines.Dispatchers
@@ -257,10 +258,50 @@ class SupabaseEmailAuthApi(
                     )
                 }
             }
-        }.getOrElse {
-            DeleteAccountOutcome.Failed(classifyAuthFailure(it, AuthOperation.ACCOUNT_DELETE))
+        }.getOrElse { thrown ->
+            definitiveRefusal(thrown)
+                ?.let { DeleteAccountOutcome.Refused(it) }
+                ?: DeleteAccountOutcome.Failed(
+                    classifyAuthFailure(thrown, AuthOperation.ACCOUNT_DELETE)
+                )
         }
     }
+
+    /**
+     * The SQLSTATE, when it is one that proves the deletion transaction did not commit.
+     *
+     * ## Why the code and not the HTTP status
+     *
+     * A status says how PostgREST rendered a failure; it does not say whether any SQL
+     * ran. `403` covers both "the function raised 42501" and "a policy refused
+     * something else"; `400` covers a malformed request and a `RAISE ... 22023` alike.
+     * Deciding on the status would mean clearing a deletion marker on evidence that
+     * does not distinguish "nothing happened" from "something happened".
+     *
+     * The SQLSTATE does distinguish it. Each code below is raised by
+     * `delete_my_account` itself, and a plpgsql `RAISE` aborts the enclosing
+     * transaction - which for PostgREST is the whole request. So one of these coming
+     * back is proof that no row and no receipt were committed:
+     *
+     * | code | raised where | why nothing committed |
+     * |---|---|---|
+     * | `28000` | `auth.uid()` is null | before any DELETE |
+     * | `42501` | anonymous caller - or no EXECUTE on the function | before any DELETE, or the function never ran |
+     * | `22023` | `p_request_id` is null | before any DELETE |
+     * | `XX000` | the defensive row-count check | after the DELETEs, and the RAISE rolls them back with the receipt |
+     *
+     * Everything else is `null` here and becomes [DeleteAccountOutcome.Failed]: an
+     * `IOException`, a gateway's own error page, a `PGRST301`, a 5xx, an exception
+     * carrying no code at all, and - deliberately - **any SQLSTATE this build does not
+     * recognise**. A code added to the function by a later migration must not be read
+     * as a refusal by an older client that has never heard of it.
+     */
+    private fun definitiveRefusal(t: Throwable): String? =
+        generateSequence(t) { it.cause }
+            .filterIsInstance<PostgrestRestException>()
+            .firstOrNull()
+            ?.code
+            ?.takeIf { it in DEFINITIVE_REFUSALS }
 
     /**
      * `account_deletion_status(p_request_id, p_deleted_uid)`, sent **without** an
@@ -476,5 +517,15 @@ class SupabaseEmailAuthApi(
         private const val OUTCOME_ALREADY_DELETED = "ALREADY_DELETED"
         private const val OUTCOME_COMPLETED = "COMPLETED"
         private const val OUTCOME_UNKNOWN = "UNKNOWN"
+
+        /**
+         * The SQLSTATEs `delete_my_account` raises itself, and the only codes that may
+         * be read as a definitive refusal.
+         *
+         * Written out as a closed set rather than a range or a prefix: the point is
+         * that an unrecognised code is *not* a refusal, and a set is the only shape
+         * that keeps saying so when the function grows a new one.
+         */
+        private val DEFINITIVE_REFUSALS = setOf("28000", "42501", "22023", "XX000")
     }
 }

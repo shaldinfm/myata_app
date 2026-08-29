@@ -4,8 +4,10 @@ Permanent deletion of a **registered** Radio Myata account: the authentication
 identity and every app-owned row keyed to it, removed together, provably.
 
 This document is the frozen design. The server half ships in
-[`supabase/migrations/0004_account_deletion.sql`](../supabase/migrations/0004_account_deletion.sql);
-**no client code exists yet** — see [Not implemented yet](#not-implemented-yet).
+[`supabase/migrations/0004_account_deletion.sql`](../supabase/migrations/0004_account_deletion.sql),
+applied to production. The client boundary, the sync gates, the orchestrator, the
+recovery and the local cleanup are implemented; **no UI reaches any of it yet** — see
+[Implementation status](#implementation-status).
 
 Related: [SUPABASE-FOUNDATION.md](SUPABASE-FOUNDATION.md) (schema, RLS, grants),
 [SUPABASE-SYNC.md](SUPABASE-SYNC.md) (drain, pull, the lease).
@@ -169,7 +171,7 @@ index in `user_metadata` and is deleted with the auth row.
 
 ## Client state machine
 
-Frozen here; **implemented in a later PR.** One durable marker in the
+Frozen here; **implemented across G-A8b and G-A8c.** One durable marker in the
 `supabase_identity` preferences file, written with `commit()`.
 
 | Durable marker | + identity state | Meaning | Sync |
@@ -199,11 +201,13 @@ SyncLease.withExclusive {                            // 1 in-flight drains/pulls
     when (result) {
         Deleted, AlreadyDeleted -> {
             IdentityStore.markDeletionConfirmed(R, X)    // 6 before anything local is touched
-            ReactionWriteGate.withDeliveryStep {         // 7 local only, no network
+            api.signOutLocal()                           // 7 NETWORK - outside the gate
+            //    false here -> Deferred: nothing local is touched at all
+            ReactionWriteGate.withDeliveryStep {         // 8 one section, no network inside
                 purge reaction_outbox; clear track_reaction
+                LastSyncStore.forget(X)
+                IdentityStore.forgetDeletedAccount()     // 9 -> None, marker cleared. LAST
             }
-            api.signOutLocal()                           // 8
-            IdentityStore.forgetDeletedAccount()         // 9 -> None, marker cleared
         }
         Inconclusive      -> { /* REQUESTED stands; nothing local changes */ }
         DefinitiveRefusal -> { IdentityStore.clearDeletionMarker() }
@@ -212,15 +216,32 @@ SyncLease.withExclusive {                            // 1 in-flight drains/pulls
 ```
 
 The lease stops what is running; the durable marker stops what would start. Only
-`SyncLease` is held across the network call — `ReactionWriteGate` is not, so a listener
-tapping Like never waits on it. Holding the lease across a request follows
+`SyncLease` is held across a network call — `ReactionWriteGate` is not, so a listener
+tapping Like never waits on one. Holding the lease across a request follows
 `IdentityHandoff.finish`, which does the same.
 
-The outbox is purged **before** the identity is cleared. `forgetDeletedAccount()`
-writes `None`, the one state from which a new anonymous uid may be minted, and
-reversing the two would open a window in which a drain could mint an identity and
-upload the dead account's pending events. The lease closes that window; the ordering
-closes it again.
+**`signOutLocal()` is a network call.** `signOut(SignOutScope.LOCAL)` is local in
+*scope* — it invalidates this device's session and nobody else's — but supabase-kt
+issues an HTTP `POST /logout?scope=local` whenever a session exists, skipping it only
+when there is none. So it runs **first, and outside the gate**: holding the gate across
+it would make a Like wait on a round trip, up to the client's read timeout. A failure
+there returns `Deferred` before anything local is touched — no purge, no forgotten
+timestamps, no identity change — and a later start retries the whole routine.
+
+**Everything after it is one gate section, and that section is the cutover.** Purge,
+`LastSyncStore.forget(X)` and `forgetDeletedAccount()` are held together, with no
+network inside. `SyncLease` does not serialise ordinary reaction writes, so without
+this a tap landing after the purge and before the identity was cleared would commit a
+`track_reaction` and an outbox row that survived the deletion, belonging to an account
+that no longer existed. With one section there is no such instant: a tap either lands
+before the gate is taken and the purge removes it, or it waits and lands afterwards, on
+an install that is already a guest, where it is an ordinary new guest-side action.
+
+**Room before identity, inside that section.** `forgetDeletedAccount()` writes `None`,
+the one state from which a new anonymous uid may be minted, and reversing the two would
+open a window in which a drain could mint an identity and upload the dead account's
+pending events. The lease closes that window against sync; the gate closes it against
+taps.
 
 `deletionInFlight` is consulted by `ListenerSession.identity`, `ReactionSyncEngine`,
 `ReactionPull` / `ReactionPullTrigger`, `ReactionSyncScheduler`, `IdentityHandoff` and
@@ -241,6 +262,7 @@ reentrant.
 A successful sign-in as X proves the account exists and therefore that deletion did not
 complete: clear the marker, restore normal operation, report. That is an *available*
 resolution, never a required one — the primary path needs no session at all.
+**Not implemented; deferred — see [Implementation status](#implementation-status).**
 
 **Accepted limit.** An uninstall while `REQUESTED` takes the marker and the token with
 it. If the deletion had not committed, the account survives with nothing pointing at
@@ -319,19 +341,35 @@ Query 8 is the only one that calls a new function, and it reads. **Do not valida
 to the live, double-gated instrumentation test in a later PR, against a fixture
 account created for it — which this migration finally makes cleanable.
 
-## Not implemented yet
+## Implementation status
 
-This PR is the server half only. Still to come, in order:
+| | |
+|---|---|
+| **G-A8a** server: receipts table, `delete_my_account`, `account_deletion_status` | applied to production, verified |
+| **G-A8b** client boundary and sync gates | implemented |
+| **G-A8c** orchestrator, reconciler recovery, local cleanup | implemented |
+| **UI** — the destructive row, two confirmations, progress and failure states | **outstanding** |
+| **Live validation** — double-gated, opt-in, against a fixture account | **outstanding** |
 
-1. **Client boundary and gates** — `deleteAccount` / `checkDeletionStatus` on the auth
-   interface, the durable deletion marker and `forgetDeletedAccount()`,
-   `LastSyncStore.forget(uid)`, and `deletionInFlight` wired into every sync entry
-   point. No UI.
-2. **Orchestrator and recovery** — the flow above, the reconciler resolution, and the
-   regression tests that matter: pending outbox plus an unresolved deletion mints
-   nothing and drains nothing; a lost response followed by an expired token resolves
-   through the status route.
-3. **UI** — the destructive row, two confirmations, progress and failure states.
-4. **Live validation** — double-gated, opt-in.
+`AccountDeletion.request(context)` is the entry point and is complete, but **nothing
+in `src/main` calls it**: without the UI phase there is no way for a listener to reach
+it, and no code path in a shipped build invokes `delete_my_account` at all.
 
-Nothing in the Android app calls anything in `0004` today.
+Everything above has been exercised offline only. **No production RPC has ever been
+executed and no account has been deleted** — the first real execution will be the live
+validation phase, against a fixture account created for it.
+
+### Deferred: resolving a deletion by signing in again
+
+The [Recovery](#recovery) section describes an *optional* resolution — a successful
+sign-in as X proving the account still exists, which retracts an unresolved deletion.
+**That path is not implemented**, and it is deferred rather than dropped.
+
+The reason is a collision with a different frozen contract: authentication from
+`IdentityState.Registered` is not a defined transition in the G-A4 routing rules, so an
+explicit sign-in while a deletion is unresolved is refused locally before any request
+is made. Making it a defined transition changes the auth contract, not this one, and
+would risk the generic router adopting an unrelated account.
+
+Nothing depends on it. The primary resolution — the session-less status route — needs
+no credentials at all, which is the whole reason the receipt exists.

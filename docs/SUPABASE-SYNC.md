@@ -10,20 +10,41 @@ Supabase. Neither reporting path waits on the other and neither can fail the oth
 
 ## Migration status
 
-| | |
-|---|---|
-| Applied to production | **`0003_rev_and_atomic_apply.sql`** |
-| SHA256 of the applied file | `4ac40f03a1e93d862f61864a034a72b480fa8abe21ad04388803b11bb778b37f` |
-| Post-migration verification | **PASS** (`verdict.overall = true`) |
+| applied to production | SHA256 of the applied file | post-apply verification |
+|---|---|---|
+| **`0003_rev_and_atomic_apply.sql`** | `4ac40f03a1e93d862f61864a034a72b480fa8abe21ad04388803b11bb778b37f` | **PASS** (`verdict.overall = true`) |
+| **`0004_account_deletion.sql`** | `a641e694550791e66e63a27a12d39ae712e6faa8ed35a8ada2ac197b37031b97` | **PASS** (see below) |
 
-`supabase/migrations/0003_rev_and_atomic_apply.sql` in this repository is the exact
-file that was executed, byte for byte - which is why `.gitattributes` pins the
-migration directory to LF, so a checkout on any platform still hashes to the value
-above.
+Each file named above, as it stands in this repository, is the exact file that was
+executed, byte for byte - which is why `.gitattributes` pins the migration directory
+to LF, so a checkout on any platform still hashes to the value recorded here.
 
 0003 adds `reactions.liked_at`, the server-assigned `reactions.rev`, its sequence and
 `SECURITY DEFINER` trigger, the `reaction_event_applications` log, and the
 `apply_reaction_event_batch` RPC.
+
+0004 adds account deletion: `account_deletion_receipts`, `delete_my_account` and
+`account_deletion_status`. It is not part of the reaction sync path and is recorded
+here only because this is where applied-migration provenance lives; the design is
+[ACCOUNT-DELETION.md](ACCOUNT-DELETION.md).
+
+Post-apply verification covered schema and privilege posture, one functional probe,
+and data preservation. Specifically: `account_deletion_receipts` has RLS enabled,
+FORCE RLS disabled, zero policies, no foreign key, and no direct privileges for
+`anon`, `authenticated` or `PUBLIC`; `delete_my_account` takes `p_request_id uuid`
+and no uid, is `SECURITY DEFINER` with an empty `search_path`, and its only client
+EXECUTE is `authenticated` - `anon` and `PUBLIC` have none, while the production ACL
+also showed the administrative roles `postgres` and `service_role`;
+`account_deletion_status` takes two `uuid` arguments, is `SECURITY DEFINER` and
+`STABLE` with an empty `search_path`, grants client EXECUTE to `anon` and
+`authenticated` but not `PUBLIC`, and returned `{"outcome": "UNKNOWN"}` for one
+random non-existent pair. The three reaction tables were unchanged across the apply
+at 6 / 13 / 13.
+
+**The deletion path itself was not exercised.** No verification step called
+`delete_my_account`, so nothing here is evidence about how it behaves against a real
+account. End-to-end validation belongs to the double-gated live instrumentation test
+in a later PR, against a fixture account.
 
 ## G-A7 status
 

@@ -7,6 +7,8 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.musicplayerapp.R
+import com.example.musicplayerapp.data.supabase.DeletionStage
+import com.example.musicplayerapp.data.supabase.IdentityStore
 import com.example.musicplayerapp.databinding.FragmentProfileGuestBinding
 
 /**
@@ -112,7 +114,73 @@ class ProfileGuestFragment : Fragment() {
             findNavController().navigate(R.id.action_profile_to_auth_create_account)
         }
 
+        renderPendingDeletionIfAny()
+
         return binding.root
+    }
+
+    /**
+     * What this screen says while an account deletion is unresolved.
+     *
+     * ## Why it belongs here
+     *
+     * `ProfileRoute` already sends an install with a deletion marker to this screen -
+     * that is G-A8b, and it is right: the account may be gone, so the authenticated
+     * card would be asserting something nobody can prove. What it produced until now
+     * was a dead end. The install still holds `REGISTERED(X)` on disk, and
+     * authentication from that state is not a defined transition in the frozen G-A4
+     * routing, so both CTAs failed with a generic error and the listener had no way to
+     * understand why.
+     *
+     * So the copy changes and the CTAs go. **Presentation only**: nothing here reads a
+     * session, writes state, authenticates, or resolves anything. The resolution
+     * belongs to `IdentityReconciler`, which runs on every start and needs no help
+     * from a screen.
+     *
+     * ## Two stages, two different sentences
+     *
+     * `REQUESTED` means the outcome is genuinely unknown - the deletion may already
+     * have committed with its response lost - so the copy promises a check rather than
+     * a result, and offers no retry: a manual one would mint a second token for one
+     * deletion and orphan the first, whose receipt is the only thing that can resolve
+     * it.
+     *
+     * `CONFIRMED` means the server has answered and only this device is behind, so it
+     * says the account is deleted and that cleanup is finishing.
+     *
+     * When the marker goes - cleanup done, or a refusal retracted it - this method
+     * changes nothing and the ordinary guest screen renders exactly as it always has.
+     */
+    private fun renderPendingDeletionIfAny() {
+        val stage = IdentityStore.deletion(requireContext())?.stage ?: return
+
+        val heading = when (stage) {
+            DeletionStage.REQUESTED -> R.string.profile_deletion_pending_heading
+            DeletionStage.CONFIRMED -> R.string.profile_deletion_confirmed_heading
+        }
+        val body = when (stage) {
+            DeletionStage.REQUESTED -> R.string.profile_deletion_pending_body
+            DeletionStage.CONFIRMED -> R.string.profile_deletion_confirmed_body
+        }
+
+        binding.profileGuestHeading.setText(heading)
+        binding.profileGuestBodyFirst.setText(body)
+        // The frozen guest copy is one sentence split across two nodes where the
+        // designer breaks it. The pending copy is a single string, so the second node
+        // has nothing to say.
+        binding.profileGuestBodySecond.visibility = View.GONE
+
+        // Every way in is closed while this is unresolved. Not merely disabled: a
+        // greyed-out `Войти` invites a tap that cannot work, and the reason it cannot
+        // is not something this screen can explain.
+        binding.profileSignIn.visibility = View.GONE
+        binding.profileCreateAccount.visibility = View.GONE
+
+        // "Аккаунт добавляет ..." is an argument for registering, which is not the
+        // question in front of the listener right now.
+        binding.profileBenefitsSection.visibility = View.GONE
+        binding.profileBenefitSync.visibility = View.GONE
+        binding.profileBenefitRestore.visibility = View.GONE
     }
 
     override fun onDestroyView() {

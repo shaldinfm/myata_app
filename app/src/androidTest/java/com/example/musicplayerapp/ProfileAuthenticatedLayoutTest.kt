@@ -29,6 +29,12 @@ import org.junit.runner.RunWith
  *     Row Аватар         456..520   358x64
  *     Row Сменить        528..592   358x64
  *     Row Выйти          600..664   358x64
+ *     Row Удалить        672..736   358x64   <- G-A8d, not from Figma
+ *
+ * The last row has no frozen node behind it: the 3.6.6 frames stop at `Выйти`. It is
+ * pinned here to the same box and the same 8dp gap as the three rows above it, so the
+ * addition is measured against the design language rather than against nothing - and
+ * so a later change to it is as visible in review as a change to any frozen row.
  *
  * Built the way `AuthLayoutTest` is, and for the same reasons: the chain of gaps and
  * boxes is asserted rather than the absolute offsets, because Android rounds each dp
@@ -91,6 +97,9 @@ class ProfileAuthenticatedLayoutTest {
             val rowPassword = root.find(R.id.profile_row_change_password)
             val rowSignOut = root.find(R.id.profile_row_sign_out)
             val signOutLabel = root.text(R.id.profile_row_sign_out_label)
+            val rowDelete = root.find(R.id.profile_row_delete_account)
+            val deleteLabel = root.text(R.id.profile_row_delete_account_label)
+            val deleteProgress = root.find(R.id.profile_row_delete_account_progress)
 
             /* ---- the band, identical to profile-guest's ---- */
             expect(where, "header band height", band.height, dp(64))
@@ -112,12 +121,14 @@ class ProfileAuthenticatedLayoutTest {
             }
             for ((label, row) in listOf(
                 "Аватар" to rowAvatar, "Сменить пароль" to rowPassword, "Выйти" to rowSignOut,
+                "Удалить аккаунт" to rowDelete,
             )) {
                 expect(where, "$label row height", row.height, dp(64))
             }
 
             for ((label, v) in listOf("card" to card, "cloud" to cloud, "last sync" to last,
-                    "Аватар" to rowAvatar, "Сменить" to rowPassword, "Выйти" to rowSignOut)) {
+                    "Аватар" to rowAvatar, "Сменить" to rowPassword, "Выйти" to rowSignOut,
+                    "Удалить" to rowDelete)) {
                 expect(where, "$label x", leftInRoot(v), dp(16))
                 expect(where, "$label width", v.width, dp(widthDp - 32))
             }
@@ -131,6 +142,7 @@ class ProfileAuthenticatedLayoutTest {
             expect(where, "Аккаунт to Аватар", gap(accountLabel, rowAvatar), dp(8))
             expect(where, "Аватар to Сменить", gap(rowAvatar, rowPassword), dp(8))
             expect(where, "Сменить to Выйти", gap(rowPassword, rowSignOut), dp(8))
+            expect(where, "Выйти to Удалить", gap(rowSignOut, rowDelete), dp(8))
 
             if (widthDp == designWidthDp) {
                 expect(where, "card y", topInRoot(card), dp(96))
@@ -138,7 +150,7 @@ class ProfileAuthenticatedLayoutTest {
                 expect(where, "Аккаунт box", accountLabel.height, dp(20))
 
                 log += "$where content ends at " +
-                    "${"%.1f".format((topInRoot(rowSignOut) + rowSignOut.height) / dm.density)}dp " +
+                    "${"%.1f".format((topInRoot(rowDelete) + rowDelete.height) / dm.density)}dp " +
                     "in a 692dp frame"
             }
 
@@ -148,6 +160,7 @@ class ProfileAuthenticatedLayoutTest {
             type(where, "email", email, 14f, 20f, dm)
             type(where, "Синхронизация", syncLabel, 14f, 20f, dm)
             type(where, "Выйти", signOutLabel, 16f, 22f, dm)
+            type(where, "Удалить аккаунт", deleteLabel, 16f, 22f, dm)
 
             /* ---- colour ---- */
             colour(where, "heading", title, ctx.tone(R.color.text_heading))
@@ -157,6 +170,14 @@ class ProfileAuthenticatedLayoutTest {
             // The destructive row is the `error` token in both frames, and it is the
             // only thing on this screen that is.
             colour(where, "Выйти", signOutLabel, ctx.tone(R.color.error))
+            // Two destructive rows now, and both carry the same token. The delete row
+            // is the more destructive of the pair and must not read as anything softer.
+            colour(where, "Удалить аккаунт", deleteLabel, ctx.tone(R.color.error))
+
+            // The inline spinner is GONE at rest, which is what keeps the row's resting
+            // box identical to the three above it - a spinner that reserved width would
+            // shift the label and break the sweep for a state nobody is in.
+            expect(where, "delete spinner is not laid out at rest", deleteProgress.width, 0f)
         }
     }
 

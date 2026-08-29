@@ -312,6 +312,40 @@
     <string name="profile_account_sign_out">Выйти</string>
 
     <!--
+      Account deletion (G-A8d). The row, the two confirmations and the five results
+      `AccountDeletionResult` can take.
+
+      None of this names a status code, a SQLSTATE or an internal stage. The one
+      distinction the copy does have to carry is the one the contract cares about:
+      "nothing was deleted" and "we could not confirm" are different sentences,
+      because the second may well mean the account is gone.
+    -->
+    <string name="profile_account_delete">Удалить аккаунт</string>
+
+    <string name="delete_account_confirm_title">Удалить аккаунт?</string>
+    <string name="delete_account_confirm_body">Аккаунт, данные в облаке и Коллекция на этом устройстве будут удалены без возможности восстановления.</string>
+    <string name="delete_account_confirm_continue">Продолжить</string>
+
+    <string name="delete_account_final_title">Удалить навсегда?</string>
+    <!-- %1$s is the address the account is keyed by, so the last confirmation names
+         what is about to be destroyed rather than asking in the abstract. -->
+    <string name="delete_account_final_body">Аккаунт %1$s будет удалён навсегда. Это действие нельзя отменить.</string>
+    <string name="delete_account_final_confirm">Удалить навсегда</string>
+    <string name="delete_account_cancel">Отмена</string>
+
+    <string name="delete_account_done">Аккаунт удалён</string>
+    <string name="delete_account_refused">Удаление не выполнено. Данные не удалены. Попробуйте ещё раз.</string>
+    <string name="delete_account_unavailable">Удаление аккаунта сейчас недоступно. Попробуйте позже.</string>
+
+    <!-- The guest screen while a deletion is unresolved. Deliberately not an error:
+         the account may already be gone, and the app resolves it without the listener
+         doing anything. -->
+    <string name="profile_deletion_pending_heading">Проверяем удаление аккаунта</string>
+    <string name="profile_deletion_pending_body">Пока статус удаления не подтверждён, синхронизация приостановлена. Приложение продолжит проверку автоматически.</string>
+    <string name="profile_deletion_confirmed_heading">Аккаунт удалён</string>
+    <string name="profile_deletion_confirmed_body">Завершаем очистку данных на этом устройстве.</string>
+
+    <!--
       Fallbacks. Both are shown instead of a uid: a uid is not an identity a listener
       recognises, and putting one on the account card would be showing them a database
       key where they expect their name.

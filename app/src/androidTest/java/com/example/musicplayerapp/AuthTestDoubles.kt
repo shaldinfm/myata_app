@@ -236,9 +236,20 @@ internal class FakeEmailAuthApi : EmailAuthApi {
     var lastDeleteRequestId: String? = null
     var lastStatusPair: Pair<String, String>? = null
 
+    /**
+     * Holds a deletion request open until a test lets it finish.
+     *
+     * The only way to observe a request that is *in flight*, which is what the row's
+     * disabled state, its inline spinner and the double-submit guard are all claims
+     * about. The counter is incremented **before** the gate, so a test can assert
+     * "exactly one" while the first is still parked.
+     */
+    var deleteGate: CompletableDeferred<Unit>? = null
+
     override suspend fun deleteAccount(requestId: String): DeleteAccountOutcome {
         deleteCalls++
         lastDeleteRequestId = requestId
+        deleteGate?.await()
         return deleteOutcome
     }
 

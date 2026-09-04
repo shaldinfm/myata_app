@@ -3,11 +3,12 @@
 Permanent deletion of a **registered** Radio Myata account: the authentication
 identity and every app-owned row keyed to it, removed together, provably.
 
-This document is the frozen design. The server half ships in
+This document is the frozen design, and the whole of it now ships. The server half is
 [`supabase/migrations/0004_account_deletion.sql`](../supabase/migrations/0004_account_deletion.sql),
-applied to production. The client boundary, the sync gates, the orchestrator, the
-recovery and the local cleanup are implemented; **no UI reaches any of it yet** — see
-[Implementation status](#implementation-status).
+applied to production; the client boundary, the sync gates, the orchestrator, the
+recovery, the local cleanup and the destructive UI are implemented and **validated
+against production** — see [Implementation status](#implementation-status) and
+[Live validation](#live-validation--recorded-result-2026-09-04).
 
 Related: [SUPABASE-FOUNDATION.md](SUPABASE-FOUNDATION.md) (schema, RLS, grants),
 [SUPABASE-SYNC.md](SUPABASE-SYNC.md) (drain, pull, the lease).
@@ -337,33 +338,95 @@ select (select count(*) from auth.users)                          as auth_users,
 ```
 
 Query 8 is the only one that calls a new function, and it reads. **Do not validate
-`delete_my_account` by deleting a production account.** End-to-end validation belongs
-to the live, double-gated instrumentation test in a later PR, against a fixture
-account created for it — which this migration finally makes cleanable.
+`delete_my_account` by deleting a production account.** End-to-end validation was done
+once, under G-A8e, against a disposable fixture account created for it — which only
+this migration made cleanable. See
+[Live validation](#live-validation--recorded-result-2026-09-04).
 
 ## Implementation status
 
 | | |
 |---|---|
-| **G-A8a** server: receipts table, `delete_my_account`, `account_deletion_status` | applied to production, verified |
-| **G-A8b** client boundary and sync gates | implemented |
-| **G-A8c** orchestrator, reconciler recovery, local cleanup | implemented |
-| **UI** — the destructive row, two confirmations, progress and failure states | **outstanding** |
-| **Live validation** — double-gated, opt-in, against a fixture account | **outstanding** |
+| **G-A8a** server: receipts table, `delete_my_account`, `account_deletion_status` | **CLOSED** — applied to production, verified |
+| **G-A8b** client boundary and sync gates | **CLOSED** |
+| **G-A8c** orchestrator, reconciler recovery, local cleanup | **CLOSED** |
+| **G-A8d** the destructive row, two confirmations, progress and failure states | **CLOSED** |
+| **G-A8e** live validation against a production fixture account | **CLOSED** — 2026-09-04, PASS |
 
-`AccountDeletion.request(context)` is the entry point and is complete, but **nothing
-in `src/main` calls it**: without the UI phase there is no way for a listener to reach
-it, and no code path in a shipped build invokes `delete_my_account` at all.
+`AccountDeletion.request(context)` is reached from the profile screen's `Удалить
+аккаунт` row, behind the two confirmations G-A8d added.
 
-Everything above has been exercised offline only. **No production RPC has ever been
-executed and no account has been deleted** — the first real execution will be the live
-validation phase, against a fixture account created for it.
+`delete_my_account` has been executed against production exactly once, deliberately,
+against the G-A8e fixture. No other account has ever been deleted by this app.
 
-### Deferred: resolving a deletion by signing in again
+## Live validation — recorded result (2026-09-04)
+
+One end-to-end run against production, on a clean debug install (`versionCode 202611`,
+API 36 emulator) at `main` `ce2fafa`. **One** `delete_my_account` invocation.
+
+The fixture was a disposable registered account created **through the product's own
+`Создать аккаунт` screen** — not by dashboard invite and not by SQL — at
+`zz-ga8e-…@example.com`, so the shipped registration path was the one exercised and no
+mail could leave the project. Registration produced a live session immediately and the
+install committed `REGISTERED(X)`. Before deletion it held **three LIKEs on three
+distinct tracks**, drained to the cloud, with a read-only SQL gate confirming exactly
+`3 / 3 / 3` rows in `reactions`, `reaction_events` and
+`reaction_event_applications`, zero receipts for that uid, zero Storage buckets and
+objects, and the three foreign keys into `auth.users` and `reaction_events` all
+`ON DELETE CASCADE`.
+
+What the destructive step produced, in order:
+
+| | |
+|---|---|
+| UI | the row disabled with its inline spinner; both confirmations shown, the second naming the fixture address |
+| server outcome | **`DELETED`** |
+| local cleanup | completed — `cleared 0 pending event(s), 3 reaction(s)`, then `forgetDeletedAccount` |
+| resulting screen | the **ordinary** guest profile, not either pending presentation; Back does not return to the account card |
+
+Read-only SQL afterwards, scoped to the fixture uid:
+
+| Check | Result |
+|---|---|
+| `auth.users` row, by uid **and** by address | gone |
+| `public.reactions` for the uid | 0 |
+| `public.reaction_events` for the uid | 0 |
+| `public.reaction_event_applications` for the uid | 0 |
+| accounts matching the fixture convention | 0 remaining |
+| `account_deletion_receipts` for the uid | **exactly one**, durable |
+
+Local state afterwards: identity `NONE`, no deletion marker, no handoff marker, zero
+reaction rows, empty outbox, `LastSyncStore` forgotten.
+
+### The recovery route, proven without a session
+
+The receipt was then read back over the **`anon` transport a stranded device would
+use** — `POST /rest/v1/rpc/account_deletion_status` with an `apikey` header and
+**no `Authorization` header**, no access token, and no service-role key anywhere in
+the run (none exists on the build machine, and the app ships only the publishable
+key):
+
+| Call | Answer |
+|---|---|
+| correct pair `(R, X)` | `COMPLETED` |
+| wrong `request_id`, correct uid | `UNKNOWN` |
+| correct `request_id`, wrong uid | `UNKNOWN` |
+
+All three returned HTTP 200, so the two negatives are the function's own answers
+rather than transport failures. That is the pair binding demonstrated in production:
+neither half of the pair answers anything on its own.
+
+The `(request_id, deleted_uid)` pair itself is kept with the run evidence and
+deliberately not recorded in this repository.
+
+## Deferred: resolving a deletion by signing in again
+
+**Explicitly outside the G-A8a–e closure, and still open.**
 
 The [Recovery](#recovery) section describes an *optional* resolution — a successful
 sign-in as X proving the account still exists, which retracts an unresolved deletion.
-**That path is not implemented**, and it is deferred rather than dropped.
+**That path is not implemented**, it was not exercised by the live validation, and it
+is deferred rather than dropped.
 
 The reason is a collision with a different frozen contract: authentication from
 `IdentityState.Registered` is not a defined transition in the G-A4 routing rules, so an

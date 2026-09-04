@@ -24,11 +24,15 @@ import com.example.musicplayerapp.data.supabase.AuthFailure
  *
  * ## The cases v1 cannot reach still have answers
  *
- * `EmailNotConfirmed`, `PasswordUnchanged`, `InvalidRecoveryCode` and
- * `RecoveryCodeExpired` are unreachable from these two screens: registration sends no
- * confirmation mail and recovery has no UI until G-A4c2. They map to the general
- * message rather than to nothing, because "unreachable" is a statement about today's
- * wiring and a blank screen is a statement about nothing at all.
+ * `EmailNotConfirmed` and `PasswordUnchanged` are unreachable from every screen that
+ * exists: registration sends no confirmation mail, and nothing offers to set a password
+ * to the one already on the account. They map to the general message rather than to
+ * nothing, because "unreachable" is a statement about today's wiring and a blank screen
+ * is a statement about nothing at all.
+ *
+ * `InvalidRecoveryCode` and `RecoveryCodeExpired` stopped being unreachable in G-A4c2:
+ * auth-recovery reaches both, and they are the only two failures here with words of
+ * their own rather than a shared fallback.
  */
 @StringRes
 fun authFailureMessage(failure: AuthFailure): Int = when (failure) {
@@ -53,10 +57,17 @@ fun authFailureMessage(failure: AuthFailure): Int = when (failure) {
     // confirmation flow - so they are told what is true: it did not work, try again.
     is AuthFailure.SessionNotEstablished -> R.string.auth_error_session
 
+    // The two recovery-code cases got their own words in G-A4c2, and they are the one
+    // place in this file where two failures that look alike must not read alike: a
+    // wrong code is something to check and retype, an expired one is something no
+    // amount of retyping fixes. They are attached to the code field by the recovery
+    // screen and are unreachable from the other two, which send no code at all.
+    is AuthFailure.InvalidRecoveryCode -> R.string.auth_error_recovery_code_invalid
+
+    is AuthFailure.RecoveryCodeExpired -> R.string.auth_error_recovery_code_expired
+
     is AuthFailure.EmailNotConfirmed,
     is AuthFailure.PasswordUnchanged,
-    is AuthFailure.InvalidRecoveryCode,
-    is AuthFailure.RecoveryCodeExpired,
     is AuthFailure.Unknown,
     -> R.string.auth_error_unknown
 }

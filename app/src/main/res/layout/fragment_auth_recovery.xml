@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  auth-recovery (G-A4c2). No approved Figma frame draws password recovery, so nothing
+  here is measured against one: this screen is **composed** from auth-sign-in's own
+  primitives and tokens - the 64dp header band, the label/input/error triple, the
+  358x52 primary button with its centred indicator, and the same dimens and text
+  appearances throughout. Every value below already appears in
+  `fragment_auth_sign_in.xml`; none is new, and no new visual language is introduced.
+
+  ## One destination, three states
+
+  The three groups below are the three stages, and exactly one is visible at a time:
+
+      REQUEST   ask for the address
+      CODE      the code from the mail, and the new password
+      DONE      it worked, and this install is signed in
+
+  They are separate `LinearLayout`s rather than one form whose fields come and go,
+  because a stage is a claim about what the listener is being asked - and a hidden
+  `EditText` that still holds a value is exactly how a screen ends up sending the
+  wrong one. The address is owned by `RecoveryViewModel`, not by the field.
+
+  ## The error TextViews are `gone`, like the other two auth screens
+
+  Same reason as `fragment_auth_sign_in.xml`: `GONE` rather than `INVISIBLE`, so an
+  error row costs no height until something has actually failed.
+-->
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <LinearLayout
+        android:id="@+id/auth_root"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/background"
+        android:orientation="vertical"
+        tools:context=".fragments.AuthRecoveryFragment">
+
+        <!-- `Header - TopAppBar` 390x64, identical to the other auth screens. -->
+        <LinearLayout
+            android:id="@+id/auth_header"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/profile_header_height"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/profile_back_margin_start"
+            android:paddingEnd="@dimen/profile_margin">
+
+            <ImageView
+                android:id="@+id/auth_back"
+                android:layout_width="@dimen/profile_back_size"
+                android:layout_height="@dimen/profile_back_size"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/auth_back_description"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_profile_back" />
+
+            <TextView
+                android:id="@+id/auth_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/profile_title_margin_start"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/auth_recovery_title"
+                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.24_32"
+                android:textColor="@color/text_heading" />
+        </LinearLayout>
+
+        <ScrollView
+            android:id="@+id/auth_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:paddingBottom="@dimen/content_bottom_clearance">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/profile_margin"
+                android:paddingEnd="@dimen/profile_margin">
+
+                <!-- stage: REQUEST -->
+                <LinearLayout
+                    android:id="@+id/auth_recovery_request_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/auth_recovery_body"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/auth_first_row_margin_top"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/auth_body_box"
+                        android:text="@string/auth_recovery_body"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.15_22"
+                        android:textColor="@color/text_secondary" />
+
+                    <TextView
+                        android:id="@+id/auth_email_label"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/auth_body_to_label"
+                        android:gravity="center_vertical"
+                        android:labelFor="@+id/auth_email"
+                        android:minHeight="@dimen/auth_label_box"
+                        android:text="@string/auth_label_email"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                        android:textColor="@color/text_secondary" />
+
+                    <EditText
+                        android:id="@+id/auth_email"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/auth_input_height"
+                        android:layout_marginTop="@dimen/auth_label_gap"
+                        android:background="@drawable/bg_auth_input"
+                        android:gravity="center_vertical"
+                        android:hint="@string/auth_hint_email"
+                        android:imeOptions="actionDone"
+                        android:importantForAutofill="no"
+                        android:inputType="textEmailAddress"
+                        android:maxLines="1"
+                        android:paddingStart="@dimen/auth_input_padding_horizontal"
+                        android:paddingEnd="@dimen/auth_input_padding_horizontal"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.15_22"
+                        android:textColor="@color/text_primary"
+                        android:textColorHint="@color/text_secondary" />
+
+                    <TextView
+                        android:id="@+id/auth_email_error"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/auth_error_margin_top"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                        android:textColor="@color/error"
+                        android:visibility="gone"
+                        tools:text="@string/auth_error_email_format"
+                        tools:visibility="visible" />
+                </LinearLayout>
+
+                <!-- stage: CODE -->
+                <LinearLayout
+                    android:id="@+id/auth_recovery_code_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <!--
+                      The notice that says nothing about whether the account exists.
+                      It is the whole of the request stage's answer, deliberately.
+                    -->
+                    <TextView
+                        android:id="@+id/auth_recovery_sent_notice"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/auth_first_row_margin_top"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/auth_body_box"
+                        android:text="@string/auth_recovery_sent_notice"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.15_22"
+                        android:textColor="@color/text_secondary" />
+
+                    <TextView
+                        android:id="@+id/auth_recovery_code_label"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/auth_body_to_label"
+                        android:gravity="center_vertical"
+                        android:labelFor="@+id/auth_recovery_code"
+                        android:minHeight="@dimen/auth_label_box"
+                        android:text="@string/auth_recovery_label_code"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                        android:textColor="@color/text_secondary" />
+
+                    <EditText
+                        android:id="@+id/auth_recovery_code"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/auth_input_height"
+                        android:layout_marginTop="@dimen/auth_label_gap"
+                        android:background="@drawable/bg_auth_input"
+                        android:gravity="center_vertical"
+                        android:hint="@string/auth_recovery_hint_code"
+                        android:imeOptions="actionNext"
+                        android:importantForAutofill="no"
+                        android:inputType="text"
+                        android:maxLines="1"
+                        android:paddingStart="@dimen/auth_input_padding_horizontal"
+                        android:paddingEnd="@dimen/auth_input_padding_horizontal"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.15_22"
+                        android:textColor="@color/text_primary"
+                        android:textColorHint="@color/text_secondary" />
+
+                    <TextView
+                        android:id="@+id/auth_recovery_code_error"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/auth_error_margin_top"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                        android:textColor="@color/error"
+                        android:visibility="gone"
+                        tools:text="@string/auth_error_recovery_code_invalid"
+                        tools:visibility="visible" />
+
+                    <TextView
+                        android:id="@+id/auth_recovery_password_label"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/auth_field_gap"
+                        android:gravity="center_vertical"
+                        android:labelFor="@+id/auth_recovery_password"
+                        android:minHeight="@dimen/auth_label_box"
+                        android:text="@string/auth_recovery_label_new_password"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                        android:textColor="@color/text_secondary" />
+
+                    <EditText
+                        android:id="@+id/auth_recovery_password"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/auth_input_height"
+                        android:layout_marginTop="@dimen/auth_label_gap"
+                        android:background="@drawable/bg_auth_input"
+                        android:gravity="center_vertical"
+                        android:hint="@string/auth_hint_password"
+                        android:imeOptions="actionDone"
+                        android:importantForAutofill="no"
+                        android:inputType="textPassword"
+                        android:maxLines="1"
+                        android:paddingStart="@dimen/auth_input_padding_horizontal"
+                        android:paddingEnd="@dimen/auth_input_padding_horizontal"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.15_22"
+                        android:textColor="@color/text_primary"
+                        android:textColorHint="@color/text_secondary" />
+
+                    <TextView
+                        android:id="@+id/auth_recovery_password_error"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/auth_error_margin_top"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                        android:textColor="@color/error"
+                        android:visibility="gone"
+                        tools:text="@string/auth_error_password_short"
+                        tools:visibility="visible" />
+
+                    <TextView
+                        android:id="@+id/auth_recovery_password_rule"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/auth_error_margin_top"
+                        android:text="@string/auth_password_hint_rule"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                        android:textColor="@color/text_secondary" />
+                </LinearLayout>
+
+                <!-- stage: DONE -->
+                <LinearLayout
+                    android:id="@+id/auth_recovery_done_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    tools:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/auth_recovery_done_title"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/auth_first_row_margin_top"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/auth_body_box"
+                        android:text="@string/auth_recovery_done_title"
+                        android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.21_28"
+                        android:textColor="@color/text_heading" />
+
+                    <TextView
+                        android:id="@+id/auth_recovery_done_body"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/auth_body_box"
+                        android:text="@string/auth_recovery_done_body"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.15_22"
+                        android:textColor="@color/text_secondary" />
+                </LinearLayout>
+
+                <!-- The one inline area every remote failure lands in. -->
+                <TextView
+                    android:id="@+id/auth_form_error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/auth_error_margin_top"
+                    android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                    android:textColor="@color/error"
+                    android:visibility="gone"
+                    tools:text="@string/auth_error_network"
+                    tools:visibility="visible" />
+
+                <!--
+                  One button for all three stages. Its label is the stage's verb and
+                  its indicator shares its centre, so a request in flight swaps one for
+                  the other without moving anything - the same component and the same
+                  behaviour as auth-sign-in's.
+                -->
+                <FrameLayout
+                    android:id="@+id/auth_submit"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_button_height"
+                    android:layout_marginTop="@dimen/auth_primary_margin_top"
+                    android:background="@drawable/bg_profile_button_primary"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:id="@+id/auth_submit_label"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:text="@string/auth_recovery_request_action"
+                        android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.21_28"
+                        android:textColor="@color/profile_primary_button_label" />
+
+                    <ProgressBar
+                        android:id="@+id/auth_submit_progress"
+                        android:layout_width="@dimen/auth_progress_size"
+                        android:layout_height="@dimen/auth_progress_size"
+                        android:layout_gravity="center"
+                        android:contentDescription="@string/auth_progress_description"
+                        android:indeterminateTint="@color/profile_primary_button_label"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
+                </FrameLayout>
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+</layout>

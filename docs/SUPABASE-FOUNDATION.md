@@ -448,6 +448,61 @@ not exist in the data being adopted. A state-only path needs none of it.
 - **What happens to X's `auth.users` row** once it owns no current state — retained
   for its history, which is the only thing left pointing at it.
 
+## Password recovery (G-A4c1 domain, G-A4c2 screen)
+
+Three steps, and the middle one is an authentication:
+
+| Step | Call | Identity effect |
+|---|---|---|
+| ask for a mail | `requestPasswordReset` | **none** — nothing durable is written |
+| type the code back | `verifyRecoveryCode` | establishes a session, so it is routed exactly like a sign-in: from `Anonymous` it performs the full X→Y handoff |
+| set the password | `updatePassword` | none — the session already belongs to whoever this install now is |
+
+That asymmetry is the whole contract. Asking for a mail proves nothing and must not
+retire an anonymous identity on the strength of somebody typing an address into a form;
+typing the code back proves control of the mailbox and is an authentication like any
+other.
+
+`auth-recovery` is one destination with three states, composed from the auth screens'
+own primitives — no frame draws it. The address is owned by `RecoveryViewModel` and
+never re-read from a field at submit time, and an accepted code is never sent twice: a
+verified OTP is consumed, so a retry after a failed `updatePassword` retries only the
+password.
+
+### The request stage says nothing about whether the account exists
+
+Supabase answers a reset request identically for an address with an account and one
+without, and the screen adds no difference the server does not have: one sentence,
+`Если аккаунт с таким адресом существует, мы отправили код.`, whatever the address was.
+A distinct "no such account" would turn the form into a way of asking which addresses
+are registered. `AuthRecoveryUiTest` asserts this as an equality between two runs with
+different addresses rather than as the absence of a message, so anything that later
+learns to vary with the address fails there.
+
+### Residual crash window: verified code, unchanged password
+
+**Narrow and accepted, not solved.** Between `verifyRecoveryCode` committing and
+`updatePassword` completing there is an interval in which:
+
+- the identity **is** already `Registered(Y)` — the handoff, if any, has happened;
+- the password **is** still the old one.
+
+`IdentityReconciler` does not close this. G-A4b1 repairs identity and handoff
+consistency, and it does that here as everywhere — but it holds no record of a password
+that was going to be changed, and **nothing completes the password update after a
+process death.** Do not read the reconciler as covering it.
+
+What the app does do is remove the one cause of this window it controls: the recovery
+screen refuses Back — the band control, the system button and the predictive gesture
+alike — for as long as a request is in flight, so a listener cannot cancel the sequence
+between the two calls. A process death there is still possible and is left alone,
+because closing it needs a durable recovery marker, and a new durable marker on the
+identity file is a contract change that this slice deliberately did not make.
+
+The consequence for a listener who hits it is bounded and recoverable without support:
+they are signed in to the account they were recovering, with the old password. They can
+use the app, and they can sign out and run recovery again.
+
 ## Validation
 
 ### The anonymous mint path

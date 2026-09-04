@@ -10,7 +10,6 @@ import com.example.musicplayerapp.data.supabase.IdentityState
 import com.example.musicplayerapp.data.supabase.IdentityStore
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -143,6 +142,45 @@ class AuthNavigationTest {
         }
     }
 
+    /**
+     * `Забыли пароль?` opens recovery, and Back comes back to the form.
+     *
+     * Deliberately unlike the two cross-links above, which pop what they came from:
+     * somebody who decides they meant to register does not want the sign-in form back,
+     * but recovery is an errand *inside* signing in and abandoning it should return the
+     * half-filled form rather than the profile. The typed address surviving is the
+     * observable half of that rule.
+     */
+    @Test
+    fun forgot_password_opens_recovery_and_back_returns_to_the_form() {
+        scenario { scenario ->
+            scenario.openProfile()
+            scenario.tap(R.id.profile_sign_in)
+
+            scenario.onActivity {
+                it.findViewById<android.widget.EditText>(R.id.auth_email).setText("denis@example.com")
+            }
+            sync()
+
+            scenario.tap(R.id.auth_forgot_password)
+            scenario.onActivity { assertEquals(R.id.auth_recovery, it.currentDestinationId()) }
+
+            scenario.tap(R.id.auth_back)
+            scenario.onActivity {
+                assertEquals(R.id.auth_sign_in, it.currentDestinationId())
+                assertEquals(
+                    "the form the listener was filling in must still be there",
+                    "denis@example.com",
+                    it.findViewById<android.widget.EditText>(R.id.auth_email).text.toString(),
+                )
+            }
+
+            // And one more Back leaves auth entirely: recovery added no extra entry.
+            scenario.tap(R.id.auth_back)
+            scenario.onActivity { assertEquals(R.id.profile, it.currentDestinationId()) }
+        }
+    }
+
     // ==================== 4: continuing without an account ====================
 
     @Test
@@ -240,18 +278,19 @@ class AuthNavigationTest {
         }
     }
 
-    // ==================== the control that is waiting for G-A4c2 ====================
+    // ==================== the control G-A4c2 finally wired ====================
 
     /**
-     * `Забыли пароль?` is drawn and does nothing, and both halves matter.
+     * `Забыли пароль?` is drawn, and since G-A4c2 it works.
      *
-     * Password recovery is part of v1 and its domain primitives are already merged;
-     * removing the control would misrepresent the product. Leaving it tappable and
-     * silent would misrepresent the build. Disabled is the only one of the three that
-     * is true, and there is deliberately no placeholder toast behind it.
+     * Until then this asserted the opposite - drawn, disabled, going nowhere - because
+     * the domain primitives existed with no screen to reach them, and a control that
+     * says `Забыли пароль?` and does nothing misrepresents the build as surely as
+     * removing it would misrepresent the product. Both halves still matter; it is the
+     * second one that changed.
      */
     @Test
-    fun forgot_password_is_visible_and_deliberately_not_interactive() {
+    fun forgot_password_is_visible_and_opens_recovery() {
         scenario { scenario ->
             scenario.openProfile()
             scenario.tap(R.id.profile_sign_in)
@@ -263,16 +302,12 @@ class AuthNavigationTest {
                     activity.getString(R.string.auth_forgot_password),
                     forgot.text.toString(),
                 )
-                assertFalse("it must not be clickable until G-A4c2", forgot.isClickable)
-                assertFalse(forgot.isEnabled)
-
-                // And tapping it goes nowhere, which is the assertion that survives
-                // somebody adding a listener without noticing the two flags above.
-                forgot.performClick()
+                assertTrue("it must be reachable now", forgot.isClickable)
+                assertTrue(forgot.isEnabled)
             }
-            sync()
 
-            scenario.onActivity { assertEquals(R.id.auth_sign_in, it.currentDestinationId()) }
+            scenario.tap(R.id.auth_forgot_password)
+            scenario.onActivity { assertEquals(R.id.auth_recovery, it.currentDestinationId()) }
         }
     }
 

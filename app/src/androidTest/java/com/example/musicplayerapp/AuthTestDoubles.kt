@@ -93,6 +93,26 @@ internal class FakeEmailAuthApi : EmailAuthApi {
      */
     var gate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
 
+    /**
+     * Holds `updatePassword` open on its own, without holding anything else.
+     *
+     * Recovery's second step is the only call in the app that runs **after** an
+     * authentication has already committed an identity and **before** the listener has
+     * what they came for. Parking exactly that call is how a test can stand inside that
+     * window and try to leave the screen; [gate] cannot express it, because it would
+     * have parked the verification too.
+     */
+    var updateGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+
+    /**
+     * A failure for `updatePassword` alone.
+     *
+     * [failure] is read by every call, so it cannot say "the code was accepted and then
+     * the password was refused" - which is the one recovery state where this install is
+     * signed in and the password is still the old one.
+     */
+    var updateFailure: AuthFailure? = null
+
     /** Incremented on entry to every authenticating call, before the gate. */
     var authCalls = 0
         private set
@@ -135,15 +155,18 @@ internal class FakeEmailAuthApi : EmailAuthApi {
     /** Completes whatever is waiting on [gate], letting the call return. */
     fun release() {
         gate?.complete(Unit)
+        updateGate?.complete(Unit)
     }
 
     override suspend fun requestPasswordReset(email: String): RecoveryResult {
         resetRequests += email
+        gate?.await()
         return failure?.let { RecoveryResult.Failed(it) } ?: RecoveryResult.Requested
     }
 
     override suspend fun verifyRecoveryCode(email: String, code: String): RecoveryResult {
         verifications += Credentials(email, code)
+        gate?.await()
         val failed = failure
         if (failed != null) {
             if (sessionDespiteFailure) session = uid
@@ -155,7 +178,9 @@ internal class FakeEmailAuthApi : EmailAuthApi {
 
     override suspend fun updatePassword(newPassword: String): RecoveryResult {
         passwordUpdates += newPassword
-        val failed = failure
+        gate?.await()
+        updateGate?.await()
+        val failed = updateFailure ?: failure
         return if (failed != null) {
             RecoveryResult.Failed(failed)
         } else {

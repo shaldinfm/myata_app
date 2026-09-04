@@ -28,13 +28,13 @@ import com.example.musicplayerapp.ui.auth.setInlineError
  * screen reaching in to help would be a second implementation of the most delicate
  * code in the app - one that a listener's data would pay for.
  *
- * ## `Забыли пароль?` is present and inert
+ * ## `Забыли пароль?` opens auth-recovery
  *
- * Password recovery is part of v1 and its domain primitives are already merged; only
- * the screens are missing, and they land in G-A4c2. So the control stays exactly
- * where the frame draws it and is disabled: removing it would misrepresent the
- * product, and leaving it tappable-but-silent would misrepresent the build. There is
- * deliberately no placeholder toast, for the same reason profile-guest had none.
+ * Live since G-A4c2, and a push rather than a swap: the two cross-links between the
+ * auth forms pop what they came from, because somebody who decides they meant to
+ * register does not want the sign-in form back. Recovery is not a change of mind about
+ * which form to fill in - it is an errand inside this one - so Back returns here with
+ * whatever was typed.
  *
  * ## `Продолжить без аккаунта` creates nothing
  *
@@ -93,6 +93,14 @@ class AuthSignInFragment : Fragment() {
             findNavController().popBackStack()
         }
 
+        // A push rather than a swap, unlike the create-account link: recovery is an
+        // errand inside signing in, so Back from it returns to this form with whatever
+        // was typed in it. See the nav graph.
+        binding.authForgotPassword.setOnClickListener {
+            if (viewModel.isBusy) return@setOnClickListener
+            findNavController().navigate(R.id.action_auth_sign_in_to_auth_recovery)
+        }
+
         viewModel.state.observe(viewLifecycleOwner) { render(it) }
 
         return binding.root
@@ -136,6 +144,8 @@ class AuthSignInFragment : Fragment() {
         binding.authContinueAsGuest.isEnabled = idle
         binding.authCreateAccount.isClickable = idle
         binding.authContinueAsGuest.isClickable = idle
+        binding.authForgotPassword.isEnabled = idle
+        binding.authForgotPassword.isClickable = idle
 
         if (state.succeeded) {
             // Consume first. The identity is already committed by the repository, so

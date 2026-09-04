@@ -210,6 +210,45 @@
             app:exitAnim="@anim/fade_out"
             app:popEnterAnim="@anim/fade_in"
             app:popExitAnim="@anim/fade_out" />
+        <!--
+          Recovery is the one auth link that does NOT pop what it came from. The two
+          cross-links above swap one form for another and Back should skip the one the
+          listener rejected; recovery is an errand *inside* signing in, and somebody who
+          abandons it wants the half-filled sign-in form back rather than the profile.
+          The stack is still bounded: recovery has no cross-links of its own.
+        -->
+        <action
+            android:id="@+id/action_auth_sign_in_to_auth_recovery"
+            app:destination="@id/auth_recovery"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
+    </fragment>
+
+    <!--
+      auth-recovery (G-A4c2). Three states in one destination - request, code, done -
+      because they are one errand and the address belongs to one ViewModel rather than
+      to a back stack. Composed from the auth screens' primitives; no frame draws it.
+    -->
+    <fragment
+        android:id="@+id/auth_recovery"
+        android:name="com.example.musicplayerapp.fragments.AuthRecoveryFragment"
+        android:label="AuthRecoveryFragment" >
+        <!--
+          Where a completed recovery lands, and it is the sign-in action's rule exactly:
+          verifying the code authenticated this install, so the form behind it and the
+          guest profile under that are both false about the listener now.
+        -->
+        <action
+            android:id="@+id/action_auth_recovery_to_profile_authenticated"
+            app:destination="@id/profile_authenticated"
+            app:popUpTo="@id/profile"
+            app:popUpToInclusive="true"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
     </fragment>
 
     <fragment

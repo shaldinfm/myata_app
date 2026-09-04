@@ -61,16 +61,19 @@ class AuthRecoveryFragment : Fragment() {
     private val viewModel: RecoveryViewModel by viewModels()
 
     /**
-     * Swallows Back while a request is in flight.
+     * Every system Back on this screen, routed through the one exit rule.
      *
-     * Registered against `viewLifecycleOwner`, so it is gone with the view, and its
-     * `isEnabled` is driven by the rendered state rather than by a flag of its own -
-     * one source of truth for "busy", the same one the spinner reads.
+     * Always enabled, and that is deliberate: this screen's way out is not the default
+     * pop. Recovery is pushed **on top of** auth-sign-in so that abandoning it at the
+     * request stage returns the half-filled form - which means the default pop is right
+     * only while nothing has been proved, and lands a signed-in listener on a sign-in
+     * form the moment a code has been accepted. [leave] owns that decision for the band
+     * control and for this alike, so the two can never diverge.
+     *
+     * Registered against `viewLifecycleOwner`, so it goes with the view.
      */
-    private val backWhileBusy = object : OnBackPressedCallback(false) {
-        override fun handleOnBackPressed() {
-            // Deliberately nothing. The gesture is consumed and the screen stays.
-        }
+    private val backPressed = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() = leave()
     }
 
     override fun onCreateView(
@@ -82,7 +85,7 @@ class AuthRecoveryFragment : Fragment() {
 
         applyAuthInsets(binding.authRoot, binding.authScroll)
 
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backWhileBusy)
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressed)
 
         binding.authBack.setOnClickListener { leave() }
         binding.authSubmit.setOnClickListener { submit() }
@@ -106,12 +109,24 @@ class AuthRecoveryFragment : Fragment() {
         }
 
     /**
-     * The band's `Назад`, and every other way out.
+     * The one way out, for the band's `Назад` and for every system Back alike.
      *
-     * Refused outright while busy - the same rule the dispatcher callback enforces for
-     * the system gesture, stated here as well because `isEnabled = false` stops a touch
-     * and only a touch: `View.performClick` runs the listener whatever the flag says,
-     * which is the path an accessibility action takes and the path a test takes.
+     * Three answers, and which one applies is decided by how much has been proved:
+     *
+     *  - **a request is running** - nothing. The sequence must not be cancelled between
+     *    the code being accepted and the password being set, so the gesture is consumed
+     *    and the spinner keeps saying why. Stated here as well as on the view because
+     *    `isEnabled = false` stops a touch and only a touch: `View.performClick` runs
+     *    the listener whatever the flag says, which is the path an accessibility action
+     *    takes and the path a test takes;
+     *  - **the code has been accepted** - go to the account. `verifyRecoveryCode`
+     *    committed `Registered(Y)`, so this install owns the account whether or not the
+     *    password was reached, and popping would land on auth-sign-in: recovery is
+     *    pushed on top of it deliberately, so the default pop is right only while
+     *    nothing has been proved. Showing a sign-in form to somebody already signed in
+     *    is exactly the false screen G-A5a exists to remove;
+     *  - **nothing has been proved** - pop, which returns the half-filled sign-in form
+     *    at the request stage, or steps back to it from an un-accepted code stage.
      */
     private fun leave() {
         if (viewModel.isBusy) return
@@ -125,11 +140,25 @@ class AuthRecoveryFragment : Fragment() {
             return
         }
 
-        // Everything else pops. When the code *has* been accepted this install is
-        // already Registered(Y), and popping lands on the guest profile - which reads
-        // the persisted identity and forwards to the account card by itself. No
-        // special case here, because ProfileRoute already owns that decision.
+        if (state.codeAccepted) {
+            toTheAccount()
+            return
+        }
+
         findNavController().popBackStack()
+    }
+
+    /**
+     * Leaves for profile-authenticated, once and only from here.
+     *
+     * The destination check is what makes it safe to call from two places: a second
+     * Back arriving after the navigation has already run would otherwise be asked to
+     * navigate from a destination this action does not belong to.
+     */
+    private fun toTheAccount() {
+        val controller = findNavController()
+        if (controller.currentDestination?.id != R.id.auth_recovery) return
+        controller.navigate(R.id.action_auth_recovery_to_profile_authenticated)
     }
 
     private fun submit() {
@@ -145,10 +174,11 @@ class AuthRecoveryFragment : Fragment() {
             )
 
             // The stage is its own completion signal: there is no separate "succeeded"
-            // event to consume, so pressing the button here is simply the navigation.
+            // event to consume, so pressing the button here is simply the navigation -
+            // the same one Back takes from here, through the same guard.
             RecoveryStage.DONE -> {
                 if (viewModel.isBusy) return
-                findNavController().navigate(R.id.action_auth_recovery_to_profile_authenticated)
+                toTheAccount()
             }
         }
     }
@@ -197,11 +227,13 @@ class AuthRecoveryFragment : Fragment() {
         binding.authRecoveryCode.isEnabled = idle && !state.codeAccepted
         binding.authRecoveryPassword.isEnabled = idle
 
-        // The band control follows the same rule as the system gesture below it, so the
-        // screen never shows a way out it will not honour.
+        // The band control is greyed while busy, so the screen never shows a way out it
+        // will not honour. The dispatcher callback stays enabled throughout - it owns
+        // this screen's exit rule, not just its refusal - and `leave` is what decides
+        // whether a given Back does nothing, steps back a stage, pops, or lands on the
+        // account.
         binding.authBack.isEnabled = idle
         binding.authBack.isClickable = idle
-        backWhileBusy.isEnabled = state.loading
     }
 
     override fun onDestroyView() {

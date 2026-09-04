@@ -410,6 +410,62 @@ class AuthRecoveryUiTest {
         }
     }
 
+    /**
+     * Leaving after the code was accepted but the password was not.
+     *
+     * The worst state this screen can be in: the account **is** already this install's -
+     * `verifyRecoveryCode` committed `Registered(Y)` - and the password is still the old
+     * one, because `updatePassword` failed. Whatever the listener presses next, they
+     * must not be shown a sign-in form for an account they are already signed in to.
+     *
+     * That is not a hypothetical arrangement of screens. Recovery is pushed **on top of**
+     * auth-sign-in deliberately, so that abandoning it at the request stage returns the
+     * half-filled form - which means a plain `popBackStack` from here lands on exactly
+     * the wrong screen, and the guest profile's forwarding never gets a chance to run.
+     *
+     * And the code must not be re-sent on the way out: it is spent.
+     */
+    @Test
+    fun back_after_a_failed_password_update_lands_on_the_account_not_the_sign_in_form() {
+        IdentityStore.adoptAnonymous(context, x)
+
+        recovery { scenario ->
+            scenario.reachCodeStage()
+
+            auth.updateFailure = AuthFailure.NetworkFailure("dropped")
+            scenario.submitCode()
+            scenario.await("the password failure") {
+                it.visibilityOf(R.id.auth_recovery_password_error) == View.VISIBLE
+            }
+
+            // The two halves of the state this test is about.
+            assertEquals(
+                "the code bought a session, so the identity is already Y",
+                IdentityState.Registered(y),
+                IdentityStore.state(context),
+            )
+            assertEquals(1, auth.verifications.size)
+
+            on { it.onBackPressedDispatcher.onBackPressed() }
+            sync()
+
+            scenario.await("the authenticated profile") {
+                it.currentDestinationId() == R.id.profile_authenticated
+            }
+            on {
+                assertNotEquals(
+                    "a signed-in listener must never be shown the sign-in form",
+                    R.id.auth_sign_in,
+                    it.currentDestinationId(),
+                )
+                assertNotEquals(R.id.auth_recovery, it.currentDestinationId())
+            }
+
+            assertEquals("the spent code must not be sent again", 1, auth.verifications.size)
+            assertEquals(IdentityState.Registered(y), IdentityStore.state(context))
+        }
+    }
+
     @Test
     fun a_double_tap_runs_one_request() {
         recovery { scenario ->

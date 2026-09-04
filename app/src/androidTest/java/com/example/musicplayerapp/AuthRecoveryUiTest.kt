@@ -38,8 +38,8 @@ import java.util.concurrent.TimeUnit
  * anonymous install performs really happens here.
  *
  * **No test in this file sends mail.** Every call stops at [FakeEmailAuthApi]; nothing
- * constructs the real API, and the Maileroo quota behind the project is never touched.
- * Live delivery is a separate, owner-run gate.
+ * constructs the real API, and the project's custom SMTP allowance is never touched.
+ * Live delivery was a separate, owner-run gate, passed once in G-A4c2.
  *
  * ## What each test is defending
  *

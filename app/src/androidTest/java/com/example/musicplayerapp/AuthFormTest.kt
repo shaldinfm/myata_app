@@ -258,7 +258,7 @@ class AuthFormTest {
      * control was drawn and disabled. Now it navigates - and the half worth keeping is
      * the half that would cost something if it were wrong: **arriving** on recovery
      * spends nothing. Requesting a recovery mail is the only call in the app that spends
-     * the owner's shared SMTP quota, so a screen that fired one on open would not be a
+     * the project's SMTP allowance, so a screen that fired one on open would not be a
      * convenience, it would be a bill. The mail is asked for by a submit, and by nothing
      * else.
      */

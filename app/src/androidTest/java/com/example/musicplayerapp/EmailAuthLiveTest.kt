@@ -60,9 +60,12 @@ import org.junit.runner.RunWith
  * ## What it never does
  *
  * **It sends no mail.** There is no call to `requestPasswordReset` anywhere in this
- * file and there must never be one: the project's SMTP allowance is shared with
- * another production product, and recovery delivery is validated by hand, once, after
- * the owner has configured Custom SMTP. The typed-code half of recovery is covered
+ * file and there must never be one: it would spend the project's custom SMTP
+ * allowance, and recovery delivery is validated by hand rather than by a suite.
+ *
+ * That hand validation has since happened - G-A4c2, once, end to end: custom SMTP
+ * configured, one real mail, one typed code, one password update, the old password
+ * rejected and the new one accepted. The typed-code half of recovery remains covered
  * offline by [AuthRecoveryTest].
  *
  * ## What it leaves behind, and how to remove it

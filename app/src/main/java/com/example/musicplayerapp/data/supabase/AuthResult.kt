@@ -381,8 +381,9 @@ internal fun classifyAuthError(
     AuthErrorCode.OtpExpired -> AuthFailure.RecoveryCodeExpired(detail)
 
     // Three separate quotas - requests, mail, SMS - and one response: wait. The mail
-    // one is the one v1 can realistically hit, because the Maileroo quota behind it
-    // is shared with another product.
+    // one is the one v1 can realistically hit: recovery is the only call that sends
+    // anything, and since G-A4c2 it goes through the project's custom SMTP sending
+    // identity, which has an allowance of its own.
     AuthErrorCode.OverRequestRateLimit,
     AuthErrorCode.OverEmailSendRateLimit,
     AuthErrorCode.OverSmsSendRateLimit,

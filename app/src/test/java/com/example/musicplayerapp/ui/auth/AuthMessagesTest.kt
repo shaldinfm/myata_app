@@ -53,20 +53,41 @@ class AuthMessagesTest {
     }
 
     @Test
-    fun `the cases these two screens cannot reach still have a message`() {
+    fun `the cases no screen can reach still have a message`() {
         // Unreachable is a statement about today's wiring. A blank message is a
         // statement about nothing at all, and would be what shipped if one of these
         // ever became reachable.
+        //
+        // The two recovery-code cases left this list in G-A4c2: auth-recovery reaches
+        // both, and they now have words of their own - see below.
         val unreachable = listOf(
             AuthFailure.EmailNotConfirmed(),
             AuthFailure.PasswordUnchanged(),
-            AuthFailure.InvalidRecoveryCode(),
-            AuthFailure.RecoveryCodeExpired(),
         )
 
         for (failure in unreachable) {
             assertEquals("$failure", R.string.auth_error_unknown, authFailureMessage(failure))
         }
+    }
+
+    /**
+     * The two code failures are different problems and must not read alike.
+     *
+     * A wrong code is something to check and retype; an expired one is something no
+     * amount of retyping fixes, and the listener has to ask for another. Folding them
+     * back into the general message - which is where they sat until auth-recovery
+     * existed to show them - would send somebody retyping a code that can never work.
+     */
+    @Test
+    fun `a wrong recovery code and an expired one say different things`() {
+        val invalid = authFailureMessage(AuthFailure.InvalidRecoveryCode())
+        val expired = authFailureMessage(AuthFailure.RecoveryCodeExpired())
+
+        assertEquals(R.string.auth_error_recovery_code_invalid, invalid)
+        assertEquals(R.string.auth_error_recovery_code_expired, expired)
+        assertNotEquals(invalid, expired)
+        assertNotEquals(R.string.auth_error_unknown, invalid)
+        assertNotEquals(R.string.auth_error_unknown, expired)
     }
 
     @Test

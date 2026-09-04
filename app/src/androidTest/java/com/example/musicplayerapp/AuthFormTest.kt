@@ -252,25 +252,25 @@ class AuthFormTest {
     }
 
     /**
-     * `Забыли пароль?` cannot reach the backend, which is the half a visibility check
-     * cannot prove.
+     * `Забыли пароль?` opens the screen and, by itself, still sends nothing.
      *
-     * `AuthNavigationTest` asserts it is drawn, disabled and navigates nowhere. This
-     * asserts the thing that would actually cost something if it were wrong: with a
-     * backend installed and watching, tapping it sends no recovery request. Requesting
-     * a recovery mail is the only call in the app that spends the owner's shared SMTP
-     * quota, so a control that could fire one before G-A4c2 wires the flow is not a
-     * dead link - it is a bill.
+     * Until G-A4c2 this asserted that the link reached no backend at all, because the
+     * control was drawn and disabled. Now it navigates - and the half worth keeping is
+     * the half that would cost something if it were wrong: **arriving** on recovery
+     * spends nothing. Requesting a recovery mail is the only call in the app that spends
+     * the project's SMTP allowance, so a screen that fired one on open would not be a
+     * convenience, it would be a bill. The mail is asked for by a submit, and by nothing
+     * else.
      */
     @Test
-    fun the_recovery_link_cannot_request_anything_before_g_a4c2() {
+    fun opening_recovery_requests_nothing_by_itself() {
         signIn { scenario ->
             on { it.findViewById<View>(R.id.auth_forgot_password).performClick() }
             sync()
 
+            on { assertEquals(R.id.auth_recovery, it.currentDestinationId()) }
             assertTrue("no recovery mail may be requested", auth.resetRequests.isEmpty())
             assertEquals("and no auth call of any kind", 0, auth.authCalls)
-            on { assertEquals(R.id.auth_sign_in, it.currentDestinationId()) }
         }
     }
 

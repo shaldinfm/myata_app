@@ -287,6 +287,37 @@
       the only thing this screen genuinely needs is a password to send.
     -->
     <string name="auth_error_password_blank">Введите пароль</string>
+    <string name="auth_error_code_blank">Введите код из письма</string>
+
+    <!--
+      Password recovery (G-A4c2), composed from the auth screens' own primitives -
+      no approved frame draws it.
+
+      The request result is deliberately the same sentence whatever the address turns
+      out to be. Supabase answers a reset request identically for an address with an
+      account and one without, and this screen must not add a difference the server
+      does not have: a distinct "no such account" would turn the form into a way of
+      asking which addresses are registered.
+    -->
+    <string name="auth_recovery_title">Восстановление пароля</string>
+    <string name="auth_recovery_body">Укажите email — пришлём код для смены пароля.</string>
+    <string name="auth_recovery_request_action">Отправить код</string>
+    <string name="auth_recovery_sent_notice">Если аккаунт с таким адресом существует, мы отправили код.</string>
+    <string name="auth_recovery_label_code">Код из письма</string>
+    <string name="auth_recovery_hint_code">Код</string>
+    <string name="auth_recovery_label_new_password">Новый пароль</string>
+    <string name="auth_recovery_save_action">Сохранить пароль</string>
+    <string name="auth_recovery_done_title">Пароль изменён</string>
+    <string name="auth_recovery_done_body">Вы вошли в аккаунт.</string>
+    <string name="auth_recovery_done_action">Продолжить</string>
+
+    <!--
+      The two code failures, and the only place in the auth copy where two failures
+      that look alike must not read alike: a wrong code is something to check and
+      retype, an expired one is something no amount of retyping fixes.
+    -->
+    <string name="auth_error_recovery_code_invalid">Неверный код. Проверьте письмо и попробуйте ещё раз</string>
+    <string name="auth_error_recovery_code_expired">Срок действия кода истёк. Запросите новый код</string>
 
     <!--
       Remote failures, one message per AuthFailure case. They go in the single

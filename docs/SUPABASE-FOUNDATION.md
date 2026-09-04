@@ -448,6 +448,114 @@ not exist in the data being adopted. A state-only path needs none of it.
 - **What happens to X's `auth.users` row** once it owns no current state — retained
   for its history, which is the only thing left pointing at it.
 
+## Password recovery (G-A4c1 domain, G-A4c2 screen)
+
+Three steps, and the middle one is an authentication:
+
+| Step | Call | Identity effect |
+|---|---|---|
+| ask for a mail | `requestPasswordReset` | **none** — nothing durable is written |
+| type the code back | `verifyRecoveryCode` | establishes a session, so it is routed exactly like a sign-in: from `Anonymous` it performs the full X→Y handoff |
+| set the password | `updatePassword` | none — the session already belongs to whoever this install now is |
+
+That asymmetry is the whole contract. Asking for a mail proves nothing and must not
+retire an anonymous identity on the strength of somebody typing an address into a form;
+typing the code back proves control of the mailbox and is an authentication like any
+other.
+
+`auth-recovery` is one destination with three states, composed from the auth screens'
+own primitives — no frame draws it. The address is owned by `RecoveryViewModel` and
+never re-read from a field at submit time, and an accepted code is never sent twice: a
+verified OTP is consumed, so a retry after a failed `updatePassword` retries only the
+password.
+
+### The production mail contract — and it is half in Supabase, not here
+
+Android's half of recovery is a **manual OTP flow, deliberately not deep-link based**:
+`verifyRecoveryCode` calls supabase-kt's `(type, email, token)` overload, which takes a
+raw code. The app registers no deep link, and `FlowType.IMPLICIT` is pinned in
+`SupabaseModule` precisely because there is nothing to bring a redirect back to.
+
+That only works if the project's mail says the same thing, and **that half lives in the
+Supabase dashboard where no test in this repository can see it**:
+
+| Requirement | Value |
+|---|---|
+| Custom SMTP | **required** — without it the project falls back to Supabase's built-in mail service, whose templates cannot be edited at all |
+| Sender | `Радио Мята <no-reply@radiomyata.ru>` |
+| *Reset Password* template | must emit `{{ .Token }}` |
+| `{{ .ConfirmationURL }}` | **intentionally not used** — it produces a link this flow cannot consume |
+
+Custom SMTP became part of the production setup **during G-A4c2's live validation**, and
+not before: earlier comments in this repository claiming a Maileroo allowance already
+backed this project were wrong, and are corrected. Until then the project was on the
+built-in service with the default link template.
+
+> **If recovery ever stops working, check the template before the code.** The failure
+> mode is silent and total: the mail arrives, the screen asks for a code, and there is
+> no code in the mail. Nothing in the app can detect it, and every offline test still
+> passes — which is exactly how it survived to a live gate.
+
+### Live validation — recorded result (2026-09-04)
+
+One end-to-end run against production, on a disposable owner-controlled mailbox
+registered through the app's own *Создать аккаунт* screen. Result: **PASS**.
+
+| Step | Result |
+|---|---|
+| recovery requested from the new UI | **one** real mail, from `Радио Мята <no-reply@radiomyata.ru>` |
+| mail content | a typed code, and **no link** |
+| request-stage copy | the generic existence-blind sentence, unchanged by the SMTP change |
+| code verification | **one** `verifyRecoveryCode`, accepted first try |
+| password update | **one** `updatePassword` |
+| identity afterwards | `REGISTERED`, **the same uid** the account was registered with — no second identity minted |
+| authenticated profile | reached, account card correct |
+| old password | **rejected** — `Неверный email или пароль` |
+| new password | **accepted**, same uid again |
+
+The identity never changed hands: `REGISTERED → SIGNED_OUT → (recovery) → REGISTERED`
+on one uid throughout, with no deletion, handoff or recovery marker at any point. The
+run also confirmed the request stage writes nothing durable, against production rather
+than a fake.
+
+Deliberately not recorded here: the code, either password, the SMTP credentials, the
+fixture's uid and its full address. None of them proves anything a reader needs, and
+three of them are secrets.
+
+### The request stage says nothing about whether the account exists
+
+Supabase answers a reset request identically for an address with an account and one
+without, and the screen adds no difference the server does not have: one sentence,
+`Если аккаунт с таким адресом существует, мы отправили код.`, whatever the address was.
+A distinct "no such account" would turn the form into a way of asking which addresses
+are registered. `AuthRecoveryUiTest` asserts this as an equality between two runs with
+different addresses rather than as the absence of a message, so anything that later
+learns to vary with the address fails there.
+
+### Residual crash window: verified code, unchanged password
+
+**Narrow and accepted, not solved.** Between `verifyRecoveryCode` committing and
+`updatePassword` completing there is an interval in which:
+
+- the identity **is** already `Registered(Y)` — the handoff, if any, has happened;
+- the password **is** still the old one.
+
+`IdentityReconciler` does not close this. G-A4b1 repairs identity and handoff
+consistency, and it does that here as everywhere — but it holds no record of a password
+that was going to be changed, and **nothing completes the password update after a
+process death.** Do not read the reconciler as covering it.
+
+What the app does do is remove the one cause of this window it controls: the recovery
+screen refuses Back — the band control, the system button and the predictive gesture
+alike — for as long as a request is in flight, so a listener cannot cancel the sequence
+between the two calls. A process death there is still possible and is left alone,
+because closing it needs a durable recovery marker, and a new durable marker on the
+identity file is a contract change that this slice deliberately did not make.
+
+The consequence for a listener who hits it is bounded and recoverable without support:
+they are signed in to the account they were recovering, with the old password. They can
+use the app, and they can sign out and run recovery again.
+
 ## Validation
 
 ### The anonymous mint path

@@ -41,6 +41,15 @@ import okhttp3.RequestBody.Companion.toRequestBody
  * own default - so no PKCE verifier is created either, and the recovery mail's
  * `{{ .Token }}` is a code the listener can simply read out and type.
  *
+ * **That last sentence is a claim about the project's mail template, not about this
+ * file, and it is the one thing here that no amount of Kotlin can guarantee.**
+ * [verifyRecoveryCode] calls the `(type, email, token)` overload - a raw OTP - so the
+ * *Reset Password* template has to emit `{{ .Token }}`. A template emitting
+ * `{{ .ConfirmationURL }}` instead sends a link this flow cannot consume, and the
+ * listener is left with a screen asking for a code that is nowhere in their mail.
+ * That is not hypothetical: it is what production did until G-A4c2's live validation
+ * found it. See `docs/SUPABASE-FOUNDATION.md`.
+ *
  * ## Registration sends no mail
  *
  * With Confirm Email off, `signUpWith(Email)` returns a session and the project

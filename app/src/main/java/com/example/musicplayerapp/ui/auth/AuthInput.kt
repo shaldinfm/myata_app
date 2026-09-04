@@ -76,4 +76,18 @@ object AuthInput {
      * that is simply false about an account that exists and works.
      */
     fun isPasswordPresent(raw: String): Boolean = raw.isNotEmpty()
+
+    /**
+     * The recovery code as it will be sent.
+     *
+     * Trimmed, and only trimmed. A code copied out of a mail client arrives with a
+     * trailing space or a newline more often than not, and neither is part of the
+     * token - but nothing in the middle is touched, because the shape of `{{ .Token }}`
+     * is the server's to decide and an app that "cleaned" it would refuse codes that
+     * are correct.
+     */
+    fun code(raw: String): String = raw.trim()
+
+    /** A code is anything that is not only whitespace. Its length is not ours to judge. */
+    fun isCodePresent(raw: String): Boolean = code(raw).isNotEmpty()
 }

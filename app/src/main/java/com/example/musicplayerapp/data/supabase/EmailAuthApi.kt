@@ -46,9 +46,13 @@ interface EmailAuthApi {
      * Asks Supabase to send a recovery mail to [email].
      *
      * **This is the only call in the app that consumes mail quota**, which is the
-     * reason it is a method of its own rather than a flag on something else: the
-     * owner's SMTP allowance is shared with another product, and any future caller
-     * added here is spending it.
+     * reason it is a method of its own rather than a flag on something else: it sends
+     * through the project's custom SMTP sending identity, which has a real allowance,
+     * and any future caller added here is spending it.
+     *
+     * Custom SMTP became part of the production setup during G-A4c2's live validation.
+     * Before that the project was on Supabase's built-in mail service, whose templates
+     * cannot be edited - which is what made this flow undeliverable in practice.
      *
      * No redirect URL is passed. v1 has no deep link to come back to, and the flow
      * is a typed code instead - see [verifyRecoveryCode].

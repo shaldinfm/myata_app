@@ -215,11 +215,11 @@
                     tools:visibility="visible" />
 
                 <!--
-                  Right-aligned, per the frame. Present and deliberately not
-                  interactive until G-A4c2 builds recovery: password recovery is
-                  part of v1, so removing the control would misrepresent the
-                  product, and leaving it tappable-but-inert would misrepresent the
-                  build. Disabled says exactly what is true.
+                  Right-aligned, per the frame, and live since G-A4c2: it opens
+                  auth-recovery. It was drawn disabled from G-A4c1 until then because
+                  the domain primitives existed with no screen to reach them, and a
+                  control that says "Забыли пароль?" and does nothing misrepresents the
+                  build as surely as removing it would misrepresent the product.
                 -->
                 <TextView
                     android:id="@+id/auth_forgot_password"
@@ -227,9 +227,8 @@
                     android:layout_height="wrap_content"
                     android:minHeight="@dimen/auth_label_box"
                     android:layout_marginTop="@dimen/auth_forgot_margin_top"
-                    android:clickable="false"
-                    android:enabled="false"
-                    android:focusable="false"
+                    android:clickable="true"
+                    android:focusable="true"
                     android:gravity="end|center_vertical"
                     android:text="@string/auth_forgot_password"
                     android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"

@@ -34,8 +34,9 @@ import org.junit.runner.RunWith
  * somebody typing an address into a form, or ending up as the recovered account while
  * the disk still says anonymous.
  *
- * **No real mail is sent by anything here.** The Maileroo quota behind the project is
- * shared with another product, and every call in this suite stops at a fake.
+ * **No real mail is sent by anything here.** Recovery mail leaves through the project's
+ * custom SMTP sending identity - part of the production setup since G-A4c2's live
+ * validation - and costs a real allowance, so every call in this suite stops at a fake.
  */
 @RunWith(AndroidJUnit4::class)
 class AuthRecoveryTest {

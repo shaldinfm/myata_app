@@ -143,12 +143,23 @@ class PlayerLayoutTest {
                     "${(inactiveSwing * 100).roundToInt()}%)"
             }
 
-            // The trailing slot is reserved, not a control: it must take up the
-            // frozen space and must not be clickable.
-            expect(where, "reserved trailing slot width", reserved.width, dp(32))
-            if (reserved.isClickable || reserved.hasOnClickListeners()) {
-                findings += "$where: the reserved header slot is clickable - it has no action until D/E"
-            }
+            // The trailing slot is the frozen overflow control. It was a reserved,
+            // empty Space until G1a - the box held open so the label stayed
+            // centred, with nothing drawn in it because nothing behind it existed.
+            // It has one action now (Настройки), so the box became the control the
+            // frame draws in it.
+            //
+            // Only geometry is asserted here, and deliberately: this file inflates
+            // the layout with no fragment behind it, so nothing has attached a
+            // click listener and asking whether the control *works* would be asking
+            // the wrong object. SettingsOverflowEntryTest asks the running screen.
+            expect(where, "trailing overflow slot width", reserved.width, dp(32))
+            // `Button:margin` is 32 wide but the `Button` inside it is 20, anchored
+            // to the start, and the 4x16 dot column is centred in that 20. The
+            // padding is what puts the glyph at the frozen x rather than 6dp right
+            // of it.
+            expect(where, "overflow glyph inset from the trailing edge", reserved.paddingEnd, dp(12))
+
             // The label is centred because both ends reserve a slot.
             val labelCentre = leftIn(label, header) + label.width / 2
             expect(where, "header label centred", labelCentre, header.width / 2f)

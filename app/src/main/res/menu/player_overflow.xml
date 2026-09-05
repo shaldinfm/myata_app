@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PLAYER header overflow (G1a).
+
+  The frozen `Menu / Плеер` (2444:18763 light / 2444:18707 dark) is a 206x264
+  surface with **four** rows, and their layer names say what they are: Найти
+  трек, Таймер сна, Сообщить о проблеме, История эфира. Every label in the frame
+  itself reads "Действие" - the rows are placeholders whose names are the design's
+  only statement of intent.
+
+  None of those four exists yet, and **Настройки is not among them**. It is here
+  because the owner placed the Settings entry on this control: the frozen file
+  never draws a path to `settings` at all (see docs/SETTINGS-APPEARANCE-3.6.6.md),
+  so where it is reached from is a product decision rather than something the
+  frame can settle. The four frozen rows arrive with the phases that build them,
+  and this menu grows into that surface rather than replacing it.
+
+  A platform PopupMenu, deliberately and temporarily - the same decision, for the
+  same reason, that the COLLECTION overflow records: the frozen 206x264 r20 menu
+  on `menu_surface` is its own piece of work, and relocating the action first
+  keeps it reachable across the interval.
+-->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/player_action_settings"
+        android:title="@string/settings_title" />
+</menu>

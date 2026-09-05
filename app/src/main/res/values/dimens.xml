@@ -325,6 +325,14 @@
          because every action behind it belongs to a later phase. -->
     <dimen name="player_header_action_width">32dp</dimen>
     <dimen name="player_header_action_height">39dp</dimen>
+    <!--
+      The overflow glyph is not centred in that 32: the frozen `Button` inside
+      `Button:margin` is 20 wide and anchored to its start, and the 4x16 dot
+      column is centred in the 20. 32 - 20 = 12, taken off the trailing edge, so
+      `scaleType=center` lands the column at x=333.98 - 20.02 from the header's
+      trailing edge, which is where the frame draws it.
+    -->
+    <dimen name="player_header_action_inset">12dp</dimen>
     <!-- The swipe dots abut the header row: it ends at 63 and they start at 63.
          They end at 73 and the page starts at 79, so 6 between. -->
     <!--
@@ -674,7 +682,7 @@
       Its 16x16 glyph sits at x=12,y=12 inside the circle; that inset lives inside
       the drawable's own 40x40 viewport, so there is no icon-inset dimen here.
     -->
-    <dimen name="settings_entry_size">40dp</dimen>
+    <dimen name="profile_entry_size">40dp</dimen>
 
     <!-- profile-guest 2517:2644 / 2517:3611. -->
     <dimen name="profile_header_height">64dp</dimen>

@@ -12,28 +12,57 @@ Frozen sources: `settings` **2517:2758** (light) / **2517:3725** (dark) and
 
 ## 1 · The entry point
 
-**The 40x40 header control on HOME, ABOUT US and the empty COLLECTION now opens
-`settings`.** It opened `profile-guest` from G-A3 until here.
+**Settings is reached from the three-dot overflow on PLAYER and on a populated
+COLLECTION.** The 40x40 header control on HOME, ABOUT US and the empty COLLECTION
+is the **profile** entry, as it has been since G-A3.
 
-Nothing in the FINAL Figma file shows how `settings` is reached, and there is no
-spare control to reach it with — both HOME (`2393:1670`) and ABOUT US
-(`2413:61`) carry a *second* 40x40 node at exactly the same `x=334, y=12`, and
-both are `visible: false`. Two overlapping circles is not a layout the file is
-offering.
+### What G1 got wrong, and what G1a corrected
 
-What the file *does* say is that `settings` draws `Row / Профиль` as its first
-row, with a value and a chevron. So Settings is the parent surface and the
-profile is a destination inside it, and one control pointing at the parent is the
-arrangement the design already describes.
+G1 shipped the opposite: it retargeted the 40x40 control to Settings and put the
+profile one tap deeper, behind `Settings > Аккаунт > Профиль`. The reasoning was
+that the frozen `settings` frame draws Профиль as its first row, which makes
+Settings look like the parent surface — and that nothing in the FINAL file shows
+how `settings` itself is reached, with both spare 40x40 nodes
+(`2393:1670`, `2413:61`) `visible: false`.
 
-Changed: the glyph (person → gear, `ic_settings_entry`) and the content
-description. Unchanged: the 40x40 circle, its plate, its position, its three
-hosts, and the four bottom-bar destinations beside it.
+That last part is still true and is the reason this was ever a judgement call:
+**the frozen design never draws a path to `settings` at all.** Where Settings is
+reached from is therefore a product decision, not something the frame can settle,
+and the owner settled it the other way. G1a restores the profile control exactly
+as it was — same glyph, same file names, same one-tap route — and puts Settings on
+the two overflow controls the frozen PLAYER and COLLECTION headers already carry.
 
-The rename that followed is mechanical — `view_profile_entry` →
-`view_settings_entry`, `profile_entry_*` → `settings_entry_*`,
-`ProfileEntryTest` → `SettingsEntryTest`. The control's name now says what it
-does.
+The `Row / Профиль` row inside Settings stays. It is a second, deeper route to the
+profile, not the only one.
+
+### The two overflows
+
+| surface | control | before G1a | after |
+|---|---|---|---|
+| PLAYER | `Button:margin` 32.02x39 @325.98,4 — a 4x16 dot column | a reserved, empty `Space` | an `ImageView` opening a one-item `PopupMenu` |
+| COLLECTION (populated) | `Header - TopAppBar > Button:margin` @341.98 — the same dot column | already live, a `PopupMenu` with the two exports | the same menu, with `Настройки` appended |
+
+The PLAYER slot had been held open on purpose — the box kept the header label
+centred where the frame centres it, and drawing a control with nothing behind it
+would have been a button that does nothing. It has one action now, so the box
+becomes the control the frame draws in it. Both headers draw the identical frozen
+glyph and their two colour tokens carry the same pair of values in both themes, so
+there is one drawable and the tint names the surface.
+
+**Neither frozen menu contains `Настройки`.** `Menu / Плеер` has four rows — Найти
+трек, Таймер сна, Сообщить о проблеме, История эфира — and the COLLECTION menu has
+the two exports. Those arrive with the phases that build them; this is an added
+row, recorded as one.
+
+### The empty COLLECTION has no Settings entry
+
+The frozen `COLLECTION pusto` frame carries the profile control where the
+populated frame carries the overflow, and never both — so with an empty collection
+there is no ellipsis to put Settings on. Making one appear there would be
+redrawing a frozen screen. PLAYER is the entry that is always available, because
+the bottom bar always offers it.
+`SettingsOverflowEntryTest.an_empty_collection_shows_the_profile_control_and_no_overflow`
+asserts this, so the trade-off is visible rather than discovered.
 
 ## 2 · Two sections, not five
 

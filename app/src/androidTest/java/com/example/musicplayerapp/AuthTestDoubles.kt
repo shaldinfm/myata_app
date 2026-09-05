@@ -552,34 +552,213 @@ internal fun withMainActivity(body: (ActivityScenario<MainActivity>) -> Unit) {
 }
 
 /**
- * Opens the settings shell and waits for it.
+ * Puts the app on Settings, from PLAYER, and waits for it.
  *
- * The 40x40 header control is a plain, synchronous `navigate` - there is nothing to
- * resolve before entering settings - but the fragment transaction still is not the
- * frame the tap happened in, so this waits the same way everything else here does.
+ * ## It navigates rather than driving the overflow, on purpose
+ *
+ * The real entry is the PLAYER overflow, and
+ * [SettingsOverflowEntryTest] drives it end to end - taps the control, clicks
+ * `Настройки` in the popup, and asserts where it lands - on both API levels. That
+ * is where the entry is under test.
+ *
+ * This helper exists for the suites whose subject is the *appearance*, not how
+ * Settings was reached. Driving a platform popup through the accessibility tree is
+ * reliable enough to test once and not something eight unrelated tests should
+ * depend on: on the API 24 image the popup's row intermittently reports no
+ * clickable node at all, while a screenshot of the same moment shows the menu open
+ * and drawn. Rather than let that flake tests about night mode, those tests take
+ * the same two destinations by navigating.
+ *
+ * The back stack it builds is identical to the one the overflow builds - PLAYER,
+ * then settings - so a test asserting that Back returns to PLAYER is asserting the
+ * real thing.
  */
 internal fun openSettingsAndSettle(timeoutMs: Long = 15_000) {
     val instrumentation = InstrumentationRegistry.getInstrumentation()
+
     instrumentation.runOnMainSync {
-        resumedMainActivity().findViewById<android.view.View>(R.id.settings_entry).performClick()
+        resumedMainActivity().findViewById<android.view.View>(R.id.nav_item_player).performClick()
+    }
+    awaitDestination(timeoutMs, "the player") { it.currentDestinationIdOrNull() == R.id.player }
+
+    instrumentation.runOnMainSync {
+        val activity = resumedMainActivity()
+        val host = activity.supportFragmentManager.findFragmentById(R.id.navHostFragment)
+            as androidx.navigation.fragment.NavHostFragment
+        host.navController.navigate(R.id.settings)
     }
     awaitDestination(timeoutMs, "settings") { it.currentDestinationIdOrNull() == R.id.settings }
 }
 
 /**
+ * Clicks an item in whatever platform popup is currently showing.
+ *
+ * `PopupMenu` puts its list in its own window, so the activity's view tree does not
+ * contain it and `findViewById` returns null.
+ *
+ * Driven through the accessibility tree rather than Espresso, and that is not a
+ * preference: Espresso's click requires the target to report
+ * `isDisplayingAtLeast(90)`, and on the software-rendered API 24 image a popup item
+ * comes back with the right text, the right size and an **empty**
+ * `getGlobalVisibleRect()`. The item is on screen - a screenshot shows it - so the
+ * constraint is measuring the emulator rather than the app.
+ * `AccessibilityNodeInfo.performAction(ACTION_CLICK)` asks the node to activate
+ * itself and needs no such geometry.
+ */
+internal fun clickPopupItem(titleRes: Int, timeoutMs: Long = 10_000) {
+    awaitMenuRow(titleRes, timeoutMs) { row ->
+        // The return value is not the signal. `ACTION_CLICK` can report false on the
+        // API 24 image and still deliver the click - which made the retry loop spend
+        // its whole timeout re-matching the *destination* screen's heading, because
+        // `Настройки` is deliberately the same string there. What actually says the
+        // item was taken is the popup closing, so that is what is waited for.
+        row.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
+        awaitPopupClosed(titleRes)
+    }
+}
+
+/**
+ * True once no clickable row titled [titleRes] is on screen any more.
+ *
+ * A menu row has a clickable ancestor and a screen heading does not, which is what
+ * separates "the popup is still open" from "the popup closed and the destination
+ * happens to use the same word".
+ */
+private fun awaitPopupClosed(titleRes: Int, timeoutMs: Long = 2_000): Boolean {
+    val instrumentation = InstrumentationRegistry.getInstrumentation()
+    val title = instrumentation.targetContext.getString(titleRes)
+    val deadline = System.currentTimeMillis() + timeoutMs
+
+    while (System.currentTimeMillis() < deadline) {
+        val stillOpen = accessibilityRoots()
+            .flatMap { it.findAccessibilityNodeInfosByText(title).orEmpty() }
+            .filter { it.text?.toString() == title }
+            .any { match ->
+                var row: android.view.accessibility.AccessibilityNodeInfo? = match
+                while (row != null && !row.isClickable) row = row.parent
+                row != null
+            }
+        if (!stillOpen) return true
+        Thread.sleep(50)
+    }
+    return false
+}
+
+/** Asserts a menu row with this title is present in the popup that is showing. */
+internal fun assertPopupShows(titleRes: Int, timeoutMs: Long = 10_000) {
+    awaitMenuRow(titleRes, timeoutMs) { true }
+}
+
+/**
+ * Finds the menu row carrying [titleRes] and runs [act] on it, retrying until it
+ * reports success.
+ *
+ * ## Every match is tried, not the first
+ *
+ * `Настройки` is the popup item's title **and** the Settings screen's own heading -
+ * they are deliberately the same string. So a search of the accessibility tree can
+ * match a plain heading that happens to be on screen, and on the API 24 image, where
+ * a finished `ActivityScenario` can take a while to actually go away, it does: the
+ * first match was a heading with no clickable ancestor and the helper spent its whole
+ * timeout on it while the real menu row sat second in the list.
+ *
+ * A menu row is distinguishable without guessing: it is the only match that has a
+ * clickable ancestor. So every match is walked, and the first that yields one is the
+ * row. On API 24 the clickable node is the row around the TextView; on API 36 the
+ * TextView reports clickable itself, so the same walk covers both.
+ *
+ * ## Across every window, not just the active one
+ *
+ * A `PopupMenu` lives in a window of its own, and `rootInActiveWindow` returns one
+ * window. On the API 24 image an `ActivityScenario` that has been closed can take a
+ * while to actually go away, so a stale activity's window can be the active one
+ * while the popup is somewhere else - which is how this failed with
+ * `1 view(s) read "Настройки", none of them a menu row`: the one match was a dead
+ * Settings screen's heading, and the live popup was in a window nobody looked at.
+ * So every window's root is searched.
+ *
+ * ## And against a fresh tree each attempt
+ *
+ * An `AccessibilityNodeInfo` is a snapshot: a node fetched from one traversal can
+ * have a null parent, or refuse its action, once the window behind it has moved on -
+ * which a popup that is still animating in does. Re-fetching per attempt makes
+ * staleness a retry rather than a failure.
+ */
+private fun awaitMenuRow(
+    titleRes: Int,
+    timeoutMs: Long,
+    act: (android.view.accessibility.AccessibilityNodeInfo) -> Boolean,
+) {
+    val instrumentation = InstrumentationRegistry.getInstrumentation()
+    val title = instrumentation.targetContext.getString(titleRes)
+    val deadline = System.currentTimeMillis() + timeoutMs
+    var lastProblem = "the popup never appeared"
+
+    while (System.currentTimeMillis() < deadline) {
+        val matches = accessibilityRoots()
+            .flatMap { it.findAccessibilityNodeInfosByText(title).orEmpty() }
+            .filter { it.text?.toString() == title }
+
+        if (matches.isEmpty()) {
+            lastProblem = "nothing on screen reads \"$title\""
+        } else {
+            lastProblem = "${matches.size} view(s) read \"$title\", none of them a menu row"
+            for (match in matches) {
+                var row: android.view.accessibility.AccessibilityNodeInfo? = match
+                while (row != null && !row.isClickable) row = row.parent
+                if (row != null && act(row)) return
+            }
+        }
+        Thread.sleep(50)
+    }
+    throw AssertionError("no usable menu row for \"$title\" after ${timeoutMs}ms: $lastProblem")
+}
+
+/**
+ * Every window's accessibility root, with the active one first.
+ *
+ * `getWindows()` needs `FLAG_RETRIEVE_INTERACTIVE_WINDOWS` on the automation's
+ * service info; it is set once, lazily, and left on. If the platform declines to
+ * list windows for any reason, the active root alone is still returned, so this
+ * degrades to the old behaviour rather than to nothing.
+ */
+private fun accessibilityRoots(): List<android.view.accessibility.AccessibilityNodeInfo> {
+    val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+
+    if (!interactiveWindowsRequested) {
+        interactiveWindowsRequested = true
+        runCatching {
+            automation.serviceInfo = automation.serviceInfo.apply {
+                flags = flags or
+                    android.accessibilityservice.AccessibilityServiceInfo
+                        .FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+            }
+        }
+    }
+
+    val roots = mutableListOf<android.view.accessibility.AccessibilityNodeInfo>()
+    automation.rootInActiveWindow?.let { roots += it }
+    runCatching { automation.windows }.getOrNull()?.forEach { window ->
+        window?.root?.let { roots += it }
+    }
+    return roots
+}
+
+@Volatile
+private var interactiveWindowsRequested = false
+
+/**
  * Opens a profile and waits for the route to resolve.
  *
- * Two taps since G1, and the first one is new rather than incidental: the header
- * control opens `settings`, and `Row / Профиль` inside it is what routes to a
- * profile. The callers of this helper are asserting things about the profile
- * screens, not about how many screens are between them and HOME, so the extra hop
- * lives here rather than in eight test bodies.
+ * One tap again, as before G1: the 40x40 header control on HOME opens a profile
+ * directly. G1 had briefly made it two, through the settings shell; G1a put the
+ * control back.
  *
- * Opening a profile is still asynchronous, and deliberately so: `ProfileRoute`
- * proves a matching session before it navigates, rather than entering the
- * authenticated screen and letting it discover it should not have. That check is
- * local and quick, but it is not the same main-thread frame as the tap - so a suite
- * that taps and asserts in one breath reads the destination it started on.
+ * Opening a profile is asynchronous, and deliberately so: `ProfileRoute` proves a
+ * matching session before it navigates, rather than entering the authenticated
+ * screen and letting it discover it should not have. That check is local and quick,
+ * but it is not the same main-thread frame as the tap - so a suite that taps and
+ * asserts in one breath reads the destination it started on.
  *
  * This waits for *either* profile destination and asserts neither. Which one it landed
  * on is what the calling test is for, and one case ([ProfileAuthenticatedTest] B) exists
@@ -587,11 +766,8 @@ internal fun openSettingsAndSettle(timeoutMs: Long = 15_000) {
  */
 internal fun openProfileAndSettle(timeoutMs: Long = 15_000) {
     val instrumentation = InstrumentationRegistry.getInstrumentation()
-    openSettingsAndSettle(timeoutMs)
-
     instrumentation.runOnMainSync {
-        resumedMainActivity().findViewById<android.view.View>(R.id.settings_row_profile)
-            .performClick()
+        resumedMainActivity().findViewById<android.view.View>(R.id.profile_entry).performClick()
     }
     awaitDestination(timeoutMs, "a profile") { it.profileDestination() != null }
 }
@@ -635,11 +811,25 @@ internal fun MainActivity.currentDestinationIdOrNull(): Int? {
  * `onActivity` waits for an idle looper, and on API 24 a screen that is animating or
  * spinning may never give it one - see the harness note in `AuthFormTest`.
  */
-internal fun resumedMainActivity(): MainActivity =
-    ActivityLifecycleMonitorRegistry.getInstance()
+internal fun resumedMainActivity(): MainActivity {
+    val resumed = ActivityLifecycleMonitorRegistry.getInstance()
         .getActivitiesInStage(Stage.RESUMED)
         .filterIsInstance<MainActivity>()
-        .firstOrNull() ?: error("no resumed MainActivity")
+
+    // `ActivityScenario.close()` reports a teardown timeout on the API 24 image long
+    // before the activity is actually gone, so a finished activity from the previous
+    // test can still be sitting in RESUMED when the next one starts. Clicking its
+    // views does nothing visible - the fragment behind them is destroyed - which is
+    // how a popup came back "open" with no menu row in it while a screenshot of the
+    // same moment showed the menu drawn on the live activity.
+    //
+    // Live ones only, and the most recent of those: the newest RESUMED activity is
+    // the one on screen.
+    val live = resumed.filterNot { it.isFinishing || it.isDestroyed }
+    return live.lastOrNull()
+        ?: resumed.lastOrNull()
+        ?: error("no resumed MainActivity")
+}
 
 /** Which profile is showing, or `null` if the route has not resolved yet. */
 internal fun MainActivity.profileDestination(): Int? {

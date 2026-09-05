@@ -140,11 +140,15 @@ class ThemeRecreationPlaybackTest {
      * The exact journey, once, with the bottom bar checked at every step.
      *
      * ```
-     * HOME -> Settings -> Appearance -> choose Тёмная -> [activity recreates]
+     * PLAYER -> overflow -> Настройки -> Appearance -> choose Тёмная -> [recreates]
      *   still on Appearance, in dark
      *   Back -> Settings   (bar still hidden)
-     *   Back -> HOME       (bar restored)
+     *   Back -> PLAYER     (bar restored)
      * ```
+     *
+     * It starts at PLAYER rather than HOME since G1a: the 40x40 header control is
+     * the profile entry again, and Settings is reached from the PLAYER and
+     * COLLECTION overflows. Back therefore returns to PLAYER, which is the caller.
      *
      * The ten-toggle test below proves the back stack survives *repetition*; this
      * proves the single journey a listener actually makes, and it is the one that
@@ -152,14 +156,13 @@ class ThemeRecreationPlaybackTest {
      * recreation would be a visible flash on the one path everybody walks.
      */
     @Test
-    fun home_to_appearance_and_back_survives_the_recreation() {
+    fun player_to_appearance_and_back_survives_the_recreation() {
         val scenario = ActivityScenario.launch(MainActivity::class.java)
         try {
             await("HOME") { it.destination() == R.id.home }
             assertEquals(View.VISIBLE, barVisibility())
 
-            tap(R.id.settings_entry)
-            await("settings") { it.destination() == R.id.settings }
+            openSettingsAndSettle()
             assertEquals("settings has no bottom bar", View.GONE, barVisibility())
 
             tap(R.id.settings_row_theme)
@@ -188,13 +191,13 @@ class ThemeRecreationPlaybackTest {
             assertTrue("settings must still be dark", onMain { it.isNight() })
 
             tap(R.id.settings_back)
-            await("HOME") { it.destination() == R.id.home }
+            await("the player") { it.destination() == R.id.player }
             assertEquals(
-                "the bar must come back with HOME",
+                "the bar must come back with the caller",
                 View.VISIBLE,
                 barVisibility(),
             )
-            assertTrue("HOME must still be dark", onMain { it.isNight() })
+            assertTrue("the player must still be dark", onMain { it.isNight() })
         } finally {
             close(scenario)
         }
@@ -231,7 +234,7 @@ class ThemeRecreationPlaybackTest {
             assertEquals(View.GONE, barVisibility())
 
             tap(R.id.settings_back)
-            await("HOME") { it.destination() == R.id.home }
+            await("the player") { it.destination() == R.id.player }
             assertEquals(View.VISIBLE, barVisibility())
         } finally {
             close(scenario)
@@ -279,7 +282,7 @@ class ThemeRecreationPlaybackTest {
             await("settings") { it.destination() == R.id.settings }
 
             tap(R.id.settings_back)
-            await("HOME") { it.destination() == R.id.home }
+            await("the player") { it.destination() == R.id.player }
         } finally {
             close(scenario)
         }

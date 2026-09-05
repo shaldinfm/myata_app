@@ -103,8 +103,8 @@
               the overflow is pushed 40dp off its frozen trailing anchor.
             -->
             <include
-                android:id="@+id/settings_entry"
-                layout="@layout/view_settings_entry"
+                android:id="@+id/profile_entry"
+                layout="@layout/view_profile_entry"
                 android:visibility="gone" />
         </LinearLayout>
 

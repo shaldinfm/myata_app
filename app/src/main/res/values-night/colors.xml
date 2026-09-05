@@ -128,8 +128,8 @@
       dark while their foregrounds differ - #F5F7FA on the 40dp control, #5FD9B4
       on the 72dp avatar - so they are two colours rather than one shared token.
     -->
-    <color name="settings_entry_circle">#1C4771</color>
-    <color name="settings_entry_icon">#F5F7FA</color>
+    <color name="profile_entry_circle">#1C4771</color>
+    <color name="profile_entry_icon">#F5F7FA</color>
     <color name="avatar_guest_background">#1C4771</color>
     <color name="avatar_guest_icon">#5FD9B4</color>
     <!-- profile-guest_dark 2517:3611. Dark halves; provenance in values/colors.xml. -->

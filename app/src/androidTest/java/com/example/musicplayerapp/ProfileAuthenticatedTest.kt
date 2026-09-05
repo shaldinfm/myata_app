@@ -169,14 +169,7 @@ class ProfileAuthenticatedTest {
             // as either profile is showing. Sampling from the tap itself is what makes
             // a destination that was entered and then left visible here - and that is
             // exactly the behaviour being ruled out.
-            //
-            // The sampling starts at the *profile row*, not at the header control:
-            // since G1 the control opens settings, and sampling from there would spend
-            // most of the window recording R.id.settings while the interesting
-            // transition had not been asked for yet.
-            scenario.tap(R.id.settings_entry)
-            scenario.await("the settings shell") { it.currentDestinationId() == R.id.settings }
-            scenario.tap(R.id.settings_row_profile)
+            scenario.tap(R.id.profile_entry)
             repeat(60) {
                 runCatching { on { seen += it.currentDestinationId() } }
                 Thread.sleep(25)
@@ -320,10 +313,6 @@ class ProfileAuthenticatedTest {
      * **H.** Back from the account card must reach whatever opened the profile - not
      * the guest card that is now false, and not the form that was just satisfied.
      *
-     * Since G1 "whatever opened the profile" is the settings shell, and the screen
-     * that opened *that* is HOME. The claim is unchanged and the walk is one step
-     * longer: what must not appear on the way is an auth screen or the guest profile,
-     * and both Backs are asserted for that rather than only the first.
      */
     @Test
     fun h_no_auth_screen_is_left_in_the_back_stack() {
@@ -337,26 +326,14 @@ class ProfileAuthenticatedTest {
                 it.currentDestinationId() == R.id.profile_authenticated
             }
 
-            // One Back, and we are at the settings shell the profile row was tapped
-            // on - not at an auth screen, and not at the guest card.
+            // One Back, and we are at the screen the profile was opened from.
             scenario.tap(R.id.profile_back)
             on { activity ->
                 assertEquals(
                     "Back must not reach the auth screens or the guest profile",
-                    R.id.settings,
+                    R.id.home,
                     activity.currentDestinationId(),
                 )
-                // Settings has no bottom bar either, so it is still hidden here.
-                assertEquals(
-                    View.GONE,
-                    activity.findViewById<View>(R.id.bottomNavView).visibility,
-                )
-            }
-
-            // And one more reaches HOME, with the bar back.
-            scenario.tap(R.id.settings_back)
-            on { activity ->
-                assertEquals(R.id.home, activity.currentDestinationId())
                 assertEquals(
                     View.VISIBLE,
                     activity.findViewById<View>(R.id.bottomNavView).visibility,
@@ -661,21 +638,11 @@ class ProfileAuthenticatedTest {
             scenario.tap(R.id.profile_row_sign_out)
             scenario.await("the guest profile") { it.currentDestinationId() == R.id.profile }
 
-            // Back must not reach the account card that is no longer true. Since G1
-            // it lands on the settings shell - the screen the profile row was tapped
-            // on - and the account card is not on the stack behind it.
+            // Back must not reach the account card that is no longer true.
             scenario.tap(R.id.profile_back)
             on {
                 assertEquals(
                     "the authenticated profile must be gone from the stack",
-                    R.id.settings,
-                    it.currentDestinationId(),
-                )
-            }
-            scenario.tap(R.id.settings_back)
-            on {
-                assertEquals(
-                    "and the step above settings is the screen that opened it",
                     R.id.home,
                     it.currentDestinationId(),
                 )

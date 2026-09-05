@@ -26,8 +26,8 @@
 
         <!--
           Header row, 358x47 at 16. The label is centred because both ends reserve
-          a slot: the frozen leading Button is hidden, and the trailing overflow is
-          reserved but not drawn - see player_header_action.
+          a slot: the frozen leading Button is hidden, and the trailing overflow
+          occupies the other - see player_header_action.
         -->
         <FrameLayout
             android:id="@+id/player_header"
@@ -60,19 +60,46 @@
                 android:textColor="@color/player_header_label" />
 
             <!--
-              The frozen overflow control's box, reserved and empty.
+              The frozen overflow control, `Button:margin` 32.02x39 @325.98,4.
 
-              Every action behind it belongs to a later phase - the canonical menu
-              is four rows all reading "Действие", and the real entries are the
-              Sleep Timer (D) and Report a problem (E). Reserving the space keeps
-              the label centred where the frozen design centres it; drawing a
-              control here would be a button that does nothing.
+              It was a reserved, empty `Space` until G1a: the canonical menu is
+              four rows all reading "Действие", and its real entries - Sleep Timer
+              (D), Report a problem (E) - are still later phases, so drawing a
+              control would have been a button that does nothing. It has one real
+              action now, `Настройки`, so the box it was holding open becomes the
+              control the frozen design draws in it.
+
+              ## The glyph, and why it is the Collection's file
+
+              Both headers draw the identical frozen node - `Button` 20x39 holding
+              a `Container` 4x16 dot column - and `player_header_label` and
+              `collection_header_action` carry the *same* pair of values in both
+              themes (#42474E / #F5F7FA). One authored glyph, therefore, rather
+              than a byte-identical second copy. The tint is named for the surface
+              it is on, which is what keeps that a coincidence this file relies on
+              rather than one it hides: if the Player's label token ever moves, this
+              moves with it.
+
+              ## Why the padding
+
+              `Button:margin` is 32 wide but the `Button` inside it is 20, anchored
+              to its start, and the dots are centred in *that*: absolute x=333.98,
+              20.02 from the header's trailing edge, not 14. paddingEnd narrows the
+              content box to the leading 20 so `center` lands the column where the
+              frame puts it. The outer box stays 32, so the label stays centred
+              exactly where it was.
             -->
-            <Space
+            <ImageView
                 android:id="@+id/player_header_action"
                 android:layout_width="@dimen/player_header_action_width"
                 android:layout_height="@dimen/player_header_action_height"
-                android:layout_gravity="end|center_vertical" />
+                android:layout_gravity="end|center_vertical"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/player_overflow"
+                android:paddingEnd="@dimen/player_header_action_inset"
+                android:scaleType="center"
+                android:src="@drawable/ic_collection_overflow"
+                app:tint="@color/player_header_label" />
         </FrameLayout>
 
         <!--

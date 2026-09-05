@@ -1,6 +1,5 @@
 package com.example.musicplayerapp
 
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.room.Room
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -8,10 +7,12 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
 import androidx.test.runner.lifecycle.Stage
 import com.example.musicplayerapp.data.AppDatabase
+import com.example.musicplayerapp.data.ThemeStore
 import com.example.musicplayerapp.data.supabase.EmailAuthBackend
 import com.example.musicplayerapp.data.supabase.IdentityStore
 import com.example.musicplayerapp.data.supabase.LastSyncStore
 import com.example.musicplayerapp.data.supabase.ReactionSyncBackend
+import com.example.musicplayerapp.ui.settings.ThemeMode
 import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -38,8 +39,8 @@ import org.junit.runner.RunWith
  *
  * ## Opt-in
  *
- * Runs only under `captureProfile=true`, because it writes files and flips the
- * device's night mode:
+ * Runs only under `captureProfile=true`, because it writes files and changes
+ * this install's persisted appearance:
  *
  * ```
  * ./gradlew connectedDebugAndroidTest \
@@ -101,9 +102,9 @@ class ProfileAuthenticatedCaptureTest {
     @After
     fun close() {
         if (!::db.isInitialized) return
-        instrumentation.runOnMainSync {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
-        }
+        // Back to an install that has made no appearance choice, which is the state
+        // every other suite expects to find.
+        ThemeStore.clearForTest(context)
         IdentityStore.clearForTest(context)
         LastSyncStore.clearForTest(context)
         AppDatabase.overrideForInstrumentation(null)
@@ -114,15 +115,24 @@ class ProfileAuthenticatedCaptureTest {
     @Test
     fun capturesBothThemes() {
 
+        // The appearance is chosen the way the app chooses it, by writing
+        // ThemeStore before the activity is launched. `setDefaultNightMode` used to
+        // do this and no longer can: MainActivity sets `localNightMode` on its own
+        // delegate in onCreate (G1), and an activity-local mode wins over the
+        // process default - so the dark shot would have come back light.
         for ((mode, theme) in listOf(
-            AppCompatDelegate.MODE_NIGHT_NO to "light",
-            AppCompatDelegate.MODE_NIGHT_YES to "dark",
+            ThemeMode.LIGHT to "light",
+            ThemeMode.DARK to "dark",
         )) {
-            instrumentation.runOnMainSync { AppCompatDelegate.setDefaultNightMode(mode) }
+            ThemeStore.write(context, mode)
 
             val scenario = ActivityScenario.launch(MainActivity::class.java)
             try {
-                tap(R.id.profile_entry)
+                // Two taps since G1: the header control opens settings, and the
+                // profile row inside it is what routes to the account card.
+                tap(R.id.settings_entry)
+                await("the settings shell") { it.currentDestinationId() == R.id.settings }
+                tap(R.id.settings_row_profile)
                 await("the account card") {
                     it.currentDestinationId() == R.id.profile_authenticated &&
                         it.findViewById<android.widget.TextView>(R.id.profile_account_name)

@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  settings-appearance 2517:2817 (light) / 2517:3784 (dark), 390x420.
+
+  Three rows, one note, and no fourth option. A true-black / AMOLED variant was
+  considered for this screen and dropped - the canonical dark background is the
+  navy #0F253E, and a second dark theme follows from nothing in the file. See
+  `tools/figma-export/screens-3.6.6/PR23-CONCEPT-REVIEW.md`.
+
+  ## Geometry
+
+      band              0..64
+      Row Системная     92..164   (28 below the band, and 72 tall)
+      Row Светлая       172..236  (8 below it)
+      Row Тёмная        244..308  (8 below it)
+      note              336..356  (28 below the last row)
+
+  ## What selection changes, and what it does not
+
+  The frozen frame only ever draws Системная selected, so what the other two look
+  like when chosen is a decision rather than a measurement. Selection is the 2dp
+  `primary` border and the check at x=318 - nothing else. In particular:
+
+    * `Row / Системная` keeps its 72dp height and its sub-label whichever row is
+      selected. The sub-label describes what Системная *is*, not that it is
+      current, and a row that grew and shrank would shift the two rows under it
+      every time the listener changed their mind;
+    * the plate, the radius and the fill are identical on all three rows in both
+      states. Only the stroke width and colour move, and an inside stroke grows
+      inwards, so no row shifts by the extra pixel.
+
+  The check ImageView is present on all three rows and toggled, rather than being
+  one view moved between them: three fixed slots keep the 24dp reserved at x=318
+  on every row, so the labels do not reflow when the selection changes.
+
+  The rows are the profile screens' component again, so the plate, radius, stroke
+  and insets are `bg_profile_row` and the `profile_row_*` dimens.
+-->
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <LinearLayout
+        android:id="@+id/appearance_root"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/background"
+        android:orientation="vertical"
+        tools:context=".fragments.SettingsAppearanceFragment">
+
+        <!-- `Header - TopAppBar` 2517:2818, identical to the settings band. -->
+        <LinearLayout
+            android:id="@+id/appearance_header"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/profile_header_height"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/profile_back_margin_start"
+            android:paddingEnd="@dimen/profile_margin">
+
+            <ImageView
+                android:id="@+id/appearance_back"
+                android:layout_width="@dimen/profile_back_size"
+                android:layout_height="@dimen/profile_back_size"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/profile_back_description"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_profile_back" />
+
+            <TextView
+                android:id="@+id/appearance_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/profile_title_margin_start"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/settings_appearance_title"
+                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.24_32"
+                android:textColor="@color/text_heading" />
+        </LinearLayout>
+
+        <ScrollView
+            android:id="@+id/appearance_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:fillViewport="true"
+            android:paddingBottom="@dimen/content_bottom_clearance"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/profile_margin"
+                android:paddingEnd="@dimen/profile_margin">
+
+                <!--
+                  `Row / Системная` 2517:2819, 358x72 at y=92; the band ends at 64.
+                  The only row with a sub-label, and it keeps it always.
+                -->
+                <LinearLayout
+                    android:id="@+id/appearance_row_system"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/settings_row_tall"
+                    android:layout_marginTop="@dimen/settings_appearance_first_row_margin_top"
+                    android:background="@drawable/bg_settings_row_selected"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/profile_row_icon_margin_start"
+                    android:paddingEnd="@dimen/profile_row_icon_margin_start">
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_row_icon_size"
+                        android:layout_height="@dimen/profile_row_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_settings_theme" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_row_label_margin_start"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:minHeight="@dimen/profile_account_label_box"
+                            android:text="@string/settings_theme_system"
+                            android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                            android:textColor="@color/profile_row_label" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:gravity="center_vertical"
+                            android:maxLines="1"
+                            android:minHeight="@dimen/auth_label_box"
+                            android:text="@string/settings_theme_system_sub"
+                            android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                            android:textColor="@color/text_secondary" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:id="@+id/appearance_check_system"
+                        android:layout_width="@dimen/settings_check_size"
+                        android:layout_height="@dimen/settings_check_size"
+                        android:contentDescription="@string/settings_theme_selected_description"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_settings_check" />
+                </LinearLayout>
+
+                <!-- `Row / Светлая` 2517:2827, 358x64 at y=172; the row above ends at 164. -->
+                <LinearLayout
+                    android:id="@+id/appearance_row_light"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_row_height"
+                    android:layout_marginTop="@dimen/profile_row_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/profile_row_icon_margin_start"
+                    android:paddingEnd="@dimen/profile_row_icon_margin_start">
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_row_icon_size"
+                        android:layout_height="@dimen/profile_row_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_settings_theme" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_row_label_margin_start"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/profile_account_label_box"
+                        android:text="@string/settings_theme_light"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                        android:textColor="@color/profile_row_label" />
+
+                    <ImageView
+                        android:id="@+id/appearance_check_light"
+                        android:layout_width="@dimen/settings_check_size"
+                        android:layout_height="@dimen/settings_check_size"
+                        android:contentDescription="@string/settings_theme_selected_description"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_settings_check"
+                        android:visibility="invisible" />
+                </LinearLayout>
+
+                <!-- `Row / Тёмная` 2517:2833, 358x64 at y=244; the row above ends at 236. -->
+                <LinearLayout
+                    android:id="@+id/appearance_row_dark"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_row_height"
+                    android:layout_marginTop="@dimen/profile_row_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/profile_row_icon_margin_start"
+                    android:paddingEnd="@dimen/profile_row_icon_margin_start">
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_row_icon_size"
+                        android:layout_height="@dimen/profile_row_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_settings_theme" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_row_label_margin_start"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/profile_account_label_box"
+                        android:text="@string/settings_theme_dark"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                        android:textColor="@color/profile_row_label" />
+
+                    <ImageView
+                        android:id="@+id/appearance_check_dark"
+                        android:layout_width="@dimen/settings_check_size"
+                        android:layout_height="@dimen/settings_check_size"
+                        android:contentDescription="@string/settings_theme_selected_description"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_settings_check"
+                        android:visibility="invisible" />
+                </LinearLayout>
+
+                <!--
+                  `note` 2517:2839, 358x20 at y=336; the last row ends at 308.
+
+                  It is a promise the implementation keeps: choosing a row writes the
+                  choice and hands MainActivity a new local night mode, the activity
+                  recreates under the listener, and the back stack brings them back to
+                  this screen repainted. No process restart, and nothing to dismiss.
+                -->
+                <TextView
+                    android:id="@+id/appearance_note"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/settings_appearance_note_margin_top"
+                    android:gravity="center_vertical"
+                    android:minHeight="@dimen/auth_label_box"
+                    android:text="@string/settings_appearance_note"
+                    android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                    android:textColor="@color/text_secondary" />
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+</layout>

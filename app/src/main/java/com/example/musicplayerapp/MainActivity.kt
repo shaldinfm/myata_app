@@ -19,6 +19,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.findNavController
 import com.example.musicplayerapp.data.Streams
+import com.example.musicplayerapp.data.ThemeStore
 import com.example.musicplayerapp.databinding.ActivityMainBinding
 import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.service.PlaybackLog
@@ -113,6 +114,34 @@ class MainActivity : AppCompatActivity() {
         // makes android:textAppearance carry a whole token. TvMainActivity is
         // deliberately not given it; TV is not on the 3.6.6 typography.
         LayoutInflaterCompat.setFactory2(layoutInflater, MyataTypography.Factory(delegate))
+
+        // The chosen appearance, applied to **this activity's delegate** and to
+        // nothing else (G1). Before super.onCreate, which is the documented point
+        // for it: set later, AppCompat has already applied a night mode for this
+        // activity and has to undo it, which costs a recreation on the way in.
+        //
+        // `localNightMode` rather than `AppCompatDelegate.setDefaultNightMode`, and
+        // the difference is the whole of the TV isolation. The default is a static,
+        // process-wide switch; TvMainActivity is an AppCompatActivity in this same
+        // process and the <application> theme it sits under is now a DayNight tree,
+        // so a process-wide night mode set from a phone screen would reach a TV
+        // surface that cannot open that screen. Scoped to this delegate, it cannot.
+        // Nothing in this app calls setDefaultNightMode; AppearanceSelectionTest
+        // asserts the process default is never forced afterwards.
+        //
+        // An install that has never opened the appearance screen has no key on disk,
+        // ThemeStore answers SYSTEM, and SYSTEM assigns MODE_NIGHT_UNSPECIFIED -
+        // AppCompat's own "no local override", which is the exact state this activity
+        // was in before G1. So the upgrade path is that there is nothing to migrate,
+        // and the default path costs nothing: assigning the explicit
+        // MODE_NIGHT_FOLLOW_SYSTEM instead was measured recreating the activity on
+        // every cold start. See ThemeMode.localNightMode.
+        //
+        // The uiMode change this can cause is not in configChanges, so a change made
+        // on the appearance screen recreates the activity and comes back through
+        // here. See applySystemBarAppearance below, which was already written for
+        // exactly that path.
+        delegate.localNightMode = ThemeStore.read(this).localNightMode()
 
         super.onCreate(savedInstanceState)
 
@@ -234,10 +263,17 @@ class MainActivity : AppCompatActivity() {
             // so the bar would otherwise appear for the length of a sign-in and
             // vanish again - offering four destinations to somebody in the middle of
             // typing a password.
+            // settings and settings-appearance joined them at G1, for the same
+            // reason and from the same place: neither frozen frame has a bottom
+            // bar, and settings is now what the 40x40 header control opens, so the
+            // bar would otherwise be present on the parent of a screen that hides
+            // it and absent on the child.
             val hidesBottomBar = destination.id == R.id.profile ||
                 destination.id == R.id.profile_authenticated ||
                 destination.id == R.id.auth_sign_in ||
-                destination.id == R.id.auth_create_account
+                destination.id == R.id.auth_create_account ||
+                destination.id == R.id.settings ||
+                destination.id == R.id.settings_appearance
 
             binding.bottomNavView.visibility =
                 if (hidesBottomBar) android.view.View.GONE

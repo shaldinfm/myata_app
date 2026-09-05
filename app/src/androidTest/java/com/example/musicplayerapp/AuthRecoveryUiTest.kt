@@ -584,7 +584,13 @@ class AuthRecoveryUiTest {
     }
 
     private fun openProfileAndSettle() {
-        on { it.findViewById<View>(R.id.profile_entry).performClick() }
+        // Two taps since G1: the header control opens settings, and `Row / Профиль`
+        // inside it routes to a profile.
+        on { it.findViewById<View>(R.id.settings_entry).performClick() }
+        sync()
+        awaitDestination(R.id.settings)
+
+        on { it.findViewById<View>(R.id.settings_row_profile).performClick() }
         sync()
         awaitDestination(R.id.profile)
     }

@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  settings 2517:2758 (light) / 2517:3725 (dark), 390x792.
+
+  A pushed destination like the profile and the auth screens: the band carries a
+  back button, the frame has no bottom bar, and MainActivity hides the bar for
+  this destination.
+
+  ## Two sections, not five
+
+  The frozen frame draws five - Аккаунт, Внешний вид, Воспроизведение,
+  Интеграции, Прочее - and this screen draws the first two. The other three name
+  features this app does not have: stream quality, a sleep timer, Last.fm, a
+  report form and an about-app screen are each their own slice, and none of them
+  exists yet.
+
+  That is deliberately *not* the treatment `Row / Аватар` gets on
+  profile-authenticated, which is drawn inert with a chevron that does nothing.
+  The difference is what the row would say. An inert Аватар row names a feature
+  the account genuinely has and cannot reach yet; a row reading `Таймер сна -
+  Выключен` or `Last.fm - Не подключён` states a *fact* about a feature with no
+  implementation behind it to make the fact true or false. Each section arrives
+  with the slice that makes its row honest.
+
+  ## Geometry
+
+  Every margin is the difference between two absolute Figma offsets, so the
+  screen can be checked by adding up rather than trusted:
+
+      band                0..64
+      Section Аккаунт     84..104   (20 below the band)
+      Row Профиль         112..176  (8 below the section)
+      Section Внешний вид 196..216  (20 below the row)
+      Row Тема            224..288  (8 below the section)
+
+  The rows are the profile screens' own component - r12 `surface` plate, 1dp
+  `outline` stroke, 24dp glyph at x=16, label at x=56, chevron at x=318 - so they
+  reuse `bg_profile_row` and the `profile_row_*` dimens rather than declaring a
+  second set of identical numbers.
+
+  Content ends at 288 inside a 792 frame, but the ScrollView is not decoration:
+  at 360dp the two values sit beside longer labels, and the sections arriving in
+  later slices extend this list well past a viewport.
+-->
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <LinearLayout
+        android:id="@+id/settings_root"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/background"
+        android:orientation="vertical"
+        tools:context=".fragments.SettingsFragment">
+
+        <!--
+          `Header - TopAppBar` 2517:2759. Back 24x24 at x=12 (vertically centred:
+          20+24=44, 64-44=20), heading at x=56 - 20 past the back button's
+          trailing edge. Identical to the profile and auth bands, down to the
+          dimens, which is why it reuses theirs.
+        -->
+        <LinearLayout
+            android:id="@+id/settings_header"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/profile_header_height"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/profile_back_margin_start"
+            android:paddingEnd="@dimen/profile_margin">
+
+            <ImageView
+                android:id="@+id/settings_back"
+                android:layout_width="@dimen/profile_back_size"
+                android:layout_height="@dimen/profile_back_size"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/profile_back_description"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_profile_back" />
+
+            <TextView
+                android:id="@+id/settings_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/profile_title_margin_start"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/settings_title"
+                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.24_32"
+                android:textColor="@color/text_heading" />
+        </LinearLayout>
+
+        <ScrollView
+            android:id="@+id/settings_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:fillViewport="true"
+            android:paddingBottom="@dimen/content_bottom_clearance"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/profile_margin"
+                android:paddingEnd="@dimen/profile_margin">
+
+                <!-- `Section / Аккаунт` 2517:2765, 358x20 at y=84; the band ends at 64. -->
+                <TextView
+                    android:id="@+id/settings_section_account"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/settings_first_section_margin_top"
+                    android:gravity="center_vertical"
+                    android:minHeight="@dimen/auth_label_box"
+                    android:text="@string/settings_section_account"
+                    android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                    android:textColor="@color/profile_section_label" />
+
+                <!--
+                  `Row / Профиль` 2517:2766, 358x64 at y=112; the section ends at 104.
+
+                  The value is filled in at runtime - see SettingsFragment - and the
+                  row routes through ProfileRoute, which is the same decision the
+                  header control used to make before G1 moved the caller.
+                -->
+                <LinearLayout
+                    android:id="@+id/settings_row_profile"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_row_height"
+                    android:layout_marginTop="@dimen/profile_row_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/profile_row_icon_margin_start"
+                    android:paddingEnd="@dimen/profile_row_icon_margin_start">
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_row_icon_size"
+                        android:layout_height="@dimen/profile_row_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_profile_person" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_row_label_margin_start"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/profile_account_label_box"
+                        android:text="@string/settings_row_profile"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                        android:textColor="@color/profile_row_label" />
+
+                    <TextView
+                        android:id="@+id/settings_row_profile_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_row_label_margin_start"
+                        android:ellipsize="end"
+                        android:gravity="center_vertical"
+                        android:maxLines="1"
+                        android:minHeight="@dimen/auth_label_box"
+                        android:text="@string/settings_profile_signed_out"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                        android:textColor="@color/text_secondary"
+                        tools:text="Не вошли" />
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_account_chevron_size"
+                        android:layout_height="@dimen/profile_account_chevron_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_profile_chevron" />
+                </LinearLayout>
+
+                <!-- `Section / Внешний вид` 2517:2772, 358x20 at y=196; the row ends at 176. -->
+                <TextView
+                    android:id="@+id/settings_section_appearance"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/settings_section_margin_top"
+                    android:gravity="center_vertical"
+                    android:minHeight="@dimen/auth_label_box"
+                    android:text="@string/settings_section_appearance"
+                    android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                    android:textColor="@color/profile_section_label" />
+
+                <!-- `Row / Тема` 2517:2773, 358x64 at y=224; the section ends at 216. -->
+                <LinearLayout
+                    android:id="@+id/settings_row_theme"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_row_height"
+                    android:layout_marginTop="@dimen/profile_row_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/profile_row_icon_margin_start"
+                    android:paddingEnd="@dimen/profile_row_icon_margin_start">
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_row_icon_size"
+                        android:layout_height="@dimen/profile_row_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_settings_theme" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_row_label_margin_start"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/profile_account_label_box"
+                        android:text="@string/settings_row_theme"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                        android:textColor="@color/profile_row_label" />
+
+                    <TextView
+                        android:id="@+id/settings_row_theme_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_row_label_margin_start"
+                        android:ellipsize="end"
+                        android:gravity="center_vertical"
+                        android:maxLines="1"
+                        android:minHeight="@dimen/auth_label_box"
+                        android:text="@string/settings_theme_system"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                        android:textColor="@color/text_secondary"
+                        tools:text="Системная" />
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_account_chevron_size"
+                        android:layout_height="@dimen/profile_account_chevron_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_profile_chevron" />
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+</layout>

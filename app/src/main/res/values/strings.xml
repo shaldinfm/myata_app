@@ -229,7 +229,7 @@
     <string name="collection_removed_undo">Отменить</string>
     <!-- ACCOUNTS (Phase G-A3). Copy verbatim from profile-guest 2517:2644. -->
     <string name="profile_title">Профиль</string>
-    <string name="profile_entry_description">Профиль</string>
+    <string name="settings_entry_description">Настройки</string>
     <string name="profile_back_description">Назад</string>
     <string name="profile_guest_heading">Вы не вошли</string>
     <string name="profile_guest_body_first">Радио, плеер, история эфира, таймер сна</string>
@@ -394,4 +394,32 @@
     <string name="profile_account_sync_minutes">%d мин назад</string>
     <string name="profile_account_sync_hours">%d ч назад</string>
     <string name="profile_account_sync_days">%d дн назад</string>
+
+    <!--
+      settings 2517:2758 / 2517:3725 and settings-appearance 2517:2817 /
+      2517:3784 (G1). Copy is the frozen frames' own, character for character,
+      except where noted.
+    -->
+    <string name="settings_title">Настройки</string>
+    <string name="settings_section_account">Аккаунт</string>
+    <string name="settings_row_profile">Профиль</string>
+    <string name="settings_section_appearance">Внешний вид</string>
+    <string name="settings_row_theme">Тема</string>
+
+    <!--
+      The `Row / Профиль` value. `Не вошли` is the frame's own string; the frame
+      never draws the signed-in case, so `Вошли` is new - see SettingsProfileRow
+      for when each of the three outcomes is used and why the address is not
+      always available.
+    -->
+    <string name="settings_profile_signed_out">Не вошли</string>
+    <string name="settings_profile_signed_in">Вошли</string>
+
+    <string name="settings_appearance_title">Тема</string>
+    <string name="settings_theme_system">Системная</string>
+    <string name="settings_theme_system_sub">Как в настройках устройства</string>
+    <string name="settings_theme_light">Светлая</string>
+    <string name="settings_theme_dark">Тёмная</string>
+    <string name="settings_appearance_note">Тема применяется сразу, без перезапуска.</string>
+    <string name="settings_theme_selected_description">Выбрано</string>
 </resources>

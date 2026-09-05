@@ -5,10 +5,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.PopupMenu
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
-import androidx.navigation.fragment.findNavController
 import androidx.viewpager2.widget.ViewPager2
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
@@ -107,35 +105,6 @@ class PlayerFragment : Fragment() {
                 super.onPageSelected(position)
             }
         })
-
-        // The frozen header overflow, live as of G1a with one entry.
-        //
-        // The frozen `Menu / Плеер` has four rows - Найти трек, Таймер сна,
-        // Сообщить о проблеме, История эфира - and none of them exists yet;
-        // `Настройки` is not among them either. It is here because the owner put
-        // the Settings entry on this control, and the frozen file never draws a
-        // path to `settings` at all. See res/menu/player_overflow.xml.
-        //
-        // `android.widget.PopupMenu`, the same class the COLLECTION overflow
-        // uses, so the two menus are one surface rather than two that merely look
-        // alike. Platform and temporary for the same stated reason: the frozen
-        // 206x264 menu is its own piece of work.
-        binding.playerHeaderAction.setOnClickListener { anchor ->
-            PopupMenu(anchor.context, anchor).apply {
-                menuInflater.inflate(R.menu.player_overflow, menu)
-                setOnMenuItemClickListener { item ->
-                    when (item.itemId) {
-                        // Back from settings pops to whatever opened it, so there
-                        // is nothing to remember and nothing to pass.
-                        R.id.player_action_settings -> {
-                            findNavController().navigate(R.id.settings)
-                            true
-                        }
-                        else -> false
-                    }
-                }
-            }.show()
-        }
 
         return binding.root
     }

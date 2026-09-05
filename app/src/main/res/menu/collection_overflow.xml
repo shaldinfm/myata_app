@@ -8,13 +8,6 @@
 
   Phase B carries the wording and the actions; the surface is a platform
   PopupMenu. F2 replaces it with the frozen 260x160 r20 menu on `menu_surface`.
-
-  G1a adds a third: `Настройки`. It is **not** in that frozen frame either, and
-  the 50 of slack below the two export rows is still not where it comes from - the
-  frozen file never draws a path to `settings` at all, so where Settings is
-  reached from is a product decision rather than something the frame can settle.
-  The owner placed it on this control and on the PLAYER overflow. It sits last,
-  after the two actions that are about the collection itself.
 -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
@@ -23,7 +16,4 @@
     <item
         android:id="@+id/collection_action_export_csv"
         android:title="@string/collection_export_csv" />
-    <item
-        android:id="@+id/collection_action_settings"
-        android:title="@string/settings_title" />
 </menu>

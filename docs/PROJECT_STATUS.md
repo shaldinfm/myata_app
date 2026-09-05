@@ -97,17 +97,17 @@ Last updated: 2026-09-05.
 
 Two pushed destinations, `settings` and `settings_appearance`.
 
-**Settings is reached from the three-dot overflow on PLAYER and on a populated
-COLLECTION** (G1a). G1 had briefly put it on the 40x40 header control that HOME,
-ABOUT US and the empty COLLECTION share, moving the profile a tap deeper; the
-owner corrected that, and the header control is the profile entry again exactly as
-it was before G1. The frozen file never draws a path to `settings` at all, so
-where it is reached from was a product decision rather than one the frame could
-settle. `Settings > Аккаунт > Профиль` remains as a second route to the profile.
+**Settings is reached from a second 40x40 control on the HOME header**, beside
+the profile control, which still opens the profile in one tap. The frozen design
+draws no path to `settings` at all - the `.fig` was decoded in full and carries
+zero prototype metadata, and the word `Настройки` appears in it only as that
+screen's own heading - so the entry is an owner-delegated product decision. It
+lands in space the frozen band already leaves empty, so nothing frozen moves, and
+it reuses the existing circular-control component.
 
-An empty COLLECTION has no overflow - the frozen empty frame carries the profile
-control there instead, never both - so Settings is not reachable from it. PLAYER
-is the entry that always is.
+G1 briefly retargeted the profile control itself, and G1a briefly put `Настройки`
+on the PLAYER and COLLECTION overflows. Both were withdrawn; those menus are for
+their own screens' actions.
 
 Settings renders **only** the two sections whose features exist — Аккаунт and
 Внешний вид. Stream quality, the sleep timer, Last.fm, report-a-problem and the

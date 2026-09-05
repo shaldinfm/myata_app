@@ -140,15 +140,14 @@ class ThemeRecreationPlaybackTest {
      * The exact journey, once, with the bottom bar checked at every step.
      *
      * ```
-     * PLAYER -> overflow -> Настройки -> Appearance -> choose Тёмная -> [recreates]
+     * HOME -> Settings -> Appearance -> choose Тёмная -> [activity recreates]
      *   still on Appearance, in dark
      *   Back -> Settings   (bar still hidden)
-     *   Back -> PLAYER     (bar restored)
+     *   Back -> HOME       (bar restored)
      * ```
      *
-     * It starts at PLAYER rather than HOME since G1a: the 40x40 header control is
-     * the profile entry again, and Settings is reached from the PLAYER and
-     * COLLECTION overflows. Back therefore returns to PLAYER, which is the caller.
+     * Settings is entered from the HOME header control, so HOME is the caller and
+     * is what Back returns to.
      *
      * The ten-toggle test below proves the back stack survives *repetition*; this
      * proves the single journey a listener actually makes, and it is the one that
@@ -156,7 +155,7 @@ class ThemeRecreationPlaybackTest {
      * recreation would be a visible flash on the one path everybody walks.
      */
     @Test
-    fun player_to_appearance_and_back_survives_the_recreation() {
+    fun home_to_appearance_and_back_survives_the_recreation() {
         val scenario = ActivityScenario.launch(MainActivity::class.java)
         try {
             await("HOME") { it.destination() == R.id.home }
@@ -191,13 +190,13 @@ class ThemeRecreationPlaybackTest {
             assertTrue("settings must still be dark", onMain { it.isNight() })
 
             tap(R.id.settings_back)
-            await("the player") { it.destination() == R.id.player }
+            await("HOME") { it.destination() == R.id.home }
             assertEquals(
                 "the bar must come back with the caller",
                 View.VISIBLE,
                 barVisibility(),
             )
-            assertTrue("the player must still be dark", onMain { it.isNight() })
+            assertTrue("HOME must still be dark", onMain { it.isNight() })
         } finally {
             close(scenario)
         }
@@ -234,7 +233,7 @@ class ThemeRecreationPlaybackTest {
             assertEquals(View.GONE, barVisibility())
 
             tap(R.id.settings_back)
-            await("the player") { it.destination() == R.id.player }
+            await("HOME") { it.destination() == R.id.home }
             assertEquals(View.VISIBLE, barVisibility())
         } finally {
             close(scenario)
@@ -282,7 +281,7 @@ class ThemeRecreationPlaybackTest {
             await("settings") { it.destination() == R.id.settings }
 
             tap(R.id.settings_back)
-            await("the player") { it.destination() == R.id.player }
+            await("HOME") { it.destination() == R.id.home }
         } finally {
             close(scenario)
         }
@@ -335,7 +334,9 @@ class ThemeRecreationPlaybackTest {
             if (ok) return
             Thread.sleep(25)
         }
-        error("timed out after ${timeoutMs}ms waiting for $what")
+        var actual: Int? = null
+        runCatching { instrumentation.runOnMainSync { actual = resumed().destination() } }
+        error("timed out after ${timeoutMs}ms waiting for $what; current destination = $actual")
     }
 
     /**

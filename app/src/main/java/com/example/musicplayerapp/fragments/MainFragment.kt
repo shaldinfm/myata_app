@@ -163,6 +163,18 @@ class MainFragment : Fragment() {
             ProfileRoute.open(this)
         }
 
+        // The 40x40 Settings control beside it. HOME is the only screen that
+        // carries this one; see the note in fragment_main.xml for why the frozen
+        // band had room for it and why the other two profile-control headers do
+        // not get it.
+        //
+        // A plain navigate: `settings` decides nothing on the way in, and Back
+        // pops to HOME. The profile is still one tap from here through the control
+        // above, so nothing got further away.
+        binding.settingsEntry.setOnClickListener {
+            findNavController().navigate(R.id.settings)
+        }
+
 
         return binding.root
     }

@@ -195,13 +195,7 @@ class FavoritesFragment : Fragment() {
         // the frozen `Menu / Коллекция` surface. Relocating the actions first
         // keeps export reachable across the interval instead of removing it and
         // waiting for F2 to bring it back.
-        //
-        // G1a adds `Настройки` to the same menu. Note what that inherits: this
-        // control is GONE while the collection is empty, because the frozen empty
-        // frame carries the profile control here instead and never both. So
-        // Settings is not reachable from an empty COLLECTION - it is reachable
-        // from the PLAYER overflow, which the bottom bar always offers. Making the
-        // overflow appear on the empty frame would be redrawing that frame.
+
         binding.collectionOverflow.setOnClickListener { anchor ->
             PopupMenu(anchor.context, anchor).apply {
                 menuInflater.inflate(R.menu.collection_overflow, menu)
@@ -213,12 +207,6 @@ class FavoritesFragment : Fragment() {
                         }
                         R.id.collection_action_export_csv -> {
                             exportCsv()
-                            true
-                        }
-                        // G1a. Back from settings pops to whichever screen opened
-                        // it, so this needs no action of its own beyond navigating.
-                        R.id.collection_action_settings -> {
-                            findNavController().navigate(R.id.settings)
                             true
                         }
                         else -> false

@@ -48,10 +48,10 @@ enum class ThemeMode {
      * ## Why not MODE_NIGHT_FOLLOW_SYSTEM, which says the same thing in words
      *
      * Because it measurably costs a recreation. `MainActivity` assigns this in
-     * `onCreate`, and an install that has chosen nothing assigns it on every cold
-     * start; AppCompat's own unset value is `MODE_NIGHT_UNSPECIFIED`, so assigning
-     * the explicit `FOLLOW_SYSTEM` is a *change* to the delegate and it runs
-     * `applyDayNight()` and recreates the activity.
+     * `attachBaseContext`, and an install that has chosen nothing assigns it on
+     * every cold start; AppCompat's own unset value is `MODE_NIGHT_UNSPECIFIED`, so
+     * assigning the explicit `FOLLOW_SYSTEM` is a *change* to the delegate, and a
+     * change is what `applyDayNight()` turns into a recreation.
      *
      * That was caught by
      * `AppearanceSelectionTest.the_default_appearance_does_not_recreate_the_activity_on_launch`,

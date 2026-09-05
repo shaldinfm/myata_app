@@ -86,10 +86,17 @@ Three options and no fourth. A true-black / AMOLED variant was considered for
 this screen and dropped — see `screens-3.6.6/PR23-CONCEPT-REVIEW.md`.
 
 ```
-ThemeMode.SYSTEM  ->  AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM   "system"
-ThemeMode.LIGHT   ->  AppCompatDelegate.MODE_NIGHT_NO              "light"
-ThemeMode.DARK    ->  AppCompatDelegate.MODE_NIGHT_YES             "dark"
+ThemeMode.SYSTEM  ->  AppCompatDelegate.MODE_NIGHT_UNSPECIFIED   "system"
+ThemeMode.LIGHT   ->  AppCompatDelegate.MODE_NIGHT_NO            "light"
+ThemeMode.DARK    ->  AppCompatDelegate.MODE_NIGHT_YES           "dark"
 ```
+
+**Системная is `MODE_NIGHT_UNSPECIFIED`, not `MODE_NIGHT_FOLLOW_SYSTEM`.** The two
+follow the system identically once applied, but only one is free to assign:
+`UNSPECIFIED` is AppCompat's own unset value, so assigning it is not a change,
+while assigning the explicit `FOLLOW_SYSTEM` *is* — and it was measured recreating
+`MainActivity` on **every cold start**. `AppearanceSelectionTest` counted two
+activity creations on a plain launch and is why the mapping is what it is.
 
 Stored by `ThemeStore` in its own `myata_appearance` preferences file, key
 `theme_mode`, written with `apply()`. Words rather than ordinals, so reordering
@@ -103,10 +110,16 @@ not carry theirs across. `AccountDeletionCleanup` does not touch it.
 ### Migration for existing installs: there is none
 
 Nothing is written at install, at upgrade, or by opening the screen and leaving
-it. An install arriving from 3.6.5 has no key, `ThemeStore.read` answers
-`SYSTEM`, and `MODE_NIGHT_FOLLOW_SYSTEM` is what AppCompat was already doing. The
-upgrade is a no-op *by construction* rather than by a step somebody has to run,
-which is why there is no version number in that file and no backfill.
+it. An install arriving from 3.6.5 has no key, `ThemeStore.read` answers `SYSTEM`,
+and `SYSTEM` installs `MODE_NIGHT_UNSPECIFIED` — the exact state the activity was
+in before G1, with no override at all. The upgrade is a no-op *by construction*
+rather than by a step somebody has to run, which is why there is no version number
+in that file and no backfill.
+
+A stored value this build cannot parse is treated the same way — and is **left on
+disk unchanged**. Rewriting it to `system` would be the app silently migrating a
+preference on the listener's behalf, and a downgrade that understood the original
+would find it gone.
 
 ### How a choice is applied
 
@@ -117,15 +130,31 @@ ThemeStore.write(mode)                              the choice reaches disk firs
 ```
 
 The second call runs `applyDayNight()`. `uiMode` is **not** in `MainActivity`'s
-`configChanges`, so the activity is recreated; `MainActivity.onCreate` reads
-`ThemeStore` before `super.onCreate` and comes back in the chosen appearance, and
+`configChanges`, so the activity is recreated; the recreated activity reads
+`ThemeStore` in `attachBaseContext` and comes back in the chosen appearance, and
 `applySystemBarAppearance()` re-runs on that path — as its own KDoc already
 anticipated. The Navigation back stack survives, so the listener stays on the
 appearance screen and watches it repaint. That is what the frozen note —
 *«Тема применяется сразу, без перезапуска.»* — promises.
 
-Writing before applying is not cosmetic: the recreated activity reads the value
-in `onCreate`, so a write that happened second would race its own recreation.
+Writing before applying is not cosmetic: the recreated activity reads the value on
+its way in, so a write that happened second would race its own recreation.
+
+### Where the mode is assigned, and why it is not `onCreate`
+
+`MainActivity.attachBaseContext`, before `super`. That is the last point at which
+the night mode is still an *input* to the activity rather than a change to it: the
+delegate has no base context yet, so it folds the mode into the one it is about to
+build, and the activity is created once with the right configuration.
+
+Assigned in `onCreate` instead — where the first implementation put it — the
+delegate is already attached, so it applies the mode immediately, and applying it
+is a configuration change the activity does not handle. Measured on API 24: a cold
+start on a stored Тёмная created `MainActivity` **twice**, a second full activity
+creation on every launch for anybody who had chosen a theme.
+`AppearanceSelectionTest.a_cold_start_on_stored_dark_does_not_recreate` caught it
+and is what holds the fix in place. Системная was unaffected either way, because
+`MODE_NIGHT_UNSPECIFIED` is not a change.
 
 Choosing the mode that is already current does nothing at all — no write, no
 assignment, no recreation.
@@ -155,7 +184,12 @@ tree, so a process-wide night mode set from a phone screen would reach a TV
 surface that cannot open that screen. `delegate.localNightMode` is scoped to one
 activity, which makes "TV is unaffected" structural rather than a claim.
 
-`TvThemeIsolationTest` proves it three ways: `TvTheme` resolves identical colours
+`NoProcessWideNightModeTest` proves the call is absent from production source at
+all — a JVM test, so CI gates on it — because a single `setDefaultNightMode` on a
+path no behaviour test walks would change TV and no runtime assertion here would
+ever see it.
+
+`TvThemeIsolationTest` then proves it three ways: `TvTheme` resolves identical colours
 under a night configuration for every one of the three modes; no TV drawable
 resolves to a different file under one; and the process default is still
 `MODE_NIGHT_FOLLOW_SYSTEM`. A fourth test asserts the *mobile* theme does change
@@ -170,7 +204,7 @@ Both are recorded rather than solved, per the owner's decision for G1.
 
 ### Системная on API 24–28 resolves to Light
 
-`MODE_NIGHT_FOLLOW_SYSTEM` follows a platform-wide dark setting that arrived at
+Following the system means following a platform-wide dark setting that arrived at
 **API 29**, and `minSdk` is 24. On 24–28 there is normally nothing for it to
 follow on an ordinary phone, so Системная is Light there. Светлая and Тёмная are
 unaffected, and Тёмная is how a listener on those releases gets a dark app at
@@ -193,10 +227,13 @@ some other way, which is a design question rather than a defect.
 | what | how |
 |---|---|
 | the enum, its stored form, corrupt values | `ThemeModeTest` (unit) |
+| `setDefaultNightMode` absent from production source | `NoProcessWideNightModeTest` (unit) |
 | the three profile-row outcomes | `SettingsProfileRowTest` (unit) |
 | settings geometry, type and colour, light + dark, 320–412dp | `SettingsLayoutTest` |
 | appearance geometry, the tall first row, the reserved check slot | `AppearanceLayoutTest` |
 | choosing, persisting, repainting in place, the untouched process default | `AppearanceSelectionTest` |
+| what Системная installs on the live delegate, fresh install == explicit system, corrupt value not rewritten, Dark→System clears the override, cold start costs one creation | `AppearanceSelectionTest` |
+| HOME→Settings→Appearance→Dark→recreate→Back→Back, bottom bar at every step | `ThemeRecreationPlaybackTest` |
 | the retargeted control, both back paths, no minted identity | `SettingsEntryTest` |
 | TV isolation | `TvThemeIsolationTest` |
 | ten changes over a live controller | `ThemeRecreationPlaybackTest` |

@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — MyataRadio
 
-Last updated: 2026-08-08.
+Last updated: 2026-09-05.
 
 ## Current canonical state
 
@@ -115,6 +115,8 @@ resolves to Light on API 24-28, and the platform starting window follows the
 system rather than the choice. Full record:
 [SETTINGS-APPEARANCE-3.6.6.md](SETTINGS-APPEARANCE-3.6.6.md).
 
-## Phase 2 / 3.6.6 scope (agreed, not started)
+## Phase 2 / 3.6.6 scope (agreed)
 
-New design, Light / Dark / System, new screens, auth / profile / settings, cloud favorites, Supabase. The playback fixes already in `main` ship as part of the same 3.6.6 release. Nothing here has been implemented, and each step needs explicit owner approval.
+New design, Light / Dark / System, new screens, auth / profile / settings, cloud favorites, Supabase. The playback fixes already in `main` ship as part of the same 3.6.6 release. Each step needs explicit owner approval.
+
+This heading used to end "not started", which stopped being true some time ago and is now contradicted two sections above: A-F, G-A2..G-A8 and G1 have landed. What remains of the list is Sleep Timer, Last.fm, Report a problem, stream quality, the avatar picker (G5, blocked on artwork) and Android Auto.

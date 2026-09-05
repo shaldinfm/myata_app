@@ -10,6 +10,7 @@ import androidx.navigation.fragment.findNavController
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.data.ThemeStore
 import com.example.musicplayerapp.data.supabase.EmailAuthBackend
+import com.example.musicplayerapp.data.supabase.IdentityStore
 import com.example.musicplayerapp.databinding.FragmentSettingsBinding
 import com.example.musicplayerapp.ui.profile.ProfileRoute
 import com.example.musicplayerapp.ui.settings.SettingsProfileRow
@@ -126,20 +127,52 @@ class SettingsFragment : Fragment() {
      * routing (which reconciles) first, the session read second - so the two
      * screens cannot disagree about who this device is.
      *
-     * A failure to reach the session is not an error state here. The row falls
-     * back to `Вошли` or `Не вошли`, both of which are true statements, and
+     * Neither call reaches a network. `currentAccount()` is
+     * `client.auth.currentUserOrNull()` plus two field reads - the same accessor
+     * `currentUid()` documents as "reads what the Auth plugin holds and makes no
+     * request" - so nothing here fetches an address, and nothing here writes.
+     *
+     * ## The address is proven to belong to the identity that was routed
+     *
+     * The routing decision and the session read are two separate reads, and a
+     * sign-out or a sign-in on another thread can land between them. That would
+     * pair X's decision with Y's address: the row would show an account this
+     * install is no longer registered as, while the tap - which re-decides -
+     * opened the guest profile.
+     *
+     * So the account is only used when its uid is the uid the routing settled on.
+     * `AccountInfo` carries that uid already, which is why this needs nothing new
+     * from the auth or identity contracts. A mismatch is not an error state: it
+     * degrades to `Вошли`, which is still true of an install the routing has just
+     * concluded is registered.
+     *
+     * What remains, and is inherent rather than a defect, is that the value is a
+     * snapshot: the identity can change while the screen sits on the back stack.
+     * That cannot mislead a tap, because `ProfileRoute.open` decides again from
+     * scratch, and the row is recomputed on every resume.
+     *
+     * A failure to reach the session is not an error state here either. The row
+     * falls back to `Вошли` or `Не вошли`, both of which are true statements, and
      * neither of which needs a retry.
      */
     private fun renderProfileValue() {
         viewLifecycleOwner.lifecycleScope.launch {
             val value = withContext(Dispatchers.IO) {
+                val context = requireContext()
                 val signedIn =
-                    ProfileRoute.destination(requireContext()) == R.id.profile_authenticated
+                    ProfileRoute.destination(context) == R.id.profile_authenticated
+
+                // Re-read after the routing, which is what reconciliation may have
+                // changed. This is the uid the decision above was actually taken on.
+                val settledUid = IdentityStore.state(context).uid
+
                 val email = if (!signedIn) {
                     null
                 } else {
-                    runCatching { EmailAuthBackend.api(requireContext()).currentAccount() }
-                        .getOrNull()?.email
+                    runCatching { EmailAuthBackend.api(context).currentAccount() }
+                        .getOrNull()
+                        ?.takeIf { it.uid == settledUid }
+                        ?.email
                 }
                 SettingsProfileRow.value(signedIn, email)
             }

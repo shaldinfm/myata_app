@@ -15,9 +15,10 @@ import com.example.musicplayerapp.ui.settings.ThemeMode
  * ## The absent key is the answer
  *
  * Nothing is written at install or at upgrade. An install arriving from 3.6.5 has
- * no `theme_mode` at all, [read] answers [ThemeMode.SYSTEM], and
- * `MODE_NIGHT_FOLLOW_SYSTEM` is what AppCompat was already doing - so the
- * migration for existing installs is that there is nothing to migrate. That is a
+ * no `theme_mode` at all, [read] answers [ThemeMode.SYSTEM], and SYSTEM installs
+ * `MODE_NIGHT_UNSPECIFIED` - AppCompat's own "no local override", which is the
+ * exact state the activity was in before G1. So the migration for existing
+ * installs is that there is nothing to migrate. That is a
  * property of the shape rather than a step anybody has to run, which is why there
  * is no version number here and no backfill.
  *

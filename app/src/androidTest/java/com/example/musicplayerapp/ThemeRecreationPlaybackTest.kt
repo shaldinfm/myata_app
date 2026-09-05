@@ -1,6 +1,7 @@
 package com.example.musicplayerapp
 
 import android.os.Build
+import android.view.View
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import androidx.media3.session.MediaController
@@ -134,6 +135,122 @@ class ThemeRecreationPlaybackTest {
             onMainThread { seen.any { it.isConnected } },
         )
     }
+
+    /**
+     * The exact journey, once, with the bottom bar checked at every step.
+     *
+     * ```
+     * HOME -> Settings -> Appearance -> choose Тёмная -> [activity recreates]
+     *   still on Appearance, in dark
+     *   Back -> Settings   (bar still hidden)
+     *   Back -> HOME       (bar restored)
+     * ```
+     *
+     * The ten-toggle test below proves the back stack survives *repetition*; this
+     * proves the single journey a listener actually makes, and it is the one that
+     * checks the bar. Both matter: a bar that reappeared for the length of a
+     * recreation would be a visible flash on the one path everybody walks.
+     */
+    @Test
+    fun home_to_appearance_and_back_survives_the_recreation() {
+        val scenario = ActivityScenario.launch(MainActivity::class.java)
+        try {
+            await("HOME") { it.destination() == R.id.home }
+            assertEquals(View.VISIBLE, barVisibility())
+
+            tap(R.id.settings_entry)
+            await("settings") { it.destination() == R.id.settings }
+            assertEquals("settings has no bottom bar", View.GONE, barVisibility())
+
+            tap(R.id.settings_row_theme)
+            await("appearance") { it.destination() == R.id.settings_appearance }
+            assertEquals("appearance has no bottom bar", View.GONE, barVisibility())
+
+            tap(R.id.appearance_row_dark)
+            await("a dark activity still on appearance") {
+                it.isNight() && it.destination() == R.id.settings_appearance
+            }
+            assertEquals(ThemeMode.DARK, ThemeStore.read(context))
+            assertEquals(
+                "the recreation must not bring the bar back on the appearance screen",
+                View.GONE,
+                barVisibility(),
+            )
+            assertEquals(
+                "the check must have moved to Тёмная after the recreation",
+                View.VISIBLE,
+                onMain { it.findViewById<View>(R.id.appearance_check_dark).visibility },
+            )
+
+            tap(R.id.appearance_back)
+            await("settings") { it.destination() == R.id.settings }
+            assertEquals(View.GONE, barVisibility())
+            assertTrue("settings must still be dark", onMain { it.isNight() })
+
+            tap(R.id.settings_back)
+            await("HOME") { it.destination() == R.id.home }
+            assertEquals(
+                "the bar must come back with HOME",
+                View.VISIBLE,
+                barVisibility(),
+            )
+            assertTrue("HOME must still be dark", onMain { it.isNight() })
+        } finally {
+            close(scenario)
+        }
+    }
+
+    /**
+     * The same journey the other way: Светлая, then Системная.
+     *
+     * Cheap here because the infrastructure is already in place, and worth having
+     * because clearing a local override is a different AppCompat path from setting
+     * one - so "Back still works" is a different question after it.
+     */
+    @Test
+    fun light_then_system_also_survives_the_recreation() {
+        val scenario = ActivityScenario.launch(MainActivity::class.java)
+        try {
+            openAppearance()
+
+            tap(R.id.appearance_row_light)
+            await("a light activity on appearance") {
+                !it.isNight() && it.destination() == R.id.settings_appearance
+            }
+            assertEquals(ThemeMode.LIGHT, ThemeStore.read(context))
+
+            tap(R.id.appearance_row_system)
+            await("an activity matching the device, still on appearance") {
+                it.isNight() == systemIsNight() && it.destination() == R.id.settings_appearance
+            }
+            assertEquals(ThemeMode.SYSTEM, ThemeStore.read(context))
+            assertEquals(View.GONE, barVisibility())
+
+            tap(R.id.appearance_back)
+            await("settings") { it.destination() == R.id.settings }
+            assertEquals(View.GONE, barVisibility())
+
+            tap(R.id.settings_back)
+            await("HOME") { it.destination() == R.id.home }
+            assertEquals(View.VISIBLE, barVisibility())
+        } finally {
+            close(scenario)
+        }
+    }
+
+    private fun barVisibility(): Int =
+        onMain { it.findViewById<View>(R.id.bottomNavView).visibility }
+
+    /** What the device itself is, read where no delegate can have overridden it. */
+    private fun systemIsNight(): Boolean =
+        (context.applicationContext.resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+
+    private fun MainActivity.isNight(): Boolean =
+        (resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
 
     /**
      * The appearance screen itself survives ten recreations.

@@ -95,6 +95,51 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * The chosen appearance, applied to **this activity's delegate** and nothing else.
+     *
+     * ## Why here and not in onCreate
+     *
+     * `attachBaseContext` is the last point at which the night mode is still an
+     * *input* to this activity rather than a change to it. `AppCompatDelegate`
+     * applies a local night mode immediately if its base context is already
+     * attached, and applying one after the fact means a configuration change - which
+     * `uiMode` is not in this activity's `configChanges`, so it means a **recreation**.
+     * Set before `super.attachBaseContext`, the delegate has not attached yet, so it
+     * folds the mode into the base context it is about to build and the activity is
+     * created once with the right configuration.
+     *
+     * Measured, because it is not obvious: with the assignment in `onCreate`, a cold
+     * start on a stored Тёмная created MainActivity **twice** on API 24 - a second
+     * full activity creation on every launch for anybody who had chosen a theme.
+     * `AppearanceSelectionTest.a_cold_start_on_stored_dark_does_not_recreate` is the
+     * test that caught it and is what holds this in place.
+     *
+     * ## Why localNightMode and not AppCompatDelegate.setDefaultNightMode
+     *
+     * The default is a static, process-wide switch. `TvMainActivity` is an
+     * `AppCompatActivity` in this same process and the `<application>` theme it sits
+     * under is now a DayNight tree, so a process-wide night mode set from a phone
+     * screen would reach a TV surface that cannot open that screen. Scoped to this
+     * delegate, it cannot. Nothing in this app calls `setDefaultNightMode` -
+     * `NoProcessWideNightModeTest` scans the production sources for it.
+     *
+     * ## The default costs nothing
+     *
+     * An install that has never opened the appearance screen has no key on disk,
+     * `ThemeStore` answers SYSTEM, and SYSTEM assigns `MODE_NIGHT_UNSPECIFIED` -
+     * AppCompat's own "no local override", the exact state this activity was in
+     * before G1. So there is nothing to migrate and nothing to apply.
+     *
+     * `newBase` rather than `this`: inside `attachBaseContext` this activity has no
+     * base context yet, so its `applicationContext` is null and `ThemeStore` would
+     * fail on it. The parameter is a real Context and is the one being attached.
+     */
+    override fun attachBaseContext(newBase: Context) {
+        delegate.localNightMode = ThemeStore.read(newBase).localNightMode()
+        super.attachBaseContext(newBase)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Before super.onCreate, and before the inflater factory below, because
         // this is what swaps the activity off the launch theme and onto AppTheme
@@ -115,34 +160,11 @@ class MainActivity : AppCompatActivity() {
         // deliberately not given it; TV is not on the 3.6.6 typography.
         LayoutInflaterCompat.setFactory2(layoutInflater, MyataTypography.Factory(delegate))
 
-        // The chosen appearance, applied to **this activity's delegate** and to
-        // nothing else (G1). Before super.onCreate, which is the documented point
-        // for it: set later, AppCompat has already applied a night mode for this
-        // activity and has to undo it, which costs a recreation on the way in.
-        //
-        // `localNightMode` rather than `AppCompatDelegate.setDefaultNightMode`, and
-        // the difference is the whole of the TV isolation. The default is a static,
-        // process-wide switch; TvMainActivity is an AppCompatActivity in this same
-        // process and the <application> theme it sits under is now a DayNight tree,
-        // so a process-wide night mode set from a phone screen would reach a TV
-        // surface that cannot open that screen. Scoped to this delegate, it cannot.
-        // Nothing in this app calls setDefaultNightMode; AppearanceSelectionTest
-        // asserts the process default is never forced afterwards.
-        //
-        // An install that has never opened the appearance screen has no key on disk,
-        // ThemeStore answers SYSTEM, and SYSTEM assigns MODE_NIGHT_UNSPECIFIED -
-        // AppCompat's own "no local override", which is the exact state this activity
-        // was in before G1. So the upgrade path is that there is nothing to migrate,
-        // and the default path costs nothing: assigning the explicit
-        // MODE_NIGHT_FOLLOW_SYSTEM instead was measured recreating the activity on
-        // every cold start. See ThemeMode.localNightMode.
-        //
-        // The uiMode change this can cause is not in configChanges, so a change made
-        // on the appearance screen recreates the activity and comes back through
-        // here. See applySystemBarAppearance below, which was already written for
+        // The appearance is applied in attachBaseContext above, not here. A change
+        // made on the appearance screen still recreates this activity - `uiMode` is
+        // not in its `configChanges` - so it comes back through attachBaseContext and
+        // then through here. applySystemBarAppearance below was already written for
         // exactly that path.
-        delegate.localNightMode = ThemeStore.read(this).localNightMode()
-
         super.onCreate(savedInstanceState)
 
         // No setTheme() here any more. It used to install one of AppTheme0..9, whose

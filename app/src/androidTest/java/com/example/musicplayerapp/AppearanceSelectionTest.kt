@@ -4,6 +4,7 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.view.View
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -212,6 +213,176 @@ class AppearanceSelectionTest {
         }
     }
 
+    // ==================== what SYSTEM actually installs ====================
+
+    /**
+     * Stored `system` installs **no local override** on the live delegate.
+     *
+     * The unit test asserts the mapping; this asserts the activity. They are
+     * different claims: the mapping could be right and the assignment could be
+     * skipped, overwritten by AppCompat, or applied to the wrong delegate, and only
+     * reading `MainActivity.delegate.localNightMode` on a running activity rules
+     * that out.
+     */
+    @Test
+    fun stored_system_leaves_the_activity_with_no_local_override() {
+        ThemeStore.write(context, ThemeMode.SYSTEM)
+
+        withActivity {
+            await("HOME") { it.destination() == R.id.home }
+            assertEquals(
+                "stored `system` must install no local override",
+                AppCompatDelegate.MODE_NIGHT_UNSPECIFIED,
+                localNightMode(),
+            )
+            assertEquals(nightNow(), systemIsNight())
+        }
+    }
+
+    /**
+     * A fresh install is indistinguishable from an explicit `system`.
+     *
+     * Same delegate value, same appearance, and - the half a behaviour check cannot
+     * see - **nothing on disk**. That is the whole migration story for the existing
+     * installs, so it is asserted rather than described.
+     */
+    @Test
+    fun a_fresh_install_is_identical_to_an_explicit_system_choice() {
+        // Fresh: no key at all.
+        assertNull("a fresh install must store nothing", ThemeStore.rawForTest(context))
+        var fresh: Int? = null
+        withActivity {
+            await("HOME") { it.destination() == R.id.home }
+            fresh = localNightMode()
+        }
+
+        // Explicit, written by hand.
+        ThemeStore.write(context, ThemeMode.SYSTEM)
+        assertEquals(ThemeMode.STORED_SYSTEM, ThemeStore.rawForTest(context))
+        var explicit: Int? = null
+        withActivity {
+            await("HOME") { it.destination() == R.id.home }
+            explicit = localNightMode()
+        }
+
+        assertEquals(
+            "an install that has chosen nothing must behave exactly like one that " +
+                "chose Системная",
+            explicit,
+            fresh,
+        )
+        assertEquals(AppCompatDelegate.MODE_NIGHT_UNSPECIFIED, fresh)
+    }
+
+    /** Cold start on a stored `system` costs one activity creation, not two. */
+    @Test
+    fun a_cold_start_on_stored_system_does_not_recreate() {
+        ThemeStore.write(context, ThemeMode.SYSTEM)
+        assertEquals(1, creationsDuring { await("HOME") { it.destination() == R.id.home } })
+    }
+
+    /** And so does a cold start on an explicit Тёмная - the override is applied once. */
+    @Test
+    fun a_cold_start_on_stored_dark_does_not_recreate() {
+        ThemeStore.write(context, ThemeMode.DARK)
+        assertEquals(
+            1,
+            creationsDuring {
+                await("a dark activity on HOME") {
+                    it.isNight() && it.destination() == R.id.home
+                }
+            },
+        )
+    }
+
+    /**
+     * A value this build cannot parse resolves to Системная and is **left alone**.
+     *
+     * The second half is the point. Rewriting the key to `system` would be a silent
+     * migration - the app deciding on the listener's behalf that their unreadable
+     * preference is now this one - and a downgrade that understood the original
+     * value would find it gone. Reading it as the default costs nothing and
+     * destroys nothing.
+     */
+    @Test
+    fun a_corrupt_value_resolves_to_system_and_is_not_rewritten() {
+        for (junk in listOf("amoled", "SYSTEM", "", "true")) {
+            ThemeStore.writeRawForTest(context, junk)
+            assertEquals(ThemeMode.SYSTEM, ThemeStore.read(context))
+
+            withActivity {
+                await("HOME") { it.destination() == R.id.home }
+                assertEquals(
+                    "a corrupt value must install no override",
+                    AppCompatDelegate.MODE_NIGHT_UNSPECIFIED,
+                    localNightMode(),
+                )
+                assertEquals(nightNow(), systemIsNight())
+            }
+
+            assertEquals(
+                "the unparseable value [$junk] was rewritten; resolving a default " +
+                    "must not migrate anybody's preference",
+                junk,
+                ThemeStore.rawForTest(context),
+            )
+        }
+    }
+
+    /**
+     * Dark, then Системная, leaves the activity with no explicit override.
+     *
+     * Clearing an override is a different AppCompat path from setting one, so
+     * ending on the right *appearance* is not enough - the delegate has to be back
+     * at `MODE_NIGHT_UNSPECIFIED`, or the next cold start is applying a forced mode
+     * that nobody chose.
+     */
+    @Test
+    fun dark_then_system_clears_the_local_override() {
+        ThemeStore.write(context, ThemeMode.DARK)
+
+        withActivity {
+            openAppearance()
+            await("a dark activity") { it.isNight() }
+            assertEquals(AppCompatDelegate.MODE_NIGHT_YES, localNightMode())
+
+            tap(R.id.appearance_row_system)
+            await("an activity matching the device") { it.isNight() == systemIsNight() }
+
+            assertEquals(
+                "choosing Системная must remove the override, not replace it with " +
+                    "an explicit follow-the-system value",
+                AppCompatDelegate.MODE_NIGHT_UNSPECIFIED,
+                localNightMode(),
+            )
+            assertEquals(ThemeMode.SYSTEM, ThemeStore.read(context))
+        }
+    }
+
+    /** The live delegate's local night mode, read off the activity on screen now. */
+    private fun localNightMode(): Int = onMain { (it as AppCompatActivity).delegate.localNightMode }
+
+    /** Whether the activity on screen right now is in night mode. */
+    private fun nightNow(): Boolean = onMain { it.isNight() }
+
+    /** How many MainActivity instances are created while [body] runs. */
+    private fun creationsDuring(body: () -> Unit): Int {
+        val created = Collections.newSetFromMap(IdentityHashMap<MainActivity, Boolean>())
+        val monitor = ActivityLifecycleMonitorRegistry.getInstance()
+        val callback = ActivityLifecycleCallback { activity, stage ->
+            if (activity is MainActivity && stage == Stage.CREATED) {
+                synchronized(created) { created += activity }
+            }
+        }
+        monitor.addLifecycleCallback(callback)
+        try {
+            withActivity { body() }
+        } finally {
+            monitor.removeLifecycleCallback(callback)
+        }
+        return synchronized(created) { created.size }
+    }
+
     // ==================== it survives a relaunch ====================
 
     /**
@@ -289,13 +460,15 @@ class AppearanceSelectionTest {
     /**
      * The default path costs no extra recreation.
      *
-     * `MainActivity` now assigns `localNightMode` on every launch, and for an install
-     * that has chosen nothing that assignment is `MODE_NIGHT_FOLLOW_SYSTEM` where
-     * previously nothing was assigned at all. AppCompat's own unset default is
-     * `MODE_NIGHT_UNSPECIFIED`, so the two are not the same value even though they
-     * follow the system identically - and if AppCompat treated the difference as a
-     * change it would recreate the activity on every cold start, a startup regression
-     * paid by everybody to no effect.
+     * `MainActivity` assigns `localNightMode` on every launch. For an install that
+     * has chosen nothing that assignment is `MODE_NIGHT_UNSPECIFIED`, which is
+     * AppCompat's own unset value - so it is not a change and costs nothing.
+     *
+     * The first implementation assigned the explicit `MODE_NIGHT_FOLLOW_SYSTEM`
+     * instead. The two follow the system identically once applied, but that one *is*
+     * a change to the delegate: this test caught it recreating the activity on every
+     * cold start, a startup regression paid by everybody to no effect. The mapping
+     * moved to `MODE_NIGHT_UNSPECIFIED` because of this test.
      *
      * ## Counting creations, not destructions
      *
@@ -325,8 +498,8 @@ class AppearanceSelectionTest {
                 await("HOME") { it.destination() == R.id.home }
                 assertEquals(
                     "launching with no stored appearance created MainActivity more " +
-                        "than once - assigning MODE_NIGHT_FOLLOW_SYSTEM is costing a " +
-                        "recreation on every cold start",
+                        "than once - the local night mode assigned for Системная is " +
+                        "costing a recreation on every cold start",
                     1,
                     synchronized(created) { created.size },
                 )

@@ -43,7 +43,9 @@
             <!--
               Header - TopAppBar, 390x64, the greeting vertically centred and 16
               from the leading edge, and the 40x40 profile control on the trailing
-              one (2393:1665 / 2444:10389).
+              one (2393:1665 / 2444:10389). A second 40x40 - the Settings control -
+              sits 8 before it, in space the frozen band already leaves empty; see
+              the note on it below.
 
               The band already reserved this space, so landing the control moves
               nothing: the greeting keeps its height, its 16dp leading padding and
@@ -71,9 +73,42 @@
                     android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.24_32"
                     android:textColor="@color/text_heading" />
 
+                <!--
+                  The Settings control, and the one piece of geometry in G1 that
+                  the frozen file does not draw.
+
+                  The frozen band is 390 wide with the greeting at 16 and the
+                  profile control at 334..374 - 133dp of empty space between them.
+                  This 40x40 sits in that space at 286..326, 8 before the profile
+                  control, so **nothing frozen moves**: the greeting keeps its
+                  height, its leading padding and its centring (it is weight=1 and
+                  already ellipsizes), and the profile control keeps its exact
+                  trailing anchor.
+
+                  Same plate as the profile control - `bg_profile_entry`, the same
+                  40dp box, the same 16x16 glyph inset baked into the artwork - so
+                  this reuses a component rather than introducing a second visual
+                  language for header controls.
+
+                  HOME only. ABOUT US and the empty COLLECTION carry the profile
+                  control too, and deliberately do not get this one: HOME is the
+                  app's front door and is always one tap from the bottom bar, so a
+                  single entry is enough and three would be three places to keep in
+                  step. See docs/SETTINGS-APPEARANCE-3.6.6.md.
+                -->
+                <ImageView
+                    android:id="@+id/settings_entry"
+                    android:layout_width="@dimen/profile_entry_size"
+                    android:layout_height="@dimen/profile_entry_size"
+                    android:layout_marginEnd="@dimen/home_header_control_gap"
+                    android:background="@drawable/bg_profile_entry"
+                    android:contentDescription="@string/settings_entry_description"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_settings_entry" />
+
                 <include
-                android:id="@+id/settings_entry"
-                layout="@layout/view_settings_entry" />
+                android:id="@+id/profile_entry"
+                layout="@layout/view_profile_entry" />
             </LinearLayout>
 
             <!--

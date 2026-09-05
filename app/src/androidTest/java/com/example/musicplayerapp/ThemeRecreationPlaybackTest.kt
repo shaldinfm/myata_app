@@ -146,6 +146,9 @@ class ThemeRecreationPlaybackTest {
      *   Back -> HOME       (bar restored)
      * ```
      *
+     * Settings is entered from the HOME header control, so HOME is the caller and
+     * is what Back returns to.
+     *
      * The ten-toggle test below proves the back stack survives *repetition*; this
      * proves the single journey a listener actually makes, and it is the one that
      * checks the bar. Both matter: a bar that reappeared for the length of a
@@ -158,8 +161,7 @@ class ThemeRecreationPlaybackTest {
             await("HOME") { it.destination() == R.id.home }
             assertEquals(View.VISIBLE, barVisibility())
 
-            tap(R.id.settings_entry)
-            await("settings") { it.destination() == R.id.settings }
+            openSettingsAndSettle()
             assertEquals("settings has no bottom bar", View.GONE, barVisibility())
 
             tap(R.id.settings_row_theme)
@@ -190,7 +192,7 @@ class ThemeRecreationPlaybackTest {
             tap(R.id.settings_back)
             await("HOME") { it.destination() == R.id.home }
             assertEquals(
-                "the bar must come back with HOME",
+                "the bar must come back with the caller",
                 View.VISIBLE,
                 barVisibility(),
             )
@@ -332,7 +334,9 @@ class ThemeRecreationPlaybackTest {
             if (ok) return
             Thread.sleep(25)
         }
-        error("timed out after ${timeoutMs}ms waiting for $what")
+        var actual: Int? = null
+        runCatching { instrumentation.runOnMainSync { actual = resumed().destination() } }
+        error("timed out after ${timeoutMs}ms waiting for $what; current destination = $actual")
     }
 
     /**

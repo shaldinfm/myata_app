@@ -552,11 +552,19 @@ internal fun withMainActivity(body: (ActivityScenario<MainActivity>) -> Unit) {
 }
 
 /**
- * Opens the settings shell and waits for it.
+ * Opens the settings shell from the HOME header control, and waits for it.
  *
- * The 40x40 header control is a plain, synchronous `navigate` - there is nothing to
- * resolve before entering settings - but the fragment transaction still is not the
- * frame the tap happened in, so this waits the same way everything else here does.
+ * One tap. The 40x40 gear beside the profile control is the Settings entry and a
+ * plain `navigate` - nothing is decided on the way in - but the fragment
+ * transaction is still not the frame the tap happened in, so this waits the way
+ * everything else here does.
+ *
+ * It drove the PLAYER overflow's `PopupMenu` briefly, during G1a, which cost six
+ * tests an API 24 skip: the menu opened there but its contents never reached the
+ * accessibility tree. A header control is an ordinary view in the activity, so
+ * that whole class of harness problem went with it.
+ *
+ * The caller must be on HOME. Every suite using this launches straight into it.
  */
 internal fun openSettingsAndSettle(timeoutMs: Long = 15_000) {
     val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -569,17 +577,15 @@ internal fun openSettingsAndSettle(timeoutMs: Long = 15_000) {
 /**
  * Opens a profile and waits for the route to resolve.
  *
- * Two taps since G1, and the first one is new rather than incidental: the header
- * control opens `settings`, and `Row / Профиль` inside it is what routes to a
- * profile. The callers of this helper are asserting things about the profile
- * screens, not about how many screens are between them and HOME, so the extra hop
- * lives here rather than in eight test bodies.
+ * One tap again, as before G1: the 40x40 header control on HOME opens a profile
+ * directly. G1 had briefly made it two, through the settings shell; G1a put the
+ * control back.
  *
- * Opening a profile is still asynchronous, and deliberately so: `ProfileRoute`
- * proves a matching session before it navigates, rather than entering the
- * authenticated screen and letting it discover it should not have. That check is
- * local and quick, but it is not the same main-thread frame as the tap - so a suite
- * that taps and asserts in one breath reads the destination it started on.
+ * Opening a profile is asynchronous, and deliberately so: `ProfileRoute` proves a
+ * matching session before it navigates, rather than entering the authenticated
+ * screen and letting it discover it should not have. That check is local and quick,
+ * but it is not the same main-thread frame as the tap - so a suite that taps and
+ * asserts in one breath reads the destination it started on.
  *
  * This waits for *either* profile destination and asserts neither. Which one it landed
  * on is what the calling test is for, and one case ([ProfileAuthenticatedTest] B) exists
@@ -587,11 +593,8 @@ internal fun openSettingsAndSettle(timeoutMs: Long = 15_000) {
  */
 internal fun openProfileAndSettle(timeoutMs: Long = 15_000) {
     val instrumentation = InstrumentationRegistry.getInstrumentation()
-    openSettingsAndSettle(timeoutMs)
-
     instrumentation.runOnMainSync {
-        resumedMainActivity().findViewById<android.view.View>(R.id.settings_row_profile)
-            .performClick()
+        resumedMainActivity().findViewById<android.view.View>(R.id.profile_entry).performClick()
     }
     awaitDestination(timeoutMs, "a profile") { it.profileDestination() != null }
 }
@@ -635,11 +638,25 @@ internal fun MainActivity.currentDestinationIdOrNull(): Int? {
  * `onActivity` waits for an idle looper, and on API 24 a screen that is animating or
  * spinning may never give it one - see the harness note in `AuthFormTest`.
  */
-internal fun resumedMainActivity(): MainActivity =
-    ActivityLifecycleMonitorRegistry.getInstance()
+internal fun resumedMainActivity(): MainActivity {
+    val resumed = ActivityLifecycleMonitorRegistry.getInstance()
         .getActivitiesInStage(Stage.RESUMED)
         .filterIsInstance<MainActivity>()
-        .firstOrNull() ?: error("no resumed MainActivity")
+
+    // `ActivityScenario.close()` reports a teardown timeout on the API 24 image long
+    // before the activity is actually gone, so a finished activity from the previous
+    // test can still be sitting in RESUMED when the next one starts. Clicking its
+    // views does nothing visible - the fragment behind them is destroyed - which is
+    // how a popup came back "open" with no menu row in it while a screenshot of the
+    // same moment showed the menu drawn on the live activity.
+    //
+    // Live ones only, and the most recent of those: the newest RESUMED activity is
+    // the one on screen.
+    val live = resumed.filterNot { it.isFinishing || it.isDestroyed }
+    return live.lastOrNull()
+        ?: resumed.lastOrNull()
+        ?: error("no resumed MainActivity")
+}
 
 /** Which profile is showing, or `null` if the route has not resolved yet. */
 internal fun MainActivity.profileDestination(): Int? {

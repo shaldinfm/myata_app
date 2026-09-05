@@ -144,11 +144,15 @@ class PlayerLayoutTest {
             }
 
             // The trailing slot is reserved, not a control: it must take up the
-            // frozen space and must not be clickable.
+            // frozen 32 and do nothing. G1a briefly drew a control here and hung
+            // Настройки on it; that was withdrawn - this menu is for the player's
+            // own actions, none of which exist yet, and Settings is reached from
+            // the HOME header instead. See SettingsEntryTest.
             expect(where, "reserved trailing slot width", reserved.width, dp(32))
             if (reserved.isClickable || reserved.hasOnClickListeners()) {
                 findings += "$where: the reserved header slot is clickable - it has no action until D/E"
             }
+
             // The label is centred because both ends reserve a slot.
             val labelCentre = leftIn(label, header) + label.width / 2
             expect(where, "header label centred", labelCentre, header.width / 2f)

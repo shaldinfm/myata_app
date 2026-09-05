@@ -16,6 +16,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
+import com.example.musicplayerapp.ui.profile.ProfileRoute
 import com.example.musicplayerapp.data.supabase.EmailAuthBackend
 import com.example.musicplayerapp.data.supabase.IdentityStore
 import com.example.musicplayerapp.ui.HomeGreeting
@@ -155,12 +156,22 @@ class MainFragment : Fragment() {
             renderPlaylistSection()
         })
 
-        // The 40x40 header control. Since G1 it opens `settings`, which is the
-        // surface the frozen design makes the parent of the profile - `Row /
-        // Профиль` is the first row of the settings frame. It still touches no
-        // identity boundary: the routing that used to run on this tap now runs on
-        // the settings screen, so looking at either never mints an anonymous uid.
-        binding.settingsEntry.root.setOnClickListener {
+        // The 40x40 profile control. It opens profile-guest and does nothing else -
+        // in particular it does not touch the identity boundary, so looking at the
+        // profile never mints an anonymous uid.
+        binding.profileEntry.root.setOnClickListener {
+            ProfileRoute.open(this)
+        }
+
+        // The 40x40 Settings control beside it. HOME is the only screen that
+        // carries this one; see the note in fragment_main.xml for why the frozen
+        // band had room for it and why the other two profile-control headers do
+        // not get it.
+        //
+        // A plain navigate: `settings` decides nothing on the way in, and Back
+        // pops to HOME. The profile is still one tap from here through the control
+        // above, so nothing got further away.
+        binding.settingsEntry.setOnClickListener {
             findNavController().navigate(R.id.settings)
         }
 

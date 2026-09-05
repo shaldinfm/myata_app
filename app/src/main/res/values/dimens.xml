@@ -674,7 +674,14 @@
       Its 16x16 glyph sits at x=12,y=12 inside the circle; that inset lives inside
       the drawable's own 40x40 viewport, so there is no icon-inset dimen here.
     -->
-    <dimen name="settings_entry_size">40dp</dimen>
+    <dimen name="profile_entry_size">40dp</dimen>
+    <!--
+      The gap between the two 40x40 header controls on HOME (G1). The frozen band
+      leaves 16..201 for the greeting and puts the profile control at 334..374,
+      so 133 is empty; Settings takes 286..326 and this is the 8 between them.
+      Nothing frozen moves to make room.
+    -->
+    <dimen name="home_header_control_gap">8dp</dimen>
 
     <!-- profile-guest 2517:2644 / 2517:3611. -->
     <dimen name="profile_header_height">64dp</dimen>

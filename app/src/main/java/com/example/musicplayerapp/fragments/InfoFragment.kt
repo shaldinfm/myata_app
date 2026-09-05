@@ -12,6 +12,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.lifecycle.Observer
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
+import com.example.musicplayerapp.ui.profile.ProfileRoute
 import com.example.musicplayerapp.StreamsViewModel
 import com.example.musicplayerapp.databinding.FragmentInfoBinding
 import com.example.musicplayerapp.ui.AboutLinks
@@ -178,13 +179,11 @@ class InfoFragment : Fragment() {
             }
         })
 
-        // The 40x40 header control. Since G1 it opens `settings`, which is the
-        // surface the frozen design makes the parent of the profile - `Row /
-        // Профиль` is the first row of the settings frame. It still touches no
-        // identity boundary: the routing that used to run on this tap now runs on
-        // the settings screen, so looking at either never mints an anonymous uid.
-        binding.settingsEntry.root.setOnClickListener {
-            findNavController().navigate(R.id.settings)
+        // The 40x40 profile control. It opens profile-guest and does nothing else -
+        // in particular it does not touch the identity boundary, so looking at the
+        // profile never mints an anonymous uid.
+        binding.profileEntry.root.setOnClickListener {
+            ProfileRoute.open(this)
         }
 
 

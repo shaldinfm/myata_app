@@ -229,6 +229,7 @@
     <string name="collection_removed_undo">Отменить</string>
     <!-- ACCOUNTS (Phase G-A3). Copy verbatim from profile-guest 2517:2644. -->
     <string name="profile_title">Профиль</string>
+    <string name="profile_entry_description">Профиль</string>
     <string name="settings_entry_description">Настройки</string>
     <string name="profile_back_description">Назад</string>
     <string name="profile_guest_heading">Вы не вошли</string>
@@ -401,6 +402,7 @@
       except where noted.
     -->
     <string name="settings_title">Настройки</string>
+
     <string name="settings_section_account">Аккаунт</string>
     <string name="settings_row_profile">Профиль</string>
     <string name="settings_section_appearance">Внешний вид</string>

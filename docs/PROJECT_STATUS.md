@@ -95,10 +95,19 @@ Last updated: 2026-09-05.
 
 ## G1 — settings shell and appearance (landed)
 
-Two pushed destinations, `settings` and `settings_appearance`, and the 40x40
-header control on HOME / ABOUT US / empty COLLECTION now opens the first of them.
-The profile moved one tap deeper, to `Settings > Аккаунт > Профиль`, which is the
-structure the frozen `settings` frame describes.
+Two pushed destinations, `settings` and `settings_appearance`.
+
+**Settings is reached from a second 40x40 control on the HOME header**, beside
+the profile control, which still opens the profile in one tap. The frozen design
+draws no path to `settings` at all - the `.fig` was decoded in full and carries
+zero prototype metadata, and the word `Настройки` appears in it only as that
+screen's own heading - so the entry is an owner-delegated product decision. It
+lands in space the frozen band already leaves empty, so nothing frozen moves, and
+it reuses the existing circular-control component.
+
+G1 briefly retargeted the profile control itself, and G1a briefly put `Настройки`
+on the PLAYER and COLLECTION overflows. Both were withdrawn; those menus are for
+their own screens' actions.
 
 Settings renders **only** the two sections whose features exist — Аккаунт and
 Внешний вид. Stream quality, the sleep timer, Last.fm, report-a-problem and the

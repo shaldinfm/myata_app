@@ -128,11 +128,7 @@ class ProfileAuthenticatedCaptureTest {
 
             val scenario = ActivityScenario.launch(MainActivity::class.java)
             try {
-                // Two taps since G1: the header control opens settings, and the
-                // profile row inside it is what routes to the account card.
-                tap(R.id.settings_entry)
-                await("the settings shell") { it.currentDestinationId() == R.id.settings }
-                tap(R.id.settings_row_profile)
+                tap(R.id.profile_entry)
                 await("the account card") {
                     it.currentDestinationId() == R.id.profile_authenticated &&
                         it.findViewById<android.widget.TextView>(R.id.profile_account_name)

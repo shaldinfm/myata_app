@@ -63,10 +63,16 @@
               The frozen overflow control's box, reserved and empty.
 
               Every action behind it belongs to a later phase - the canonical menu
-              is four rows all reading "Действие", and the real entries are the
-              Sleep Timer (D) and Report a problem (E). Reserving the space keeps
-              the label centred where the frozen design centres it; drawing a
-              control here would be a button that does nothing.
+              `Menu / Плеер` is four rows all reading "Действие", and its real
+              entries are Найти трек, Таймер сна (D), Сообщить о проблеме (E) and
+              История эфира. Reserving the space keeps the label centred where the
+              frozen design centres it; drawing a control here would be a button
+              that does nothing.
+
+              G1a briefly drew it and hung Настройки on it. That was withdrawn:
+              this menu is for the player's own actions, and Settings is not one of
+              them - it is reached from the HOME header. See
+              docs/SETTINGS-APPEARANCE-3.6.6.md.
             -->
             <Space
                 android:id="@+id/player_header_action"

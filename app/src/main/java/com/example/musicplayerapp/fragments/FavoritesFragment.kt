@@ -19,6 +19,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
+import com.example.musicplayerapp.ui.profile.ProfileRoute
 import com.example.musicplayerapp.adapters.FavoritesAdapter
 import com.example.musicplayerapp.data.FavoriteTrack
 import com.example.musicplayerapp.databinding.FragmentFavoritesBinding
@@ -170,12 +171,12 @@ class FavoritesFragment : Fragment() {
                     binding.collectionOverflow.visibility = View.GONE
                     // `COLLECTION pusto` carries the profile control where the
                     // populated frame carries the overflow. Never both.
-                    binding.settingsEntry.root.visibility = View.VISIBLE
+                    binding.profileEntry.root.visibility = View.VISIBLE
                 } else {
                     binding.rvFavorites.visibility = View.VISIBLE
                     binding.emptyState.visibility = View.GONE
                     binding.collectionOverflow.visibility = View.VISIBLE
-                    binding.settingsEntry.root.visibility = View.GONE
+                    binding.profileEntry.root.visibility = View.GONE
                     adapter.submitList(favorites)
                 }
             }
@@ -194,6 +195,7 @@ class FavoritesFragment : Fragment() {
         // the frozen `Menu / Коллекция` surface. Relocating the actions first
         // keeps export reachable across the interval instead of removing it and
         // waiting for F2 to bring it back.
+
         binding.collectionOverflow.setOnClickListener { anchor ->
             PopupMenu(anchor.context, anchor).apply {
                 menuInflater.inflate(R.menu.collection_overflow, menu)
@@ -213,13 +215,11 @@ class FavoritesFragment : Fragment() {
             }.show()
         }
 
-        // The 40x40 header control. Since G1 it opens `settings`, which is the
-        // surface the frozen design makes the parent of the profile - `Row /
-        // Профиль` is the first row of the settings frame. It still touches no
-        // identity boundary: the routing that used to run on this tap now runs on
-        // the settings screen, so looking at either never mints an anonymous uid.
-        binding.settingsEntry.root.setOnClickListener {
-            findNavController().navigate(R.id.settings)
+        // The 40x40 profile control. It opens profile-guest and does nothing else -
+        // in particular it does not touch the identity boundary, so looking at the
+        // profile never mints an anonymous uid.
+        binding.profileEntry.root.setOnClickListener {
+            ProfileRoute.open(this)
         }
 
 

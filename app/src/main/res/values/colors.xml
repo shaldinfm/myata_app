@@ -440,8 +440,8 @@
       guest avatar   `Generic avatar` 2518:3932 inside profile-guest
                      2517:2644 / 2517:3611.
     -->
-    <color name="settings_entry_circle">#E7E8E9</color>
-    <color name="settings_entry_icon">#42474E</color>
+    <color name="profile_entry_circle">#E7E8E9</color>
+    <color name="profile_entry_icon">#42474E</color>
     <color name="avatar_guest_background">#F8F9FA</color>
     <color name="avatar_guest_icon">#1C4771</color>
 

@@ -552,13 +552,34 @@ internal fun withMainActivity(body: (ActivityScenario<MainActivity>) -> Unit) {
 }
 
 /**
- * Taps the profile control and waits for the route to resolve.
+ * Opens the settings shell and waits for it.
  *
- * Opening a profile is asynchronous, and deliberately so: `ProfileRoute` proves a
- * matching session before it navigates, rather than entering the authenticated screen
- * and letting it discover it should not have. That check is local and quick, but it is
- * not the same main-thread frame as the tap - so a suite that taps and asserts in one
- * breath reads the destination it started on.
+ * The 40x40 header control is a plain, synchronous `navigate` - there is nothing to
+ * resolve before entering settings - but the fragment transaction still is not the
+ * frame the tap happened in, so this waits the same way everything else here does.
+ */
+internal fun openSettingsAndSettle(timeoutMs: Long = 15_000) {
+    val instrumentation = InstrumentationRegistry.getInstrumentation()
+    instrumentation.runOnMainSync {
+        resumedMainActivity().findViewById<android.view.View>(R.id.settings_entry).performClick()
+    }
+    awaitDestination(timeoutMs, "settings") { it.currentDestinationIdOrNull() == R.id.settings }
+}
+
+/**
+ * Opens a profile and waits for the route to resolve.
+ *
+ * Two taps since G1, and the first one is new rather than incidental: the header
+ * control opens `settings`, and `Row / Профиль` inside it is what routes to a
+ * profile. The callers of this helper are asserting things about the profile
+ * screens, not about how many screens are between them and HOME, so the extra hop
+ * lives here rather than in eight test bodies.
+ *
+ * Opening a profile is still asynchronous, and deliberately so: `ProfileRoute`
+ * proves a matching session before it navigates, rather than entering the
+ * authenticated screen and letting it discover it should not have. That check is
+ * local and quick, but it is not the same main-thread frame as the tap - so a suite
+ * that taps and asserts in one breath reads the destination it started on.
  *
  * This waits for *either* profile destination and asserts neither. Which one it landed
  * on is what the calling test is for, and one case ([ProfileAuthenticatedTest] B) exists
@@ -566,22 +587,46 @@ internal fun withMainActivity(body: (ActivityScenario<MainActivity>) -> Unit) {
  */
 internal fun openProfileAndSettle(timeoutMs: Long = 15_000) {
     val instrumentation = InstrumentationRegistry.getInstrumentation()
-    instrumentation.runOnMainSync {
-        resumedMainActivity().findViewById<android.view.View>(R.id.profile_entry).performClick()
-    }
+    openSettingsAndSettle(timeoutMs)
 
+    instrumentation.runOnMainSync {
+        resumedMainActivity().findViewById<android.view.View>(R.id.settings_row_profile)
+            .performClick()
+    }
+    awaitDestination(timeoutMs, "a profile") { it.profileDestination() != null }
+}
+
+/**
+ * Polls the resumed activity until [condition] holds.
+ *
+ * `runOnMainSync` rather than `ActivityScenario.onActivity`, and a sleep loop rather
+ * than `waitForIdleSync`, for the reason [resumedMainActivity] gives: on the API 24
+ * image an animating or spinning screen may never hand out an idle looper, and a
+ * helper that waits for one hangs for the length of the whole suite.
+ */
+private fun awaitDestination(
+    timeoutMs: Long,
+    what: String,
+    condition: (MainActivity) -> Boolean,
+) {
+    val instrumentation = InstrumentationRegistry.getInstrumentation()
     val deadline = System.currentTimeMillis() + timeoutMs
     while (System.currentTimeMillis() < deadline) {
         var landed = false
         runCatching {
-            instrumentation.runOnMainSync {
-                landed = resumedMainActivity().profileDestination() != null
-            }
+            instrumentation.runOnMainSync { landed = condition(resumedMainActivity()) }
         }
         if (landed) return
         Thread.sleep(25)
     }
-    throw AssertionError("timed out after ${timeoutMs}ms opening the profile")
+    throw AssertionError("timed out after ${timeoutMs}ms opening $what")
+}
+
+/** The current destination id, whatever it is, or null before the graph is up. */
+internal fun MainActivity.currentDestinationIdOrNull(): Int? {
+    val host = supportFragmentManager.findFragmentById(R.id.navHostFragment)
+        as? androidx.navigation.fragment.NavHostFragment
+    return host?.navController?.currentDestination?.id
 }
 
 /**

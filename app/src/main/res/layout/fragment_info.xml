@@ -72,8 +72,8 @@
                 android:textColor="@color/text_heading" />
 
             <include
-                android:id="@+id/profile_entry"
-                layout="@layout/view_profile_entry" />
+                android:id="@+id/settings_entry"
+                layout="@layout/view_settings_entry" />
         </LinearLayout>
 
         <!--

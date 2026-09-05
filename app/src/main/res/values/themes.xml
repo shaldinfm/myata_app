@@ -5,7 +5,12 @@
       DayNight is what makes values-night/colors.xml resolve at all: with a
       .Light. parent the night resources are never selected, so having the files
       is not the same as having dark mode. Selection follows the system, which is
-      AppCompat's default (MODE_NIGHT_FOLLOW_SYSTEM) - no code change needed.
+      AppCompat's default when no night mode is set at all. Since G1 that is still
+      what an install gets until somebody chooses otherwise on
+      settings-appearance: Системная installs MODE_NIGHT_UNSPECIFIED on
+      MainActivity's own delegate, which is the same "nothing is overridden"
+      state. Светлая and Тёмная override it for that one activity. The process
+      default is never set - see docs/SETTINGS-APPEARANCE-3.6.6.md.
 
       Android's force-dark transformation stays OFF. Dark mode here means the
       semantic roles resolving their dark values, not the framework inverting

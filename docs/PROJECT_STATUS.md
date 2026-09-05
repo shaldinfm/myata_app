@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — MyataRadio
 
-Last updated: 2026-08-08.
+Last updated: 2026-09-05.
 
 ## Current canonical state
 
@@ -30,7 +30,7 @@ Last updated: 2026-08-08.
 
 - **Issue #15 — playback can stop by itself during continuous listening. OPEN.** Recovery was substantially improved (bounded, network-aware reconnect; `STATE_ENDED` on a live stream now treated as a disconnect), but **the root cause of the user reports is not proven**. Closing it needs a `MyataPlayback` log from a real affected device showing the stop with its cause and then automatic recovery.
 - **Playback diagnostics are in `main`**: every playback decision is logged under one tag — `adb logcat | grep MyataPlayback`. This is what #15 will be diagnosed with.
-- **Phase 2 / 3.6.6 — not implemented.** Design source lives in `tools/figma-export/` (approved dark screens, light/dark semantic tokens, plugin sources, rendered previews). No Phase 2 code exists yet: the app is still Material Components (M2), XML Views, with no `values-night/` and no `dimens.xml`.
+- **Phase 2 / 3.6.6 — in progress.** Design source lives in `tools/figma-export/` (approved dark screens, light/dark semantic tokens, plugin sources, rendered previews). The line that used to stand here — "no Phase 2 code exists yet ... no `values-night/` and no `dimens.xml`" — has been false since the token migration: `values/` and `values-night/` now carry the paired semantic roles, `dimens.xml` and `typography.xml` exist, and phases A-F plus G-A2..G-A8 and G1 have landed. The app is still Material Components (M2) and XML Views, which has not changed and is not planned to.
 - **`liked_at` positional memory is asymmetric across devices. UNRESOLVED product/ordering decision — no code change proposed.**
   Recorded during G-A7 live validation and deliberately left alone by the follow-up
   PR: nothing about Room, the schema or sync behaviour was touched for it.
@@ -46,7 +46,7 @@ Last updated: 2026-08-08.
   behaviours are defensible; picking one is an owner call, and implementing it
   changes either the local write or the server contract.
   **Needs a decision before it needs code.**
-- **Repository hygiene, needs owner decision**: `app/release/` and `app/src_backup_best_version/` are still tracked; no CI (build/lint on PRs); no release runbook.
+- **Repository hygiene, needs owner decision**: `app/release/` and `app/src_backup_best_version/` are still tracked; no release runbook. (The "no CI" half of this line was stale and is removed: `.github/workflows/android-ci.yml` runs `testDebugUnitTest`, `lintDebug` and `assembleDebug` on every pull request.)
 - **Typography audit — RecyclerView rows never receive the typography contract. FUTURE, not fixed.**
   `MyataTypography.Factory` is installed on the Activity's inflater in
   `MainActivity.onCreate`. Adapters inflate their rows with
@@ -93,6 +93,30 @@ Last updated: 2026-08-08.
   release / non-debuggable build on a real device.** Owner action: agents cannot
   run `assembleRelease`.
 
-## Phase 2 / 3.6.6 scope (agreed, not started)
+## G1 — settings shell and appearance (landed)
 
-New design, Light / Dark / System, new screens, auth / profile / settings, cloud favorites, Supabase. The playback fixes already in `main` ship as part of the same 3.6.6 release. Nothing here has been implemented, and each step needs explicit owner approval.
+Two pushed destinations, `settings` and `settings_appearance`, and the 40x40
+header control on HOME / ABOUT US / empty COLLECTION now opens the first of them.
+The profile moved one tap deeper, to `Settings > Аккаунт > Профиль`, which is the
+structure the frozen `settings` frame describes.
+
+Settings renders **only** the two sections whose features exist — Аккаунт and
+Внешний вид. Stream quality, the sleep timer, Last.fm, report-a-problem and the
+about-app row arrive with their own slices rather than as inert rows.
+
+The appearance is Системная / Светлая / Тёмная, stored in `ThemeStore`
+(`myata_appearance`), applied through **`MainActivity`'s own delegate**
+(`localNightMode`). `AppCompatDelegate.setDefaultNightMode` is never called: it is
+process-wide and would reach `TvMainActivity`. An absent key means Системная, so
+existing installs need no migration.
+
+Two limitations are accepted and documented rather than solved: Системная
+resolves to Light on API 24-28, and the platform starting window follows the
+system rather than the choice. Full record:
+[SETTINGS-APPEARANCE-3.6.6.md](SETTINGS-APPEARANCE-3.6.6.md).
+
+## Phase 2 / 3.6.6 scope (agreed)
+
+New design, Light / Dark / System, new screens, auth / profile / settings, cloud favorites, Supabase. The playback fixes already in `main` ship as part of the same 3.6.6 release. Each step needs explicit owner approval.
+
+This heading used to end "not started", which stopped being true some time ago and is now contradicted two sections above: A-F, G-A2..G-A8 and G1 have landed. What remains of the list is Sleep Timer, Last.fm, Report a problem, stream quality, the avatar picker (G5, blocked on artwork) and Android Auto.

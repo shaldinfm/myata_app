@@ -674,7 +674,7 @@
       Its 16x16 glyph sits at x=12,y=12 inside the circle; that inset lives inside
       the drawable's own 40x40 viewport, so there is no icon-inset dimen here.
     -->
-    <dimen name="profile_entry_size">40dp</dimen>
+    <dimen name="settings_entry_size">40dp</dimen>
 
     <!-- profile-guest 2517:2644 / 2517:3611. -->
     <dimen name="profile_header_height">64dp</dimen>
@@ -836,4 +836,52 @@
          rows for that to accumulate. -->
     <dimen name="profile_account_name_box">28dp</dimen>
     <dimen name="profile_account_label_box">22dp</dimen>
+
+    <!--
+      settings 2517:2758 / 2517:3725 and settings-appearance 2517:2817 /
+      2517:3784, both 390 wide (G1).
+
+      Nearly all of this screen is already declared above: the band, the back
+      button, the 16dp margins, the 1dp stroke, the r12 plate, the 24dp icon and
+      the 16/16 row insets are the profile screens' own dimens and are reused
+      rather than restated - the frozen rows are the same component. Only the
+      numbers that are new to these two frames are here.
+
+      settings, as absolute offsets in the frame:
+
+          band              0..64
+          Section Аккаунт   84..104   (20 below the band)
+          Row Профиль       112..176  (8 below the section)
+          Section Внешний   196..216  (20 below the row)
+          Row Тема          224..288  (8 below the section)
+
+      settings-appearance:
+
+          band              0..64
+          Row Системная     92..164   (28 below the band, and 72 tall)
+          Row Светлая       172..236  (8 below it)
+          Row Тёмная        244..308  (8 below it)
+          note              336..356  (28 below the last row)
+    -->
+    <dimen name="settings_section_margin_top">20dp</dimen>
+    <dimen name="settings_first_section_margin_top">20dp</dimen>
+    <!--
+      `Row / Системная` is 72 rather than 64 because it carries a sub-label, and it
+      keeps that height whichever row is selected: selection adds a border and a
+      check, and a row that also grew and shrank would move the two rows under it
+      every time the listener changed their mind. Same value as the profile's tall
+      rows, declared here because it is this frame's number too.
+    -->
+    <dimen name="settings_row_tall">72dp</dimen>
+    <dimen name="settings_appearance_first_row_margin_top">28dp</dimen>
+    <dimen name="settings_appearance_note_margin_top">28dp</dimen>
+    <!--
+      The selected row's border. 2dp against the unselected 1dp
+      `profile_stroke_width`, drawn on `primary` - see bg_settings_row_selected.
+      The plate keeps its r12, so only the stroke changes and the row does not
+      shift by the extra pixel: an inside stroke grows inwards.
+    -->
+    <dimen name="settings_row_selected_stroke">2dp</dimen>
+    <!-- `Icon / check` slot on the selected row, 24x24 at x=318. -->
+    <dimen name="settings_check_size">24dp</dimen>
 </resources>

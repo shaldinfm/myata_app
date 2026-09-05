@@ -241,7 +241,19 @@ class AuthNavigationTest {
                 )
             }
 
+            // Since G1 the profile is reached through the settings shell, so Back
+            // lands there next - and settings has no bottom bar either, so the bar
+            // is still hidden. The step that restores it is Back from settings.
             scenario.tap(R.id.profile_back)
+            scenario.onActivity { activity ->
+                assertEquals(R.id.settings, activity.currentDestinationId())
+                assertEquals(
+                    View.GONE,
+                    activity.findViewById<View>(R.id.bottomNavView).visibility,
+                )
+            }
+
+            scenario.tap(R.id.settings_back)
             scenario.onActivity { activity ->
                 assertEquals(R.id.home, activity.currentDestinationId())
                 assertEquals(

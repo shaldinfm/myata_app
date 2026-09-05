@@ -132,8 +132,9 @@ class TypographyProbeTest {
             expectedFont = R.font.onest_regular,
             widthDp = 310,
         ),
-        // Stand-in for Settings / Sleep Timer, which this app does not have - see
-        // the note on settingsSleepTimerSurfaceIsAbsent(). Carries the fractional
+        // Stand-in for the Sleep Timer, which this app does not have - see the note
+        // on sleepTimerSurfaceIsAbsent(). Settings itself exists as of G1 and is
+        // measured directly by SettingsLayoutTest. Carries the fractional
         // 27.5sp line height, which is the part of that surface worth probing:
         // it is the only token whose value does not land on a whole sp.
         Surface(
@@ -732,24 +733,64 @@ class TypographyProbeTest {
     /**
      * Not a behaviour test - a recorded fact the report has to carry.
      *
-     * The brief lists Settings / Sleep Timer as a surface to probe. This app has
-     * no Settings screen and no sleep timer: there is no layout, no fragment, no
-     * navigation destination and no string for either. The fractional 15/27.5
-     * token is probed on a real stream-screen label instead, which covers the
-     * typography question; what cannot be covered is the screen itself.
+     * The brief lists Settings / Sleep Timer as one surface to probe, and it has
+     * been two things since G1. **Settings now exists** - `fragment_settings`,
+     * `SettingsFragment` and the `settings` destination - and its typography is
+     * covered by `SettingsLayoutTest`, which measures the real screen rather than
+     * a stand-in. **The sleep timer still does not**: no layout, no dialog, no
+     * fragment, no destination and no string, and it is a slice of its own.
+     *
+     * So the recorded fact narrows rather than disappearing. The fractional
+     * 15/27.5 token - the only one in the set whose line height does not land on a
+     * whole sp, and the reason this entry exists at all - is still probed on a real
+     * stream-screen label, because the surface the brief wanted it probed on is
+     * still not in the app.
+     *
+     * ## The package name, which this used to get wrong
+     *
+     * Until G1 this passed `"com.example.musicplayerapp"` to `getIdentifier` as the
+     * package. That is the **namespace**, not the `applicationId`, which is
+     * `dlinemedia.radioplayer.myata` - so every lookup returned 0, every layout
+     * looked absent, and the assertion that three were missing passed without ever
+     * asking the resource table anything. It was found by adding the positive half
+     * below, which claimed `fragment_settings` was missing on a build that had just
+     * shipped it.
+     *
+     * `context.packageName` now, so the lookups are real and both halves mean
+     * something.
      */
     @Test
-    fun settingsSleepTimerSurfaceIsAbsent() {
-        val res = androidx.test.core.app.ApplicationProvider
-            .getApplicationContext<android.content.Context>().resources
-        val absent = listOf("fragment_settings", "fragment_sleep_timer", "dialog_sleep_timer")
-            .filter { res.getIdentifier(it, "layout", "com.example.musicplayerapp") == 0 }
+    fun sleepTimerSurfaceIsAbsent() {
+        val ctx = androidx.test.core.app.ApplicationProvider
+            .getApplicationContext<android.content.Context>()
+        val res = ctx.resources
+
+        // Sanity: prove the lookup can find something before trusting it to report
+        // that something is missing. This is what the old hardcoded package broke.
+        assertTrue(
+            "getIdentifier cannot resolve a layout that certainly exists - the " +
+                "package name is wrong and every 'absent' answer below is vacuous",
+            res.getIdentifier("fragment_main", "layout", ctx.packageName) != 0,
+        )
+
+        val sleepTimer = listOf("fragment_sleep_timer", "dialog_sleep_timer")
+        val absent = sleepTimer
+            .filter { res.getIdentifier(it, "layout", ctx.packageName) == 0 }
         android.util.Log.i(
             "TYPO",
-            "Settings/Sleep Timer: no such surface in this app (missing layouts: $absent). " +
-                "Probed the fractional 15/27.5 token on R.id.main_song instead.",
+            "Sleep Timer: no such surface in this app (missing layouts: $absent). " +
+                "Probed the fractional 15/27.5 token on R.id.main_song instead. " +
+                "Settings itself exists as of G1 - see SettingsLayoutTest.",
         )
-        assertTrue(absent.size == 3)
+        assertTrue("Sleep timer layouts have appeared: $absent", absent.size == sleepTimer.size)
+
+        // The other half of the old assertion, inverted: this used to record that
+        // Settings was missing, and it now records that it arrived. A build in which
+        // both halves were false again would mean the screen had been deleted.
+        assertTrue(
+            "fragment_settings is missing - Settings shipped in G1",
+            res.getIdentifier("fragment_settings", "layout", ctx.packageName) != 0,
+        )
     }
 
     /* --------------------------------------------------------------- infra -- */

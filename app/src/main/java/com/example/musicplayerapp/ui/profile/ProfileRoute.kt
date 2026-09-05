@@ -14,7 +14,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Which profile a tap on the 40x40 control should open.
+ * Which profile the `Settings > Профиль` row should open.
+ *
+ * The caller moved at G1 and the decision did not. Until then this answered a tap
+ * on the 40x40 header control; that control now opens `settings`, and the row
+ * inside it asks the same question of the same algorithm. Nothing about the rules
+ * below is a statement about which screen did the asking.
  *
  * ## Local state alone is not enough
  *
@@ -50,7 +55,8 @@ import kotlinx.coroutines.withContext
  * `ListenerSession.identity`, and nothing on this path reaches it. Nothing here
  * starts a handoff, writes to Room, or touches the Collection. Opening a profile
  * remains something a listener can do without existing in a database, which
- * `ProfileEntryTest` has asserted since G-A3 and still does.
+ * `SettingsEntryTest` has asserted since G-A3 - through the header control then,
+ * through the settings row now - and still does.
  */
 object ProfileRoute {
 

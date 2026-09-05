@@ -117,10 +117,58 @@
             app:popExitAnim="@anim/fade_out" />
     </fragment>
     <!--
+      settings 2517:2758 / 2517:3725 and settings-appearance 2517:2817 /
+      2517:3784 (G1).
+
+      Two pushed destinations, and `settings` is what the 40x40 header control on
+      HOME, ABOUT US and the empty COLLECTION now opens. It used to open the
+      profile directly; the frozen `settings` frame draws `Row / Профиль` as its
+      first row, which makes settings the parent surface and the profile a
+      destination inside it. Nothing else is navigable that was not before - the
+      profile is reached by one more tap, from one more screen.
+
+      MainActivity hides the bottom bar for both, as it does for the profile and
+      the auth screens: neither frame has one.
+
+      Neither destination is a root tab and neither pops anything. Back from the
+      appearance screen returns to settings; Back from settings returns to
+      whichever header opened it, which is why the fragments call popBackStack
+      rather than naming a destination - two of the three would be wrong.
+    -->
+    <fragment
+        android:id="@+id/settings"
+        android:name="com.example.musicplayerapp.fragments.SettingsFragment"
+        android:label="SettingsFragment" >
+        <action
+            android:id="@+id/action_settings_to_settings_appearance"
+            app:destination="@id/settings_appearance"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
+    </fragment>
+
+    <!--
+      The appearance choice. It has no actions of its own: choosing a row writes
+      the choice and recreates the activity, and the back stack - including this
+      destination - is restored around that. Navigation is not how the screen
+      responds to a tap here.
+    -->
+    <fragment
+        android:id="@+id/settings_appearance"
+        android:name="com.example.musicplayerapp.fragments.SettingsAppearanceFragment"
+        android:label="SettingsAppearanceFragment" />
+
+    <!--
       profile-guest (G-A3). A pushed destination, not a fifth root tab: the four
-      bottom-bar items are unchanged and none of them points here. It is reached
-      from the 40x40 control in the HOME, ABOUT US and empty-COLLECTION headers,
-      and Back pops to whichever of them opened it.
+      bottom-bar items are unchanged and none of them points here.
+
+      Reached from `Settings > Аккаунт > Профиль` since G1. Until then the 40x40
+      control in the HOME, ABOUT US and empty-COLLECTION headers opened it
+      directly; that control now opens `settings`, which is the surface the frozen
+      design makes the parent. `ProfileRoute` still decides which of the two
+      profile screens opens, and Back still pops to whatever is underneath - which
+      is now settings, and through it whichever header opened that.
 
       MainActivity hides the bottom bar while this is the current destination,
       which is what the frame shows.

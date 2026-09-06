@@ -54,10 +54,26 @@ proposed to the existing menu."* Adopted now rather than when the trailing value
 first appears, because re-widening the same surface later would be a second change
 to it.
 
-The `10 top / 52 pitch / 50 bottom` padding is the frozen frame's own — stated in
+### The bottom padding is temporary, and it is the only frozen number that moved
+
+The frozen vertical rhythm is `10 top / 52 pitch / 50 bottom` — stated in
 `spec/primitives.mjs:186` and reproduced identically by the two-row
-`Menu / Коллекция` at 260×160. It is asymmetric, and it is what the design says in
-both places. **See §9 for the one open question this raises.**
+`Menu / Коллекция` at 260×160.
+
+**While this menu carries one row it ships `10 / 10` instead**, by owner decision.
+The 50 belongs to the geometry of the complete four-row menu; under a single row
+it is 40dp of unexplained space below one 48dp line, and it reads as an unfinished
+surface rather than as a design. The container hugs the row it has, and the menu
+is 68dp tall.
+
+Nothing else moved: the 260 width, the 238×48 row, the 52 pitch, the r20, the
+`menuSurface`/`menuOutline` pair, the typography and the colours are all the
+frozen ones.
+
+**Restoring `player_overflow_menu_pad_bottom` to 50dp is part of shipping the next
+Player action.** `SleepTimerSurfacesTest` measures the temporary 10/10 and the
+68dp height, so a second row arriving without the padding being restored fails
+there rather than landing quietly.
 
 ### The reserved slot becomes the control it was reserving
 
@@ -78,6 +94,22 @@ absent even though its section is now drawn — nothing behind it exists, and th
 rule did not change. Both doors open **the same sheet over the same state**;
 `SleepTimerSurfacesTest.theMenuAndTheSettingsRowSayTheSameThingAboutTheSameTimer`
 is what stops them drifting.
+
+### One sheet, and where its picker opens
+
+`Своё время` opens on **1 ч 30 мин** when there is no custom timer to seed it
+from — the values `sleep-timer-custom` 2517:1969 actually draws.
+
+Deliberately not 1 ч 00. `60 минут` is already a preset one tap above, so a picker
+that opened on exactly that would offer a second route to a choice the listener
+has just declined to make with one tap; the picker exists for the durations the
+presets do not cover, and its default should be one of them. The value lives on
+`SleepTimerDuration.CUSTOM_DEFAULT_MINUTES` rather than in the sheet, so the two
+stepper fields cannot drift apart, and `SleepTimerDurationTest` holds both halves
+of the decision — the number, and the fact that it is not a preset.
+
+Reopening the picker while a custom timer is running seeds it from that timer
+instead, so it shows what was chosen rather than a default.
 
 ## 3 · Ownership
 
@@ -192,7 +224,7 @@ exoPlayer.stop()                                  // playlist NOT cleared
 | mini-player | stays, showing Play (`hasPlaybackSession` is `mediaItemCount > 0`) |
 | PLAYER screen | central control returns to Play, from the existing `pause` broadcast |
 | Play afterwards | resumes normally through `resume_from_stop`, re-preparing to the live edge |
-| snackbar | `Таймер сна завершён / Продолжить`, once |
+| snackbar | `Таймер сна завершён / Продолжить`, once — see the deviation in §9 |
 
 `onPlaybackNoLongerWanted` **before** `stop()` is load-bearing, not tidy. It is
 what tells the recovery machinery the silence was asked for; without it
@@ -249,14 +281,21 @@ Supabase, auth or identity was touched. `AccountDeletionCleanup` does not clear 
 timer store — a sleep timer belongs to the device, like an appearance, and not to
 an account.
 
-## 9 · Open questions for the owner
+## 9 · Known deviations from the frozen design
 
-1. **The frozen 50dp bottom padding on the menu.** It is the canonical frame's own
-   (`Menu / Плеер` is 264 tall for four rows: 10 + 4×48 + 3×4 + 50) and
-   `Menu / Коллекция` repeats it exactly. Reproduced faithfully here. With **one**
-   row it is 10dp above and 50dp below, which reads as slack rather than as
-   design — see the QA screenshot on the PR. Say the word and it becomes a
-   symmetric 10/10 until the other three rows land.
-2. **`Своё время`'s default when nothing is armed** is 1 ч 0 мин, on the reasoning
-   that the four presets already cover 15–60 so somebody opening the picker wants
-   something longer. The frozen frame shows 1 ч 30 мин as example content only.
+Both are owner-decided and neither is accidental.
+
+1. **The menu's bottom padding is 10dp, not the frozen 50dp** — temporary, for as
+   long as the menu carries a single row. §1 sets out the reasoning and names the
+   test that will not let it be forgotten.
+2. **The cancel and completion Snackbars carry no `timerOff` / `pause` icon.**
+   `sleep-timer-cancelled` 2517:2116 and `sleep-timer-completed` 2517:2122 both
+   draw a 24dp glyph at x=16 with the message at x=52. Material's `Snackbar` has no
+   icon slot, and giving it one means replacing the whole view — a custom Snackbar
+   is out of scope for this slice, so the message starts at the left inset instead.
+   Everything else about those two frames is reproduced: the r12
+   `surfaceContainer` surface on a `menuOutline` stroke, the message on
+   `text_primary`, the action on `primary`, the 16dp insets, and the anchor above
+   the Mini Player. **Follow-up for the design system**, not for G2.
+
+Nothing else in this slice departs from the frozen frames.

@@ -66,6 +66,19 @@ object SleepTimerDuration {
 
     const val MS_PER_MINUTE = 60_000L
 
+    /**
+     * Where `Своё время` opens when there is no custom timer to seed it from:
+     * **1 ч 30 мин**, which is what `sleep-timer-custom` 2517:1969 draws.
+     *
+     * Deliberately not 60. That is already a preset one tap away, so opening the
+     * picker on exactly that value would offer a second route to a choice the
+     * listener has just declined to make with one tap - the picker exists for the
+     * durations the presets do not cover, and its default should be one of them.
+     * `SleepTimerDurationTest` holds both halves of that: the value, and the fact
+     * that it is not a preset.
+     */
+    const val CUSTOM_DEFAULT_MINUTES = 90
+
     fun isValid(minutes: Int): Boolean = minutes in MIN_MINUTES..MAX_MINUTES
 
     fun clamp(minutes: Int): Int = minutes.coerceIn(MIN_MINUTES, MAX_MINUTES)

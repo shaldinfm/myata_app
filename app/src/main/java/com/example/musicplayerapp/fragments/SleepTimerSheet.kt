@@ -248,8 +248,13 @@ class SleepTimerSheet : BottomSheetDialogFragment() {
     }
 
     private fun renderCustom(root: View, ctx: android.content.Context) {
-        root.findViewById<TextView>(R.id.sleep_timer_hours_value).text = customHours.toString()
-        root.findViewById<TextView>(R.id.sleep_timer_minutes_value).text = customMinutes.toString()
+        // String.format rather than toString(): the stepper values are numbers
+        // shown to a reader, so they take the reader's digits. Identical output in
+        // Russian, and lint is right that toString() would not be.
+        root.findViewById<TextView>(R.id.sleep_timer_hours_value).text =
+            String.format(java.util.Locale.getDefault(), "%d", customHours)
+        root.findViewById<TextView>(R.id.sleep_timer_minutes_value).text =
+            String.format(java.util.Locale.getDefault(), "%d", customMinutes)
 
         val total = customTotalMinutes()
         val valid = SleepTimerDuration.isValid(total)
@@ -310,14 +315,15 @@ class SleepTimerSheet : BottomSheetDialogFragment() {
         private const val STATE_MINUTES = "custom_minutes"
 
         /**
-         * Where the picker opens when there is no custom timer to seed it from.
-         *
-         * One hour, because the four presets already cover 15 to 60: somebody who
-         * has opened `Своё время` at all is asking for something the presets do not
-         * offer, and that is almost always longer.
+         * Where the picker opens with nothing to seed it from - 1 ч 30 мин, the
+         * frozen frame's own values. The reasoning, and the test that holds it,
+         * are on [SleepTimerDuration.CUSTOM_DEFAULT_MINUTES]; split here so the
+         * two stepper fields cannot drift from the single number.
          */
-        private const val DEFAULT_CUSTOM_HOURS = 1
-        private const val DEFAULT_CUSTOM_MINUTES = 0
+        private val DEFAULT_CUSTOM_HOURS =
+            SleepTimerDuration.split(SleepTimerDuration.CUSTOM_DEFAULT_MINUTES).first
+        private val DEFAULT_CUSTOM_MINUTES =
+            SleepTimerDuration.split(SleepTimerDuration.CUSTOM_DEFAULT_MINUTES).second
 
         /** Owner decision D1: 12 hours is the ceiling. */
         private val MAX_HOURS = SleepTimerDuration.MAX_MINUTES / 60

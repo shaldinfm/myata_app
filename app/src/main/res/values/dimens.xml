@@ -905,15 +905,31 @@
       trailing value at x=160, w=70 - all relative to the row, and all straight out
       of screens-3.6.6/spec/primitives.mjs:184.
 
-      The 50 bottom is the frozen frame's own, stated in that file: "canonical
-      'Menu / Плеер' is 264 tall for 4 rows: 10 top, 52 pitch, 50 bottom", and
-      reproduced identically by the two-row `Menu / Коллекция` at 260x160. It is
-      asymmetric with the 10 top, and it is what the design says twice.
+      ## The bottom padding is TEMPORARY, and is not the frozen number
+
+      The frozen bottom padding is **50**, stated in that file - "canonical
+      'Menu / Плеер' is 264 tall for 4 rows: 10 top, 52 pitch, 50 bottom" - and
+      reproduced identically by the two-row `Menu / Коллекция` at 260x160.
+
+      This menu ships **10 top / 10 bottom** instead, by owner decision, for as
+      long as it carries only Таймер сна. The 50 belongs to the geometry of the
+      complete four-row menu; under a single row it is 40 of unexplained space
+      below one 48dp line and reads as an unfinished surface rather than as a
+      design. Everything else frozen is untouched - the 260 width, the 238x48 row,
+      the 52 pitch, the r20, the typography and the colours - and the container
+      hugs the one row it has.
+
+      **When the other three actions land, restore
+      `player_overflow_menu_pad_bottom` to 50dp** and the frozen geometry is whole
+      again. `SleepTimerSurfacesTest` measures the temporary value, so this cannot
+      be forgotten quietly: adding a second row without restoring the padding
+      fails there. See docs/SLEEP-TIMER-3.6.6.md.
     -->
     <dimen name="player_overflow_menu_width">260dp</dimen>
     <dimen name="player_overflow_menu_radius">20dp</dimen>
     <dimen name="player_overflow_menu_pad_top">10dp</dimen>
-    <dimen name="player_overflow_menu_pad_bottom">50dp</dimen>
+    <!-- TEMPORARY: the frozen value is 50dp - see the note above. -->
+    <dimen name="player_overflow_menu_pad_bottom">10dp</dimen>
     <dimen name="player_overflow_row_inset">11dp</dimen>
     <dimen name="player_overflow_row_height">48dp</dimen>
     <dimen name="player_overflow_row_gap">4dp</dimen>

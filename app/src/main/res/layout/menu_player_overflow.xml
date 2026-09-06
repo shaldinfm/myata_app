@@ -33,16 +33,25 @@
   All of it from screens-3.6.6/spec/primitives.mjs:184, which is the frozen menu
   primitive both menus are authored on:
 
-      menu            260 wide, r20, 10 top pad, 50 bottom pad
+      menu            260 wide, r20, 10 top pad, 50 bottom pad (see below)
       row             238x48 at x=11, pitch 52
       icon slot       48 at x=12 in the row, 24 glyph centred in it
       label           x=70, 15/22 Medium
       trailing        x=160, w=70, 14/20 on `primary`
 
-  The 50 bottom is the frozen frame's own and is stated as such in that file -
-  "canonical 'Menu / Плеер' is 264 tall for 4 rows: 10 top, 52 pitch, 50 bottom" -
-  and the two-row `Menu / Коллекция` reproduces it exactly at 260x160. It is
-  asymmetric with the 10 top, and it is what the design says in both places.
+  ## One number here is temporary, and it is the only one
+
+  The frozen bottom padding is **50** - stated in that file and reproduced by the
+  two-row `Menu / Коллекция` at 260x160. This menu ships **10 / 10** while it
+  carries a single row, by owner decision: the 50 is the complete four-row menu's
+  geometry, and under one row it is 40 of unexplained space below a single 48dp
+  line. The container hugs the row it has; every other frozen number - width, row
+  box, pitch, radius, typography, colour - is unchanged.
+
+  **Restoring it is part of shipping the next Player action.**
+  `SleepTimerSurfacesTest` measures 10/10 and the resulting 68dp height, so a
+  second row arriving without the padding being restored fails there rather than
+  landing quietly.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"

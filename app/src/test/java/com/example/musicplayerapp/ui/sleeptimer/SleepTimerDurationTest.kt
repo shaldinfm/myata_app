@@ -76,6 +76,26 @@ class SleepTimerDurationTest {
         assertEquals(45, SleepTimerDuration.clamp(45))
     }
 
+    // ---- the custom picker's default ----
+
+    @Test
+    fun `the custom picker opens on one hour thirty, as the frozen frame draws it`() {
+        assertEquals(90, SleepTimerDuration.CUSTOM_DEFAULT_MINUTES)
+        assertEquals(1 to 30, SleepTimerDuration.split(SleepTimerDuration.CUSTOM_DEFAULT_MINUTES))
+    }
+
+    @Test
+    fun `the custom default is not one of the presets`() {
+        // The point of the value, not an incidental property of it: 60 is a preset
+        // one tap away, so a picker that opened on 60 would be a second route to a
+        // choice the listener has just declined to make with one tap.
+        assertFalse(
+            "the custom picker must not open on a duration the presets already offer",
+            SleepTimerDuration.PRESETS.contains(SleepTimerDuration.CUSTOM_DEFAULT_MINUTES),
+        )
+        assertTrue(SleepTimerDuration.isValid(SleepTimerDuration.CUSTOM_DEFAULT_MINUTES))
+    }
+
     // ---- splitting, which is what the hours/minutes wording reads from ----
 
     @Test

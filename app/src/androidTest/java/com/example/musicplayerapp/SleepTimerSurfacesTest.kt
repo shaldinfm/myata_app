@@ -69,6 +69,20 @@ class SleepTimerSurfacesTest {
                 expect(where, "first row y", topIn(row, menu), dp(10))
                 expect(where, "trailing value width", trailing.width, dp(70))
 
+                // The one deliberate departure from the frozen frame, and the
+                // reason it is measured rather than left to a comment: while this
+                // menu carries a single row it uses symmetric 10/10 padding
+                // instead of the frozen 10/50, so its whole height is 10+48+10.
+                //
+                // When the next Player action lands, the frozen 50 comes back and
+                // this assertion has to be updated in the same change - which is
+                // the point of pinning it here.
+                expect(where, "one-row menu height", menu.height, dp(68))
+                expect(
+                    where, "space below the only row",
+                    menu.height - (topIn(row, menu) + row.height), dp(10),
+                )
+
                 // One row. The other three frozen entries are absent rather than
                 // inert - the whole rollout decision, held where a later edit that
                 // "just adds them greyed out" would trip over it.

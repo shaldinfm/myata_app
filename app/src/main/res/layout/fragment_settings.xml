@@ -244,6 +244,95 @@
                         android:scaleType="fitCenter"
                         android:src="@drawable/ic_profile_chevron" />
                 </LinearLayout>
+
+                <!--
+                  `Section / Воспроизведение` 2517:2778, 358x20 at y=308; the row
+                  above ends at 288, so the gap is the same 20 every section takes.
+                -->
+                <TextView
+                    android:id="@+id/settings_section_playback"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/settings_section_margin_top"
+                    android:gravity="center_vertical"
+                    android:minHeight="@dimen/auth_label_box"
+                    android:text="@string/settings_section_playback"
+                    android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                    android:textColor="@color/profile_section_label" />
+
+                <!--
+                  `Row / Таймер сна` 2517:2783, 358x64.
+
+                  The frozen section has two rows and this draws one. `Качество
+                  потока - Авто` stays absent for the reason this file's header gives
+                  and `SettingsLayoutTest` still holds: a row stating a fact about a
+                  feature with no implementation behind it is worse than no row. The
+                  sleep timer has one, so its row arrives with it - which is exactly
+                  what "each section arrives with the slice that makes its row
+                  honest" was written to mean.
+
+                  It is here as well as on the PLAYER overflow because the frozen
+                  screen's own note says so: "Sleep Timer is surfaced here as well as
+                  in the player menu, because a timer you can only reach mid-playback
+                  is hard to find." Both open the same sheet over the same state.
+
+                  The section's y=308 anchor is reproduced even though the row that
+                  would have sat at 336 is missing: the section keeps its 20 gap and
+                  the row its 8, so nothing above moves and nothing here invents a
+                  spacing of its own.
+                -->
+                <LinearLayout
+                    android:id="@+id/settings_row_sleep_timer"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_row_height"
+                    android:layout_marginTop="@dimen/profile_row_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/profile_row_icon_margin_start"
+                    android:paddingEnd="@dimen/profile_row_icon_margin_start">
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_row_icon_size"
+                        android:layout_height="@dimen/profile_row_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_profile_clock" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_row_label_margin_start"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/profile_account_label_box"
+                        android:text="@string/settings_row_sleep_timer"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                        android:textColor="@color/profile_row_label" />
+
+                    <TextView
+                        android:id="@+id/settings_row_sleep_timer_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_row_label_margin_start"
+                        android:ellipsize="end"
+                        android:gravity="center_vertical"
+                        android:maxLines="1"
+                        android:minHeight="@dimen/auth_label_box"
+                        android:text="@string/settings_sleep_timer_off"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                        android:textColor="@color/text_secondary"
+                        tools:text="Осталось 24 мин" />
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_account_chevron_size"
+                        android:layout_height="@dimen/profile_account_chevron_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_profile_chevron" />
+                </LinearLayout>
             </LinearLayout>
         </ScrollView>
     </LinearLayout>

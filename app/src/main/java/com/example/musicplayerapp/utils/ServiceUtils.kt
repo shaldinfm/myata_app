@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.service.PlaybackLog
+import com.example.musicplayerapp.service.SleepTimerContract
 
 object ServiceUtils {
     
@@ -66,6 +67,46 @@ object ServiceUtils {
                 "outcome" to "start_refused"
             )
             return false
+        }
+    }
+
+    /**
+     * Sends one sleep-timer command to the service.
+     *
+     * A plain `startService`, deliberately: none of these four actions starts
+     * playback, so none of them promises a `startForeground` call, and
+     * `startForegroundService` would leave the service on the hook for a
+     * notification it has no reason to post. `startService` also *starts* the
+     * service when it is not running, which is what lets a timer be armed with
+     * nothing playing (owner decision D6) - the caller is a screen the listener is
+     * looking at, so the background-start restriction does not apply.
+     *
+     * If that started service is later reclaimed while nothing is playing, the
+     * durable record is what carries the deadline: the next time the service is
+     * created it reconciles and re-adopts it.
+     */
+    fun sendSleepTimerCommand(
+        context: Context,
+        action: String,
+        minutes: Int = 0,
+        isCustom: Boolean = false,
+    ): Boolean {
+        val intent = Intent(context, MediaPlayerService::class.java).apply {
+            putExtra("ACTION", action)
+            putExtra(SleepTimerContract.EXTRA_MINUTES, minutes)
+            putExtra(SleepTimerContract.EXTRA_IS_CUSTOM, isCustom)
+        }
+        return try {
+            context.startService(intent)
+            true
+        } catch (e: Exception) {
+            PlaybackLog.problem(
+                "SERVICE_START_FAILED",
+                "action" to action,
+                "cause" to e.javaClass.simpleName,
+                "outcome" to "sleep_timer_command_dropped",
+            )
+            false
         }
     }
 }

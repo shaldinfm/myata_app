@@ -457,4 +457,87 @@
         <item name="android:backgroundDimEnabled">true</item>
         <item name="android:backgroundDimAmount">0.6</item>
     </style>
+
+    <!--
+      Sleep timer sheet (G2).
+
+      The rows themselves are `CollectionSheetRow*` above, unchanged and
+      deliberately reused: those styles are the frozen *sheet primitive*
+      (screens-3.6.6/spec/primitives.mjs:146) rather than anything about the
+      collection, and both sheets are authored on it. Renaming them to say so
+      would be a rename across a shipped screen for no behavioural gain.
+
+      What is new here is the trailing value the sleep timer's rows carry and the
+      custom picker, neither of which the track sheet has.
+    -->
+    <style name="SleepTimerSheetRowTrailing">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">@dimen/sheet_row_gap</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textAppearance">@style/TextAppearance.Myata.Onest.Regular.14_20</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:visibility">gone</item>
+    </style>
+
+    <!-- `Stepper / Часы` 326x64 r12 on `surface` with a 1px `outline`. -->
+    <style name="SleepTimerStepper">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">@dimen/sleep_timer_stepper_height</item>
+        <item name="android:layout_marginStart">@dimen/sleep_timer_stepper_inset</item>
+        <item name="android:layout_marginEnd">@dimen/sleep_timer_stepper_inset</item>
+        <item name="android:background">@drawable/bg_sleep_timer_stepper</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingStart">@dimen/sleep_timer_stepper_inset</item>
+        <item name="android:paddingEnd">@dimen/sleep_timer_stepper_inset</item>
+    </style>
+
+    <style name="SleepTimerStepperLabel">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textAppearance">@style/TextAppearance.Myata.Onest.Medium.16_22</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <!-- The 40x40 r20 controls. `center` rather than `fitCenter` so the 24 glyph
+         is drawn at its own size inside the 40 box, as the frozen frame does. -->
+    <style name="SleepTimerStepperControl">
+        <item name="android:layout_width">@dimen/sleep_timer_stepper_control</item>
+        <item name="android:layout_height">@dimen/sleep_timer_stepper_control</item>
+        <item name="android:background">@drawable/bg_sleep_timer_stepper_control</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:scaleType">center</item>
+    </style>
+
+    <!-- `value` 46 wide, centred, 24/32 Medium - the sheet title's own size, which
+         is what makes the number the loudest thing in the row. -->
+    <style name="SleepTimerStepperValue">
+        <item name="android:layout_width">@dimen/sleep_timer_stepper_value_width</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">@dimen/sleep_timer_stepper_gutter</item>
+        <item name="android:gravity">center</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textAppearance">@style/TextAppearance.Myata.Onest.Medium.24_32</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <!-- `Button / cancel` and `Button / confirm`, 157x52 r12 - the same box and the
+         same 22/28 label the profile buttons already draw. -->
+    <style name="SleepTimerButton">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">@dimen/sleep_timer_button_height</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:gravity">center</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textAppearance">@style/TextAppearance.Myata.Montserrat.Medium.22_28</item>
+    </style>
+
 </resources>

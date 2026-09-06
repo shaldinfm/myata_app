@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PLAYER overflow menu (G2).
+
+  Source: canonical `Menu / Плеер` 2444:18763 (206x264, r20, `menuSurface` on a
+  1px `menuOutline`), widened to 260 by the frozen proposal
+  `sleep-timer-menu-active` 2517:2093 whose note is explicit - "The canonical menu
+  is 206 wide, which cannot hold a label plus a trailing value. Widened to 260.
+  This is the only change proposed to the existing menu."
+
+  ## One row, not four
+
+  The frozen menu has four: Найти трек, Таймер сна, Сообщить о проблеме, История
+  эфира. Only the sleep timer exists, and this draws only the sleep timer.
+
+  Four rows with three disabled was rejected for the reason G1 recorded when it
+  left the whole overflow unbuilt and `SettingsLayoutTest` still holds: an inert
+  row is tolerable when it names a feature the app genuinely has and cannot reach
+  yet - `Row / Аватар` on profile-authenticated - and is not tolerable when it
+  names a feature with no implementation behind it at all. Three greyed rows would
+  be three dead controls stating that something exists.
+
+  G1's own objection to drawing this menu was that it would be "a menu with one
+  *unrelated* row" - it was being asked to carry Настройки, which is not one of the
+  player's actions. Таймер сна is one of the four. That is why the slot opens now
+  and did not open then, and it is the same rule the COLLECTION overflow lives
+  under: a menu carries its own screen's actions and nothing else.
+
+  The remaining three rows arrive with the slices that make them true.
+
+  ## Geometry
+
+  All of it from screens-3.6.6/spec/primitives.mjs:184, which is the frozen menu
+  primitive both menus are authored on:
+
+      menu            260 wide, r20, 10 top pad, 50 bottom pad
+      row             238x48 at x=11, pitch 52
+      icon slot       48 at x=12 in the row, 24 glyph centred in it
+      label           x=70, 15/22 Medium
+      trailing        x=160, w=70, 14/20 on `primary`
+
+  The 50 bottom is the frozen frame's own and is stated as such in that file -
+  "canonical 'Menu / Плеер' is 264 tall for 4 rows: 10 top, 52 pitch, 50 bottom" -
+  and the two-row `Menu / Коллекция` reproduces it exactly at 260x160. It is
+  asymmetric with the 10 top, and it is what the design says in both places.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/player_overflow_root"
+    android:layout_width="@dimen/player_overflow_menu_width"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_player_overflow_menu"
+    android:orientation="vertical"
+    android:paddingTop="@dimen/player_overflow_menu_pad_top"
+    android:paddingBottom="@dimen/player_overflow_menu_pad_bottom">
+
+    <!-- `Menu row / Таймер сна`, the second row of the frozen four and the only
+         one whose feature exists. -->
+    <LinearLayout
+        android:id="@+id/player_overflow_sleep_timer"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/player_overflow_row_height"
+        android:layout_marginStart="@dimen/player_overflow_row_inset"
+        android:layout_marginEnd="@dimen/player_overflow_row_inset"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/player_overflow_icon_slot_inset"
+        android:paddingEnd="0dp">
+
+        <ImageView
+            android:layout_width="@dimen/player_overflow_icon_slot"
+            android:layout_height="@dimen/player_overflow_icon_slot"
+            android:contentDescription="@null"
+            android:scaleType="center"
+            android:src="@drawable/ic_sleep_timer_clock" />
+
+        <!--
+          Label at x=70 in a row whose content starts at 12: the 48 slot ends at
+          60, so the frozen gap is 10. Width is what is left after the trailing
+          value's 70 - the frozen `w - 22 - 70 - 70` = 98 on a 260 menu - and the
+          value is GONE rather than INVISIBLE when the timer is off, so the label
+          takes the full 160 the frozen no-trailing rows have.
+        -->
+        <TextView
+            android:id="@+id/player_overflow_sleep_timer_label"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/player_overflow_gap"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/sleep_timer_title"
+            android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.15_22"
+            android:textColor="@color/text_primary" />
+
+        <TextView
+            android:id="@+id/player_overflow_sleep_timer_trailing"
+            android:layout_width="@dimen/player_overflow_trailing_width"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+            android:textColor="@color/primary"
+            android:visibility="gone"
+            tools:text="24 мин"
+            tools:visibility="visible" />
+    </LinearLayout>
+</LinearLayout>

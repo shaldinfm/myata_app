@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Button / cancel` 157x52 r12 - `buttonOutlineContainer` on a 1px
+  `buttonOutlineBorder`, which is the pair profile_secondary_button_* already
+  carries in both themes.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/profile_secondary_button_container" />
+    <stroke
+        android:width="@dimen/sheet_stroke"
+        android:color="@color/profile_secondary_button_outline" />
+    <corners android:radius="@dimen/sleep_timer_button_radius" />
+</shape>

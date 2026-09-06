@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.data.ThemeStore
 import com.example.musicplayerapp.data.supabase.EmailAuthBackend
@@ -14,6 +15,8 @@ import com.example.musicplayerapp.data.supabase.IdentityStore
 import com.example.musicplayerapp.databinding.FragmentSettingsBinding
 import com.example.musicplayerapp.ui.profile.ProfileRoute
 import com.example.musicplayerapp.ui.settings.SettingsProfileRow
+import com.example.musicplayerapp.ui.sleeptimer.SleepTimerState
+import com.example.musicplayerapp.ui.sleeptimer.SleepTimerText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -100,6 +103,18 @@ class SettingsFragment : Fragment() {
             findNavController().navigate(R.id.action_settings_to_settings_appearance)
         }
 
+        // The same sheet the PLAYER overflow opens, over the same state. Not a
+        // second screen and not a second copy - see docs/SLEEP-TIMER-3.6.6.md.
+        binding.settingsRowSleepTimer.setOnClickListener {
+            SleepTimerSheet.show(parentFragmentManager)
+        }
+
+        // The value follows the service's own state, so a timer that expires or is
+        // cancelled while this screen is open updates the row without a resume.
+        (activity as? MainActivity)?.viewModel?.sleepTimer?.observe(viewLifecycleOwner) {
+            renderSleepTimerValue(it)
+        }
+
         return binding.root
     }
 
@@ -109,6 +124,13 @@ class SettingsFragment : Fragment() {
         // Synchronous: one SharedPreferences lookup, which is a hash-map read after
         // the first load. Nothing about the appearance is remote.
         binding.settingsRowThemeValue.setText(ThemeStore.read(requireContext()).labelRes())
+
+        // Reconcile on the way in, for the same reason the sheet does: an expired
+        // timer must not be drawn as an armed one on a screen just opened.
+        (activity as? MainActivity)?.viewModel?.let { vm ->
+            vm.syncSleepTimer()
+            renderSleepTimerValue(vm.sleepTimer.value)
+        }
 
         renderProfileValue()
     }
@@ -188,6 +210,30 @@ class SettingsFragment : Fragment() {
 
                 is SettingsProfileRow.Value.Address -> value.email
             }
+        }
+    }
+
+    /**
+     * `Row / Таймер сна`'s value.
+     *
+     * `Выключен` is the frozen frame's own string. The frame never draws the
+     * armed case, so `Осталось 24 мин` is new (owner decision D3) - and the
+     * number in it comes from [SleepTimerText], which is the same formatter the
+     * PLAYER menu row and the sheet use. That is what stops the two entry points
+     * rounding the same deadline differently.
+     */
+    private fun renderSleepTimerValue(state: SleepTimerState?) {
+        val binding = _binding ?: return
+        val armed = state as? SleepTimerState.Armed
+        binding.settingsRowSleepTimerValue.text = if (armed == null) {
+            getString(R.string.settings_sleep_timer_off)
+        } else {
+            getString(
+                R.string.settings_sleep_timer_active,
+                SleepTimerText.remaining(
+                    requireContext(), armed, android.os.SystemClock.elapsedRealtime()
+                ),
+            )
         }
     }
 

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Stepper minus, screens-3.6.6/spec/screens.mjs:117 - `M6 12 H18`, stroked 2.
+
+  Authored on `primary` and re-tinted by the view at a bound it cannot cross: the
+  frozen invalid frame draws minus at zero in `disabledContent`, and a tint is what
+  lets one drawable carry both states without a second file.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M6 12 H18"
+        android:strokeColor="@color/primary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+</vector>

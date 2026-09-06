@@ -60,25 +60,35 @@
                 android:textColor="@color/player_header_label" />
 
             <!--
-              The frozen overflow control's box, reserved and empty.
+              The frozen overflow control, in the box that was reserved for it.
 
-              Every action behind it belongs to a later phase - the canonical menu
-              `Menu / Плеер` is four rows all reading "Действие", and its real
-              entries are Найти трек, Таймер сна (D), Сообщить о проблеме (E) and
-              История эфира. Reserving the space keeps the label centred where the
-              frozen design centres it; drawing a control here would be a button
-              that does nothing.
+              Canonical `PLAYER` > `Mobile Header (Subtle)` > the trailing
+              `Button:margin`, 32.02x39 at x=325.98 - the same 32x39 the Space
+              occupied, so the label stays centred exactly where it was and nothing
+              frozen moves. `PlayerLayoutTest` measures that rather than trusting it.
 
-              G1a briefly drew it and hung Настройки on it. That was withdrawn:
-              this menu is for the player's own actions, and Settings is not one of
-              them - it is reached from the HOME header. See
-              docs/SETTINGS-APPEARANCE-3.6.6.md.
+              It opens `Menu / Плеер` with **one** row, Таймер сна. The other
+              three - Найти трек, Сообщить о проблеме, История эфира - do not
+              exist, and are absent rather than drawn inert: see
+              menu_player_overflow.xml, which sets out why three greyed rows would
+              be worse than three missing ones.
+
+              G1 left this slot empty because the menu would then have been "a menu
+              with one *unrelated* row" - it was being asked to carry Настройки,
+              which is not one of the player's actions. Таймер сна is one of the
+              four. Settings is still reached from the HOME header and is still not
+              on this menu. See docs/SETTINGS-APPEARANCE-3.6.6.md and
+              docs/SLEEP-TIMER-3.6.6.md.
             -->
-            <Space
+            <ImageView
                 android:id="@+id/player_header_action"
                 android:layout_width="@dimen/player_header_action_width"
                 android:layout_height="@dimen/player_header_action_height"
-                android:layout_gravity="end|center_vertical" />
+                android:layout_gravity="end|center_vertical"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/player_overflow_description"
+                android:scaleType="center"
+                android:src="@drawable/ic_player_overflow" />
         </FrameLayout>
 
         <!--

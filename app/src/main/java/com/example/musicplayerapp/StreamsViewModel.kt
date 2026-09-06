@@ -41,6 +41,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import com.example.musicplayerapp.data.SleepTimerStore
+import com.example.musicplayerapp.service.SleepTimerContract
+import com.example.musicplayerapp.ui.sleeptimer.SleepTimerState
 import androidx.media3.common.Player
 import androidx.media3.common.MediaMetadata
 import android.content.ComponentName
@@ -87,6 +90,57 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
      */
     private val _hasPlaybackSession = MutableLiveData(false)
     val hasPlaybackSession: LiveData<Boolean> = _hasPlaybackSession
+
+    /**
+     * The sleep timer, as the service last reported it.
+     *
+     * Read-only in every sense that matters: nothing here counts down, nothing here
+     * decides when the timer expires, and nothing here writes to the store. The
+     * service owns the deadline and the schedule; this is the projection the Player
+     * menu, the sheet and the Settings row all read, which is what makes the two
+     * entry points incapable of disagreeing.
+     *
+     * Seeded from the durable record so a screen opened before the service has
+     * answered is not briefly wrong, then corrected by the first broadcast.
+     * `SleepTimerStore.peek` reports an expired or foreign-boot record as off, so
+     * the seed cannot show a timer that is not going to fire.
+     */
+    private val _sleepTimer = MutableLiveData<SleepTimerState>(
+        SleepTimerStore.peek(app, android.os.SystemClock.elapsedRealtime())
+    )
+    val sleepTimer: LiveData<SleepTimerState> = _sleepTimer
+
+    /** Whether `Вернуть` still has a deadline to put back. Ephemeral, service-held. */
+    private val _sleepTimerCanUndo = MutableLiveData(false)
+    val sleepTimerCanUndo: LiveData<Boolean> = _sleepTimerCanUndo
+
+    /**
+     * Raised once when a timer reached zero **and stopped playback**.
+     *
+     * A one-shot rather than a state: `Таймер сна завершён` is shown when it
+     * happens and is never re-shown by a screen that opens afterwards, and an
+     * expiry that found nothing playing raises nothing at all (owner decision D5).
+     * Consumed by [consumeSleepTimerCompletion].
+     */
+    private val _sleepTimerCompleted = MutableLiveData(false)
+    val sleepTimerCompleted: LiveData<Boolean> = _sleepTimerCompleted
+
+    /**
+     * The service's own state broadcast - the single source every surface reads.
+     *
+     * Registered for the life of this ViewModel, so a timer that expires while the
+     * listener is on HOME still reaches the Snackbar host.
+     */
+    private val sleepTimerReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val i = intent ?: return
+            _sleepTimer.value = SleepTimerContract.stateOf(i)
+            _sleepTimerCanUndo.value = i.getBooleanExtra(SleepTimerContract.STATE_CAN_UNDO, false)
+            if (i.getBooleanExtra(SleepTimerContract.STATE_COMPLETED, false)) {
+                _sleepTimerCompleted.value = true
+            }
+        }
+    }
     var isInSplitMode = MutableLiveData<Boolean>()
     var playlistList = MutableLiveData<MutableList<MyataPlaylist>>()
     private val _playlistsState = MutableLiveData(PlaylistsState.LOADING)
@@ -202,6 +256,13 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         currentStreamLive.value = "myata"
 
         setupMediaController()
+
+        LocalBroadcastManager.getInstance(app).registerReceiver(
+            sleepTimerReceiver, IntentFilter(SleepTimerContract.BROADCAST_STATE)
+        )
+        // Ask the owner what is true. This also reconciles, so a record left behind
+        // by a process that died after its deadline is cleared rather than drawn.
+        syncSleepTimer()
 
         // Use localized strings for initial state
         val slogan = app.getString(R.string.slogan_placeholder)
@@ -336,6 +397,13 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         isCleared = true
 
         unregisterConnectivityRetry()
+
+        // The timer itself is the service's and is deliberately left running; what
+        // goes here is only this ViewModel's window onto it.
+        runCatching {
+            LocalBroadcastManager.getInstance(getApplication())
+                .unregisterReceiver(sleepTimerReceiver)
+        }
 
         // Off the controller before it goes, so a listener registered by a dead
         // ViewModel cannot be called back while the release is being completed.
@@ -760,6 +828,42 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
                 }
             }
         }
+    }
+
+    // ============== SLEEP TIMER (G2) ==============
+    //
+    // Four commands, each one line, none of which decides anything. The service is
+    // the owner; these only ask.
+
+    fun setSleepTimer(minutes: Int, isCustom: Boolean) {
+        ServiceUtils.sendSleepTimerCommand(
+            getApplication(), SleepTimerContract.ACTION_SET, minutes, isCustom
+        )
+    }
+
+    fun cancelSleepTimer() {
+        ServiceUtils.sendSleepTimerCommand(getApplication(), SleepTimerContract.ACTION_CANCEL)
+    }
+
+    /** `Вернуть`: the service restores the cancelled timer's original deadline. */
+    fun undoSleepTimerCancel() {
+        ServiceUtils.sendSleepTimerCommand(getApplication(), SleepTimerContract.ACTION_UNDO)
+    }
+
+    /**
+     * Re-reads the truth, and reconciles it.
+     *
+     * Called from `init` and from every screen that shows the timer as it resumes,
+     * so an expired timer cannot survive as a visibly armed one on a screen that
+     * has just been opened.
+     */
+    fun syncSleepTimer() {
+        ServiceUtils.sendSleepTimerCommand(getApplication(), SleepTimerContract.ACTION_SYNC)
+    }
+
+    /** Clears the one-shot after the Snackbar has been shown. */
+    fun consumeSleepTimerCompletion() {
+        _sleepTimerCompleted.value = false
     }
 
     fun switchStream(stream: String) {

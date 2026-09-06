@@ -891,4 +891,78 @@
     <dimen name="settings_row_selected_stroke">2dp</dimen>
     <!-- `Icon / check` slot on the selected row, 24x24 at x=318. -->
     <dimen name="settings_check_size">24dp</dimen>
+
+    <!--
+      PLAYER overflow menu (G2). Frozen `Menu / Плеер` 2444:18763 - 206x264, r20,
+      `menuSurface` on a 1px `menuOutline` - widened to 260 by
+      sleep-timer-menu-active 2517:2093, whose note is explicit: "The canonical menu
+      is 206 wide, which cannot hold a label plus a trailing value. Widened to 260."
+      The 260 is adopted now rather than later, because re-widening the same surface
+      when the trailing value arrives would be a second change to it.
+
+      Rows are 238x48 at x=11, pitch 52, first at y=10. The icon slot is 48 at x=12
+      inside the row with a 24 glyph centred in it; the label starts at x=70 and the
+      trailing value at x=160, w=70 - all relative to the row, and all straight out
+      of screens-3.6.6/spec/primitives.mjs:184.
+
+      The 50 bottom is the frozen frame's own, stated in that file: "canonical
+      'Menu / Плеер' is 264 tall for 4 rows: 10 top, 52 pitch, 50 bottom", and
+      reproduced identically by the two-row `Menu / Коллекция` at 260x160. It is
+      asymmetric with the 10 top, and it is what the design says twice.
+    -->
+    <dimen name="player_overflow_menu_width">260dp</dimen>
+    <dimen name="player_overflow_menu_radius">20dp</dimen>
+    <dimen name="player_overflow_menu_pad_top">10dp</dimen>
+    <dimen name="player_overflow_menu_pad_bottom">50dp</dimen>
+    <dimen name="player_overflow_row_inset">11dp</dimen>
+    <dimen name="player_overflow_row_height">48dp</dimen>
+    <dimen name="player_overflow_row_gap">4dp</dimen>
+    <dimen name="player_overflow_icon_slot_inset">12dp</dimen>
+    <dimen name="player_overflow_icon_slot">48dp</dimen>
+    <dimen name="player_overflow_icon_size">24dp</dimen>
+    <dimen name="player_overflow_label_inset">70dp</dimen>
+    <dimen name="player_overflow_trailing_inset">160dp</dimen>
+    <dimen name="player_overflow_trailing_width">70dp</dimen>
+
+    <!--
+      Sleep timer sheet (G2). The list is the sheet primitive the COLLECTION track
+      sheet already uses - 358 wide, r28, rows 56 on a 58 pitch, label at 76 - so it
+      reuses every `sheet_*` dimen rather than declaring a second identical set.
+      Only the custom picker and its footer are new.
+
+      sleep-timer-custom 2517:1969: stepper rows 326x64 r12 at y=118 and y=194, so
+      the gap between them is 12; label at x=16, minus at 156 (40x40 r20), value at
+      200 (46 wide, centred), plus at 250. Footer line at y=278 - 20 below the
+      second stepper - and the buttons at y=322, 157x52 with a 12 gutter.
+    -->
+    <dimen name="sleep_timer_stepper_height">64dp</dimen>
+    <dimen name="sleep_timer_stepper_radius">12dp</dimen>
+    <dimen name="sleep_timer_stepper_top">20dp</dimen>
+    <dimen name="sleep_timer_stepper_gap">12dp</dimen>
+    <dimen name="sleep_timer_stepper_inset">16dp</dimen>
+    <dimen name="sleep_timer_stepper_control">40dp</dimen>
+    <dimen name="sleep_timer_stepper_control_radius">20dp</dimen>
+    <dimen name="sleep_timer_stepper_glyph">24dp</dimen>
+    <dimen name="sleep_timer_stepper_value_width">46dp</dimen>
+    <dimen name="sleep_timer_stepper_gutter">10dp</dimen>
+    <dimen name="sleep_timer_footer_top">20dp</dimen>
+    <dimen name="sleep_timer_buttons_top">24dp</dimen>
+    <dimen name="sleep_timer_button_height">52dp</dimen>
+    <dimen name="sleep_timer_button_radius">12dp</dimen>
+    <dimen name="sleep_timer_button_gutter">12dp</dimen>
+    <!-- Menu label at x=70 in a row whose content starts at 12: the 48 slot ends
+         at 60, so the frozen gap is 10. -->
+    <dimen name="player_overflow_gap">10dp</dimen>
+
+    <!-- `Sheet / chevron` sits at x=318 on a 358 row whose padding ends at 342,
+         so it hangs off the end of the trailing value with the row's own inset. -->
+    <dimen name="sleep_timer_chevron_gap">8dp</dimen>
+
+    <!-- `Sheet / trailing` on the ticked row: x=180 on a 358 sheet, w=162. -->
+    <dimen name="sleep_timer_trailing_width">162dp</dimen>
+    <!-- The menu floats above the header it is anchored to. The frozen frame has
+         no shadow node - it is a flat surface on a 1px outline - so this is only
+         enough lift to separate the window, not a drawn elevation. -->
+    <dimen name="player_overflow_elevation">8dp</dimen>
+
 </resources>

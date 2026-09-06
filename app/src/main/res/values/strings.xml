@@ -424,4 +424,70 @@
     <string name="settings_theme_dark">Тёмная</string>
     <string name="settings_appearance_note">Тема применяется сразу, без перезапуска.</string>
     <string name="settings_theme_selected_description">Выбрано</string>
+
+    <!--
+      Sleep timer (G2). Frozen sources: sleep-timer-select 2517:1937,
+      sleep-timer-custom 2517:1969, sleep-timer-custom-invalid 2517:1993,
+      sleep-timer-active 2517:2017, sleep-timer-active-custom 2517:2056,
+      sleep-timer-menu-active 2517:2093, sleep-timer-cancelled 2517:2116,
+      sleep-timer-completed 2517:2122, and `Row / Таймер сна` on settings
+      2517:2758. Copy is the frozen frames' own, character for character, except
+      where noted.
+    -->
+    <string name="sleep_timer_title">Таймер сна</string>
+    <string name="sleep_timer_subtitle">Остановить воспроизведение через</string>
+    <string name="sleep_timer_preset_15">15 минут</string>
+    <string name="sleep_timer_preset_30">30 минут</string>
+    <string name="sleep_timer_preset_45">45 минут</string>
+    <string name="sleep_timer_preset_60">60 минут</string>
+    <string name="sleep_timer_custom">Своё время</string>
+    <string name="sleep_timer_cancel_row">Отключить таймер</string>
+
+    <!-- `Bottom Sheet / subtitle` on the two active frames. The time of day is
+         derived at render time from the wall clock plus the monotonic time left,
+         so it re-reads correctly after a clock or timezone change. -->
+    <string name="sleep_timer_active_subtitle">Воспроизведение остановится в %1$s</string>
+
+    <!-- `Sheet / trailing` on the ticked row. -->
+    <string name="sleep_timer_trailing">осталось %1$s</string>
+
+    <!--
+      Durations, in the abbreviated style profile_account_sync_* uses and for the
+      same reason: `1 мин` and `5 мин` are both correct Russian, so there is no
+      plural agreement to get wrong and no quantity strings are involved.
+    -->
+    <string name="sleep_timer_minutes">%1$d мин</string>
+    <string name="sleep_timer_hours">%1$d ч</string>
+    <string name="sleep_timer_hours_minutes">%1$d ч %2$d мин</string>
+
+    <!-- `Bottom Sheet / Своё время` 2517:1969. -->
+    <string name="sleep_timer_custom_title">Своё время</string>
+    <string name="sleep_timer_custom_subtitle">Через сколько остановить эфир</string>
+    <string name="sleep_timer_custom_hours">Часы</string>
+    <string name="sleep_timer_custom_minutes">Минуты</string>
+    <string name="sleep_timer_custom_preview">Эфир остановится в %1$s</string>
+    <string name="sleep_timer_custom_error">Укажите хотя бы 1 минуту</string>
+    <string name="sleep_timer_custom_cancel">Отмена</string>
+    <string name="sleep_timer_custom_confirm">Установить</string>
+
+    <!-- Snackbars. `Composited over the Player ... Not a screen.` -->
+    <string name="sleep_timer_cancelled">Таймер сна отключён</string>
+    <string name="sleep_timer_cancelled_undo">Вернуть</string>
+    <string name="sleep_timer_completed">Таймер сна завершён</string>
+    <string name="sleep_timer_completed_resume">Продолжить</string>
+
+    <!-- `Row / Таймер сна` on settings. `Выключен` is the frame's own string; the
+         frame never draws the armed case, so the active value is new - owner
+         decision D3, and it goes through the same formatter every other surface
+         uses so the two entry points cannot disagree. -->
+    <string name="settings_section_playback">Воспроизведение</string>
+    <string name="settings_row_sleep_timer">Таймер сна</string>
+    <string name="settings_sleep_timer_off">Выключен</string>
+    <string name="settings_sleep_timer_active">Осталось %1$s</string>
+
+    <!-- The PLAYER header control the frozen menu hangs off, and its menu. -->
+    <string name="player_overflow_description">Действия плеера</string>
+    <string name="sleep_timer_selected_description">Выбрано</string>
+    <string name="sleep_timer_stepper_minus">Меньше</string>
+    <string name="sleep_timer_stepper_plus">Больше</string>
 </resources>

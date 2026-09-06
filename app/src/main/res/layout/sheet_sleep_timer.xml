@@ -1,0 +1,374 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sleep timer sheet (G2).
+
+  Sources, all in tools/figma-export/screens-3.6.6:
+      sleep-timer-select         2517:1937 / 2517:2904   358x424
+      sleep-timer-active         2517:2017 / 2517:2984   358x505
+      sleep-timer-active-custom  2517:2056 / 2517:3023   358x505
+      sleep-timer-custom         2517:1969 / 2517:2936   358x398
+      sleep-timer-custom-invalid 2517:1993 / 2517:2960   358x398
+
+  Five frozen frames, one sheet. They are five *states* of the same surface, not
+  five surfaces: the list and the picker are the same card with the same handle,
+  the same title box and the same subtitle box, and the frozen frames differ only
+  in what is inside and what the two lines of the head say. Building them as one
+  dialog is what lets `Своё время` open the picker without a second window
+  appearing over the first, which is what the select frame's note describes -
+  "'Своё время' opens the picker instead".
+
+  ## Geometry
+
+  The list is the sheet primitive the COLLECTION track sheet already uses, so
+  every `sheet_*` dimen here is that one's, unchanged:
+
+      sheet       358 wide, r28, `menuSurface` on a 1px `menuOutline`
+      handle      40x4 r2 at y=16
+      title       x=24, y=40, Medium 24/32 `text_heading`
+      subtitle    x=24, y=78, Regular 14/20 `text_secondary`
+      rows        y=112, pitch 58, 56 tall; 48 icon slot at 16, label at 76
+      divider     x=16, w=326, 1px `outline`
+
+  The picker's numbers are its own and are declared as `sleep_timer_*`:
+
+      stepper     326x64 r12 `surface`/`outline`, at y=118 and y=194
+      label 16 | minus 156 (40x40 r20) | value 200 (46, centred) | plus 250
+      footer      y=278, Regular 14/20
+      buttons     y=322, 157x52 r12, 12 gutter
+
+  ## Why the head is filled in by code
+
+  The title and subtitle carry four different strings across the five frames -
+  «Таймер сна» over «Остановить воспроизведение через» when nothing is armed,
+  «Таймер сна» over «Воспроизведение остановится в 23:47» when something is, and
+  «Своё время» over «Через сколько остановить эфир» in the picker. The time of day
+  in the armed subtitle is derived from the wall clock plus the monotonic time
+  that is left, never stored, so it cannot be a layout string.
+-->
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@android:color/transparent">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/sleep_timer_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/sheet_margin"
+        app:cardBackgroundColor="@color/menu_surface"
+        app:cardCornerRadius="@dimen/sheet_corner"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/menu_outline"
+        app:strokeWidth="@dimen/sheet_stroke">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="@dimen/sheet_pad_bottom">
+
+            <View
+                android:layout_width="@dimen/sheet_handle_width"
+                android:layout_height="@dimen/sheet_handle_height"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="@dimen/sheet_handle_top"
+                android:background="@drawable/bg_sheet_handle" />
+
+            <TextView
+                android:id="@+id/sleep_timer_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/sheet_title_gap"
+                android:layout_marginHorizontal="@dimen/sheet_text_inset"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:minHeight="@dimen/sheet_title_min_height"
+                android:text="@string/sleep_timer_title"
+                android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.24_32"
+                android:textColor="@color/text_heading" />
+
+            <TextView
+                android:id="@+id/sleep_timer_subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/sheet_subtitle_gap"
+                android:layout_marginHorizontal="@dimen/sheet_text_inset"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:minHeight="@dimen/sheet_subtitle_min_height"
+                android:text="@string/sleep_timer_subtitle"
+                android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                android:textColor="@color/text_secondary" />
+
+            <!-- ============ the list: select / active / active-custom ============ -->
+            <LinearLayout
+                android:id="@+id/sleep_timer_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- `Sheet row / 15 минут`, y=112 -> the first row's gap is 14. -->
+                <LinearLayout
+                    android:id="@+id/sleep_timer_row_15"
+                    style="@style/CollectionSheetRow"
+                    android:layout_marginTop="@dimen/sheet_rows_top">
+
+                    <ImageView
+                        android:id="@+id/sleep_timer_icon_15"
+                        style="@style/CollectionSheetRowIcon"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_sleep_timer_clock" />
+
+                    <TextView
+                        style="@style/CollectionSheetRowLabel"
+                        android:text="@string/sleep_timer_preset_15"
+                        android:textColor="@color/text_primary" />
+
+                    <TextView
+                        android:id="@+id/sleep_timer_trailing_15"
+                        style="@style/SleepTimerSheetRowTrailing"
+                        tools:text="осталось 12 мин" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/sleep_timer_row_30"
+                    style="@style/CollectionSheetRow">
+
+                    <ImageView
+                        android:id="@+id/sleep_timer_icon_30"
+                        style="@style/CollectionSheetRowIcon"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_sleep_timer_clock" />
+
+                    <TextView
+                        style="@style/CollectionSheetRowLabel"
+                        android:text="@string/sleep_timer_preset_30"
+                        android:textColor="@color/text_primary" />
+
+                    <TextView
+                        android:id="@+id/sleep_timer_trailing_30"
+                        style="@style/SleepTimerSheetRowTrailing"
+                        tools:text="осталось 24 мин"
+                        tools:visibility="visible" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/sleep_timer_row_45"
+                    style="@style/CollectionSheetRow">
+
+                    <ImageView
+                        android:id="@+id/sleep_timer_icon_45"
+                        style="@style/CollectionSheetRowIcon"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_sleep_timer_clock" />
+
+                    <TextView
+                        style="@style/CollectionSheetRowLabel"
+                        android:text="@string/sleep_timer_preset_45"
+                        android:textColor="@color/text_primary" />
+
+                    <TextView
+                        android:id="@+id/sleep_timer_trailing_45"
+                        style="@style/SleepTimerSheetRowTrailing" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/sleep_timer_row_60"
+                    style="@style/CollectionSheetRow">
+
+                    <ImageView
+                        android:id="@+id/sleep_timer_icon_60"
+                        style="@style/CollectionSheetRowIcon"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_sleep_timer_clock" />
+
+                    <TextView
+                        style="@style/CollectionSheetRowLabel"
+                        android:text="@string/sleep_timer_preset_60"
+                        android:textColor="@color/text_primary" />
+
+                    <TextView
+                        android:id="@+id/sleep_timer_trailing_60"
+                        style="@style/SleepTimerSheetRowTrailing" />
+                </LinearLayout>
+
+                <!--
+                  `Sheet row / Своё время` - the only row here that opens something
+                  rather than committing a choice, which is what the chevron says.
+                  When a custom timer is running it takes the check and the trailing
+                  value instead, exactly as sleep-timer-active-custom draws it, and
+                  the chevron stays: tapping it still opens the picker.
+                -->
+                <LinearLayout
+                    android:id="@+id/sleep_timer_row_custom"
+                    style="@style/CollectionSheetRow">
+
+                    <ImageView
+                        android:id="@+id/sleep_timer_icon_custom"
+                        style="@style/CollectionSheetRowIcon"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_sleep_timer_clock" />
+
+                    <TextView
+                        style="@style/CollectionSheetRowLabel"
+                        android:text="@string/sleep_timer_custom"
+                        android:textColor="@color/text_primary" />
+
+                    <TextView
+                        android:id="@+id/sleep_timer_trailing_custom"
+                        style="@style/SleepTimerSheetRowTrailing" />
+
+                    <ImageView
+                        android:layout_width="@dimen/sheet_row_icon_size"
+                        android:layout_height="@dimen/sheet_row_icon_size"
+                        android:layout_marginStart="@dimen/sleep_timer_chevron_gap"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_sleep_timer_chevron" />
+                </LinearLayout>
+
+                <!-- `Divider` (16,412) 326x1, and the destructive row after it.
+                     Both belong to the armed states only. -->
+                <View
+                    android:id="@+id/sleep_timer_divider"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/sheet_stroke"
+                    android:layout_marginTop="@dimen/sheet_divider_gap_above"
+                    android:layout_marginHorizontal="@dimen/sheet_divider_inset"
+                    android:background="@color/outline"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+                <LinearLayout
+                    android:id="@+id/sleep_timer_row_cancel"
+                    style="@style/CollectionSheetRow"
+                    android:layout_marginTop="@dimen/sheet_divider_gap_below"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <ImageView
+                        style="@style/CollectionSheetRowIcon"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_sleep_timer_off" />
+
+                    <TextView
+                        style="@style/CollectionSheetRowLabel"
+                        android:text="@string/sleep_timer_cancel_row"
+                        android:textColor="@color/error" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ============ the picker: custom / custom-invalid ============ -->
+            <LinearLayout
+                android:id="@+id/sleep_timer_custom_panel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                tools:visibility="gone">
+
+                <!-- `Stepper / Часы`, y=118 - 20 below the subtitle box. -->
+                <LinearLayout
+                    android:id="@+id/sleep_timer_stepper_hours"
+                    style="@style/SleepTimerStepper"
+                    android:layout_marginTop="@dimen/sleep_timer_stepper_top">
+
+                    <TextView
+                        style="@style/SleepTimerStepperLabel"
+                        android:text="@string/sleep_timer_custom_hours" />
+
+                    <ImageView
+                        android:id="@+id/sleep_timer_hours_minus"
+                        style="@style/SleepTimerStepperControl"
+                        android:contentDescription="@string/sleep_timer_stepper_minus"
+                        android:src="@drawable/ic_sleep_timer_minus" />
+
+                    <TextView
+                        android:id="@+id/sleep_timer_hours_value"
+                        style="@style/SleepTimerStepperValue"
+                        tools:text="1" />
+
+                    <ImageView
+                        android:id="@+id/sleep_timer_hours_plus"
+                        style="@style/SleepTimerStepperControl"
+                        android:layout_marginStart="@dimen/sleep_timer_stepper_gutter"
+                        android:contentDescription="@string/sleep_timer_stepper_plus"
+                        android:src="@drawable/ic_sleep_timer_plus" />
+                </LinearLayout>
+
+                <!-- `Stepper / Минуты`, y=194 - 12 below the one above. -->
+                <LinearLayout
+                    android:id="@+id/sleep_timer_stepper_minutes"
+                    style="@style/SleepTimerStepper"
+                    android:layout_marginTop="@dimen/sleep_timer_stepper_gap">
+
+                    <TextView
+                        style="@style/SleepTimerStepperLabel"
+                        android:text="@string/sleep_timer_custom_minutes" />
+
+                    <ImageView
+                        android:id="@+id/sleep_timer_minutes_minus"
+                        style="@style/SleepTimerStepperControl"
+                        android:contentDescription="@string/sleep_timer_stepper_minus"
+                        android:src="@drawable/ic_sleep_timer_minus" />
+
+                    <TextView
+                        android:id="@+id/sleep_timer_minutes_value"
+                        style="@style/SleepTimerStepperValue"
+                        tools:text="30" />
+
+                    <ImageView
+                        android:id="@+id/sleep_timer_minutes_plus"
+                        style="@style/SleepTimerStepperControl"
+                        android:layout_marginStart="@dimen/sleep_timer_stepper_gutter"
+                        android:contentDescription="@string/sleep_timer_stepper_plus"
+                        android:src="@drawable/ic_sleep_timer_plus" />
+                </LinearLayout>
+
+                <!--
+                  One line, two frames. `preview` resolves the duration to a wall
+                  clock time before anything is committed; `error` replaces it at
+                  0 ч 0 мин, which is the only invalid input. Same box, same
+                  baseline - the frozen frames put both at y=278.
+                -->
+                <TextView
+                    android:id="@+id/sleep_timer_custom_footer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/sleep_timer_footer_top"
+                    android:layout_marginHorizontal="@dimen/sleep_timer_stepper_inset"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:minHeight="@dimen/sheet_subtitle_min_height"
+                    android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                    android:textColor="@color/text_secondary"
+                    tools:text="Эфир остановится в 01:12" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/sleep_timer_buttons_top"
+                    android:layout_marginHorizontal="@dimen/sleep_timer_stepper_inset"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/sleep_timer_custom_cancel"
+                        style="@style/SleepTimerButton"
+                        android:background="@drawable/bg_sleep_timer_button_outline"
+                        android:text="@string/sleep_timer_custom_cancel"
+                        android:textColor="@color/text_heading" />
+
+                    <TextView
+                        android:id="@+id/sleep_timer_custom_confirm"
+                        style="@style/SleepTimerButton"
+                        android:layout_marginStart="@dimen/sleep_timer_button_gutter"
+                        android:background="@drawable/bg_sleep_timer_button_primary"
+                        android:text="@string/sleep_timer_custom_confirm"
+                        android:textColor="@color/profile_primary_button_label" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</androidx.core.widget.NestedScrollView>

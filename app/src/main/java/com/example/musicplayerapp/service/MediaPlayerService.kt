@@ -24,6 +24,10 @@ import androidx.media3.ui.PlayerNotificationManager
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.SecureNetModule
 import com.example.musicplayerapp.MainActivity
+import com.example.musicplayerapp.data.BootIdentity
+import com.example.musicplayerapp.data.SleepTimerStore
+import com.example.musicplayerapp.ui.sleeptimer.SleepTimerDuration
+import com.example.musicplayerapp.ui.sleeptimer.SleepTimerState
 import com.google.gson.Gson
 import com.squareup.picasso.Picasso
 import kotlinx.coroutines.*
@@ -116,6 +120,38 @@ class MediaPlayerService(): MediaSessionService(){
 
     /** How long the last uninterrupted stretch of playback lasted. */
     private var lastPlaybackRunMs = 0L
+
+    // ============== SLEEP TIMER (G2) ==============
+
+    /**
+     * The armed timer, or null. This object is the authority: the store is its
+     * durable copy and the UI is only ever told what it says.
+     */
+    private var sleepTimer: SleepTimerState.Armed? = null
+
+    /** The scheduled expiry, on its own handler so nothing here can disturb recovery's. */
+    private var sleepTimerRunnable: Runnable? = null
+    private val sleepTimerHandler by lazy { android.os.Handler(android.os.Looper.getMainLooper()) }
+
+    /**
+     * The most recent arming, counted. Every arm and every cancel bumps it, the
+     * scheduled callback captures it, and the callback compares before doing
+     * anything - so a replaced, cancelled or re-armed timer's outstanding
+     * `Runnable` becomes a no-op rather than a second expiry.
+     */
+    private var sleepTimerGeneration = 0L
+
+    /**
+     * What `Вернуть` puts back: the timer as it was at the moment it was cancelled,
+     * **with its original deadline** (owner decision D4). Undoing a 30-minute timer
+     * that had 10 minutes left restores 10 minutes, not 30.
+     *
+     * Deliberately in memory only. It is a one-gesture affordance that lives as
+     * long as a Snackbar, not a state anybody should find again after a restart,
+     * and keeping it out of the store is what stops it competing with the one
+     * record that is meant to be durable.
+     */
+    private var lastCancelledTimer: SleepTimerState.Armed? = null
 
     var song: String = ""
     var artist: String = ""
@@ -363,6 +399,22 @@ class MediaPlayerService(): MediaSessionService(){
                         )
                     }
                     Log.d("MediaPlayerService", "Status requested: $action")
+                }
+                SleepTimerContract.ACTION_SET -> {
+                    armSleepTimer(
+                        minutes = intent.getIntExtra(SleepTimerContract.EXTRA_MINUTES, 0),
+                        isCustom = intent.getBooleanExtra(SleepTimerContract.EXTRA_IS_CUSTOM, false),
+                    )
+                }
+                SleepTimerContract.ACTION_CANCEL -> cancelSleepTimer()
+                SleepTimerContract.ACTION_UNDO -> undoSleepTimerCancel()
+                SleepTimerContract.ACTION_SYNC -> {
+                    // Every read is a reconciliation. A Handler that was delayed
+                    // while nothing was playing, or a service that came back after
+                    // the deadline had passed, must not leave a dead timer looking
+                    // armed on a screen that has just been opened.
+                    reconcileSleepTimer("sync")
+                    broadcastSleepTimerState()
                 }
                 "stop" -> {
                     Log.d("MediaPlayerService", "Stop action received - shutting down")
@@ -641,6 +693,12 @@ class MediaPlayerService(): MediaSessionService(){
 
         // Initialize MediaSession (Media3 will handle notification based on this)
         initializeMediaSession(forwardingPlayer)
+
+        // A timer that was running when this process died is re-adopted here, and
+        // one that belongs to a previous boot or has already gone by is removed
+        // here. START_STICKY brings the service back with a null intent, so this is
+        // the only point that is guaranteed to run on that path.
+        reconcileSleepTimer("service_create")
     }
     
     private fun initializeMediaSession(player: Player) {
@@ -930,6 +988,11 @@ class MediaPlayerService(): MediaSessionService(){
         unregisterNetworkLogging()
         cancelPendingRetry()
 
+        // The scheduled expiry goes; the record on disk deliberately stays, so a
+        // service that is recreated re-adopts the same deadline rather than losing
+        // it. Only a reboot, a cancel or the expiry itself removes the record.
+        cancelScheduledSleepTimer()
+
         metadataJob?.cancel()
         serviceScope.cancel()
 
@@ -944,6 +1007,292 @@ class MediaPlayerService(): MediaSessionService(){
         super.onDestroy()
     }
     
+    // ============== SLEEP TIMER (G2) ==============
+    //
+    // The service owns the timer because the service is what outlives everything
+    // that could otherwise hold it. `onTaskRemoved` deliberately keeps playing
+    // after the Activity is gone, so a timer held by a ViewModel, a Fragment or
+    // the sheet itself would evaporate in exactly the case the feature exists for:
+    // the phone face down, the app swiped away, the radio still on.
+    //
+    // Scheduling is a Handler, not an AlarmManager. The timer can only *do*
+    // anything while playback is running, and while playback is running this is a
+    // foreground service holding a PARTIAL_WAKE_LOCK, so the CPU is up and Doze
+    // cannot defer the callback. An exact alarm would additionally need
+    // USE_EXACT_ALARM on API 31+, which Play restricts to alarm-clock and calendar
+    // apps - a radio sleep timer does not qualify, and would gain nothing here.
+
+    /**
+     * Starts a timer, replacing whatever was running.
+     *
+     * Replacement is total: a new choice is a new deadline measured from now, not
+     * an extension of the old one, and it discards anything `Вернуть` could have
+     * put back.
+     */
+    private fun armSleepTimer(minutes: Int, isCustom: Boolean) {
+        // Android TV has no way to reach this and must never acquire one. The
+        // service is exported, so the guard belongs here rather than in a UI that
+        // TV does not run - it is the only place that is true for every caller.
+        if (isTv) {
+            PlaybackLog.problem("SLEEP_TIMER_REFUSED", "reason" to "tv_device", "minutes" to minutes)
+            clearSleepTimerState()
+            broadcastSleepTimerState()
+            return
+        }
+
+        if (!SleepTimerDuration.isValid(minutes)) {
+            PlaybackLog.problem("SLEEP_TIMER_REFUSED", "reason" to "invalid_duration", "minutes" to minutes)
+            broadcastSleepTimerState()
+            return
+        }
+
+        cancelScheduledSleepTimer()
+        lastCancelledTimer = null
+        sleepTimerGeneration += 1
+
+        val timer = SleepTimerState.Armed(
+            deadlineElapsedMs = android.os.SystemClock.elapsedRealtime() + SleepTimerDuration.toMs(minutes),
+            durationMinutes = minutes,
+            isCustom = isCustom,
+            generation = sleepTimerGeneration,
+        )
+        sleepTimer = timer
+        SleepTimerStore.write(this, timer, BootIdentity.read(this))
+        scheduleSleepTimer(timer)
+
+        PlaybackLog.event(
+            "SLEEP_TIMER_ARMED",
+            "minutes" to minutes, "custom" to isCustom, "generation" to timer.generation,
+            "isPlaying" to exoPlayer.isPlaying,
+        )
+        broadcastSleepTimerState()
+    }
+
+    /**
+     * `Отключить таймер`.
+     *
+     * Keeps the cancelled timer in memory so `Вернуть` can put back the deadline it
+     * had - not the duration it was created with. A 30-minute timer with 10 minutes
+     * left is worth 10 minutes to an undo, and no more.
+     */
+    private fun cancelSleepTimer() {
+        val cancelled = sleepTimer
+        val now = android.os.SystemClock.elapsedRealtime()
+
+        cancelScheduledSleepTimer()
+        sleepTimer = null
+        sleepTimerGeneration += 1
+        SleepTimerStore.clear(this)
+
+        // Nothing to give back if the deadline had already passed. Undo must never
+        // manufacture time that had already run out.
+        lastCancelledTimer = cancelled?.takeIf { !it.hasExpired(now) }
+
+        PlaybackLog.event(
+            "SLEEP_TIMER_CANCELLED",
+            "hadTimer" to (cancelled != null),
+            "canUndo" to (lastCancelledTimer != null),
+        )
+        broadcastSleepTimerState()
+    }
+
+    /**
+     * `Вернуть` on the cancel Snackbar - the original absolute deadline, restored.
+     *
+     * If that deadline has gone by while the Snackbar was up, this does nothing at
+     * all rather than pushing it into the future: a timer that would have fired
+     * already is not a timer anybody can have back.
+     */
+    private fun undoSleepTimerCancel() {
+        val snapshot = lastCancelledTimer
+        lastCancelledTimer = null
+        val now = android.os.SystemClock.elapsedRealtime()
+
+        if (snapshot == null || snapshot.hasExpired(now)) {
+            PlaybackLog.event(
+                "SLEEP_TIMER_UNDO_DECLINED",
+                "reason" to if (snapshot == null) "nothing_to_restore" else "deadline_already_passed",
+            )
+            broadcastSleepTimerState()
+            return
+        }
+
+        cancelScheduledSleepTimer()
+        sleepTimerGeneration += 1
+        // copy(), so the deadline is carried across untouched and only the
+        // generation moves. This is what makes undo a restore rather than a re-arm.
+        val restored = snapshot.copy(generation = sleepTimerGeneration)
+        sleepTimer = restored
+        SleepTimerStore.write(this, restored, BootIdentity.read(this))
+        scheduleSleepTimer(restored)
+
+        PlaybackLog.event(
+            "SLEEP_TIMER_UNDONE",
+            "remainingMs" to restored.remainingMs(now), "generation" to restored.generation,
+        )
+        broadcastSleepTimerState()
+    }
+
+    /**
+     * Adopts whatever survived, and reconciles anything that did not.
+     *
+     * Called once when the service is created - including the `START_STICKY`
+     * recreation after a process death - and again on every `sleep_timer_sync`,
+     * which is what a screen asks for when it opens. Every path through it either
+     * produces a live timer or removes the record, so nothing can be shown as armed
+     * that is not going to fire.
+     */
+    private fun reconcileSleepTimer(reason: String) {
+        val now = android.os.SystemClock.elapsedRealtime()
+
+        sleepTimer?.let { live ->
+            if (live.hasExpired(now)) {
+                // The Handler has not run yet - it can be behind if the device was
+                // in Doze with nothing playing. The read is what catches up.
+                PlaybackLog.event("SLEEP_TIMER_RECONCILE_EXPIRED", "reason" to reason)
+                expireSleepTimer(live)
+            }
+            return
+        }
+
+        when (val restored = SleepTimerStore.restore(this, BootIdentity.read(this), now)) {
+            SleepTimerStore.Restored.None -> Unit
+
+            SleepTimerStore.Restored.ForeignBoot -> {
+                // A record from a previous boot, or one that cannot prove which boot
+                // it came from. The frozen contract is that a timer never resumes
+                // after a reboot, and there is no BOOT_COMPLETED receiver anywhere
+                // in the app, so this is the only place that record can go.
+                PlaybackLog.event("SLEEP_TIMER_DISCARDED", "reason" to "foreign_boot", "at" to reason)
+                SleepTimerStore.clear(this)
+            }
+
+            is SleepTimerStore.Restored.Expired -> {
+                PlaybackLog.event("SLEEP_TIMER_DISCARDED", "reason" to "already_expired", "at" to reason)
+                sleepTimerGeneration = maxOf(sleepTimerGeneration, restored.timer.generation)
+                expireSleepTimer(restored.timer)
+            }
+
+            is SleepTimerStore.Restored.Armed -> {
+                sleepTimerGeneration = maxOf(sleepTimerGeneration, restored.timer.generation) + 1
+                val adopted = restored.timer.copy(generation = sleepTimerGeneration)
+                sleepTimer = adopted
+                SleepTimerStore.write(this, adopted, BootIdentity.read(this))
+                scheduleSleepTimer(adopted)
+                PlaybackLog.event(
+                    "SLEEP_TIMER_RESTORED",
+                    "remainingMs" to adopted.remainingMs(now), "at" to reason,
+                )
+            }
+        }
+    }
+
+    private fun scheduleSleepTimer(timer: SleepTimerState.Armed) {
+        cancelScheduledSleepTimer()
+        val generation = timer.generation
+        val runnable = Runnable { onSleepTimerCallback(generation) }
+        sleepTimerRunnable = runnable
+        sleepTimerHandler.postDelayed(
+            runnable,
+            timer.remainingMs(android.os.SystemClock.elapsedRealtime()),
+        )
+    }
+
+    /**
+     * The scheduled callback. Guarded by the generation, which is the whole
+     * duplicate-expiry defence: a callback whose arming has been replaced,
+     * cancelled, undone or re-adopted is not the current one and does nothing.
+     */
+    private fun onSleepTimerCallback(generation: Long) {
+        if (generation != sleepTimerGeneration) {
+            PlaybackLog.event(
+                "SLEEP_TIMER_CALLBACK_STALE",
+                "callback" to generation, "current" to sleepTimerGeneration,
+            )
+            return
+        }
+        val timer = sleepTimer ?: return
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (!timer.hasExpired(now)) {
+            // Delivered early. Re-post for what is actually left rather than
+            // stopping the stream ahead of the deadline the listener chose.
+            scheduleSleepTimer(timer)
+            return
+        }
+        expireSleepTimer(timer)
+    }
+
+    /**
+     * Zero.
+     *
+     * The stop is the app's **existing** pause, not a new kind of stop: this app
+     * has no true pause - `ForwardingPlayer.pause()` clears `userWantsPlayback` and
+     * calls `stop()` without clearing the playlist, so the buffer is dropped, the
+     * session survives, the Mini Player stays, and the next Play re-prepares to the
+     * live edge. Expiry takes that same path with a different caller.
+     *
+     * `onPlaybackNoLongerWanted` before `stop()` is mandatory rather than tidy. It
+     * is what tells the recovery machinery that this silence was asked for; without
+     * it `STATE_ENDED` handling would treat the stop as a dropped connection and
+     * reconnect within seconds, and the timer would look broken.
+     */
+    private fun expireSleepTimer(timer: SleepTimerState.Armed) {
+        clearSleepTimerState()
+
+        // Owner decision D5: an explicit pause leaves the timer armed, so a timer
+        // can and does reach zero with nothing playing. There is nothing to stop
+        // and nothing to announce.
+        val wasWanted = userWantsPlayback || exoPlayer.isPlaying
+        if (wasWanted) {
+            PlaybackLog.event(
+                "PLAYER_STOP", "source" to "sleep_timer", "reason" to "sleep_timer_expired",
+                "state" to PlaybackLog.stateName(exoPlayer.playbackState),
+                "durationMinutes" to timer.durationMinutes,
+            )
+            onPlaybackNoLongerWanted("sleep_timer_expired")
+            exoPlayer.stop()
+        } else {
+            PlaybackLog.event("SLEEP_TIMER_EXPIRED_IDLE", "durationMinutes" to timer.durationMinutes)
+        }
+
+        broadcastSleepTimerState(completed = wasWanted)
+    }
+
+    /** Handler, memory, store and the undo snapshot, all released together. */
+    private fun clearSleepTimerState() {
+        cancelScheduledSleepTimer()
+        sleepTimer = null
+        lastCancelledTimer = null
+        sleepTimerGeneration += 1
+        SleepTimerStore.clear(this)
+    }
+
+    private fun cancelScheduledSleepTimer() {
+        sleepTimerRunnable?.let { sleepTimerHandler.removeCallbacks(it) }
+        sleepTimerRunnable = null
+    }
+
+    /**
+     * Tells every surface at once.
+     *
+     * [completed] is a one-shot: it is true only on the broadcast that carries an
+     * expiry which actually stopped playback, so the `Таймер сна завершён` Snackbar
+     * is shown once and is never re-shown by a later state read.
+     */
+    private fun broadcastSleepTimerState(completed: Boolean = false) {
+        val timer = sleepTimer
+        val intent = Intent(SleepTimerContract.BROADCAST_STATE).apply {
+            putExtra(SleepTimerContract.STATE_ARMED, timer != null)
+            putExtra(SleepTimerContract.STATE_DEADLINE_ELAPSED, timer?.deadlineElapsedMs ?: 0L)
+            putExtra(SleepTimerContract.STATE_DURATION_MINUTES, timer?.durationMinutes ?: 0)
+            putExtra(SleepTimerContract.STATE_IS_CUSTOM, timer?.isCustom ?: false)
+            putExtra(SleepTimerContract.STATE_GENERATION, timer?.generation ?: 0L)
+            putExtra(SleepTimerContract.STATE_CAN_UNDO, lastCancelledTimer != null)
+            putExtra(SleepTimerContract.STATE_COMPLETED, completed)
+        }
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+    }
+
     // ============== SMART POLLING FOR METADATA ==============
     
     private fun startMetadataPolling() {

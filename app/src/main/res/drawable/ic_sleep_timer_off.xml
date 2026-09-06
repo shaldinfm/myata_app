@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Icon / timerOff` - the leading glyph on the destructive sheet row and on the
+  cancel Snackbar. Path from screens-3.6.6/spec/primitives.mjs:91: the clock's dial
+  with a stroke through it.
+
+  `error`, which is what the frozen row gives the label beside it - the same
+  treatment `Удалить из коллекции` gets on the track sheet.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12 3 A9 9 0 1 0 12.01 3 M6 6 L18 18"
+        android:strokeColor="@color/error"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

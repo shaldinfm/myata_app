@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- `Button / confirm` 157x52 r12 on `primary`. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/profile_primary_button_container" />
+    <corners android:radius="@dimen/sleep_timer_button_radius" />
+</shape>

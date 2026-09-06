@@ -77,7 +77,12 @@ class PlayerLayoutTest {
             val shell = measured(inflater, R.layout.fragment_player, widthPx)
             val header = shell.findViewById<View>(R.id.player_header)
             val label = shell.findViewById<TextView>(R.id.player_header_label)
-            val reserved = shell.findViewById<View>(R.id.player_header_action)
+            val reserved = shell.findViewById<View>(R.id.player_header_action).also {
+                // The listener lives in PlayerFragment, not the layout, so the
+                // inflated shell has to be given one before it can be measured
+                // as a control rather than as a box.
+                it.setOnClickListener { }
+            }
             val dots = shell.findViewById<View>(R.id.dots_indicator)
             val pager = shell.findViewById<View>(R.id.viewPager)
 
@@ -143,14 +148,23 @@ class PlayerLayoutTest {
                     "${(inactiveSwing * 100).roundToInt()}%)"
             }
 
-            // The trailing slot is reserved, not a control: it must take up the
-            // frozen 32 and do nothing. G1a briefly drew a control here and hung
-            // Настройки on it; that was withdrawn - this menu is for the player's
-            // own actions, none of which exist yet, and Settings is reached from
-            // the HOME header instead. See SettingsEntryTest.
-            expect(where, "reserved trailing slot width", reserved.width, dp(32))
-            if (reserved.isClickable || reserved.hasOnClickListeners()) {
-                findings += "$where: the reserved header slot is clickable - it has no action until D/E"
+            // The trailing slot now holds the control it was reserving (G2), and
+            // holds it in exactly the box the Space occupied - which is what keeps
+            // the label centred where the frozen frame centres it. The assertion is
+            // inverted deliberately rather than deleted: what it guarded before was
+            // "nothing may be drawn here yet", and what it guards now is "whatever
+            // is drawn here may not resize the slot".
+            //
+            // G1a's withdrawn attempt hung Настройки on this control. That is still
+            // ruled out, by SettingsEntryTest and by the menu itself: this is the
+            // player's own actions, and Settings is reached from the HOME header.
+            expect(where, "trailing action slot width", reserved.width, dp(32))
+            expect(where, "trailing action slot height", reserved.height, dp(39))
+            if (!reserved.hasOnClickListeners()) {
+                findings += "$where: the header overflow draws a control that does nothing"
+            }
+            if (reserved.contentDescription.isNullOrBlank()) {
+                findings += "$where: the header overflow has no content description"
             }
 
             // The label is centred because both ends reserve a slot.

@@ -469,4 +469,29 @@
     <color name="profile_row_outline">#E1E3E4</color>
     <color name="profile_row_label">#191C1D</color>
 
+    <!--
+      Sleep timer (G2).
+
+      `player_header_action` is the PLAYER header's trailing overflow glyph -
+      canonical `PLAYER` > `Mobile Header (Subtle)` > `Button:margin` > `Button` >
+      `Container` > `Icon`, a 4x16 dot column, #42474E light / #F5F7FA dark. Its own
+      pair for the same reason `collection_header_action` has one: #42474E is
+      exactly text_secondary in light while #F5F7FA is exactly text_primary in dark,
+      so no single role is right in both themes. Deliberately a separate resource
+      from `player_header_label` and `collection_header_action`, which carry the
+      same values today by coincidence of the palette.
+    -->
+    <color name="player_header_action">#42474E</color>
+
+    <!--
+      The disabled `Установить` on sleep-timer-custom-invalid, and the disabled
+      minus at zero.
+
+      `disabledContainer` / `disabledContent` from
+      screens-3.6.6/spec/tokens.mjs - both marked PROPOSED there, because no
+      canonical screen has a disabled control. They are used here and nowhere else.
+    -->
+    <color name="sleep_timer_disabled_container">#E8EAED</color>
+    <color name="sleep_timer_disabled_content">#8E969E</color>
+
 </resources>

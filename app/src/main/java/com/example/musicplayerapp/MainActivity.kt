@@ -335,6 +335,19 @@ class MainActivity : AppCompatActivity() {
         // activity_main.xml: one pill on the shell, reading the one playback
         // state, outliving every fragment transaction.
         MiniPlayer(binding.miniPlayer, viewModel, openPlayer).bind(this)
+
+        // `sleep-timer-completed`: shown once, when a timer reaches zero and
+        // actually stops playback. An expiry that found nothing playing raises
+        // nothing (owner decision D5), and the flag is consumed so a later
+        // recreation cannot re-show it.
+        viewModel.sleepTimerCompleted.observe(this) { completed ->
+            if (completed != true) return@observe
+            viewModel.consumeSleepTimerCompletion()
+            sleepTimerSnackbar(
+                R.string.sleep_timer_completed,
+                R.string.sleep_timer_completed_resume,
+            ) { viewModel.togglePlayPause() }
+        }
         binding.navItemFavorites.setOnClickListener {
             if (navController.currentDestination?.id != R.id.favorites) {
                 navController.navigate(R.id.favorites, null, navOptions)
@@ -345,6 +358,62 @@ class MainActivity : AppCompatActivity() {
                 navController.navigate(R.id.info, null, navOptions)
             }
         }
+    }
+
+    /**
+     * `Таймер сна отключён`, with `Вернуть`.
+     *
+     * Raised by the sheet as it dismisses, because the sheet is the only thing that
+     * knows a cancel was a *gesture* rather than an expiry. Undo is not reconstructed
+     * here: this asks the service to put back the timer it is still holding a
+     * snapshot of, so the deadline that comes back is the original one and this
+     * Activity never has to know what it was.
+     */
+    fun showSleepTimerCancelled() {
+        sleepTimerSnackbar(
+            R.string.sleep_timer_cancelled,
+            R.string.sleep_timer_cancelled_undo,
+        ) { viewModel.undoSleepTimerCancel() }
+    }
+
+    /**
+     * The design system's own snackbar, over the shell.
+     *
+     * The frozen note is that it is "composited over the Player, 16px from the
+     * sides, above the mini player" - so it is anchored on the chrome the way
+     * FavoritesFragment anchors its own, and takes the same `bg_snackbar` surface
+     * rather than Material's grey slab, which belongs to neither theme.
+     *
+     * It lives on the Activity rather than on a screen because the thing it reports
+     * is not a screen's: a timer can expire while the listener is on HOME, on
+     * COLLECTION, or on nothing at all.
+     */
+    private fun sleepTimerSnackbar(messageRes: Int, actionRes: Int, action: () -> Unit) {
+        val bar = com.google.android.material.snackbar.Snackbar
+            .make(binding.root, messageRes, com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
+            .setAction(actionRes) { action() }
+
+        snackbarAnchor()?.let(bar::setAnchorView)
+
+        bar.view.background = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.bg_snackbar)
+        bar.view.setBackgroundTintList(null)
+        (bar.view.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { lp ->
+            val m = resources.getDimensionPixelSize(R.dimen.snackbar_margin)
+            lp.setMargins(m, m, m, m)
+            bar.view.layoutParams = lp
+        }
+        bar.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.text_primary))
+        bar.setActionTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.primary))
+        // Nothing else in the app shouts; Material's button style would render
+        // `Вернуть` as `ВЕРНУТЬ`.
+        bar.view.findViewById<android.widget.Button>(com.google.android.material.R.id.snackbar_action)
+            ?.isAllCaps = false
+        bar.show()
+    }
+
+    private fun snackbarAnchor(): android.view.View? {
+        val mini = binding.miniPlayer.root
+        return if (mini.visibility == android.view.View.VISIBLE) mini else binding.bottomNavView
     }
 
     /**

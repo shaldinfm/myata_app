@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Sheet / chevron` on `Своё время` - the only row of this sheet that opens
+  something instead of committing a choice. Same geometry as ic_profile_chevron; a
+  separate file because it takes `text_secondary` on a sheet rather than the
+  profile rows' own icon colour.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M9 5L16 12L9 19"
+        android:strokeColor="@color/text_secondary"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

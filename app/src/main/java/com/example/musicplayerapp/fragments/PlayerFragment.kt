@@ -14,6 +14,8 @@ import com.example.musicplayerapp.StreamsViewModel
 import com.example.musicplayerapp.adapters.FragmentStreamAdapter
 import com.example.musicplayerapp.databinding.FragmentPlayerBinding
 import com.example.musicplayerapp.service.MediaPlayerService
+import com.example.musicplayerapp.ui.PlayerOverflowMenu
+import com.example.musicplayerapp.ui.sleeptimer.SleepTimerState
 
 const val CURRENT_ITEM = "0"
 
@@ -21,6 +23,15 @@ class PlayerFragment : Fragment() {
 
     lateinit var binding:FragmentPlayerBinding
     lateinit var vm: StreamsViewModel
+
+    /**
+     * The frozen `Menu / Плеер`, held so it can be dismissed when this screen
+     * goes away. A PopupWindow is a window: leaving one up while the fragment that
+     * anchored it is destroyed leaks it onto whatever is underneath.
+     */
+    private val overflow = PlayerOverflowMenu(onSleepTimer = {
+        SleepTimerSheet.show(childFragmentManager)
+    })
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -66,6 +77,13 @@ class PlayerFragment : Fragment() {
             insets
         }
 
+        // The trailing header control. It reads the timer straight off the
+        // ViewModel at the moment it opens, so the value on the row is the same one
+        // the sheet and the Settings row are showing - there is no second copy.
+        binding.playerHeaderAction.setOnClickListener { anchor ->
+            overflow.show(anchor, vm.sleepTimer.value as? SleepTimerState.Armed)
+        }
+
         binding.viewPager.adapter = adapter
         binding.viewPager.offscreenPageLimit = 2  // Pre-load all pages to avoid UI delay
 
@@ -108,6 +126,18 @@ class PlayerFragment : Fragment() {
 
         return binding.root
     }
+    override fun onResume() {
+        super.onResume()
+        // Reconcile before the menu can be opened: a timer that expired while this
+        // screen was on the back stack must not still read as armed.
+        vm.syncSleepTimer()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        overflow.dismiss()
+    }
+
     /**
      * The frozen `swipe` row. The active page is a different *shape* - the
      * nine-lobed cookie against the others' circles - as well as a different

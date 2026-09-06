@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Установить` while the duration is 0 ч 0 мин. The frozen note is that the button
+  is disabled rather than accepting the input and failing afterwards, so this is a
+  real state of a real control rather than a decoration.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/sleep_timer_disabled_container" />
+    <corners android:radius="@dimen/sleep_timer_button_radius" />
+</shape>

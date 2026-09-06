@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- `Stepper / Часы` on sleep-timer-custom: 326x64, r12, `surface` on a 1px `outline`. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/surface" />
+    <stroke
+        android:width="@dimen/sheet_stroke"
+        android:color="@color/outline" />
+    <corners android:radius="@dimen/sleep_timer_stepper_radius" />
+</shape>

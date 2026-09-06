@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The 40x40 r20 stepper control, outlined in `primary` and unfilled. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@android:color/transparent" />
+    <stroke
+        android:width="@dimen/sheet_stroke"
+        android:color="@color/primary" />
+    <corners android:radius="@dimen/sleep_timer_stepper_control_radius" />
+</shape>

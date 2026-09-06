@@ -87,9 +87,14 @@ class SettingsLayoutTest {
     fun theUnbuiltSectionsAreAbsentRatherThanInert() {
         onMainActivity { activity ->
             val root = measured(inflaterFor(activity, night = false), dp390(activity))
+            // G2 built the sleep timer, so `Воспроизведение` and its
+            // `Таймер сна` row leave this list and join the one below. The
+            // rule has not changed - each section arrives with the slice that makes
+            // its row honest - and `Качество потока` stays absent even though
+            // its section is now drawn, because nothing behind it exists.
             val absentStrings = listOf(
-                "Воспроизведение", "Интеграции", "Прочее",
-                "Качество потока", "Таймер сна", "Last.fm",
+                "Интеграции", "Прочее",
+                "Качество потока", "Last.fm",
                 "Сообщить о проблеме", "О приложении",
             )
             val present = collectText(root)
@@ -97,6 +102,15 @@ class SettingsLayoutTest {
             assertTrue(
                 "settings must not draw rows for features that do not exist yet: $leaked",
                 leaked.isEmpty(),
+            )
+
+            // And the positive half, so a later edit cannot quietly drop the row
+            // the slice was built to add.
+            val built = listOf("Воспроизведение", "Таймер сна")
+            val missing = built.filter { s -> present.none { it.contains(s) } }
+            assertTrue(
+                "settings must draw the sections whose features exist: $missing is missing",
+                missing.isEmpty(),
             )
         }
     }
@@ -119,6 +133,9 @@ class SettingsLayoutTest {
             val sectionAppearance = root.text(R.id.settings_section_appearance)
             val rowTheme = root.find(R.id.settings_row_theme)
             val themeValue = root.text(R.id.settings_row_theme_value)
+            val sectionPlayback = root.text(R.id.settings_section_playback)
+            val rowSleepTimer = root.find(R.id.settings_row_sleep_timer)
+            val sleepTimerValue = root.text(R.id.settings_row_sleep_timer_value)
 
             /* ---- the band, identical to the profile and auth bands ---- */
             expect(where, "header band height", band.height, dp(64))
@@ -130,7 +147,10 @@ class SettingsLayoutTest {
             )
 
             /* ---- rows: fixed box at every width ---- */
-            for ((label, row) in listOf("Профиль" to rowProfile, "Тема" to rowTheme)) {
+            for ((label, row) in listOf(
+                "Профиль" to rowProfile, "Тема" to rowTheme,
+                "Таймер сна" to rowSleepTimer,
+            )) {
                 expect(where, "$label row height", row.height, dp(64))
                 expect(where, "$label row x", leftInRoot(row), dp(16))
                 expect(where, "$label row width", row.width, dp(widthDp - 32))
@@ -138,6 +158,7 @@ class SettingsLayoutTest {
 
             for ((label, v) in listOf(
                 "Аккаунт" to sectionAccount, "Внешний вид" to sectionAppearance,
+                "Воспроизведение" to sectionPlayback,
             )) {
                 expect(where, "$label section x", leftInRoot(v), dp(16))
             }
@@ -147,14 +168,27 @@ class SettingsLayoutTest {
             expect(where, "Аккаунт to Профиль", gap(sectionAccount, rowProfile), dp(8))
             expect(where, "Профиль to Внешний вид", gap(rowProfile, sectionAppearance), dp(20))
             expect(where, "Внешний вид to Тема", gap(sectionAppearance, rowTheme), dp(8))
+            // The frozen section sits at y=308, 20 below the Тема row, and its
+            // first row 8 below it. `Качество потока` - which the frame draws
+            // between them - is not built, so Таймер сна takes that 8: the two
+            // frozen spacings are reproduced and neither is invented.
+            expect(where, "Тема to Воспроизведение", gap(rowTheme, sectionPlayback), dp(20))
+            expect(where, "Воспроизведение to Таймер сна", gap(sectionPlayback, rowSleepTimer), dp(8))
 
             if (widthDp == designWidthDp) {
                 expect(where, "Профиль row y", topInRoot(rowProfile), dp(112))
                 expect(where, "Аккаунт box", sectionAccount.height, dp(20))
                 expect(where, "Внешний вид box", sectionAppearance.height, dp(20))
+                expect(where, "Воспроизведение box", sectionPlayback.height, dp(20))
+                // Deliberately no absolute anchor for this section. It sits below
+                // five rounded boundaries, and this file's own rule is that only
+                // the first content row is asserted absolutely for that reason -
+                // the first version of this line asked for 809px and got 811,
+                // which is the accumulated rounding and not the layout. Its
+                // position is pinned by the two gaps above instead.
 
                 log += "$where content ends at " +
-                    "${"%.1f".format((topInRoot(rowTheme) + rowTheme.height) / dm.density)}dp " +
+                    "${"%.1f".format((topInRoot(rowSleepTimer) + rowSleepTimer.height) / dm.density)}dp " +
                     "in a 792dp frame"
             }
 
@@ -164,6 +198,8 @@ class SettingsLayoutTest {
             type(where, "Внешний вид", sectionAppearance, 14f, 20f, dm)
             type(where, "Профиль value", profileValue, 14f, 20f, dm)
             type(where, "Тема value", themeValue, 14f, 20f, dm)
+            type(where, "Воспроизведение", sectionPlayback, 14f, 20f, dm)
+            type(where, "Таймер сна value", sleepTimerValue, 14f, 20f, dm)
 
             /* ---- colour ---- */
             colour(where, "heading", title, ctx.tone(R.color.text_heading))
@@ -174,6 +210,11 @@ class SettingsLayoutTest {
             )
             colour(where, "Профиль value", profileValue, ctx.tone(R.color.text_secondary))
             colour(where, "Тема value", themeValue, ctx.tone(R.color.text_secondary))
+            colour(
+                where, "Воспроизведение", sectionPlayback,
+                ctx.tone(R.color.profile_section_label),
+            )
+            colour(where, "Таймер сна value", sleepTimerValue, ctx.tone(R.color.text_secondary))
         }
     }
 

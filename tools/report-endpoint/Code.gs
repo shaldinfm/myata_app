@@ -1,0 +1,325 @@
+/**
+ * "Сообщить о проблеме" endpoint — Google Apps Script Web App (G3).
+ *
+ * FOR OWNER REVIEW. Not deployed by this PR, and deploying it is a separate,
+ * explicitly authorised step. Nothing in this file is a secret and nothing in it
+ * may become one: the bot token is read from Script Properties at run time and
+ * must never be typed into this source, into the repository, or into a commit
+ * message.
+ *
+ * ======================================================================
+ * WHAT IT IS
+ * ======================================================================
+ *
+ *   Android app  ->  THIS Web App  ->  Telegram Bot API  ->  a chat you own
+ *
+ * The app holds only this deployment's URL, which is a capability URL: it ships
+ * in the APK and anyone who downloads the app can extract it. That is acceptable
+ * for a write-only report intake and is exactly the shape the existing reactions
+ * endpoint (FeedbackRepository) already has. It would NOT be acceptable for the
+ * bot token, which is why the token lives here and never there — a token in an
+ * APK lets a stranger post as the bot and read its updates.
+ *
+ * **A separate deployment from the reactions one.** Reports carry free text and
+ * device diagnostics; reactions carry a track name. They must not share an
+ * endpoint, a sheet or a chat.
+ *
+ * ======================================================================
+ * THE CONTRACT THE ANDROID CLIENT DEPENDS ON
+ * ======================================================================
+ *
+ * Request:  POST, application/x-www-form-urlencoded; charset=UTF-8
+ *           Exactly eight fields, all strings, all always present:
+ *
+ *             category      one of: playback_wont_start | stopped_by_itself |
+ *                           headphones | ui | other
+ *             message       the listener's own words; may be empty; <= 2000 chars
+ *             app_version   e.g. "3.6.5 (202611)"
+ *             device        e.g. "Xiaomi Redmi Note 12"
+ *             android       e.g. "14 (API 34)"
+ *             network       one of: Wi-Fi | Мобильная сеть | Другая сеть | Нет сети
+ *             last_error    a Media3 constant name plus how long ago, or "нет"
+ *             stream        MYATA | GOLD | XTRA
+ *
+ * Response: 200 with a JSON body.
+ *
+ *           {"ok":true}                      -> the app shows report-success
+ *           {"ok":false,"error":"<reason>"}  -> the app shows report-error
+ *
+ *   **`ok:true` MUST mean the Telegram send itself succeeded.** The client matches
+ *   the VALUE - `"ok"\s*:\s*true` - and treats everything else as a failure,
+ *   including every `{"ok":false}` this file can return. See ReportAck on the
+ *   Android side; matching the key alone made every failure here read as a
+ *   success, which is the bug that check exists to prevent.
+ *
+ *   It matters more than it looks: Apps Script answers 200 to almost anything,
+ *   including its own uncaught exceptions, so without it the listener would be
+ *   thanked for a message nobody received — and, because the success screen is
+ *   terminal, they would have no way to send it again.
+ *
+ *   Every failure path below therefore ANSWERS `{"ok":false,"error":...}` rather
+ *   than throwing, so the client always has something unambiguous to read.
+ *
+ *   A non-2xx would work too, but Apps Script cannot reliably produce one, so the
+ *   body is the channel.
+ *
+ * ======================================================================
+ * SETUP (owner, once — do NOT do any of this from the repository)
+ * ======================================================================
+ *
+ *  1. Create the bot with @BotFather and keep the token out of every file.
+ *  2. Create a private group or channel for reports and add the bot to it.
+ *     Get its numeric chat id (e.g. via @getidsbot, or getUpdates once).
+ *  3. script.google.com -> New project -> paste this file.
+ *  4. Project Settings -> Script Properties, add exactly these two:
+ *         TELEGRAM_BOT_TOKEN   <the token from BotFather>            SECRET
+ *         TELEGRAM_CHAT_ID     <the numeric chat id, e.g. -100...>   SENSITIVE
+ *     Nothing else is read. This file has no third property, and setting one
+ *     would do nothing.
+ *  5. Deploy -> New deployment -> Web app
+ *         Execute as:        Me
+ *         Who has access:    Anyone
+ *  6. Copy the /exec URL into report.properties as REPORT_ENDPOINT.
+ *     That file is untracked. Never commit it and never paste the URL into an
+ *     issue, a commit message or a screenshot.
+ *
+ * Rotating the token later is a Script Properties edit and needs no app release.
+ * That is the main reason the token is here rather than anywhere nearer the app.
+ *
+ * ======================================================================
+ * ABUSE
+ * ======================================================================
+ *
+ * The endpoint is unauthenticated by design — the frozen flow works with no
+ * account, and requiring one would exclude exactly the listeners most likely to
+ * be reporting a problem. So spam control belongs here, not in the APK:
+ *
+ *   - a per-execution size cap, below;
+ *   - a coarse global rate limit via CacheService, below;
+ *   - Apps Script's own daily UrlFetch quota as a hard ceiling.
+ *
+ * A shared secret is deliberately NOT implemented — not as a client-sent header,
+ * and not as a Script Property either. A secret shipped in an APK is not a
+ * secret, and a property that nothing reads is worse than no property at all: it
+ * reads as protection that is not there. Per-request authentication here would
+ * have to be a signed request, which is a different design.
+ */
+
+var MAX_MESSAGE = 2000;
+var MAX_FIELD = 200;
+
+/**
+ * Telegram rejects a sendMessage over 4096 characters, and escaping *expands*:
+ * a message of 2000 ampersands becomes 10000 characters of `&amp;`. Left alone
+ * that is a message the listener can never send — every attempt, retry included,
+ * would come back as the frozen error, and the cause would be invisible to them.
+ *
+ * So the budgets below are on the ESCAPED length, and the worst case adds up.
+ * Recomputed when the diagnostics moved to one labelled line each — the six labels
+ * cost about what the three `<code>` wrappers did, so the budgets did not have to
+ * move:
+ *
+ *     message                        2700
+ *     6 diagnostics, 200 each        1200
+ *     longest category label           24   ("Музыка остановилась сама")
+ *     6 labels + <b></b> + newlines    87
+ *                                   ------
+ *                                     4011   < 4096, measured, 85 to spare
+ *
+ * Ordinary input never reaches the budgets — the real diagnostics are all under 60
+ * characters and a normal message escapes to its own length — so they bite only on
+ * input designed to break the send.
+ *
+ * If a label is ever reworded or a seventh line added, re-measure: the headroom is
+ * 85 characters and a long new label eats it.
+ */
+var MAX_MESSAGE_HTML = 2700;
+var MAX_FIELD_HTML = 200;
+
+var CATEGORIES = {
+  playback_wont_start: 'Музыка не запускается',
+  stopped_by_itself: 'Музыка остановилась сама',
+  headphones: 'Проблема с наушниками',
+  ui: 'Проблема с интерфейсом',
+  other: 'Другое'
+};
+
+function doPost(e) {
+  try {
+    if (!e || !e.parameter) return fail('no_body');
+
+    if (isRateLimited()) return fail('rate_limited');
+
+    var category = String(e.parameter.category || '');
+    if (!CATEGORIES.hasOwnProperty(category)) return fail('bad_category');
+
+    var report = {
+      category: category,
+      message: clamp(e.parameter.message, MAX_MESSAGE),
+      app_version: clamp(e.parameter.app_version, MAX_FIELD),
+      device: clamp(e.parameter.device, MAX_FIELD),
+      android: clamp(e.parameter.android, MAX_FIELD),
+      network: clamp(e.parameter.network, MAX_FIELD),
+      last_error: clamp(e.parameter.last_error, MAX_FIELD),
+      stream: clamp(e.parameter.stream, MAX_FIELD)
+    };
+
+    // The whole point of the endpoint: this must throw or return false rather
+    // than let a failure be reported to the listener as a success.
+    sendToTelegram(format(report));
+
+    return ok();
+  } catch (err) {
+    // The reason is for the log, not for the listener — the app draws one frozen
+    // sentence for every failure. Never echo the request back in an error, and
+    // never the token: `UrlFetchApp.fetch` puts the whole URL in the message when
+    // it throws, and the URL contains the bot token. See redact().
+    console.error('report failed: ' + redact(err));
+    return fail('send_failed');
+  }
+}
+
+/** A GET is a health check, so the deployment can be verified without posting. */
+function doGet() {
+  return json({ ok: true, service: 'myata-report', version: 1 });
+}
+
+function sendToTelegram(text) {
+  var props = PropertiesService.getScriptProperties();
+  var token = props.getProperty('TELEGRAM_BOT_TOKEN');
+  var chatId = props.getProperty('TELEGRAM_CHAT_ID');
+  if (!token || !chatId) throw new Error('endpoint is not configured');
+
+  var response = UrlFetchApp.fetch(
+    'https://api.telegram.org/bot' + token + '/sendMessage',
+    {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({
+        chat_id: chatId,
+        text: text,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true
+      }),
+      muteHttpExceptions: true
+    }
+  );
+
+  var code = response.getResponseCode();
+  var body = response.getContentText();
+  if (code < 200 || code >= 300) {
+    // Never let the token reach a log line. The URL contains it, so only the
+    // status and Telegram's own description are recorded.
+    throw new Error('telegram http ' + code + ': ' + clamp(body, 300));
+  }
+  var parsed = JSON.parse(body);
+  if (!parsed.ok) throw new Error('telegram rejected: ' + clamp(parsed.description, 300));
+}
+
+/**
+ * One diagnostic per labelled line.
+ *
+ * The first version packed the six values into three `<code>` lines with a middot
+ * between them, which is compact and unreadable: you had to remember that the
+ * second half of line three was the last error. Six labelled lines cost about the
+ * same characters and can be read without knowing the format.
+ *
+ * Nothing about *what* is sent changed - the same six values from the same
+ * snapshot, still escaped through the same budgets. Only their arrangement.
+ */
+function format(r) {
+  var field = function (v) { return escaped(v, MAX_FIELD_HTML); };
+  return [
+    '<b>' + escapeHtml(CATEGORIES[r.category]) + '</b>',
+    r.message ? '' : null,
+    r.message ? escaped(r.message, MAX_MESSAGE_HTML) : null,
+    '',
+    'Версия приложения: ' + field(r.app_version),
+    'Устройство: ' + field(r.device),
+    'Android: ' + field(r.android),
+    'Сеть: ' + field(r.network),
+    'Последняя ошибка: ' + field(r.last_error),
+    'Поток: ' + field(r.stream)
+  ].filter(function (line) { return line !== null; }).join('\n');
+}
+
+/**
+ * A coarse ceiling, not a per-listener limit.
+ *
+ * There is no identity to key on and there must not be one - the request carries
+ * nothing that identifies a device, by design. So this caps total intake per
+ * minute, which is enough to stop a script pointed at the URL from filling the
+ * chat, and is not enough to stop a determined one. If that ever happens the
+ * answer is to rotate the deployment URL, which is a one-line change to
+ * report.properties and one app release.
+ */
+function isRateLimited() {
+  var cache = CacheService.getScriptCache();
+  var key = 'rate:' + Math.floor(Date.now() / 60000);
+  var count = Number(cache.get(key) || 0) + 1;
+  cache.put(key, String(count), 120);
+  return count > 60;
+}
+
+function clamp(value, max) {
+  var s = value == null ? '' : String(value);
+  return s.length > max ? s.substring(0, max) : s;
+}
+
+/**
+ * Removes the two Script Properties from anything on its way to a log line.
+ *
+ * This is not paranoia about our own code — it is about somebody else's. The
+ * Telegram URL carries the bot token in its path, and when `UrlFetchApp.fetch`
+ * fails it throws with the whole URL in the message ("Address unavailable:
+ * https://api.telegram.org/bot<TOKEN>/sendMessage"). Logging that error verbatim
+ * writes the token into the execution log, where it lives as long as the project
+ * does and is visible to anyone with access to it.
+ *
+ * Both known values are removed by identity, and anything token-shaped is removed
+ * by pattern as well, so a future call that builds its own URL cannot reopen this.
+ */
+function redact(text) {
+  var s = String(text == null ? '' : text);
+  var props = PropertiesService.getScriptProperties();
+  var token = props.getProperty('TELEGRAM_BOT_TOKEN');
+  var chatId = props.getProperty('TELEGRAM_CHAT_ID');
+  if (token) s = s.split(token).join('<token>');
+  if (chatId) s = s.split(chatId).join('<chat>');
+  return s.replace(/\d{6,}:[A-Za-z0-9_-]{20,}/g, '<token>');
+}
+
+/**
+ * Escape, then cut to an escaped-length budget without splitting an entity.
+ *
+ * Truncating escaped HTML naively can leave a trailing `&am`, which Telegram
+ * rejects as a malformed entity — turning a length problem into a parse problem
+ * and failing the send just as completely. Stripping the trailing fragment is
+ * what makes the cut safe.
+ */
+function escaped(value, max) {
+  var e = escapeHtml(value);
+  if (e.length <= max) return e;
+  return e.substring(0, max).replace(/&[#a-zA-Z0-9]*$/, '');
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function ok() {
+  return json({ ok: true });
+}
+
+function fail(reason) {
+  return json({ ok: false, error: reason });
+}
+
+function json(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}

@@ -67,6 +67,19 @@
               occupied, so the label stays centred exactly where it was and nothing
               frozen moves. `PlayerLayoutTest` measures that rather than trusting it.
 
+              ## The glyph is lifted onto the app's shared header line
+
+              PLAYER's header is a different frozen component from every other
+              section's, and the two disagree: a control centred in this 47dp row at
+              y=16 lands at 39.5, while one centred in the 64dp `Header - TopAppBar`
+              that HOME, COLLECTION and ABOUT US use lands at 32. Measured, the
+              ellipsis sat 19.5px below the Profile control on the same device.
+
+              `paddingBottom` lifts the drawn glyph the 7.5dp onto 32 and moves
+              nothing else: the 32x39 box keeps its position, so the touch target and
+              the popup's anchor are exactly as they were. dimens.xml carries the
+              arithmetic.
+
               It opens `Menu / Плеер` with **one** row, Таймер сна. The other
               three - Найти трек, Сообщить о проблеме, История эфира - do not
               exist, and are absent rather than drawn inert: see
@@ -87,6 +100,7 @@
                 android:layout_gravity="end|center_vertical"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/player_overflow_description"
+                android:paddingBottom="@dimen/player_header_action_glyph_lift"
                 android:scaleType="center"
                 android:src="@drawable/ic_player_overflow" />
         </FrameLayout>

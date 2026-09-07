@@ -484,14 +484,16 @@
     <color name="player_header_action">#42474E</color>
 
     <!--
-      The disabled `Установить` on sleep-timer-custom-invalid, and the disabled
-      minus at zero.
+      `disabledContainer` / `disabledContent` from screens-3.6.6/spec/tokens.mjs -
+      both marked PROPOSED there, because no canonical screen has a disabled
+      control.
 
-      `disabledContainer` / `disabledContent` from
-      screens-3.6.6/spec/tokens.mjs - both marked PROPOSED there, because no
-      canonical screen has a disabled control. They are used here and nowhere else.
+      Three frozen frames draw them: `Установить` and the minus at zero on
+      sleep-timer-custom-invalid, and `Отправить` / `Отправляем…` on report-empty
+      and report-sending. They were named `sleep_timer_disabled_*` while the timer
+      was the only caller; G3 is the second, so they carry the token's own name.
     -->
-    <color name="sleep_timer_disabled_container">#E8EAED</color>
-    <color name="sleep_timer_disabled_content">#8E969E</color>
+    <color name="disabled_container">#E8EAED</color>
+    <color name="disabled_content">#8E969E</color>
 
 </resources>

@@ -1,0 +1,687 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Сообщить о проблеме (G3).
+
+  report-empty 2517:2129 / report-filled 2517:2172 / report-sending 2517:2215 /
+  report-error 2517:2258 / report-success 2517:2317, and their dark twins
+  2517:3096 / 2517:3139 / 2517:3182 / 2517:3225 / 2517:3284. All 390 wide.
+
+  ## Five frozen frames, one layout
+
+  The four form states differ by three things and nothing else: which category row
+  carries the selected treatment, whether the error banner is present, and what the
+  button says and is filled with. Drawing them as four layouts would be four places
+  for the diagnostics card to drift. `report-success` is a different arrangement
+  rather than a different state of the same one, so it is a sibling container that
+  replaces the form - not a fifth visibility flag inside it.
+
+  ## Geometry
+
+  Every gap is the difference between two absolute Figma offsets, so the screen can
+  be checked by adding up rather than trusted. The arithmetic is in dimens.xml
+  beside the values; the anchors it lands are:
+
+      band            0..64      prompt        80..102
+      categories    110..462     descLabel    478..500
+      Input         508..628     Diagnostics  644..882
+      Button        906..958     (error: banner 906..962, button 978..1030)
+
+  The scrolling content then ends 24 below the button, in either state - see
+  `report_form_bottom_space`. That 24 is the one number here the frozen frame does
+  not contain, because a Figma frame has nothing below its last element and a phone
+  has a navigation bar.
+
+  The five category rows sit on an **8dp** gap, the same one every other list in
+  this app uses. The frozen frame stacks them at a 64 pitch on a 64-high row - a
+  zero gap - and G3 shipped that literally before the owner reversed it as too
+  tight. dimens.xml carries the arithmetic and the reason.
+
+  ## The rows are the appearance screen's component
+
+  `bg_profile_row` / `bg_settings_row_selected` / `ic_settings_check` and the
+  `profile_row_*` insets, exactly as `settings-appearance` uses them: r12 `surface`
+  plate, 1dp `outline` that becomes 2dp `primary` when chosen, 24dp glyph at 16,
+  label at 56, check at 318. Single-select is not a view state the framework
+  tracks, so the fragment swaps the background and toggles the check - the same
+  decision, and the same two drawables, G1 made.
+
+  The check is present on every row and toggled rather than being added and
+  removed, so a selection cannot change any row's measured height.
+-->
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <LinearLayout
+        android:id="@+id/report_root"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/background"
+        android:orientation="vertical"
+        tools:context=".fragments.ReportProblemFragment">
+
+        <!--
+          `Header - TopAppBar` 390x64, identical to the settings, profile and auth
+          bands down to the dimens, which is why it reuses theirs.
+        -->
+        <LinearLayout
+            android:id="@+id/report_header"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/profile_header_height"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/profile_back_margin_start"
+            android:paddingEnd="@dimen/profile_margin">
+
+            <ImageView
+                android:id="@+id/report_back"
+                android:layout_width="@dimen/profile_back_size"
+                android:layout_height="@dimen/profile_back_size"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/report_back_description"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_profile_back" />
+
+            <TextView
+                android:id="@+id/report_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/profile_title_margin_start"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/report_title"
+                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.24_32"
+                android:textColor="@color/text_heading" />
+        </LinearLayout>
+
+        <!-- ============================ THE FORM ============================ -->
+
+        <ScrollView
+            android:id="@+id/report_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:fillViewport="true"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/report_form"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/profile_margin"
+                android:paddingEnd="@dimen/profile_margin"
+                android:paddingBottom="@dimen/report_form_bottom_space">
+
+                <!-- `prompt` 358x22 at y=80; the band ends at 64. -->
+                <TextView
+                    android:id="@+id/report_prompt"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/report_prompt_margin_top"
+                    android:gravity="center_vertical"
+                    android:minHeight="@dimen/profile_account_label_box"
+                    android:text="@string/report_prompt"
+                    android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                    android:textColor="@color/text_heading" />
+
+                <!--
+                  `Row / Музыка не запускается` 2517:2134, 358x64 at y=110, and the
+                  four below it on a 72 pitch. The first takes 8 below the prompt and
+                  so does every one after it - see dimens.xml for why the frozen zero
+                  gap was reversed.
+
+                  Written out rather than included five times: `settings-appearance`
+                  writes its three the same way, and an <include> inside a
+                  data-binding layout does not yield a binding for the row's own
+                  children, which is what every one of these needs.
+                -->
+                <LinearLayout
+                    android:id="@+id/report_category_0"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/report_category_row_height"
+                    android:layout_marginTop="@dimen/report_category_first_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/report_category_icon_margin_start"
+                    android:paddingEnd="@dimen/report_category_icon_margin_start">
+
+                    <ImageView
+                        android:id="@+id/report_category_0_icon"
+                        android:layout_width="@dimen/report_category_icon_size"
+                        android:layout_height="@dimen/report_category_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_report_play_note" />
+
+                    <TextView
+                        android:id="@+id/report_category_0_label"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/report_category_label_margin_start"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/profile_account_label_box"
+                        android:text="@string/report_category_playback_wont_start"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                        android:textColor="@color/profile_row_label" />
+
+                    <ImageView
+                        android:id="@+id/report_category_0_check"
+                        android:layout_width="@dimen/report_category_check_size"
+                        android:layout_height="@dimen/report_category_check_size"
+                        android:contentDescription="@string/report_category_selected_description"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_settings_check"
+                        android:visibility="invisible" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/report_category_1"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/report_category_row_height"
+                    android:layout_marginTop="@dimen/report_category_row_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/report_category_icon_margin_start"
+                    android:paddingEnd="@dimen/report_category_icon_margin_start">
+
+                    <ImageView
+                        android:id="@+id/report_category_1_icon"
+                        android:layout_width="@dimen/report_category_icon_size"
+                        android:layout_height="@dimen/report_category_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_report_pause" />
+
+                    <TextView
+                        android:id="@+id/report_category_1_label"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/report_category_label_margin_start"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/profile_account_label_box"
+                        android:text="@string/report_category_stopped_by_itself"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                        android:textColor="@color/profile_row_label" />
+
+                    <ImageView
+                        android:id="@+id/report_category_1_check"
+                        android:layout_width="@dimen/report_category_check_size"
+                        android:layout_height="@dimen/report_category_check_size"
+                        android:contentDescription="@string/report_category_selected_description"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_settings_check"
+                        android:visibility="invisible" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/report_category_2"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/report_category_row_height"
+                    android:layout_marginTop="@dimen/report_category_row_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/report_category_icon_margin_start"
+                    android:paddingEnd="@dimen/report_category_icon_margin_start">
+
+                    <ImageView
+                        android:id="@+id/report_category_2_icon"
+                        android:layout_width="@dimen/report_category_icon_size"
+                        android:layout_height="@dimen/report_category_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_report_headphone" />
+
+                    <TextView
+                        android:id="@+id/report_category_2_label"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/report_category_label_margin_start"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/profile_account_label_box"
+                        android:text="@string/report_category_headphones"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                        android:textColor="@color/profile_row_label" />
+
+                    <ImageView
+                        android:id="@+id/report_category_2_check"
+                        android:layout_width="@dimen/report_category_check_size"
+                        android:layout_height="@dimen/report_category_check_size"
+                        android:contentDescription="@string/report_category_selected_description"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_settings_check"
+                        android:visibility="invisible" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/report_category_3"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/report_category_row_height"
+                    android:layout_marginTop="@dimen/report_category_row_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/report_category_icon_margin_start"
+                    android:paddingEnd="@dimen/report_category_icon_margin_start">
+
+                    <ImageView
+                        android:id="@+id/report_category_3_icon"
+                        android:layout_width="@dimen/report_category_icon_size"
+                        android:layout_height="@dimen/report_category_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_report_layout" />
+
+                    <TextView
+                        android:id="@+id/report_category_3_label"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/report_category_label_margin_start"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/profile_account_label_box"
+                        android:text="@string/report_category_interface"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                        android:textColor="@color/profile_row_label" />
+
+                    <ImageView
+                        android:id="@+id/report_category_3_check"
+                        android:layout_width="@dimen/report_category_check_size"
+                        android:layout_height="@dimen/report_category_check_size"
+                        android:contentDescription="@string/report_category_selected_description"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_settings_check"
+                        android:visibility="invisible" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/report_category_4"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/report_category_row_height"
+                    android:layout_marginTop="@dimen/report_category_row_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/report_category_icon_margin_start"
+                    android:paddingEnd="@dimen/report_category_icon_margin_start">
+
+                    <ImageView
+                        android:id="@+id/report_category_4_icon"
+                        android:layout_width="@dimen/report_category_icon_size"
+                        android:layout_height="@dimen/report_category_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_report_question" />
+
+                    <TextView
+                        android:id="@+id/report_category_4_label"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/report_category_label_margin_start"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/profile_account_label_box"
+                        android:text="@string/report_category_other"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                        android:textColor="@color/profile_row_label" />
+
+                    <ImageView
+                        android:id="@+id/report_category_4_check"
+                        android:layout_width="@dimen/report_category_check_size"
+                        android:layout_height="@dimen/report_category_check_size"
+                        android:contentDescription="@string/report_category_selected_description"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_settings_check"
+                        android:visibility="invisible" />
+                </LinearLayout>
+
+                <!-- `descLabel` 358x22 at y=446; the last row ends at 430. -->
+                <TextView
+                    android:id="@+id/report_description_label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/report_desc_label_margin_top"
+                    android:gravity="center_vertical"
+                    android:minHeight="@dimen/profile_account_label_box"
+                    android:text="@string/report_description_label"
+                    android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                    android:textColor="@color/text_heading" />
+
+                <!--
+                  `Input / Описание` 2517:2156, 358x120 at y=476.
+
+                  Fixed height, as frozen: the frame draws a box, not a field that
+                  grows. `gravity="top|start"` so the first line sits at the frozen
+                  16,16 rather than being centred in a 120-tall box, and the field
+                  scrolls internally once the text passes four lines.
+
+                  `maxLength` is ReportPayload.MAX_MESSAGE_LENGTH, stated here as
+                  well so the cap cannot surprise anyone at send time - a message
+                  silently truncated on the way out would be worse than one that
+                  stops accepting characters while it is being written.
+                -->
+                <EditText
+                    android:id="@+id/report_message"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/report_input_height"
+                    android:layout_marginTop="@dimen/report_input_margin_top"
+                    android:background="@drawable/bg_report_input"
+                    android:gravity="top|start"
+                    android:hint="@string/report_description_hint"
+                    android:importantForAutofill="no"
+                    android:inputType="textMultiLine|textCapSentences"
+                    android:maxLength="2000"
+                    android:padding="@dimen/report_input_padding"
+                    android:scrollbars="vertical"
+                    android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.15_22"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_secondary"
+                    tools:ignore="LabelFor" />
+
+                <!--
+                  `Diagnostics` 2517:2162, 358x238 r24 at y=612.
+
+                  The six lines are filled in at runtime from the same
+                  ReportDiagnostics.Snapshot the payload is built from - see that
+                  class for why the card and the wire cannot disagree.
+
+                  Each line is a fixed 24dp box with its text centred, and there
+                  are no gaps between them - the frozen 20-high boxes on a 24 pitch,
+                  expressed in the one form that does not accumulate a rounding
+                  error at 420dpi. dimens.xml carries the arithmetic and the reason.
+                -->
+                <LinearLayout
+                    android:id="@+id/report_diagnostics"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/report_card_margin_top"
+                    android:background="@drawable/bg_report_card"
+                    android:orientation="vertical"
+                    android:paddingStart="@dimen/report_card_padding"
+                    android:paddingTop="@dimen/report_card_padding"
+                    android:paddingEnd="@dimen/report_card_padding"
+                    android:paddingBottom="@dimen/report_diagnostics_padding_bottom">
+
+                    <TextView
+                        android:id="@+id/report_diagnostics_title"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/profile_account_label_box"
+                        android:text="@string/report_diagnostics_title"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                        android:textColor="@color/text_heading" />
+
+                    <TextView
+                        android:id="@+id/report_diagnostics_line_0"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/report_diagnostics_line_height"
+                        android:layout_marginTop="@dimen/report_diagnostics_list_margin_top"
+                        android:gravity="center_vertical"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                        android:textColor="@color/text_secondary"
+                        tools:text="Версия приложения — 3.6.5 (202611)" />
+
+                    <TextView
+                        android:id="@+id/report_diagnostics_line_1"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/report_diagnostics_line_height"
+                        android:gravity="center_vertical"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                        android:textColor="@color/text_secondary"
+                        tools:text="Устройство — Xiaomi Redmi Note 12" />
+
+                    <TextView
+                        android:id="@+id/report_diagnostics_line_2"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/report_diagnostics_line_height"
+                        android:gravity="center_vertical"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                        android:textColor="@color/text_secondary"
+                        tools:text="Android — 14 (API 34)" />
+
+                    <TextView
+                        android:id="@+id/report_diagnostics_line_3"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/report_diagnostics_line_height"
+                        android:gravity="center_vertical"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                        android:textColor="@color/text_secondary"
+                        tools:text="Сеть в момент сбоя — Wi-Fi" />
+
+                    <TextView
+                        android:id="@+id/report_diagnostics_line_4"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/report_diagnostics_line_height"
+                        android:gravity="center_vertical"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                        android:textColor="@color/text_secondary"
+                        tools:text="Последняя ошибка — нет" />
+
+                    <TextView
+                        android:id="@+id/report_diagnostics_line_5"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/report_diagnostics_line_height"
+                        android:gravity="center_vertical"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                        android:textColor="@color/text_secondary"
+                        tools:text="Поток — MYATA" />
+
+                    <!-- `NoticeRule` 326x1 at y=194 inside the card. -->
+                    <View
+                        android:id="@+id/report_diagnostics_rule"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/report_diagnostics_rule_height"
+                        android:layout_marginTop="@dimen/report_diagnostics_rule_margin_top"
+                        android:background="@color/outline" />
+
+                    <TextView
+                        android:id="@+id/report_diagnostics_notice"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/report_diagnostics_line_height"
+                        android:layout_marginTop="@dimen/report_diagnostics_notice_margin_top"
+                        android:gravity="center_vertical"
+                        android:text="@string/report_diagnostics_notice"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                        android:textColor="@color/text_secondary" />
+                </LinearLayout>
+
+                <!--
+                  `Banner / error` 2517:2247, 358x56 at y=874 - report-error only.
+
+                  When it shows, the button moves from 874 to 946: the banner takes
+                  the card's own 24 gap and leaves 16 to the button. The fragment
+                  swaps the button's top margin between the two dimens; both are
+                  named, so neither is a magic number at a call site.
+
+                  `gone` rather than `invisible`, because the frozen resting states
+                  reserve no space for it - report-empty is 950 tall and report-error
+                  is 1022, and the 72 between them is this banner plus its gap.
+                -->
+                <LinearLayout
+                    android:id="@+id/report_error_banner"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/report_banner_height"
+                    android:layout_marginTop="@dimen/report_banner_margin_top"
+                    android:background="@drawable/bg_report_error_banner"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/report_banner_icon_margin_start"
+                    android:paddingEnd="@dimen/report_banner_icon_margin_start"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <ImageView
+                        android:layout_width="@dimen/report_banner_icon_size"
+                        android:layout_height="@dimen/report_banner_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_report_alert" />
+
+                    <TextView
+                        android:id="@+id/report_error_message"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/report_banner_label_margin_start"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/report_diagnostics_line_height"
+                        android:text="@string/report_error_banner"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                        android:textColor="@color/error" />
+                </LinearLayout>
+
+                <!--
+                  `Button` 358x52 r12 at y=874.
+
+                  The FrameLayout is the control rather than a Button, so its fill,
+                  its radius and its label type are the frozen ones instead of the
+                  platform's.
+
+                  No spinner. `report-sending` draws the button with the label
+                  "Отправляем…" and the disabled fill, and nothing else - the word is
+                  the progress state. The auth screens swap a label for an indicator
+                  because their frames have no such label to change; this one does,
+                  and adding an indicator on top of it would put two progress signals
+                  in the same 358x52 box.
+                -->
+                <FrameLayout
+                    android:id="@+id/report_send"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_button_height"
+                    android:layout_marginTop="@dimen/report_button_margin_top"
+                    android:background="@drawable/bg_button_disabled"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:id="@+id/report_send_label"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:text="@string/report_send"
+                        android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.21_28"
+                        android:textColor="@color/disabled_content" />
+
+                </FrameLayout>
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- ========================== report-success ========================== -->
+
+        <!--
+          2517:2317, 390x456. A sibling of the form rather than a state of it: the
+          arrangement is different, not the fill of one control, and the frame has
+          no category list, no field and no diagnostics card to keep alive
+          underneath.
+
+          Terminal. `Готово` leaves the screen; there is no path back to the form,
+          and no ticket number, because there is no ticketing system behind this.
+        -->
+        <LinearLayout
+            android:id="@+id/report_success"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/profile_margin"
+            android:paddingEnd="@dimen/profile_margin"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:id="@+id/report_success_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/report_success_card_margin_top"
+                android:background="@drawable/bg_report_card"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:paddingTop="@dimen/report_success_card_padding_top"
+                android:paddingBottom="@dimen/report_success_card_padding_bottom">
+
+                <!-- `Badge` 64x64 r32 `primary`, centred, with a 24 `on_primary` check. -->
+                <FrameLayout
+                    android:id="@+id/report_success_badge"
+                    android:layout_width="@dimen/report_success_badge_size"
+                    android:layout_height="@dimen/report_success_badge_size"
+                    android:background="@drawable/bg_report_success_badge">
+
+                    <ImageView
+                        android:layout_width="@dimen/report_success_badge_icon_size"
+                        android:layout_height="@dimen/report_success_badge_icon_size"
+                        android:layout_gravity="center"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_report_check" />
+                </FrameLayout>
+
+                <TextView
+                    android:id="@+id/report_success_headline"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/report_success_headline_height"
+                    android:layout_marginTop="@dimen/report_success_headline_margin_top"
+                    android:gravity="center"
+                    android:text="@string/report_success_headline"
+                    android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.24_32"
+                    android:textColor="@color/text_heading" />
+
+                <!--
+                  Owner correction D5. The frozen body reads "Сообщение отправлено.
+                  Если понадобится, / мы ответим в Telegram." - and there is no
+                  Telegram handle, no contact field and no reply channel anywhere in
+                  this flow, so the second half is a promise the app cannot keep. The
+                  two-line shape, the type and the colour are the frame's; the
+                  sentence is true instead of false, and the gaps around it are wider
+                  than the frame's by owner decision - see dimens.xml.
+                -->
+                <TextView
+                    android:id="@+id/report_success_body_1"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/report_success_body_line_height"
+                    android:layout_marginTop="@dimen/report_success_body_margin_top"
+                    android:gravity="center"
+                    android:text="@string/report_success_body_1"
+                    android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.15_22"
+                    android:textColor="@color/text_secondary" />
+
+                <TextView
+                    android:id="@+id/report_success_body_2"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/report_success_body_line_height"
+                    android:gravity="center"
+                    android:text="@string/report_success_body_2"
+                    android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.15_22"
+                    android:textColor="@color/text_secondary" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/report_success_done"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/profile_button_height"
+                android:layout_marginTop="@dimen/report_success_button_margin_top"
+                android:background="@drawable/bg_profile_button_primary"
+                android:gravity="center"
+                android:text="@string/report_success_done"
+                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.21_28"
+                android:textColor="@color/profile_primary_button_label" />
+        </LinearLayout>
+    </LinearLayout>
+</layout>

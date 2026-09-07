@@ -6,13 +6,17 @@
   back button, the frame has no bottom bar, and MainActivity hides the bar for
   this destination.
 
-  ## Two sections, not five
+  ## Four sections of five, and not every row inside them
 
   The frozen frame draws five - Аккаунт, Внешний вид, Воспроизведение,
-  Интеграции, Прочее - and this screen draws the first two. The other three name
-  features this app does not have: stream quality, a sleep timer, Last.fm, a
-  report form and an about-app screen are each their own slice, and none of them
-  exists yet.
+  Интеграции, Прочее. G1 drew the first two, G2 added Воспроизведение with
+  `Таймер сна`, and G3 adds Прочее with `Сообщить о проблеме`.
+
+  Интеграции is still absent entirely, and so are `Качество потока` and
+  `О приложении` inside the two sections that are now drawn. Stream quality,
+  Last.fm and an about-app screen do not exist, and each arrives with the slice
+  that makes its row honest. The rule has not moved since G1 - only the membership
+  of its two lists.
 
   That is deliberately *not* the treatment `Row / Аватар` gets on
   profile-authenticated, which is drawn inert with a chevron that does nothing.
@@ -325,6 +329,87 @@
                         android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
                         android:textColor="@color/text_secondary"
                         tools:text="Осталось 24 мин" />
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_account_chevron_size"
+                        android:layout_height="@dimen/profile_account_chevron_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_profile_chevron" />
+                </LinearLayout>
+
+                <!--
+                  `Section / Прочее` 2517:2795, 358x20 at y=604 (G3).
+
+                  The frozen frame puts `Интеграции` and its `Last.fm` row between
+                  this and the section above. Last.fm does not exist, so it is absent
+                  and `Прочее` follows `Воспроизведение` directly - keeping its own 20
+                  gap, exactly as `Воспроизведение` did when `Качество потока` was
+                  skipped. No absolute Figma y is faked and nothing above moves.
+                -->
+                <TextView
+                    android:id="@+id/settings_section_other"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/settings_section_margin_top"
+                    android:gravity="center_vertical"
+                    android:minHeight="@dimen/auth_label_box"
+                    android:text="@string/settings_section_other"
+                    android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                    android:textColor="@color/profile_section_label" />
+
+                <!--
+                  `Row / Сообщить о проблеме` 2517:2796, 358x64 at y=632.
+
+                  **No value.** It is the one row in the frozen frame drawn without
+                  one - there is no fact about a report form to state on the right -
+                  which is why its label runs to 254 where every other label stops at
+                  136. Nothing is invented to fill the gap.
+
+                  The section's second frozen row, `О приложении - 3.6.6`, is absent:
+                  there is no about-app screen, and the rule that has governed this
+                  file since G1 is that each row arrives with the slice that makes it
+                  honest.
+
+                  It is here as well as on the PLAYER overflow because both frozen
+                  frames draw it, and because a listener whose radio will not start is
+                  by definition not mid-playback - the same argument the sleep timer's
+                  own frame note makes for being in both places. Both open the same
+                  destination in the same state.
+
+                  Visibility is decided at runtime: a build with no report endpoint
+                  hides this row, for the reason SettingsFragment gives.
+                -->
+                <LinearLayout
+                    android:id="@+id/settings_row_report_problem"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/profile_row_height"
+                    android:layout_marginTop="@dimen/profile_row_margin_top"
+                    android:background="@drawable/bg_profile_row"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/profile_row_icon_margin_start"
+                    android:paddingEnd="@dimen/profile_row_icon_margin_start">
+
+                    <ImageView
+                        android:layout_width="@dimen/profile_row_icon_size"
+                        android:layout_height="@dimen/profile_row_icon_size"
+                        android:contentDescription="@null"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_settings_report" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/profile_row_label_margin_start"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/profile_account_label_box"
+                        android:text="@string/report_title"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
+                        android:textColor="@color/profile_row_label" />
 
                     <ImageView
                         android:layout_width="@dimen/profile_account_chevron_size"

@@ -109,9 +109,10 @@ G1 briefly retargeted the profile control itself, and G1a briefly put `Наст�
 on the PLAYER and COLLECTION overflows. Both were withdrawn; those menus are for
 their own screens' actions.
 
-Settings renders **only** the two sections whose features exist — Аккаунт and
-Внешний вид. Stream quality, the sleep timer, Last.fm, report-a-problem and the
-about-app row arrive with their own slices rather than as inert rows.
+Settings renders **only** the sections whose features exist — Аккаунт and Внешний
+вид at G1, Воспроизведение with the sleep timer at G2, Прочее with
+report-a-problem at G3. Stream quality, Last.fm and the about-app row arrive with
+their own slices rather than as inert rows.
 
 The appearance is Системная / Светлая / Тёмная, stored in `ThemeStore`
 (`myata_appearance`), applied through **`MainActivity`'s own delegate**
@@ -128,4 +129,18 @@ system rather than the choice. Full record:
 
 New design, Light / Dark / System, new screens, auth / profile / settings, cloud favorites, Supabase. The playback fixes already in `main` ship as part of the same 3.6.6 release. Each step needs explicit owner approval.
 
-This heading used to end "not started", which stopped being true some time ago and is now contradicted two sections above: A-F, G-A2..G-A8 and G1 have landed. What remains of the list is Sleep Timer, Last.fm, Report a problem, stream quality, the avatar picker (G5, blocked on artwork) and Android Auto.
+This heading used to end "not started", which stopped being true some time ago and is now contradicted two sections above: A-F, G-A2..G-A8, G1, G2 (Sleep Timer) and G3 (Report a problem) have landed. What remains of the list is Last.fm, stream quality, Найти трек, История эфира, the avatar picker (G5, blocked on artwork) and Android Auto.
+
+**G3 · Сообщить о проблеме** ships the five frozen report frames behind both frozen
+entry points, and restores the Player overflow to its frozen 260×160 geometry — the
+padding debt G2 recorded is discharged. It is **gated on an endpoint that does not
+exist yet**: `report.properties` → `BuildConfig.REPORT_ENDPOINT`, and a build
+without it draws neither entry point. Not mergeable until the endpoint is deployed
+and live-validated in **both** directions - a real send arriving, and a deliberately
+broken one producing the error state rather than a false "Спасибо!". Full record:
+[REPORT-PROBLEM-3.6.6.md](REPORT-PROBLEM-3.6.6.md); endpoint proposal:
+[tools/report-endpoint/](../tools/report-endpoint/).
+
+It is also the intended way to collect evidence for **issue #15**: `LastPlaybackError`
+keeps the most recent Media3 error code in memory so the diagnostics card can carry
+it off the device, which is the thing that has been missing.

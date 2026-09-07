@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Banner / error` on report-error 2517:2247 - 358x56, r12, `surface` fill on a
+  1dp **`error`** stroke.
+
+  The fill is the ordinary surface, not an error tint: the frozen banner is a
+  normal plate outlined in the error colour, with the colour carried by the stroke,
+  the glyph and the sentence. A tinted fill would be a stronger alarm than the
+  design draws for something the listener can fix with one tap.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/surface" />
+    <stroke
+        android:width="@dimen/report_banner_stroke"
+        android:color="@color/error" />
+    <corners android:radius="@dimen/report_banner_radius" />
+</shape>

@@ -325,6 +325,35 @@
          because every action behind it belongs to a later phase. -->
     <dimen name="player_header_action_width">32dp</dimen>
     <dimen name="player_header_action_height">39dp</dimen>
+    <!--
+      What lifts the ellipsis onto the same line as every other trailing header
+      control in the app.
+
+      The two headers are different frozen components and they disagree by 7.5dp:
+
+          HOME / COLLECTION / ABOUT US   `Header - TopAppBar`      64 at y=0
+                                          40 control centred      -> centre 32
+          PLAYER                         `Mobile Header (Subtle)`  47 at y=16
+                                          39 control centred      -> centre 39.5
+
+      Measured on the API 24 emulator at 420dpi before this: the Profile control
+      sat at 146.5px and the ellipsis at 166px - 19.5px, exactly the predicted
+      7.5dp. Owner decision is to align on the Profile control.
+
+      The lift is done with padding rather than by moving the box, so the 32x39
+      touch target, its position and the popup's anchor are all untouched and only
+      the drawn glyph moves:
+
+          box top in the header      (47 - 39) / 2            =  4
+          content box after padding  39 - 15                  = 24
+          glyph centre               4 + 24 / 2               = 16
+          plus the header's own margin                        + 16
+                                                              = 32, the shared anchor
+
+      The 24dp drawable then exactly fills the 24dp content box, so `scaleType`
+      centre neither scales nor clips it.
+    -->
+    <dimen name="player_header_action_glyph_lift">15dp</dimen>
     <!-- The swipe dots abut the header row: it ends at 63 and they start at 63.
          They end at 73 and the page starts at 79, so 6 between. -->
     <!--
@@ -905,31 +934,43 @@
       trailing value at x=160, w=70 - all relative to the row, and all straight out
       of screens-3.6.6/spec/primitives.mjs:184.
 
-      ## The bottom padding is TEMPORARY, and is not the frozen number
+      ## The bottom padding is the frozen 50 again (G3)
 
-      The frozen bottom padding is **50**, stated in that file - "canonical
-      'Menu / Плеер' is 264 tall for 4 rows: 10 top, 52 pitch, 50 bottom" - and
-      reproduced identically by the two-row `Menu / Коллекция` at 260x160.
+      The frozen vertical rhythm is "10 top, 52 pitch, 50 bottom", stated in that
+      file and reproduced identically by the two-row `Menu / Коллекция` at 260x160.
 
-      This menu ships **10 top / 10 bottom** instead, by owner decision, for as
-      long as it carries only Таймер сна. The 50 belongs to the geometry of the
-      complete four-row menu; under a single row it is 40 of unexplained space
-      below one 48dp line and reads as an unfinished surface rather than as a
-      design. Everything else frozen is untouched - the 260 width, the 238x48 row,
-      the 52 pitch, the r20, the typography and the colours - and the container
-      hugs the one row it has.
+      G2 shipped **10 / 10** by owner decision, for as long as the menu carried a
+      single row: under one row the 50 is 40dp of unexplained space below one 48dp
+      line. That was recorded as temporary and as a debt against the next Player
+      action, in this file, in menu_player_overflow.xml and in
+      docs/SLEEP-TIMER-3.6.6.md §1 and §9 - "**Restoring
+      `player_overflow_menu_pad_bottom` to 50dp is part of shipping the next Player
+      action.**"
 
-      **When the other three actions land, restore
-      `player_overflow_menu_pad_bottom` to 50dp** and the frozen geometry is whole
-      again. `SleepTimerSurfacesTest` measures the temporary value, so this cannot
-      be forgotten quietly: adding a second row without restoring the padding
-      fails there. See docs/SLEEP-TIMER-3.6.6.md.
+      G3 is that action. `Сообщить о проблеме` is the second of the frozen four, so
+      the padding is back to 50 and the geometry is whole: 10 + 2x52 + 46 = **160**,
+      which is the frozen two-row menu exactly. `SleepTimerSurfacesTest` measured
+      the temporary 68 and now measures the 160, which is how the debt was made
+      impossible to forget quietly.
+
+      The other two rows - Найти трек, История эфира - are still absent rather than
+      inert, and the height formula stays honest for them: four rows would be 264.
     -->
     <dimen name="player_overflow_menu_width">260dp</dimen>
     <dimen name="player_overflow_menu_radius">20dp</dimen>
     <dimen name="player_overflow_menu_pad_top">10dp</dimen>
-    <!-- TEMPORARY: the frozen value is 50dp - see the note above. -->
-    <dimen name="player_overflow_menu_pad_bottom">10dp</dimen>
+    <dimen name="player_overflow_menu_pad_bottom">50dp</dimen>
+    <!--
+      The one-row menu's bottom padding, for a build with no report endpoint, where
+      `Сообщить о проблеме` is absent and the menu is G2's again.
+
+      This is not a second opinion about the frozen 50. It is G2's owner decision
+      applied to the surface it was made about: under a single 48dp row the 50 is
+      40dp of unexplained space and reads as an unfinished menu. Two rows earn the
+      frozen number; one does not. PlayerOverflowMenu picks between them by how many
+      rows it is actually drawing, so neither value can be applied to the wrong menu.
+    -->
+    <dimen name="player_overflow_menu_pad_bottom_single_row">10dp</dimen>
     <dimen name="player_overflow_row_inset">11dp</dimen>
     <dimen name="player_overflow_row_height">48dp</dimen>
     <dimen name="player_overflow_row_gap">4dp</dimen>
@@ -980,5 +1021,172 @@
          no shadow node - it is a flat surface on a 1px outline - so this is only
          enough lift to separate the window, not a drawn elevation. -->
     <dimen name="player_overflow_elevation">8dp</dimen>
+
+    <!--
+      Сообщить о проблеме (G3). report-empty 2517:2129 / report-filled 2517:2172 /
+      report-sending 2517:2215 / report-error 2517:2258 / report-success 2517:2317
+      and their dark twins, 390 wide with the usual 16 margin and 358 content.
+
+      Every gap below is the difference between two absolute Figma offsets, so the
+      screen adds up rather than being trusted:
+
+          band              0..64      (profile_header_height, shared)
+          prompt            80..102    (16 below the band)
+          category rows     110..430   (8 below the prompt, then 64 pitch)
+          descLabel         446..468   (16 below the last row)
+          Input             476..596   (8 below the label)
+          Diagnostics       612..850   (16 below the input)
+          Button            874..926   (24 below the card)
+          Banner / error    874..930   (error only; the button then sits at 946)
+
+      ## The category rows are on the app's 8dp rhythm, not the frozen zero gap
+
+      The frozen frame stacks five 64-high rows on a 64 pitch - a zero gap, so the
+      block reads as one slab. G3 shipped that literally (owner decision D6) and it
+      was too tight on a real screen, so the owner reversed it: the rows now take
+      the same 8dp between plates that every other list in this app uses -
+      `profile_row_margin_top` on Settings, the profile and the appearance screen.
+
+      8 rather than 10, from the range the owner gave, because 8 is the number the
+      design system already has. A 10 here would be a sixth spacing value that
+      exists only on this screen.
+
+      Pitch is therefore 72, and everything below the list moves down by 32:
+
+          categories  110..462   (was 110..430)
+          descLabel   478..500
+          Input       508..628
+          Diagnostics 644..882
+          Button      906..958
+    -->
+    <dimen name="report_prompt_margin_top">16dp</dimen>
+    <dimen name="report_category_first_margin_top">8dp</dimen>
+    <dimen name="report_category_row_margin_top">8dp</dimen>
+    <dimen name="report_category_row_height">64dp</dimen>
+    <dimen name="report_category_row_radius">12dp</dimen>
+    <dimen name="report_category_icon_size">24dp</dimen>
+    <dimen name="report_category_icon_margin_start">16dp</dimen>
+    <dimen name="report_category_label_margin_start">16dp</dimen>
+    <dimen name="report_category_check_size">24dp</dimen>
+
+    <dimen name="report_desc_label_margin_top">16dp</dimen>
+    <dimen name="report_input_margin_top">8dp</dimen>
+    <dimen name="report_input_height">120dp</dimen>
+    <dimen name="report_input_radius">12dp</dimen>
+    <dimen name="report_input_stroke">1dp</dimen>
+    <dimen name="report_input_stroke_focused">2dp</dimen>
+    <dimen name="report_input_padding">16dp</dimen>
+
+    <dimen name="report_card_margin_top">16dp</dimen>
+    <dimen name="report_card_radius">24dp</dimen>
+    <dimen name="report_card_stroke">1dp</dimen>
+    <dimen name="report_card_padding">16dp</dimen>
+    <!--
+      ## The diagnostics list is a 24 pitch, not a 20 box with a 4 gap
+
+      Figma authors the six lines as 20-high text boxes at 50, 74, 98, 122, 146 and
+      170 - a 24 pitch with a 4 gap between boxes. Reproduced literally, that is
+      twelve independent `dp` values stacked, and at this project's own QA density
+      (420dpi, 2.625) both 20dp and 4dp land on a half pixel and round **up**: the
+      pitch comes out at 64px against an exact 63, and by the sixth line the list
+      has drifted 2.2dp and the card 3.1dp - which then pushed the Send button off
+      its frozen 874 and the error banner with it.
+
+      So each line is a 24dp box with its text centred, and there are no gaps. The
+      text centres land on 60, 84, 108, 132, 156 and 180 - identical to the frozen
+      boxes' own centres, because a 20 box inside a 24 pitch is centred in it - and
+      24dp is 63px exactly at 2.625, so nothing accumulates. Every anchor below is
+      still Figma's; only the way the same rhythm is expressed has changed.
+
+          title      16..38
+          d0 box     48..72     (text centre 60, as the frozen 50..70 box)
+          d5 box    168..192    (text centre 180)
+          rule      194..195
+          notice    202..226    (text centre 214, as the frozen 204..224 box)
+          card         ..238
+    -->
+    <dimen name="report_diagnostics_list_margin_top">10dp</dimen>
+    <dimen name="report_diagnostics_line_height">24dp</dimen>
+    <dimen name="report_diagnostics_rule_margin_top">2dp</dimen>
+    <dimen name="report_diagnostics_rule_height">1dp</dimen>
+    <dimen name="report_diagnostics_notice_margin_top">7dp</dimen>
+    <dimen name="report_diagnostics_padding_bottom">12dp</dimen>
+
+    <dimen name="report_banner_margin_top">24dp</dimen>
+    <dimen name="report_banner_height">56dp</dimen>
+    <dimen name="report_banner_radius">12dp</dimen>
+    <dimen name="report_banner_stroke">1dp</dimen>
+    <dimen name="report_banner_icon_size">24dp</dimen>
+    <dimen name="report_banner_icon_margin_start">16dp</dimen>
+    <dimen name="report_banner_label_margin_start">12dp</dimen>
+
+    <!-- 24 below the diagnostics card; 16 below the banner when it is showing. -->
+    <dimen name="report_button_margin_top">24dp</dimen>
+    <dimen name="report_button_margin_top_after_banner">16dp</dimen>
+
+    <!--
+      Air under `Отправить`, and under `Отправить ещё раз` with it.
+
+      The frozen frame ends at the button because a Figma frame has nothing below
+      it. A phone does: on API 24 at 420dpi the button finished hard against the
+      system navigation area, which reads as clipped and is an uncomfortable place
+      to put the one irreversible control on the screen.
+
+      It goes on the scrolling content, not on the ScrollView, so it is *reachable*
+      space rather than a dead band - on a short screen the listener can scroll the
+      button clear of the navigation bar instead of finding it pinned beneath it.
+      The window inset is added separately, on the ScrollView, by the fragment.
+    -->
+    <dimen name="report_form_bottom_space">24dp</dimen>
+
+    <!--
+      report-success. Card at 120, 56 below the band - the frozen anchor, unchanged.
+
+      ## The card breathes wider than the frozen frame
+
+      Figma packs it to 236: 32 padding, the 64 badge, 20 to the headline, 12 to the
+      body, 32 below. On a real screen that reads as text pressed into a frame
+      rather than as a confirmation, and the owner asked for air on all four of
+      those gaps. Each grows by one 8dp step - the increment the rest of the app
+      moves in - so the new rhythm is the design system's rather than four numbers
+      picked to look right:
+
+          padding top        32 -> 40
+          badge to headline  20 -> 28
+          headline to body   12 -> 20
+          padding bottom     32 -> 40
+
+      Card 236 -> 268, and `Готово` follows it from 380 to 412 on its unchanged 24
+      gap. Nothing horizontal moves, the badge is still 64 centred at 147, and the
+      type is untouched.
+    -->
+    <dimen name="report_success_card_margin_top">56dp</dimen>
+    <dimen name="report_success_card_padding_top">40dp</dimen>
+    <dimen name="report_success_badge_size">64dp</dimen>
+    <dimen name="report_success_badge_icon_size">24dp</dimen>
+    <!-- badge ends at 104, headline starts at 132. -->
+    <dimen name="report_success_headline_margin_top">28dp</dimen>
+    <!--
+      The frozen text boxes on report-success, applied as heights rather than as
+      minimums.
+
+      Every other label in this app takes `wrap_content` with a `minHeight`,
+      because MyataTypography delivers the line height as line *spacing* and a
+      single line therefore measures short. These two measure **long**: the
+      headline came out at 30.8 against a frozen 32 and each body line at 30.1
+      against a frozen 22, which put the card 15dp over its height and pushed
+      `Готово` off its anchor. The box is what Figma draws, the text is centred in
+      it, and the slack is line spacing rather than glyph, so nothing is clipped.
+
+      These two are the frame's own boxes and did **not** grow with the card: the
+      owner asked for air *around* the text, not taller text.
+    -->
+    <dimen name="report_success_headline_height">32dp</dimen>
+    <dimen name="report_success_body_line_height">22dp</dimen>
+    <!-- headline ends at 164, body starts at 184. -->
+    <dimen name="report_success_body_margin_top">20dp</dimen>
+    <dimen name="report_success_card_padding_bottom">40dp</dimen>
+    <!-- card ends at 388, button at 412. -->
+    <dimen name="report_success_button_margin_top">24dp</dimen>
 
 </resources>

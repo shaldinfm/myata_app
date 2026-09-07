@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  PLAYER overflow menu (G2).
+  PLAYER overflow menu. Two rows as of G3.
 
   Source: canonical `Menu / Плеер` 2444:18763 (206x264, r20, `menuSurface` on a
   1px `menuOutline`), widened to 260 by the frozen proposal
@@ -8,50 +8,52 @@
   is 206 wide, which cannot hold a label plus a trailing value. Widened to 260.
   This is the only change proposed to the existing menu."
 
-  ## One row, not four
+  ## Two rows of the frozen four
 
-  The frozen menu has four: Найти трек, Таймер сна, Сообщить о проблеме, История
-  эфира. Only the sleep timer exists, and this draws only the sleep timer.
+  The frozen menu has four, in this order: Найти трек, **Таймер сна**, **Сообщить
+  о проблеме**, История эфира. The two in bold exist and are drawn; the other two
+  do not exist and are absent rather than inert.
 
-  Four rows with three disabled was rejected for the reason G1 recorded when it
-  left the whole overflow unbuilt and `SettingsLayoutTest` still holds: an inert
-  row is tolerable when it names a feature the app genuinely has and cannot reach
-  yet - `Row / Аватар` on profile-authenticated - and is not tolerable when it
-  names a feature with no implementation behind it at all. Three greyed rows would
-  be three dead controls stating that something exists.
+  That rule is not new here. An inert row is tolerable when it names a feature the
+  app genuinely has and cannot reach yet - `Row / Аватар` on
+  profile-authenticated - and is not tolerable when it names a feature with no
+  implementation behind it at all, because it is then a dead control asserting
+  that something exists. `SleepTimerSurfacesTest` has held it since G2 and still
+  does; only the membership of its two lists moved.
 
-  G1's own objection to drawing this menu was that it would be "a menu with one
-  *unrelated* row" - it was being asked to carry Настройки, which is not one of the
-  player's actions. Таймер сна is one of the four. That is why the slot opens now
-  and did not open then, and it is the same rule the COLLECTION overflow lives
-  under: a menu carries its own screen's actions and nothing else.
+  The two shipping rows keep their frozen **relative order**. Nothing is promoted
+  to close the gap left by Найти трек: the menu is the frozen menu with two rows
+  missing, not a new two-row menu.
 
-  The remaining three rows arrive with the slices that make them true.
+  ## Geometry, and the debt G2 recorded being paid
 
-  ## Geometry
+  All of it from screens-3.6.6/spec/primitives.mjs:184, the frozen menu primitive
+  both menus are authored on:
 
-  All of it from screens-3.6.6/spec/primitives.mjs:184, which is the frozen menu
-  primitive both menus are authored on:
-
-      menu            260 wide, r20, 10 top pad, 50 bottom pad (see below)
+      menu            260 wide, r20, 10 top pad, 50 bottom pad
       row             238x48 at x=11, pitch 52
       icon slot       48 at x=12 in the row, 24 glyph centred in it
       label           x=70, 15/22 Medium
       trailing        x=160, w=70, 14/20 on `primary`
 
-  ## One number here is temporary, and it is the only one
+  G2 shipped **10 / 10** rather than the frozen 10 / 50, by owner decision and for
+  exactly as long as the menu carried one row: under a single 48dp line the 50 is
+  40dp of unexplained space. It recorded that as temporary in three places and
+  named the condition for repaying it - docs/SLEEP-TIMER-3.6.6.md §1, verbatim:
+  "**Restoring `player_overflow_menu_pad_bottom` to 50dp is part of shipping the
+  next Player action.**"
 
-  The frozen bottom padding is **50** - stated in that file and reproduced by the
-  two-row `Menu / Коллекция` at 260x160. This menu ships **10 / 10** while it
-  carries a single row, by owner decision: the 50 is the complete four-row menu's
-  geometry, and under one row it is 40 of unexplained space below a single 48dp
-  line. The container hugs the row it has; every other frozen number - width, row
-  box, pitch, radius, typography, colour - is unchanged.
+  G3 is that action, so the padding is the frozen 50 again and the menu is
+  10 + 2x52 + 46 = **160** tall - which is exactly the frozen two-row
+  `Menu / Коллекция` at 260x160. `SleepTimerSurfacesTest` measured the temporary
+  68 and now measures the 160; that is how the debt was kept from being forgotten
+  quietly, and it worked.
 
-  **Restoring it is part of shipping the next Player action.**
-  `SleepTimerSurfacesTest` measures 10/10 and the resulting 68dp height, so a
-  second row arriving without the padding being restored fails there rather than
-  landing quietly.
+  ## The whole menu is absent in a build with no report endpoint
+
+  Not this row alone - see PlayerOverflowMenu. A build without `report.properties`
+  draws the one-row menu G2 shipped, and there the 10 / 10 padding is applied
+  again, because it is again the right geometry for the surface being drawn.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -117,5 +119,52 @@
             android:visibility="gone"
             tools:text="24 мин"
             tools:visibility="visible" />
+    </LinearLayout>
+
+    <!--
+      `Menu row / Сообщить о проблеме` 2517:2104, the third of the frozen four and
+      the second whose feature exists (G3).
+
+      52 pitch, so the 4dp gap sits between the two 48dp rows and neither of them
+      carries a margin of its own. The glyph is `Icon / alert` in the menu's
+      `textSecondary` rather than in `error`: it names an action, it is not a
+      warning about one.
+
+      No trailing value. Only Таймер сна has one in the frozen menu, and only when
+      a timer is armed.
+    -->
+    <LinearLayout
+        android:id="@+id/player_overflow_report_problem"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/player_overflow_row_height"
+        android:layout_marginStart="@dimen/player_overflow_row_inset"
+        android:layout_marginTop="@dimen/player_overflow_row_gap"
+        android:layout_marginEnd="@dimen/player_overflow_row_inset"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/player_overflow_icon_slot_inset"
+        android:paddingEnd="0dp">
+
+        <ImageView
+            android:layout_width="@dimen/player_overflow_icon_slot"
+            android:layout_height="@dimen/player_overflow_icon_slot"
+            android:contentDescription="@null"
+            android:scaleType="center"
+            android:src="@drawable/ic_player_overflow_alert" />
+
+        <TextView
+            android:id="@+id/player_overflow_report_problem_label"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/player_overflow_gap"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/report_title"
+            android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.15_22"
+            android:textColor="@color/text_primary" />
     </LinearLayout>
 </LinearLayout>

@@ -33,3 +33,8 @@ build_log*.txt
 build_output*.txt
 signed_bundle_log*.txt
 *.logcat
+
+# Report endpoint (G3). Holds only a capability URL - never a Telegram bot
+# token, which lives in the Apps Script Script Properties. The template is
+# report.properties.example.
+report.properties

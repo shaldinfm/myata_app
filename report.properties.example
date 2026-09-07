@@ -1,0 +1,18 @@
+# Where "Сообщить о проблеме" posts (G3).
+#
+# A Google Apps Script Web App deployed by the owner - "Execute as: me",
+# "Who has access: Anyone". It is a DIFFERENT deployment from the reactions
+# endpoint in FeedbackRepository: reports carry free text and diagnostics and
+# must not land in the reactions sheet.
+#
+# This URL is a capability URL, not a secret in the cryptographic sense - it
+# ships inside the APK and is extractable by anyone who downloads it. It stays
+# untracked so a fork does not post into someone else's inbox, and so the repo
+# never carries a live production address.
+#
+# The Telegram bot token lives in that script's Script Properties and NEVER
+# here - see docs/REPORT-PROBLEM-3.6.6.md and tools/report-endpoint/.
+#
+# Absent or empty is a supported state: the app then has no report form at all,
+# and both entry points are absent rather than dead.
+REPORT_ENDPOINT=https://script.google.com/macros/s/REPLACE_ME/exec

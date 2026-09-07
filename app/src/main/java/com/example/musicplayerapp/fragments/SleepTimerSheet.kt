@@ -274,12 +274,12 @@ class SleepTimerSheet : BottomSheetDialogFragment() {
         val confirm = root.findViewById<TextView>(R.id.sleep_timer_custom_confirm)
         confirm.setBackgroundResource(
             if (valid) R.drawable.bg_sleep_timer_button_primary
-            else R.drawable.bg_sleep_timer_button_disabled
+            else R.drawable.bg_button_disabled
         )
         confirm.setTextColor(
             ContextCompat.getColor(
                 ctx,
-                if (valid) R.color.profile_primary_button_label else R.color.sleep_timer_disabled_content,
+                if (valid) R.color.profile_primary_button_label else R.color.disabled_content,
             )
         )
 
@@ -301,7 +301,7 @@ class SleepTimerSheet : BottomSheetDialogFragment() {
             setColorFilter(
                 ContextCompat.getColor(
                     context,
-                    if (enabled) R.color.primary else R.color.sleep_timer_disabled_content,
+                    if (enabled) R.color.primary else R.color.disabled_content,
                 )
             )
         }

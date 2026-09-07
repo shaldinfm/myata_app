@@ -160,6 +160,36 @@ class PlayerLayoutTest {
             // player's own actions, and Settings is reached from the HOME header.
             expect(where, "trailing action slot width", reserved.width, dp(32))
             expect(where, "trailing action slot height", reserved.height, dp(39))
+
+            // ## The ellipsis sits on the app's shared header line
+            //
+            // PLAYER's header is `Mobile Header (Subtle)`, 47 tall at y=16; every
+            // other section uses `Header - TopAppBar`, 64 tall at y=0 with a 40
+            // control centred in it. Centred in its own row the ellipsis lands at
+            // 39.5 while the Profile control lands at 32 - measured as 166px against
+            // 146.5px on the API 24 emulator, exactly the 7.5dp the two components
+            // differ by.
+            //
+            // The glyph is lifted onto 32 with padding, so the box itself does not
+            // move: `reserved`'s own y and size are asserted above and unchanged,
+            // which is what keeps the touch target and the popup anchor where they
+            // were. What is asserted here is where the glyph is *drawn* - with
+            // `scaleType=center` that is the centre of the content box.
+            //
+            // 16 here plus the header's own 16dp margin is the 32 that HOME,
+            // COLLECTION and ABOUT US put their trailing control on.
+            val glyphCentre = topIn(reserved, header) + reserved.paddingTop +
+                (reserved.height - reserved.paddingTop - reserved.paddingBottom) / 2f
+            expect(where, "overflow glyph centre in the header", glyphCentre, dp(16))
+            expect(
+                where, "overflow glyph centre from the player top",
+                topIn(header, shell) + glyphCentre, dp(32),
+            )
+
+            // And the box is where it always was - stated separately so a future
+            // change that moved the box instead of the glyph fails here rather than
+            // silently shrinking the target or dragging the popup with it.
+            expect(where, "trailing action slot y", topIn(reserved, header), dp(4))
             if (!reserved.hasOnClickListeners()) {
                 findings += "$where: the header overflow draws a control that does nothing"
             }

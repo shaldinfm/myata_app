@@ -75,6 +75,9 @@ Player action.** `SleepTimerSurfacesTest` measures the temporary 10/10 and the
 68dp height, so a second row arriving without the padding being restored fails
 there rather than landing quietly.
 
+> **Done (G3).** `Сообщить о проблеме` shipped as the second row, the padding is
+> the frozen 50 again, and that test now measures 260×160. See §9.1.
+
 ### The reserved slot becomes the control it was reserving
 
 `fragment_player.xml`'s `Space` becomes an `ImageView` in the same 32×39 box, so
@@ -285,9 +288,17 @@ an account.
 
 Both are owner-decided and neither is accidental.
 
-1. **The menu's bottom padding is 10dp, not the frozen 50dp** — temporary, for as
-   long as the menu carries a single row. §1 sets out the reasoning and names the
-   test that will not let it be forgotten.
+1. ~~**The menu's bottom padding is 10dp, not the frozen 50dp**~~ — **discharged by
+   G3.** It was temporary for as long as the menu carried a single row, and
+   `Сообщить о проблеме` is the second. `player_overflow_menu_pad_bottom` is the
+   frozen 50dp again and the menu is 260×160, which is the frozen two-row
+   `Menu / Коллекция` exactly. `SleepTimerSurfacesTest` measured the temporary 68
+   and now measures the 160 — the mechanism §1 describes did its job. See
+   [REPORT-PROBLEM-3.6.6.md](REPORT-PROBLEM-3.6.6.md) §2.
+
+   (A build with no report endpoint draws the one-row menu again, and there the
+   10 / 10 comes back with it — the owner decision was about a one-row surface,
+   and that is again what is being drawn.)
 2. **The cancel and completion Snackbars carry no `timerOff` / `pause` icon.**
    `sleep-timer-cancelled` 2517:2116 and `sleep-timer-completed` 2517:2122 both
    draw a 24dp glyph at x=16 with the message at x=52. Material's `Snackbar` has no

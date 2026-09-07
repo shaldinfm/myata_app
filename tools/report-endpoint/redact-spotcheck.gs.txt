@@ -1,0 +1,121 @@
+TEMPORARY SPOT-CHECK — NOT PART OF THE DEPLOYED SCRIPT
+======================================================
+
+`.gs.txt`, not `.gs`, on purpose: this must never be pasted into Code.gs and must
+never be deployed. It is a throwaway helper the owner may paste into a **new,
+separate file** in the Apps Script editor, run once, read, and delete.
+
+Running it does NOT create a new deployment. Apps Script only changes what the
+Web App serves when you explicitly deploy a new version, so adding and removing a
+file leaves the live `/exec` endpoint on the version it already has.
+
+
+WHY THIS IS SAFE TO RUN
+-----------------------
+
+`redact()` reads TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID from Script Properties,
+which sounds alarming and is not: it uses them only as *search needles*. Its
+output is the input string with substitutions applied, so
+
+    output ⊆ input, with secrets removed
+
+A real value can therefore only appear in the output if it was already in the
+input. `checkRedactPattern()` below passes a fabricated string, so no real secret
+can reach the log. Reading a property is not printing it.
+
+
+WHAT EACH CHECK COVERS
+----------------------
+
+`redact()` has two branches:
+
+    identity  s.split(token).join('<token>')      - the exact configured values
+    pattern   s.replace(/\d{6,}:[A-Za-z0-9_-]{20,}/g, '<token>')  - any token shape
+
+  checkRedactPattern()   runs the REAL redact() and exercises the PATTERN branch.
+                         The identity branch cannot be exercised here without
+                         putting the real token in the input, which is exactly
+                         what we refuse to do.
+
+  checkRedactIdentity()  runs a parameterised MIRROR of the identity branch with
+                         fabricated needles. It is a copy, stated plainly - the
+                         two lines it mirrors are quoted above so they can be
+                         compared by eye.
+
+Both branches of the real function were already exercised together, off-platform,
+against this same Code.gs with PropertiesService stubbed to fabricated values -
+see the G3 closure notes. This editor check is confirmation on the real runtime,
+not the only evidence.
+
+
+THE HELPER
+----------
+
+// ---------- paste into a NEW file, e.g. TempRedactCheck.gs ----------
+
+var FAKE_TOKEN = '1234567890:AAFakeTokenForRedactionCheck_NotReal_xyz';
+var FAKE_CHAT  = '-1009998887776';
+
+/** Exercises the REAL redact() pattern branch with a fabricated token. */
+function checkRedactPattern() {
+  var samples = [
+    FAKE_TOKEN,
+    'Address unavailable: https://api.telegram.org/bot' + FAKE_TOKEN + '/sendMessage',
+    'Exception: Request failed for https://api.telegram.org/bot' + FAKE_TOKEN +
+      '/sendMessage returned code 401.',
+    'telegram http 400: {"ok":false,"description":"Bad Request: chat not found"}'
+  ];
+  var leaked = 0;
+  for (var i = 0; i < samples.length; i++) {
+    var out = redact(samples[i]);
+    if (out.indexOf(FAKE_TOKEN) !== -1) leaked++;
+    Logger.log('out : ' + out);
+  }
+  Logger.log(leaked === 0
+    ? 'PATTERN BRANCH: PASS - the fabricated token never survives'
+    : 'PATTERN BRANCH: FAIL - ' + leaked + ' leak(s)');
+}
+
+/** Mirrors the identity branch with fabricated needles. A copy, deliberately. */
+function checkRedactIdentity() {
+  var redactWith = function (text, token, chatId) {
+    var s = String(text == null ? '' : text);
+    if (token) s = s.split(token).join('<token>');
+    if (chatId) s = s.split(chatId).join('<chat>');
+    return s.replace(/\d{6,}:[A-Za-z0-9_-]{20,}/g, '<token>');
+  };
+  var input = 'token=' + FAKE_TOKEN + ' chat=' + FAKE_CHAT;
+  var out = redactWith(input, FAKE_TOKEN, FAKE_CHAT);
+  Logger.log('out : ' + out);
+  Logger.log(out.indexOf(FAKE_TOKEN) === -1 && out.indexOf(FAKE_CHAT) === -1
+    ? 'IDENTITY BRANCH: PASS - neither fabricated value survives'
+    : 'IDENTITY BRANCH: FAIL');
+}
+
+// ---------- end ----------
+
+
+EXPECTED OUTPUT
+---------------
+
+checkRedactPattern()
+
+  out : <token>
+  out : Address unavailable: https://api.telegram.org/bot<token>/sendMessage
+  out : Exception: Request failed for https://api.telegram.org/bot<token>/sendMessage returned code 401.
+  out : telegram http 400: {"ok":false,"description":"Bad Request: chat not found"}
+  PATTERN BRANCH: PASS - the fabricated token never survives
+
+checkRedactIdentity()
+
+  out : token=<token> chat=<chat>
+  IDENTITY BRANCH: PASS - neither fabricated value survives
+
+The fabricated token must appear NOWHERE in the log - only `<token>`.
+
+
+AFTERWARDS
+----------
+
+Delete the temporary file. Do not deploy. The live `/exec` URL keeps serving the
+version it already served throughout Gate A and Gate B.

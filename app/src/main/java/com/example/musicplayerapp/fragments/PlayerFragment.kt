@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import androidx.viewpager2.widget.ViewPager2
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
@@ -29,9 +30,18 @@ class PlayerFragment : Fragment() {
      * goes away. A PopupWindow is a window: leaving one up while the fragment that
      * anchored it is destroyed leaks it onto whatever is underneath.
      */
-    private val overflow = PlayerOverflowMenu(onSleepTimer = {
-        SleepTimerSheet.show(childFragmentManager)
-    })
+    private val overflow = PlayerOverflowMenu(
+        onSleepTimer = { SleepTimerSheet.show(childFragmentManager) },
+        // The same destination `Settings > Прочее > Сообщить о проблеме` opens, in
+        // the same state. A push rather than a tab move, so Back comes back here.
+        onReportProblem = {
+            findNavController().navigate(R.id.action_playerFragment_to_report_problem)
+        },
+    )
+
+    /** See [PlayerOverflowMenu.contentForTest]. */
+    @androidx.annotation.VisibleForTesting
+    internal fun overflowContentForTest(): View? = overflow.contentForTest()
 
     override fun onCreateView(
         inflater: LayoutInflater,

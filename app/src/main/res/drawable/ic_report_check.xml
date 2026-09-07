@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Icon / check` inside the 64x64 `primary` `Badge` on report-success 2517:2320.
+
+  Same path as ic_settings_check, drawn in `on_primary` because it sits on the
+  filled badge rather than on a surface.
+
+  The frozen glyph contract every line icon in this batch uses: a 24x24 slot,
+  stroked 1.8 with round caps and joins, no fill. The path is
+  screens-3.6.6/spec/primitives.mjs's own, unchanged.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M5 12.5 L9.5 17.5 L19 6.5"
+        android:strokeColor="@color/on_primary"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

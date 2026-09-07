@@ -63,6 +63,19 @@
             app:exitAnim="@anim/fade_out"
             app:popEnterAnim="@anim/fade_in"
             app:popExitAnim="@anim/fade_out" />
+        <!--
+          `Menu / Плеер` > `Сообщить о проблеме` (G3). The other three actions here
+          are bottom-bar moves between root tabs; this one pushes, so Back returns
+          to the player rather than replacing it - which is why it does not carry
+          the popUpTo the tab moves do.
+        -->
+        <action
+            android:id="@+id/action_playerFragment_to_report_problem"
+            app:destination="@id/report_problem"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
     </fragment>
     <fragment
         android:id="@+id/info"
@@ -146,6 +159,13 @@
             app:exitAnim="@anim/fade_out"
             app:popEnterAnim="@anim/fade_in"
             app:popExitAnim="@anim/fade_out" />
+        <action
+            android:id="@+id/action_settings_to_report_problem"
+            app:destination="@id/report_problem"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
     </fragment>
 
     <!--
@@ -158,6 +178,31 @@
         android:id="@+id/settings_appearance"
         android:name="com.example.musicplayerapp.fragments.SettingsAppearanceFragment"
         android:label="SettingsAppearanceFragment" />
+
+    <!--
+      Сообщить о проблеме (G3). report-empty 2517:2129 and its four siblings.
+
+      One destination with two actions into it, because the frozen design draws two
+      entry points - `Menu / Плеер` row 3 and `Settings > Прочее` - and they are the
+      same screen in the same state. A second destination, or an argument telling it
+      which door was used, would be two things to keep in step for no difference the
+      listener can see.
+
+      It has no actions of its own. `Готово` on report-success and the band's back
+      both `popBackStack`, which returns to the player or to settings correctly
+      without either being named - and one of them would be wrong whichever was
+      named.
+
+      MainActivity hides the bottom bar for it, as it does for settings and the
+      profile: none of these frames has one.
+
+      Both doors are absent in a build with no endpoint, so this destination is
+      unreachable there rather than reachable and inert. See ReportConfig.
+    -->
+    <fragment
+        android:id="@+id/report_problem"
+        android:name="com.example.musicplayerapp.fragments.ReportProblemFragment"
+        android:label="ReportProblemFragment" />
 
     <!--
       profile-guest (G-A3). A pushed destination, not a fifth root tab: the four

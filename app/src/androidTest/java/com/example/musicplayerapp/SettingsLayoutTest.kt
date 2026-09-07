@@ -87,15 +87,17 @@ class SettingsLayoutTest {
     fun theUnbuiltSectionsAreAbsentRatherThanInert() {
         onMainActivity { activity ->
             val root = measured(inflaterFor(activity, night = false), dp390(activity))
-            // G2 built the sleep timer, so `Воспроизведение` and its
-            // `Таймер сна` row leave this list and join the one below. The
-            // rule has not changed - each section arrives with the slice that makes
-            // its row honest - and `Качество потока` stays absent even though
-            // its section is now drawn, because nothing behind it exists.
+            // G2 built the sleep timer and G3 the report form, so
+            // `Воспроизведение` / `Таймер сна` and `Прочее` /
+            // `Сообщить о проблеме` have each left this list and joined the one
+            // below. The rule has not changed - each section arrives with the slice
+            // that makes its row honest - and `Качество потока` and `О приложении`
+            // stay absent even though their sections are now drawn, because nothing
+            // behind either exists.
             val absentStrings = listOf(
-                "Интеграции", "Прочее",
+                "Интеграции",
                 "Качество потока", "Last.fm",
-                "Сообщить о проблеме", "О приложении",
+                "О приложении",
             )
             val present = collectText(root)
             val leaked = absentStrings.filter { s -> present.any { it.contains(s) } }
@@ -106,7 +108,14 @@ class SettingsLayoutTest {
 
             // And the positive half, so a later edit cannot quietly drop the row
             // the slice was built to add.
-            val built = listOf("Воспроизведение", "Таймер сна")
+            //
+            // This is the layout's claim, not the runtime one: the row is declared
+            // unconditionally and hidden by SettingsFragment when the build has no
+            // report endpoint. ReportEntryPointsTest holds that half.
+            val built = listOf(
+                "Воспроизведение", "Таймер сна",
+                "Прочее", "Сообщить о проблеме",
+            )
             val missing = built.filter { s -> present.none { it.contains(s) } }
             assertTrue(
                 "settings must draw the sections whose features exist: $missing is missing",

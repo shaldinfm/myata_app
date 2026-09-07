@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Icon / message` on `Row / Сообщить о проблеме`, settings 2517:2796 / 2517:3763.
+
+  Not the `alert` glyph the PLAYER menu row carries: the frozen frames use two
+  different icons for the same destination, and each is right where it is. In a
+  menu of player actions the entry reads as "something is wrong"; in a settings
+  list beside `Профиль` and `Тема` it reads as "write to us". Both are reproduced
+  rather than unified, because unifying them would be a design change made to save
+  one file.
+
+  The frozen glyph contract: 24x24, stroked 1.8, round caps and joins, no fill.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M4 5 H20 V16 H12 L7 20.5 V16 H4 Z M8 10.5 H16"
+        android:strokeColor="@color/text_secondary"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

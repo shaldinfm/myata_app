@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The r24 `surface`/`outline` card - `Diagnostics` on report-empty 2517:2162 and
+  `Success` on report-success 2517:2318.
+
+  The canonical Card primitive: r24, `surface` fill, 1dp `outline`. `Track Item`
+  and `Broadcast History Section` are the same component.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/surface" />
+    <stroke
+        android:width="@dimen/report_card_stroke"
+        android:color="@color/outline" />
+    <corners android:radius="@dimen/report_card_radius" />
+</shape>

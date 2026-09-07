@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The 64x64 `Badge` on report-success 2517:2319 - a filled `primary` circle
+  holding a 24dp `on_primary` check. r32 on a 64 box is a circle.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/primary" />
+</shape>

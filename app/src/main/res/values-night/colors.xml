@@ -149,7 +149,7 @@
 
     <!-- Sleep timer (G2) - see values/colors.xml for provenance. -->
     <color name="player_header_action">#F5F7FA</color>
-    <color name="sleep_timer_disabled_container">#1E3754</color>
-    <color name="sleep_timer_disabled_content">#6F899F</color>
+    <color name="disabled_container">#1E3754</color>
+    <color name="disabled_content">#6F899F</color>
 
 </resources>

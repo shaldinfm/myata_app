@@ -622,6 +622,14 @@ class MediaPlayerService(): MediaSessionService(){
                         "state" to PlaybackLog.stateName(this@apply.playbackState)
                     )
 
+                    // The same identity PlaybackLog has just written to logcat, kept
+                    // in memory so `Сообщить о проблеме` can put it on the
+                    // diagnostics card - logcat is where issue #15's evidence has
+                    // been going to die. Observation only: nothing below reads it,
+                    // no branch depends on it, and it holds a code and a timestamp
+                    // rather than the exception. See LastPlaybackError.
+                    LastPlaybackError.record(error)
+
                     val recoverable = StreamErrorPolicy.isRecoverable(error)
                     val tlsFailure = StreamErrorPolicy.isTlsFailure(error)
 

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Icon / alert` on `Menu row / Сообщить о проблеме`, sleep-timer-menu-active
+  2517:2104 - the same glyph as the report screen's banner, in the menu's own
+  `textSecondary` rather than in `error`: it names an action, it is not a warning.
+
+  The frozen glyph contract every line icon in this batch uses: a 24x24 slot,
+  stroked 1.8 with round caps and joins, no fill. The path is
+  screens-3.6.6/spec/primitives.mjs's own, unchanged.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12 3 A9 9 0 1 0 12.01 3 M12 7 V13 M12 16.5 V16.6"
+        android:strokeColor="@color/text_secondary"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

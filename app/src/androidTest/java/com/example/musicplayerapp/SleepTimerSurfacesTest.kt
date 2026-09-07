@@ -22,7 +22,8 @@ import org.junit.runner.RunWith
 /**
  * The three surfaces the timer appears on, and the one formatter behind them.
  *
- *  - `Menu / Плеер` - the frozen overflow, at the frozen 260, with one row.
+ *  - `Menu / Плеер` - the frozen overflow, at the frozen 260, with two rows as
+ *    of G3 and at the frozen 10 / 50 padding again.
  *  - `sleep-timer-select` / `-active` - the sheet, in both of its list states.
  *  - `Row / Таймер сна` - the Settings row, whose geometry `SettingsLayoutTest`
  *    now measures alongside the two rows it already did.
@@ -59,6 +60,7 @@ class SleepTimerSurfacesTest {
                 }
                 val row = menu.findViewById<View>(R.id.player_overflow_sleep_timer)
                 val trailing = menu.findViewById<TextView>(R.id.player_overflow_sleep_timer_trailing)
+                val reportRow = menu.findViewById<View>(R.id.player_overflow_report_problem)
 
                 // The proposal's whole change to the canonical menu: 206 -> 260,
                 // because 206 cannot hold a label plus a trailing value.
@@ -69,36 +71,59 @@ class SleepTimerSurfacesTest {
                 expect(where, "first row y", topIn(row, menu), dp(10))
                 expect(where, "trailing value width", trailing.width, dp(70))
 
-                // The one deliberate departure from the frozen frame, and the
-                // reason it is measured rather than left to a comment: while this
-                // menu carries a single row it uses symmetric 10/10 padding
-                // instead of the frozen 10/50, so its whole height is 10+48+10.
-                //
-                // When the next Player action lands, the frozen 50 comes back and
-                // this assertion has to be updated in the same change - which is
-                // the point of pinning it here.
-                expect(where, "one-row menu height", menu.height, dp(68))
+                // The second row, G3's. 52 pitch is the frozen one: a 48dp row and
+                // a 4dp gap, so the second starts at 10 + 52 = 62.
+                expect(where, "second row height", reportRow.height, dp(48))
+                expect(where, "second row width", reportRow.width, dp(238))
+                expect(where, "second row x", leftIn(reportRow, menu), dp(11))
+                expect(where, "second row y", topIn(reportRow, menu), dp(62))
                 expect(
-                    where, "space below the only row",
-                    menu.height - (topIn(row, menu) + row.height), dp(10),
+                    where, "row pitch",
+                    topIn(reportRow, menu) - topIn(row, menu), dp(52),
                 )
 
-                // One row. The other three frozen entries are absent rather than
+                // ## The G2 debt, paid
+                //
+                // G2 shipped 10 / 10 rather than the frozen 10 / 50 while the menu
+                // carried a single row, and pinned the temporary 68dp height right
+                // here so that a second row could not arrive without the padding
+                // being restored in the same change. It could not, and it did not:
+                // this is that assertion, updated by the change it was waiting for.
+                //
+                // 10 + 2x52 + 46 = 160, which is exactly the frozen two-row
+                // `Menu / Коллекция` at 260x160.
+                expect(where, "two-row menu height", menu.height, dp(160))
+                expect(
+                    where, "space below the last row",
+                    menu.height - (topIn(reportRow, menu) + reportRow.height), dp(50),
+                )
+
+                // Two rows. The other two frozen entries are absent rather than
                 // inert - the whole rollout decision, held where a later edit that
-                // "just adds them greyed out" would trip over it.
-                // One row, and it is the sleep timer's. The trailing value the
-                // frozen active frame puts on that row is not a second entry, so
-                // the count is of rows rather than of text.
+                // "just adds them greyed out" would trip over it. The trailing value
+                // the frozen active frame puts on the timer row is not a third
+                // entry, so the count is of rows rather than of text.
                 assertEquals(
                     "the overflow must carry exactly the actions that exist",
-                    1, menuRows(menu).size,
+                    2, menuRows(menu).size,
                 )
+                // In the frozen order, and not reordered to close the gap the two
+                // absent rows leave: Таймер сна is the second of the frozen four and
+                // Сообщить о проблеме the third, so the timer stays above.
                 assertEquals(
                     "Таймер сна",
                     menu.findViewById<TextView>(R.id.player_overflow_sleep_timer_label).text.toString(),
                 )
+                assertEquals(
+                    "Сообщить о проблеме",
+                    menu.findViewById<TextView>(R.id.player_overflow_report_problem_label).text.toString(),
+                )
+                assertTrue(
+                    "$where: Таймер сна must stay above Сообщить о проблеме",
+                    topIn(row, menu) < topIn(reportRow, menu),
+                )
                 val labels = collectText(menu).filter { it.isNotBlank() }
-                for (absent in listOf("Найти трек", "Сообщить о проблеме", "История эфира")) {
+                for (absent in listOf("Найти трек", "История эфира")) {
                     if (labels.any { it.contains(absent) }) {
                         findings += "$where: `$absent` has no implementation and must not be drawn"
                     }

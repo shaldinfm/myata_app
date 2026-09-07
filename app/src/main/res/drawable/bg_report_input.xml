@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Input / Описание` on report-empty 2517:2156 - 358x120, r12, `surface` on a 1dp
+  `outline` hairline.
+
+  Two states like bg_auth_input, and for the same reason: auth-create-account
+  draws a focused field at 2dp in `primary`, so focus is the design's own state
+  rather than an invention here. The stroke is inside the bounds, so focusing the
+  field cannot move the diagnostics card below it.
+
+  Not bg_auth_input itself, which is 56dp-field furniture at the auth radius; this
+  is the same contract at this screen's own box, and sharing the drawable would
+  couple two screens' inputs through a resource neither owns.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/surface" />
+            <stroke
+                android:width="@dimen/report_input_stroke_focused"
+                android:color="@color/primary" />
+            <corners android:radius="@dimen/report_input_radius" />
+        </shape>
+    </item>
+
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/surface" />
+            <stroke
+                android:width="@dimen/report_input_stroke"
+                android:color="@color/outline" />
+            <corners android:radius="@dimen/report_input_radius" />
+        </shape>
+    </item>
+</selector>

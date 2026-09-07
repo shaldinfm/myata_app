@@ -10,6 +10,7 @@ import androidx.navigation.fragment.findNavController
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.data.ThemeStore
+import com.example.musicplayerapp.data.report.ReportConfig
 import com.example.musicplayerapp.data.supabase.EmailAuthBackend
 import com.example.musicplayerapp.data.supabase.IdentityStore
 import com.example.musicplayerapp.databinding.FragmentSettingsBinding
@@ -107,6 +108,21 @@ class SettingsFragment : Fragment() {
         // second screen and not a second copy - see docs/SLEEP-TIMER-3.6.6.md.
         binding.settingsRowSleepTimer.setOnClickListener {
             SleepTimerSheet.show(parentFragmentManager)
+        }
+
+        // `Прочее > Сообщить о проблеме` (G3). The same destination in the same
+        // state the PLAYER overflow opens - one screen, two frozen doors.
+        //
+        // The row is drawn only when this build has a report endpoint. That is the
+        // rule this file has lived under since G1, applied to a case G1 did not
+        // have: a form that cannot post is a feature that does not exist, and the
+        // row would then be stating that it does. `SettingsLayoutTest` holds both
+        // halves of it.
+        binding.settingsRowReportProblem.visibility =
+            if (ReportConfig.isConfigured) View.VISIBLE else View.GONE
+        binding.settingsSectionOther.visibility = binding.settingsRowReportProblem.visibility
+        binding.settingsRowReportProblem.setOnClickListener {
+            findNavController().navigate(R.id.action_settings_to_report_problem)
         }
 
         // The value follows the service's own state, so a timer that expires or is

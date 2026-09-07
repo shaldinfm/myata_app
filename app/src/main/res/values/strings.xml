@@ -490,4 +490,87 @@
     <string name="sleep_timer_selected_description">Выбрано</string>
     <string name="sleep_timer_stepper_minus">Меньше</string>
     <string name="sleep_timer_stepper_plus">Больше</string>
+
+    <!--
+      Сообщить о проблеме (G3). Every string below is the frozen frame's own,
+      except the three marked as owner corrections.
+    -->
+    <string name="settings_section_other">Прочее</string>
+    <string name="report_title">Сообщить о проблеме</string>
+    <string name="report_prompt">Что случилось?</string>
+
+    <!-- The five categories of `report-empty`, in the frozen order. The stable wire
+         keys they post under are in ReportCategory, deliberately not here: a copy
+         edit to a label must not silently split a triage bucket in two. -->
+    <string name="report_category_playback_wont_start">Музыка не запускается</string>
+    <string name="report_category_stopped_by_itself">Музыка остановилась сама</string>
+    <string name="report_category_headphones">Проблема с наушниками</string>
+    <string name="report_category_interface">Проблема с интерфейсом</string>
+    <string name="report_category_other">Другое</string>
+    <string name="report_category_selected_description">Выбрано</string>
+
+    <string name="report_description_label">Описание (необязательно)</string>
+    <string name="report_description_hint">Опишите, что произошло</string>
+
+    <!--
+      The diagnostics card. The six lines are formats rather than literals because
+      the frozen frame's values are a mock - "Xiaomi Redmi Note 12", "HTTP 403" -
+      and the real ones are read at send time. The em dash, the order and the
+      wording around each value are the frame's.
+    -->
+    <string name="report_diagnostics_title">Что будет отправлено</string>
+    <string name="report_diagnostics_app">Версия приложения — %1$s</string>
+    <string name="report_diagnostics_device">Устройство — %1$s</string>
+    <string name="report_diagnostics_android">Android — %1$s</string>
+    <string name="report_diagnostics_android_value">%1$s (API %2$d)</string>
+    <string name="report_diagnostics_network">Сеть в момент сбоя — %1$s</string>
+    <string name="report_diagnostics_last_error">Последняя ошибка — %1$s</string>
+    <string name="report_diagnostics_stream">Поток — %1$s</string>
+    <string name="report_diagnostics_notice">Личные данные не отправляются.</string>
+
+    <!-- The transport class only. Never an SSID, an operator or an address: an
+         SSID is very often a household name, which is the exact thing the notice
+         above promises is not being sent. -->
+    <string name="report_network_wifi">Wi-Fi</string>
+    <string name="report_network_mobile">Мобильная сеть</string>
+    <string name="report_network_other">Другая сеть</string>
+    <string name="report_network_none">Нет сети</string>
+
+    <!--
+      Owner correction D3. The frozen frame draws "HTTP 403, 2 мин назад" and
+      assumes an error always exists; a fresh process has seen none, so the honest
+      value is `нет` rather than a hidden line or an invented code.
+    -->
+    <string name="report_last_error_none">нет</string>
+    <string name="report_last_error_value">%1$s, %2$s</string>
+    <string name="report_last_error_just_now">меньше минуты назад</string>
+    <string name="report_last_error_minutes_ago">%1$d мин назад</string>
+
+    <!--
+      Owner correction D4. The frozen line reads "Мята FM, 128 kbps" and no
+      canonical bitrate exists anywhere in the app, so the stream is named and
+      nothing is invented after it. These are the names HOME already uses.
+    -->
+    <string name="report_stream_myata">MYATA</string>
+    <string name="report_stream_gold">GOLD</string>
+    <string name="report_stream_xtra">XTRA</string>
+
+    <string name="report_send">Отправить</string>
+    <string name="report_sending">Отправляем…</string>
+    <string name="report_send_again">Отправить ещё раз</string>
+    <string name="report_error_banner">Не удалось отправить сообщение.</string>
+
+    <!--
+      Owner correction D5. The frozen body reads "Сообщение отправлено. Если
+      понадобится, / мы ответим в Telegram." - a promise the app cannot keep: there
+      is no Telegram handle, no contact field and no reply channel of any kind, so
+      the report is one-way by construction. The geometry, the type and the two-line
+      shape are the frame's; only the second sentence is true instead of false.
+    -->
+    <string name="report_success_headline">Спасибо!</string>
+    <string name="report_success_body_1">Сообщение отправлено.</string>
+    <string name="report_success_body_2">Спасибо, что помогаете нам улучшать приложение.</string>
+    <string name="report_success_done">Готово</string>
+
+    <string name="report_back_description">Назад</string>
 </resources>

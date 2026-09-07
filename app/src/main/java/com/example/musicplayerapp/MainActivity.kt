@@ -295,7 +295,13 @@ class MainActivity : AppCompatActivity() {
                 destination.id == R.id.auth_sign_in ||
                 destination.id == R.id.auth_create_account ||
                 destination.id == R.id.settings ||
-                destination.id == R.id.settings_appearance
+                destination.id == R.id.settings_appearance ||
+                // report_problem joined them at G3, for the same reason: the five
+                // frozen report frames have a back band and no bottom bar, and it
+                // is pushed from the player as well as from settings - so the bar
+                // would otherwise be present over one door's copy of the screen and
+                // absent over the other's.
+                destination.id == R.id.report_problem
 
             binding.bottomNavView.visibility =
                 if (hidesBottomBar) android.view.View.GONE

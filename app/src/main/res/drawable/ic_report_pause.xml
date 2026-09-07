@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Icon / pause` on `Row / Музыка остановилась сама`, report-empty 2517:2140.
+
+  Not ic_player_pause: that is the transport control's filled glyph at its own
+  metrics. This is the 1.8-stroked line icon the category list is drawn in.
+
+  The frozen glyph contract every line icon in this batch uses: a 24x24 slot,
+  stroked 1.8 with round caps and joins, no fill. The path is
+  screens-3.6.6/spec/primitives.mjs's own, unchanged.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M9 5 V19 M15 5 V19"
+        android:strokeColor="@color/text_secondary"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The disabled Button: `disabledContainer`, r12, no stroke.
+
+  Two frozen frames draw it - `Установить` while the duration is 0 ч 0 мин on
+  sleep-timer-custom-invalid, and `Отправить` before a category is chosen (and
+  `Отправляем…` while one is in flight) on report-empty / report-sending. It was
+  `bg_sleep_timer_button_disabled` while the timer was the only control that could
+  be disabled; G3 is the second, so it carries the component's name rather than
+  the first caller's. The shape is unchanged and both radii were already 12.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/disabled_container" />
+    <corners android:radius="@dimen/profile_button_radius" />
+</shape>

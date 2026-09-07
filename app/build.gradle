@@ -33,6 +33,33 @@ if (supabaseKey.startsWith('sb_secret_') || supabaseKey.startsWith('service_role
             '(sb_publishable_...) may ship in an app. Remove it and rotate that key now.')
 }
 
+// Where "Сообщить о проблеме" posts (G3). Untracked, like supabase.properties,
+// and like it this holds nothing secret: the deployment URL ships in the APK
+// and is extractable from it. The Telegram bot token it eventually reaches
+// lives in the endpoint's own server-side storage and must never be here -
+// see docs/REPORT-PROBLEM-3.6.6.md.
+//
+// Absent or empty is a supported state, and it is the state CI and every fresh
+// clone build in: the app then has no report form, and both of its entry
+// points are absent rather than dead. See ReportConfig.
+def reportPropsFile = rootProject.file('report.properties')
+def reportProps = new Properties()
+if (reportPropsFile.exists()) {
+    reportPropsFile.withInputStream { reportProps.load(it) }
+}
+def reportEndpoint = (reportProps['REPORT_ENDPOINT'] ?: '').trim()
+
+// A bot token in this file would end up in the APK, where anyone can read it and
+// then post as the bot and read its updates. It belongs in the endpoint's Script
+// Properties. Fail the build rather than ship one.
+if (reportProps.stringPropertyNames().any { it.toLowerCase().contains('token') } ||
+        reportEndpoint ==~ /(?i).*\b\d{6,}:[A-Za-z0-9_-]{30,}\b.*/) {
+    throw new GradleException(
+            'report.properties looks like it holds a bot token. Only REPORT_ENDPOINT ' +
+            'may live there; the Telegram token belongs in the endpoint\'s server-side ' +
+            'storage. Remove it and revoke that token now.')
+}
+
 def keystorePropsFile = rootProject.file('keystore.properties')
 def keystoreProps = new Properties()
 if (keystorePropsFile.exists()) {
@@ -82,6 +109,7 @@ android {
 
         buildConfigField "String", "SUPABASE_URL", "\"${supabaseUrl}\""
         buildConfigField "String", "SUPABASE_PUBLISHABLE_KEY", "\"${supabaseKey}\""
+        buildConfigField "String", "REPORT_ENDPOINT", "\"${reportEndpoint}\""
     }
 
     buildFeatures{

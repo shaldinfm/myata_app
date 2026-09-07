@@ -73,10 +73,10 @@ interface ReportTransport {
  * ## Success means delivered
  *
  * A 2xx alone is not success. Apps Script answers 200 to almost anything,
- * including its own uncaught exceptions, so the endpoint contract is that the
- * body carries `ok` only after the onward Telegram send has itself succeeded, and
- * this checks for it. Without that check a Telegram outage would show the
- * listener the "Спасибо!" screen for a message nobody received.
+ * including its own uncaught exceptions, so the endpoint contract is that the body
+ * carries `"ok": true` only after the onward Telegram send has itself succeeded,
+ * and [ReportAck] checks for exactly that. Without it a Telegram outage would show
+ * the listener the terminal "Спасибо!" screen for a message nobody received.
  */
 class HttpReportTransport(
     context: Context,
@@ -116,11 +116,13 @@ class HttpReportTransport(
                         ).utf8()
                     }.orEmpty()
 
-                    if (answer.contains(OK_MARKER, ignoreCase = true)) {
+                    if (ReportAck.accepted(answer)) {
                         ReportTransport.Result.Sent
                     } else {
                         // A 200 whose body does not say the onward send worked. The
                         // listener must see the error state, not a false thank-you.
+                        // See ReportAck - matching on the key rather than the value
+                        // made every `{"ok":false}` read as a success.
                         ReportTransport.Result.Failed("unacknowledged")
                     }
                 }
@@ -133,8 +135,6 @@ class HttpReportTransport(
         }
 
     private companion object {
-        /** What the endpoint answers once Telegram has accepted the message. */
-        const val OK_MARKER = "\"ok\""
         const val MAX_ANSWER_BYTES = 512
     }
 }

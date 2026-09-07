@@ -37,10 +37,16 @@ eight always-present string fields:
 `report-success`. Anything else → `report-error`.
 
 > **`ok:true` must mean the Telegram send itself succeeded.**
-> The client looks for the literal `"ok"` and treats its absence as failure. Apps
+> The client matches the **value** — `"ok"\s*:\s*true` — and treats everything else
+> as a failure, including every `{"ok":false,...}` this endpoint can return. Apps
 > Script answers 200 to almost anything, including its own uncaught exceptions, so
 > without this a Telegram outage would thank the listener for a message nobody
 > received — and the success screen is terminal, so they could not send it again.
+>
+> The Android half is `ReportAck`, and `ReportAckTest` checks it against every
+> answer this file can produce. Matching the key alone — the first implementation —
+> made every `{"ok":false}` read as a delivered report, which would also have made
+> the forced-failure validation gate pass while proving the opposite.
 
 ## What the endpoint never receives
 

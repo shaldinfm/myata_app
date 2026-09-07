@@ -46,12 +46,19 @@
  *           {"ok":true}                      -> the app shows report-success
  *           {"ok":false,"error":"<reason>"}  -> the app shows report-error
  *
- *   **`ok:true` MUST mean the Telegram send itself succeeded.** The client looks
- *   for the literal `"ok"` in the body and treats its absence as a failure. This
- *   matters more than it looks: Apps Script answers 200 to almost anything,
- *   including its own uncaught exceptions, so without this the listener would be
+ *   **`ok:true` MUST mean the Telegram send itself succeeded.** The client matches
+ *   the VALUE - `"ok"\s*:\s*true` - and treats everything else as a failure,
+ *   including every `{"ok":false}` this file can return. See ReportAck on the
+ *   Android side; matching the key alone made every failure here read as a
+ *   success, which is the bug that check exists to prevent.
+ *
+ *   It matters more than it looks: Apps Script answers 200 to almost anything,
+ *   including its own uncaught exceptions, so without it the listener would be
  *   thanked for a message nobody received — and, because the success screen is
  *   terminal, they would have no way to send it again.
+ *
+ *   Every failure path below therefore ANSWERS `{"ok":false,"error":...}` rather
+ *   than throwing, so the client always has something unambiguous to read.
  *
  *   A non-2xx would work too, but Apps Script cannot reliably produce one, so the
  *   body is the channel.

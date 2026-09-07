@@ -89,15 +89,29 @@ text and diagnostics, reactions carry a track name, and they must not share an
 endpoint, a sheet or a chat. No Supabase expansion, no new infrastructure class.
 
 The endpoint code and its setup are in
-[tools/report-endpoint/](../tools/report-endpoint/), **for review and not
-deployed**.
+[tools/report-endpoint/](../tools/report-endpoint/). **It is deployed and live-
+validated** — see §10. The deployment, its Script Properties and its `/exec` URL
+live outside this repository and are never recorded in it, so editing `Code.gs`
+here changes nothing until the owner deploys a new version.
 
 ### `ok` means delivered
 
-The client treats a 200 as success only if the body carries `"ok"`. Apps Script
-answers 200 to almost anything, including its own uncaught exceptions, so without
-that check a Telegram outage would show the listener the terminal "Спасибо!"
-screen for a message nobody received — and they could not send it again.
+A 200 is not evidence: Apps Script answers 200 to almost anything, including its
+own uncaught exceptions, so a Telegram outage would otherwise show the listener
+the terminal "Спасибо!" for a message nobody received — and they could not send it
+again.
+
+So the body is **parsed**, and only a top-level boolean `ok: true` counts.
+`ReportAck` does that and fails closed on everything else — a nested `ok` (which is
+the shape of Telegram's *own* reply), a quoted `"true"`, a numeric `1`, malformed
+JSON, an empty body, an HTML captive portal, or a body truncated by the transport's
+bounded read.
+
+Two earlier versions of this check were wrong in the same direction and are worth
+recording, because both would have passed the forced-failure gate while proving the
+opposite of what it exists to prove. A substring `"ok"` matched every
+`{"ok":false}` the endpoint can return; a regex `"ok"\s*:\s*true` still matched the
+sequence anywhere in the body, nested objects included.
 
 ### Config gating
 
@@ -105,8 +119,8 @@ screen for a message nobody received — and they could not send it again.
 the untracked-file route Supabase and release signing already use. **Unconfigured
 is an ordinary state, and in it both entry points are absent.** Not defensive
 coding: a form that cannot post is a feature that does not exist, and a row opening
-it is the dead control the rollout rule exists to prevent. Every build today is in
-that state, including CI and every fresh clone.
+it is the dead control the rollout rule exists to prevent. CI and every fresh clone
+build in that state, and the owner's build is the one that does not.
 
 The Gradle script fails the build if anything token-shaped appears in
 `report.properties`; `ReportConfigTest` re-checks at runtime.
@@ -283,16 +297,33 @@ transport is in-app HTTP with no external handoff that could leak across.
 The standing shared-process caveat still applies and is not touched here: night mode
 stays activity-local, and nothing in this slice calls `setDefaultNightMode`.
 
-## 10 · Before merge
+## 10 · Live validation — done before merge
 
-1. **Deploy the endpoint** ([tools/report-endpoint/](../tools/report-endpoint/)) and
-   put its `/exec` URL in `report.properties`.
-2. **Live-validate both directions.** A real send arriving in the chat, *and* —
-   more importantly — a deliberately broken `TELEGRAM_CHAT_ID` producing
-   `{"ok":false}` and the app showing `report-error` rather than a false
-   "Спасибо!". That is the one property of this feature that cannot be checked from
-   the app, and it is the one that would silently lose reports.
-3. ~~**Decide retention**~~ — **done: 30 days.**
+Run against the deployed endpoint on **API 24**, the project's minSdk, so the
+oldest supported device is the one that was proven. All four sends were real.
+
+| gate | what it did | result |
+|---|---|---|
+| **A1** | Player door → `Другое`, one send | success screen; **exactly one** message delivered |
+| **A2** | Settings door → `Проблема с интерфейсом`, one send | success screen; **exactly one** more delivered |
+| **B** | `TELEGRAM_CHAT_ID` temporarily invalidated, one send | **`report-error`**; category and typed text preserved; «Отправить ещё раз» offered; **nothing delivered** |
+| **B-retry** | chat id restored, one tap on the same preserved form | success; delivered |
+
+**Gate B is the one that mattered.** Before the `ReportAck` fix it would have shown
+«Спасибо!» for a message nobody received — and passed, while proving the opposite.
+
+Android logcat across all four runs carried no endpoint URL, deployment id, host,
+token-shaped string, `api.telegram.org`, `apikey`, `Authorization`, Supabase key, or
+the report text. The failure path surfaced no reason at all: the listener sees one
+frozen sentence and the detail stays in `Failed(detail)`, unlogged.
+
+`redact()` was closed separately, by running the real function from the deployed
+`Code.gs` with `PropertiesService` stubbed to fabricated values — both branches,
+seven cases, no real secret in the process. Gate B could not close it: an invalid
+chat id makes `UrlFetchApp.fetch` *succeed* and return 400, so the thrown error is
+our own string and never carried the token.
+
+A second smoke pass followed the six-line formatting redeploy.
 
 ## 11 · Retention
 

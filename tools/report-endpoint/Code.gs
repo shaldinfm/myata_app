@@ -71,10 +71,11 @@
  *  2. Create a private group or channel for reports and add the bot to it.
  *     Get its numeric chat id (e.g. via @getidsbot, or getUpdates once).
  *  3. script.google.com -> New project -> paste this file.
- *  4. Project Settings -> Script Properties, add:
- *         TELEGRAM_BOT_TOKEN   <the token from BotFather>
- *         TELEGRAM_CHAT_ID     <the numeric chat id, e.g. -1001234567890>
- *         SHARED_SECRET        (optional; see below)
+ *  4. Project Settings -> Script Properties, add exactly these two:
+ *         TELEGRAM_BOT_TOKEN   <the token from BotFather>            SECRET
+ *         TELEGRAM_CHAT_ID     <the numeric chat id, e.g. -100...>   SENSITIVE
+ *     Nothing else is read. This file has no third property, and setting one
+ *     would do nothing.
  *  5. Deploy -> New deployment -> Web app
  *         Execute as:        Me
  *         Who has access:    Anyone
@@ -97,13 +98,37 @@
  *   - a coarse global rate limit via CacheService, below;
  *   - Apps Script's own daily UrlFetch quota as a hard ceiling.
  *
- * SHARED_SECRET is deliberately NOT implemented as a client-sent header: a secret
- * shipped in an APK is not a secret, and pretending otherwise would be worse than
- * having none. It is reserved for a future signed-request scheme.
+ * A shared secret is deliberately NOT implemented — not as a client-sent header,
+ * and not as a Script Property either. A secret shipped in an APK is not a
+ * secret, and a property that nothing reads is worse than no property at all: it
+ * reads as protection that is not there. Per-request authentication here would
+ * have to be a signed request, which is a different design.
  */
 
 var MAX_MESSAGE = 2000;
 var MAX_FIELD = 200;
+
+/**
+ * Telegram rejects a sendMessage over 4096 characters, and escaping *expands*:
+ * a message of 2000 ampersands becomes 10000 characters of `&amp;`. Left alone
+ * that is a message the listener can never send — every attempt, retry included,
+ * would come back as the frozen error, and the cause would be invisible to them.
+ *
+ * So the budgets below are on the ESCAPED length, and the worst case adds up:
+ *
+ *     message                   2700
+ *     6 diagnostics, 200 each   1200
+ *     category label            <=  60
+ *     fixed markup and newlines <=  90
+ *                              ------
+ *                                4050   < 4096
+ *
+ * Ordinary input never reaches them — the real diagnostics are all under 60
+ * characters and a normal message escapes to its own length — so these bite only
+ * on input designed to break the send.
+ */
+var MAX_MESSAGE_HTML = 2700;
+var MAX_FIELD_HTML = 200;
 
 var CATEGORIES = {
   playback_wont_start: 'Музыка не запускается',
@@ -139,9 +164,11 @@ function doPost(e) {
 
     return ok();
   } catch (err) {
-    // The reason is for the log, not for the listener - the app draws one frozen
-    // sentence for every failure. Never echo the request back in an error.
-    console.error('report failed: ' + err);
+    // The reason is for the log, not for the listener — the app draws one frozen
+    // sentence for every failure. Never echo the request back in an error, and
+    // never the token: `UrlFetchApp.fetch` puts the whole URL in the message when
+    // it throws, and the URL contains the bot token. See redact().
+    console.error('report failed: ' + redact(err));
     return fail('send_failed');
   }
 }
@@ -184,14 +211,15 @@ function sendToTelegram(text) {
 }
 
 function format(r) {
+  var field = function (v) { return escaped(v, MAX_FIELD_HTML); };
   return [
     '<b>' + escapeHtml(CATEGORIES[r.category]) + '</b>',
     r.message ? '' : null,
-    r.message ? escapeHtml(r.message) : null,
+    r.message ? escaped(r.message, MAX_MESSAGE_HTML) : null,
     '',
-    '<code>' + escapeHtml(r.app_version) + ' · ' + escapeHtml(r.device) + '</code>',
-    '<code>Android ' + escapeHtml(r.android) + ' · ' + escapeHtml(r.network) + '</code>',
-    '<code>' + escapeHtml(r.stream) + ' · ' + escapeHtml(r.last_error) + '</code>'
+    '<code>' + field(r.app_version) + ' · ' + field(r.device) + '</code>',
+    '<code>Android ' + field(r.android) + ' · ' + field(r.network) + '</code>',
+    '<code>' + field(r.stream) + ' · ' + field(r.last_error) + '</code>'
   ].filter(function (line) { return line !== null; }).join('\n');
 }
 
@@ -216,6 +244,43 @@ function isRateLimited() {
 function clamp(value, max) {
   var s = value == null ? '' : String(value);
   return s.length > max ? s.substring(0, max) : s;
+}
+
+/**
+ * Removes the two Script Properties from anything on its way to a log line.
+ *
+ * This is not paranoia about our own code — it is about somebody else's. The
+ * Telegram URL carries the bot token in its path, and when `UrlFetchApp.fetch`
+ * fails it throws with the whole URL in the message ("Address unavailable:
+ * https://api.telegram.org/bot<TOKEN>/sendMessage"). Logging that error verbatim
+ * writes the token into the execution log, where it lives as long as the project
+ * does and is visible to anyone with access to it.
+ *
+ * Both known values are removed by identity, and anything token-shaped is removed
+ * by pattern as well, so a future call that builds its own URL cannot reopen this.
+ */
+function redact(text) {
+  var s = String(text == null ? '' : text);
+  var props = PropertiesService.getScriptProperties();
+  var token = props.getProperty('TELEGRAM_BOT_TOKEN');
+  var chatId = props.getProperty('TELEGRAM_CHAT_ID');
+  if (token) s = s.split(token).join('<token>');
+  if (chatId) s = s.split(chatId).join('<chat>');
+  return s.replace(/\d{6,}:[A-Za-z0-9_-]{20,}/g, '<token>');
+}
+
+/**
+ * Escape, then cut to an escaped-length budget without splitting an entity.
+ *
+ * Truncating escaped HTML naively can leave a trailing `&am`, which Telegram
+ * rejects as a malformed entity — turning a length problem into a parse problem
+ * and failing the send just as completely. Stripping the trailing fragment is
+ * what makes the cut safe.
+ */
+function escaped(value, max) {
+  var e = escapeHtml(value);
+  if (e.length <= max) return e;
+  return e.substring(0, max).replace(/&[#a-zA-Z0-9]*$/, '');
 }
 
 function escapeHtml(s) {

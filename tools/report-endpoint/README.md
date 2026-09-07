@@ -102,6 +102,25 @@ break `TELEGRAM_CHAT_ID` temporarily and confirm the same call answers
 `{"ok":false,...}` rather than `{"ok":true}` — that is the single most important
 property of this endpoint, and the one that cannot be checked from the app.
 
+Note the `-L`. An Apps Script `/exec` POST answers **302** to
+`script.googleusercontent.com`, and the redirect target carries `doPost`'s output —
+the redirect does **not** re-run the script or reach `doGet`. OkHttp follows it by
+default, which is why the Android client needs no special handling; it is also why
+a `curl` without `-L` shows an empty body and looks like a broken endpoint.
+
+## Findings from the server review, and what changed
+
+The proposal was reviewed before deployment. Four things came out of it; all four
+are fixed in this file or in the client, and none of them changes the request or
+response contract above.
+
+| # | finding | where |
+|---|---|---|
+| 1 | The client accepted any body containing the **key** `"ok"` — so every `{"ok":false}` this endpoint returns read as a delivered report, and the forced-failure gate would have passed while proving the opposite. | client: `ReportAck` now matches `"ok"\s*:\s*true`, with `ReportAckTest` over every answer below |
+| 2 | `UrlFetchApp.fetch` throws with the full URL in its message, and the URL contains the bot token — so `console.error(err)` wrote the token into the execution log. | `redact()`, applied at the only log site |
+| 3 | Telegram caps a message at 4096 characters and HTML-escaping expands: 2000 ampersands become 10000 characters, so such a report could never be sent, retry included. Worst case measured at 14875. | escaped-length budgets, worst case now 3975 |
+| 4 | Setup told the owner to add a `SHARED_SECRET` property that nothing reads — protection that is not there. | removed from the setup steps |
+
 ## Abuse
 
 Unauthenticated by design: the frozen flow works with no account, and requiring one

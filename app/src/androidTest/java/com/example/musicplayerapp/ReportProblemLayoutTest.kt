@@ -161,6 +161,23 @@ class ReportProblemLayoutTest {
         expect(where, "button height", button.height, dp(52))
         expect(where, "button x", leftIn(button, root), dp(16))
 
+        // 24dp of air under the button, on the SCROLLING content rather than on
+        // the ScrollView - so on a short screen it can be scrolled clear of the
+        // system navigation area instead of being a dead band beneath it.
+        //
+        // Asserted structurally here, and as a measured gap in
+        // `theButtonKeepsItsAirBelowIt`. It cannot be measured *here*: this sweep
+        // measures the root at an artificial 1100dp so the whole form is laid out
+        // at once, which leaves the viewport taller than the content, and
+        // `fillViewport` then stretches the form to fill it. That stretch is what
+        // the first version of this assertion measured - 372px of it.
+        expect(where, "air under the button", form.paddingBottom, dp(24))
+        val last = (form as ViewGroup).getChildAt(form.childCount - 1)
+        if (last !== button) {
+            findings += "$where: the button must be the last thing in the form, " +
+                "or the padding below it is not below it"
+        }
+
         // The error banner is not drawn in three of the four form states, and takes
         // no space in them: report-empty is 950 tall and report-error 1022, and the
         // 72 between them is this banner plus its gap.
@@ -222,6 +239,12 @@ class ReportProblemLayoutTest {
                     where, "gap between the banner and the button",
                     topIn(button, root) - (topIn(banner, root) + banner.height), dp(16),
                 )
+
+                // `Отправить ещё раз` gets the same air as `Отправить`, because it
+                // is one padding on the content rather than a margin on the button
+                // - the two states cannot drift apart. Measured for real in
+                // `theButtonKeepsItsAirBelowIt`.
+                expect(where, "air under the retry button", root.find(R.id.report_form).paddingBottom, dp(24))
 
                 val msg = root.text(R.id.report_error_message)
                 assertEquals("Не удалось отправить сообщение.", msg.text.toString())
@@ -304,6 +327,61 @@ class ReportProblemLayoutTest {
     }
 
     /**
+     * The literal claim: from the bottom of the button to the bottom of the
+     * scrollable content is 24dp, in both the resting and the error state.
+     *
+     * Measured at a **realistic** viewport rather than this file's usual 1100dp.
+     * The form is ~918dp tall and the sweep's tall measure leaves the viewport
+     * taller than that, at which point `fillViewport` stretches the form and the
+     * gap under the button becomes the stretch instead of the padding. On a device
+     * the content always overflows - 918dp against 731dp on the API 24 emulator -
+     * so 640dp here is the honest condition, not a convenient one.
+     */
+    @Test
+    fun theButtonKeepsItsAirBelowIt() {
+        onMainActivity { activity ->
+            for (night in listOf(false, true)) {
+                val inflater = inflaterFor(activity, night)
+                val dm = inflater.context.resources.displayMetrics
+                val dp = { v: Number -> v.toFloat() * dm.density }
+
+                for (state in listOf("resting", "error")) {
+                    val where = "report-$state/${if (night) "dark" else "light"}@640dp-tall"
+                    val root = inflate(
+                        inflater, R.layout.fragment_report_problem,
+                        dp(390).roundToInt(), heightDp = 640,
+                    ) {
+                        if (state == "error") {
+                            it.findViewById<View>(R.id.report_error_banner).visibility = View.VISIBLE
+                            val send = it.findViewById<View>(R.id.report_send)
+                            (send.layoutParams as ViewGroup.MarginLayoutParams).topMargin =
+                                it.context.resources
+                                    .getDimensionPixelSize(R.dimen.report_button_margin_top_after_banner)
+                        }
+                    }
+                    val form = root.find(R.id.report_form)
+                    val button = root.find(R.id.report_send)
+
+                    // The content really does overflow, so `fillViewport` is inert
+                    // and the number below is the padding rather than a stretch.
+                    val viewport = root.find(R.id.report_scroll).height
+                    if (form.height <= viewport) {
+                        findings += "$where: the content must overflow for this to mean anything " +
+                            "(form ${form.height}, viewport $viewport)"
+                    }
+
+                    expect(
+                        where, "button bottom to content bottom",
+                        (topIn(form, root) + form.height) - (topIn(button, root) + button.height),
+                        dp(24),
+                    )
+                }
+            }
+        }
+        report("REPORT/bottom air")
+    }
+
+    /**
      * The two arrangements never share the screen.
      *
      * The form and the success panel are siblings, and exactly one of them is
@@ -377,6 +455,7 @@ class ReportProblemLayoutTest {
         inflater: LayoutInflater,
         layout: Int,
         widthPx: Int,
+        heightDp: Int = 1100,
         prepare: (View) -> Unit = {},
     ): View {
         val parent = android.widget.FrameLayout(inflater.context)
@@ -385,7 +464,7 @@ class ReportProblemLayoutTest {
         val density = inflater.context.resources.displayMetrics.density
         root.measure(
             View.MeasureSpec.makeMeasureSpec(widthPx, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec((1100 * density).roundToInt(), View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec((heightDp * density).roundToInt(), View.MeasureSpec.EXACTLY),
         )
         root.layout(0, 0, root.measuredWidth, root.measuredHeight)
         return root

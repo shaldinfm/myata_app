@@ -26,6 +26,11 @@
       Input         508..628     Diagnostics  644..882
       Button        906..958     (error: banner 906..962, button 978..1030)
 
+  The scrolling content then ends 24 below the button, in either state - see
+  `report_form_bottom_space`. That 24 is the one number here the frozen frame does
+  not contain, because a Figma frame has nothing below its last element and a phone
+  has a navigation bar.
+
   The five category rows sit on an **8dp** gap, the same one every other list in
   this app uses. The frozen frame stacks them at a 64 pitch on a 64-high row - a
   zero gap - and G3 shipped that literally before the owner reversed it as too
@@ -106,7 +111,8 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:paddingStart="@dimen/profile_margin"
-                android:paddingEnd="@dimen/profile_margin">
+                android:paddingEnd="@dimen/profile_margin"
+                android:paddingBottom="@dimen/report_form_bottom_space">
 
                 <!-- `prompt` 358x22 at y=80; the band ends at 64. -->
                 <TextView

@@ -325,6 +325,35 @@
          because every action behind it belongs to a later phase. -->
     <dimen name="player_header_action_width">32dp</dimen>
     <dimen name="player_header_action_height">39dp</dimen>
+    <!--
+      What lifts the ellipsis onto the same line as every other trailing header
+      control in the app.
+
+      The two headers are different frozen components and they disagree by 7.5dp:
+
+          HOME / COLLECTION / ABOUT US   `Header - TopAppBar`      64 at y=0
+                                          40 control centred      -> centre 32
+          PLAYER                         `Mobile Header (Subtle)`  47 at y=16
+                                          39 control centred      -> centre 39.5
+
+      Measured on the API 24 emulator at 420dpi before this: the Profile control
+      sat at 146.5px and the ellipsis at 166px - 19.5px, exactly the predicted
+      7.5dp. Owner decision is to align on the Profile control.
+
+      The lift is done with padding rather than by moving the box, so the 32x39
+      touch target, its position and the popup's anchor are all untouched and only
+      the drawn glyph moves:
+
+          box top in the header      (47 - 39) / 2            =  4
+          content box after padding  39 - 15                  = 24
+          glyph centre               4 + 24 / 2               = 16
+          plus the header's own margin                        + 16
+                                                              = 32, the shared anchor
+
+      The 24dp drawable then exactly fills the 24dp content box, so `scaleType`
+      centre neither scales nor clips it.
+    -->
+    <dimen name="player_header_action_glyph_lift">15dp</dimen>
     <!-- The swipe dots abut the header row: it ends at 63 and they start at 63.
          They end at 73 and the page starts at 79, so 6 between. -->
     <!--
@@ -1094,6 +1123,21 @@
     <!-- 24 below the diagnostics card; 16 below the banner when it is showing. -->
     <dimen name="report_button_margin_top">24dp</dimen>
     <dimen name="report_button_margin_top_after_banner">16dp</dimen>
+
+    <!--
+      Air under `Отправить`, and under `Отправить ещё раз` with it.
+
+      The frozen frame ends at the button because a Figma frame has nothing below
+      it. A phone does: on API 24 at 420dpi the button finished hard against the
+      system navigation area, which reads as clipped and is an uncomfortable place
+      to put the one irreversible control on the screen.
+
+      It goes on the scrolling content, not on the ScrollView, so it is *reachable*
+      space rather than a dead band - on a short screen the listener can scroll the
+      button clear of the navigation bar instead of finding it pinned beneath it.
+      The window inset is added separately, on the ScrollView, by the fragment.
+    -->
+    <dimen name="report_form_bottom_space">24dp</dimen>
 
     <!--
       report-success. Card at 120, 56 below the band - the frozen anchor, unchanged.

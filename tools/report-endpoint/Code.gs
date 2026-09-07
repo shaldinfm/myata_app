@@ -114,18 +114,24 @@ var MAX_FIELD = 200;
  * that is a message the listener can never send — every attempt, retry included,
  * would come back as the frozen error, and the cause would be invisible to them.
  *
- * So the budgets below are on the ESCAPED length, and the worst case adds up:
+ * So the budgets below are on the ESCAPED length, and the worst case adds up.
+ * Recomputed when the diagnostics moved to one labelled line each — the six labels
+ * cost about what the three `<code>` wrappers did, so the budgets did not have to
+ * move:
  *
- *     message                   2700
- *     6 diagnostics, 200 each   1200
- *     category label            <=  60
- *     fixed markup and newlines <=  90
- *                              ------
- *                                4050   < 4096
+ *     message                        2700
+ *     6 diagnostics, 200 each        1200
+ *     longest category label           24   ("Музыка остановилась сама")
+ *     6 labels + <b></b> + newlines    87
+ *                                   ------
+ *                                     4011   < 4096, measured, 85 to spare
  *
- * Ordinary input never reaches them — the real diagnostics are all under 60
- * characters and a normal message escapes to its own length — so these bite only
- * on input designed to break the send.
+ * Ordinary input never reaches the budgets — the real diagnostics are all under 60
+ * characters and a normal message escapes to its own length — so they bite only on
+ * input designed to break the send.
+ *
+ * If a label is ever reworded or a seventh line added, re-measure: the headroom is
+ * 85 characters and a long new label eats it.
  */
 var MAX_MESSAGE_HTML = 2700;
 var MAX_FIELD_HTML = 200;
@@ -210,6 +216,17 @@ function sendToTelegram(text) {
   if (!parsed.ok) throw new Error('telegram rejected: ' + clamp(parsed.description, 300));
 }
 
+/**
+ * One diagnostic per labelled line.
+ *
+ * The first version packed the six values into three `<code>` lines with a middot
+ * between them, which is compact and unreadable: you had to remember that the
+ * second half of line three was the last error. Six labelled lines cost about the
+ * same characters and can be read without knowing the format.
+ *
+ * Nothing about *what* is sent changed - the same six values from the same
+ * snapshot, still escaped through the same budgets. Only their arrangement.
+ */
 function format(r) {
   var field = function (v) { return escaped(v, MAX_FIELD_HTML); };
   return [
@@ -217,9 +234,12 @@ function format(r) {
     r.message ? '' : null,
     r.message ? escaped(r.message, MAX_MESSAGE_HTML) : null,
     '',
-    '<code>' + field(r.app_version) + ' · ' + field(r.device) + '</code>',
-    '<code>Android ' + field(r.android) + ' · ' + field(r.network) + '</code>',
-    '<code>' + field(r.stream) + ' · ' + field(r.last_error) + '</code>'
+    'Версия приложения: ' + field(r.app_version),
+    'Устройство: ' + field(r.device),
+    'Android: ' + field(r.android),
+    'Сеть: ' + field(r.network),
+    'Последняя ошибка: ' + field(r.last_error),
+    'Поток: ' + field(r.stream)
   ].filter(function (line) { return line !== null; }).join('\n');
 }
 

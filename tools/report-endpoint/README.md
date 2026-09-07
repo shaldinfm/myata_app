@@ -1,8 +1,16 @@
-# Report endpoint — for owner review
+# Report endpoint
 
-The server half of **G3 · Сообщить о проблеме**. `Code.gs` is a Google Apps Script
-Web App proposal. **It is not deployed, and deploying it is a separate step the
-owner authorises explicitly.** Nothing here is or may become a secret.
+The server half of **G3 · Сообщить о проблеме** — a Google Apps Script Web App.
+Nothing here is or may become a secret.
+
+**Status: deployed by the owner and live-validated.** `Code.gs` is the source of
+what was deployed; the deployment itself, its Script Properties and its `/exec`
+URL live outside this repository and are never recorded in it. Gate A proved
+delivery through both entry points, Gate B proved that a failure is reported as a
+failure — see *Live validation* below.
+
+Editing `Code.gs` here changes nothing on its own: the live endpoint keeps serving
+the version it was deployed with until the owner deploys a new one.
 
 ```
 Android app  ->  this Web App  ->  Telegram Bot API  ->  a private chat you own
@@ -121,6 +129,50 @@ response contract above.
 | 3 | Telegram caps a message at 4096 characters and HTML-escaping expands: 2000 ampersands become 10000 characters, so such a report could never be sent, retry included. Worst case measured at 14875. | escaped-length budgets, worst case now 3975 |
 | 4 | Setup told the owner to add a `SHARED_SECRET` property that nothing reads — protection that is not there. | removed from the setup steps |
 
+## Live validation — done
+
+Run against the deployed endpoint on the project's minSdk (API 24), so the oldest
+supported device is the one that was proven.
+
+| gate | what it did | result |
+|---|---|---|
+| **A1** | Player door → `Другое`, one send | success screen; **exactly one** message delivered |
+| **A2** | Settings door → `Проблема с интерфейсом`, one send | success screen; **exactly one** more delivered |
+| **B** | chat id temporarily invalidated, one send | **`report-error`**, category and typed text preserved, «Отправить ещё раз» offered, **nothing delivered** |
+| **B-retry** | chat id restored, one tap on the same preserved form | success; delivered |
+
+Gate B is the one that matters. Before the `ReportAck` fix it would have shown
+«Спасибо!» for a message nobody received — and passed, while proving the opposite.
+
+Android logcat across all four runs contained no endpoint URL, deployment id,
+host, token-shaped string, `api.telegram.org`, `apikey`, `Authorization`, Supabase
+key, or the report text itself. The failure path surfaced no reason at all: the
+listener sees one frozen sentence and the detail stays in `Failed(detail)`,
+unlogged.
+
+## Redaction spot-check
+
+`redact()` reads the two Script Properties, which sounds alarming and is not: it
+uses them only as search needles, so its output is the input with secrets removed
+— a real value can appear in the output only if it was already in the input.
+
+Both of its branches were exercised against **this file's real `redact()`**, with
+`PropertiesService` stubbed to fabricated values, so no real secret existed in the
+process at all:
+
+| input | output |
+|---|---|
+| a fabricated token | `<token>` |
+| `chat_id=<fabricated chat>` | `chat_id=<chat>` |
+| `…/bot<fabricated token>/sendMessage` | `…/bot<token>/sendMessage` |
+| an `Error` carrying both | both replaced |
+| an unknown token-shaped value | `<token>` |
+| `telegram http 400: {"ok":false,…}` | unchanged — nothing to remove |
+
+[redact-spotcheck.gs.txt](redact-spotcheck.gs.txt) is a throwaway helper for
+confirming the same thing in the Apps Script editor. It is `.gs.txt` so it cannot
+be mistaken for deployable code, and running it creates no deployment.
+
 ## Abuse
 
 Unauthenticated by design: the frozen flow works with no account, and requiring one
@@ -133,9 +185,12 @@ shipped in an APK is not a secret. If the URL is ever abused, rotate the deploym
 
 ## Open
 
-- **Retention.** Telegram keeps these messages until someone deletes them. If a
-  retention period is wanted, it is a policy decision and a chat-side chore, not
-  code here.
+- ~~**Retention.**~~ **Decided: 30 days, by Telegram's own auto-delete.** The
+  reports chat is set to auto-delete after 30 days, which is an owner setting on
+  that chat and not code — nothing here reads, writes or schedules it, and nothing
+  needs changing to honour it. It also means the 30 days are enforced by the only
+  system that holds the data, rather than by a job that could quietly stop running.
 - **A sheet as well as a chat.** Trivial to add (`SpreadsheetApp.openById(...)`),
-  and deliberately not done: a second sink is a second copy of listeners' free
-  text, and it should be a deliberate decision rather than a default.
+  and deliberately **not** done. A second sink is a second copy of listeners' free
+  text — and now also a copy that would outlive the 30-day retention, quietly
+  turning a bounded store into a permanent one. G3 requires no archive or export.

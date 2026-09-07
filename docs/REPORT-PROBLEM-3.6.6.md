@@ -292,4 +292,23 @@ stays activity-local, and nothing in this slice calls `setDefaultNightMode`.
    `{"ok":false}` and the app showing `report-error` rather than a false
    "Спасибо!". That is the one property of this feature that cannot be checked from
    the app, and it is the one that would silently lose reports.
-3. **Decide retention** for the Telegram chat, if any.
+3. ~~**Decide retention**~~ — **done: 30 days.**
+
+## 11 · Retention
+
+The reports chat uses **Telegram's own auto-delete at 30 days**, set by the owner
+on that chat. It is deliberately not code:
+
+- **Nothing on our side persists a report.** The endpoint forwards to Telegram and
+  writes nothing — no sheet, no Drive file, no Properties, no cache of content
+  (the rate limiter stores an integer). Telegram is the only copy, so deleting
+  there deletes everything.
+- **The 30 days are enforced by the system that holds the data**, not by a job of
+  ours that could quietly stop running and leave a growing archive nobody checks.
+- **No export or archive is required for G3.** Adding a sheet alongside the chat
+  would be a second copy of listeners' free text *and* one that outlived the
+  retention period, turning a bounded store into a permanent one.
+
+This is the whole retention story: the diagnostics are already non-identifying by
+§5, the only free text is what the listener chose to type, and it is gone in 30
+days.

@@ -1010,17 +1010,29 @@
           Button            874..926   (24 below the card)
           Banner / error    874..930   (error only; the button then sits at 946)
 
-      ## The category rows touch, and that is the frozen geometry
+      ## The category rows are on the app's 8dp rhythm, not the frozen zero gap
 
-      Pitch 64 on a 64-high row is a zero gap - the five rows are one block, unlike
-      Settings, where the same plate runs at 64 + 8. Owner decision D6 is to keep it
-      exactly as frozen. Hence `report_category_row_margin_top` = 0: it exists as a
-      named zero rather than as an omitted attribute, so the next person to read
-      this file finds the decision instead of finding nothing.
+      The frozen frame stacks five 64-high rows on a 64 pitch - a zero gap, so the
+      block reads as one slab. G3 shipped that literally (owner decision D6) and it
+      was too tight on a real screen, so the owner reversed it: the rows now take
+      the same 8dp between plates that every other list in this app uses -
+      `profile_row_margin_top` on Settings, the profile and the appearance screen.
+
+      8 rather than 10, from the range the owner gave, because 8 is the number the
+      design system already has. A 10 here would be a sixth spacing value that
+      exists only on this screen.
+
+      Pitch is therefore 72, and everything below the list moves down by 32:
+
+          categories  110..462   (was 110..430)
+          descLabel   478..500
+          Input       508..628
+          Diagnostics 644..882
+          Button      906..958
     -->
     <dimen name="report_prompt_margin_top">16dp</dimen>
     <dimen name="report_category_first_margin_top">8dp</dimen>
-    <dimen name="report_category_row_margin_top">0dp</dimen>
+    <dimen name="report_category_row_margin_top">8dp</dimen>
     <dimen name="report_category_row_height">64dp</dimen>
     <dimen name="report_category_row_radius">12dp</dimen>
     <dimen name="report_category_icon_size">24dp</dimen>
@@ -1083,13 +1095,33 @@
     <dimen name="report_button_margin_top">24dp</dimen>
     <dimen name="report_button_margin_top_after_banner">16dp</dimen>
 
-    <!-- report-success: card at 120 (56 below the band), badge 64 at y=32. -->
+    <!--
+      report-success. Card at 120, 56 below the band - the frozen anchor, unchanged.
+
+      ## The card breathes wider than the frozen frame
+
+      Figma packs it to 236: 32 padding, the 64 badge, 20 to the headline, 12 to the
+      body, 32 below. On a real screen that reads as text pressed into a frame
+      rather than as a confirmation, and the owner asked for air on all four of
+      those gaps. Each grows by one 8dp step - the increment the rest of the app
+      moves in - so the new rhythm is the design system's rather than four numbers
+      picked to look right:
+
+          padding top        32 -> 40
+          badge to headline  20 -> 28
+          headline to body   12 -> 20
+          padding bottom     32 -> 40
+
+      Card 236 -> 268, and `Готово` follows it from 380 to 412 on its unchanged 24
+      gap. Nothing horizontal moves, the badge is still 64 centred at 147, and the
+      type is untouched.
+    -->
     <dimen name="report_success_card_margin_top">56dp</dimen>
-    <dimen name="report_success_card_padding_top">32dp</dimen>
+    <dimen name="report_success_card_padding_top">40dp</dimen>
     <dimen name="report_success_badge_size">64dp</dimen>
     <dimen name="report_success_badge_icon_size">24dp</dimen>
-    <!-- badge ends at 96, headline starts at 116. -->
-    <dimen name="report_success_headline_margin_top">20dp</dimen>
+    <!-- badge ends at 104, headline starts at 132. -->
+    <dimen name="report_success_headline_margin_top">28dp</dimen>
     <!--
       The frozen text boxes on report-success, applied as heights rather than as
       minimums.
@@ -1098,16 +1130,19 @@
       because MyataTypography delivers the line height as line *spacing* and a
       single line therefore measures short. These two measure **long**: the
       headline came out at 30.8 against a frozen 32 and each body line at 30.1
-      against a frozen 22, which put the card 15dp over its frozen 236 and pushed
-      `Готово` off its 380. The box is what Figma draws, the text is centred in it,
-      and the slack is line spacing rather than glyph, so nothing is clipped.
+      against a frozen 22, which put the card 15dp over its height and pushed
+      `Готово` off its anchor. The box is what Figma draws, the text is centred in
+      it, and the slack is line spacing rather than glyph, so nothing is clipped.
+
+      These two are the frame's own boxes and did **not** grow with the card: the
+      owner asked for air *around* the text, not taller text.
     -->
     <dimen name="report_success_headline_height">32dp</dimen>
     <dimen name="report_success_body_line_height">22dp</dimen>
-    <!-- headline ends at 148, body starts at 160. -->
-    <dimen name="report_success_body_margin_top">12dp</dimen>
-    <dimen name="report_success_card_padding_bottom">32dp</dimen>
-    <!-- card ends at 356, button at 380. -->
+    <!-- headline ends at 164, body starts at 184. -->
+    <dimen name="report_success_body_margin_top">20dp</dimen>
+    <dimen name="report_success_card_padding_bottom">40dp</dimen>
+    <!-- card ends at 388, button at 412. -->
     <dimen name="report_success_button_margin_top">24dp</dimen>
 
 </resources>

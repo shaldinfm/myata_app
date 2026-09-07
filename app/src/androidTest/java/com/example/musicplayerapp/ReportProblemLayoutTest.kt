@@ -76,18 +76,22 @@ class ReportProblemLayoutTest {
         /* ---- five contiguous category rows: 110 / 174 / 238 / 302 / 366 ---- */
         val rows = categoryRows(root)
         assertEquals("the frozen form has five categories", 5, rows.size)
-        val frozenY = listOf(110, 174, 238, 302, 366)
+        // The frozen frame stacks these at a 64 pitch - a zero gap. The owner
+        // reversed that as too tight, so they run on the app's own 8dp gap and the
+        // pitch is 72. Pinned, because the gap is the whole point of the change.
+        val rowY = listOf(110, 182, 254, 326, 398)
         rows.forEachIndexed { i, row ->
-            expect(where, "category $i y", topIn(row, root), dp(frozenY[i]))
+            expect(where, "category $i y", topIn(row, root), dp(rowY[i]))
             expect(where, "category $i height", row.height, dp(64))
             expect(where, "category $i x", leftIn(row, root), dp(16))
-            // Owner decision D6: the rows touch. Pitch 64 on a 64-high row is a
-            // zero gap, unlike Settings, which runs the same plate at 64 + 8. It is
-            // pinned so a later "tidy-up" to the app's usual rhythm fails here.
             if (i > 0) {
                 expect(
                     where, "category $i pitch",
-                    topIn(row, root) - topIn(rows[i - 1], root), dp(64),
+                    topIn(row, root) - topIn(rows[i - 1], root), dp(72),
+                )
+                expect(
+                    where, "gap above category $i",
+                    topIn(row, root) - (topIn(rows[i - 1], root) + rows[i - 1].height), dp(8),
                 )
             }
         }
@@ -114,14 +118,14 @@ class ReportProblemLayoutTest {
         /* ---- description label 446, field 476..596 ---- */
         val descLabel = root.text(R.id.report_description_label)
         val input = root.find(R.id.report_message)
-        expect(where, "descLabel y", topIn(descLabel, root), dp(446))
-        expect(where, "input y", topIn(input, root), dp(476))
+        expect(where, "descLabel y", topIn(descLabel, root), dp(478))
+        expect(where, "input y", topIn(input, root), dp(508))
         expect(where, "input height", input.height, dp(120))
         expect(where, "input x", leftIn(input, root), dp(16))
 
         /* ---- diagnostics card 612..850 ---- */
         val card = root.find(R.id.report_diagnostics)
-        expect(where, "diagnostics y", topIn(card, root), dp(612))
+        expect(where, "diagnostics y", topIn(card, root), dp(644))
         expect(where, "diagnostics height", card.height, dp(238))
         expect(where, "diagnostics x", leftIn(card, root), dp(16))
 
@@ -151,9 +155,9 @@ class ReportProblemLayoutTest {
         )
         assertEquals("Личные данные не отправляются.", notice.text.toString())
 
-        /* ---- the button, resting at 874 ---- */
+        /* ---- the button, resting at 906 ---- */
         val button = root.find(R.id.report_send)
-        expect(where, "button y", topIn(button, root), dp(874))
+        expect(where, "button y", topIn(button, root), dp(906))
         expect(where, "button height", button.height, dp(52))
         expect(where, "button x", leftIn(button, root), dp(16))
 
@@ -178,7 +182,7 @@ class ReportProblemLayoutTest {
     }
 
     /**
-     * report-error: the banner appears at 874 and the button moves to 946.
+     * report-error: the banner appears at 906 and the button moves to 978.
      *
      * Measured by making the banner visible and re-measuring, which is exactly what
      * the fragment does - see `ReportProblemFragment.renderBanner`, which also swaps
@@ -206,14 +210,14 @@ class ReportProblemLayoutTest {
                 val banner = root.find(R.id.report_error_banner)
                 val button = root.find(R.id.report_send)
 
-                expect(where, "banner y", topIn(banner, root), dp(874))
+                expect(where, "banner y", topIn(banner, root), dp(906))
                 expect(where, "banner height", banner.height, dp(56))
                 expect(where, "banner x", leftIn(banner, root), dp(16))
                 expect(
                     where, "gap between the card and the banner",
                     topIn(banner, root) - (topIn(card, root) + card.height), dp(24),
                 )
-                expect(where, "button y with a banner", topIn(button, root), dp(946))
+                expect(where, "button y with a banner", topIn(button, root), dp(978))
                 expect(
                     where, "gap between the banner and the button",
                     topIn(button, root) - (topIn(banner, root) + banner.height), dp(16),
@@ -252,16 +256,33 @@ class ReportProblemLayoutTest {
                 val body2 = root.text(R.id.report_success_body_2)
                 val done = root.text(R.id.report_success_done)
 
+                // The card is 268 rather than the frozen 236: the owner asked for
+                // air, and each of its four vertical gaps grew by one 8dp step
+                // (32->40 padding, 20->28 to the headline, 12->20 to the body,
+                // 32->40 below). The card's own 120 anchor and every horizontal
+                // number are the frame's, unchanged.
                 expect(where, "card y", topIn(card, root), dp(120))
-                expect(where, "card height", card.height, dp(236))
+                expect(where, "card height", card.height, dp(268))
                 expect(where, "card x", leftIn(card, root), dp(16))
                 expect(where, "badge size", badge.height, dp(64))
-                expect(where, "badge y", topIn(badge, root) - topIn(card, root), dp(32))
+                expect(where, "badge y", topIn(badge, root) - topIn(card, root), dp(40))
                 // Centred in the 358 card: (358 - 64) / 2 = 147.
                 expect(where, "badge x", leftIn(badge, root) - leftIn(card, root), dp(147))
-                expect(where, "headline y", topIn(headline, root) - topIn(card, root), dp(116))
-                expect(where, "body y", topIn(body1, root) - topIn(card, root), dp(160))
-                expect(where, "button y", topIn(done, root), dp(380))
+                expect(where, "headline y", topIn(headline, root) - topIn(card, root), dp(132))
+                expect(
+                    where, "gap between the badge and the headline",
+                    topIn(headline, root) - (topIn(badge, root) + badge.height), dp(28),
+                )
+                expect(where, "body y", topIn(body1, root) - topIn(card, root), dp(184))
+                expect(
+                    where, "gap between the headline and the body",
+                    topIn(body1, root) - (topIn(headline, root) + headline.height), dp(20),
+                )
+                expect(
+                    where, "air below the body",
+                    (topIn(card, root) + card.height) - (topIn(body2, root) + body2.height), dp(40),
+                )
+                expect(where, "button y", topIn(done, root), dp(412))
                 expect(where, "button height", done.height, dp(52))
 
                 assertEquals("Спасибо!", headline.text.toString())
@@ -272,7 +293,7 @@ class ReportProblemLayoutTest {
                 // - so the promise is replaced rather than reproduced. Asserted, so
                 // that restoring the frozen sentence is a deliberate act.
                 val body = body1.text.toString() + " " + body2.text.toString()
-                assertEquals("Сообщение отправлено. Спасибо, что помогаете нам улучшать приложение.", body)
+                assertEquals("Сообщение отправлено. Вы помогаете нам улучшать приложение.", body)
                 assertTrue(
                     "the success screen must not promise a reply it cannot send",
                     !body.contains("Telegram", ignoreCase = true),

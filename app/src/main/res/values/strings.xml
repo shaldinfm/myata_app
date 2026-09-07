@@ -564,12 +564,16 @@
       Owner correction D5. The frozen body reads "Сообщение отправлено. Если
       понадобится, / мы ответим в Telegram." - a promise the app cannot keep: there
       is no Telegram handle, no contact field and no reply channel of any kind, so
-      the report is one-way by construction. The geometry, the type and the two-line
-      shape are the frame's; only the second sentence is true instead of false.
+      the report is one-way by construction. The type and the two-line shape are the
+      frame's; only the second sentence is true instead of false.
+
+      The second line was first "Спасибо, что помогаете нам улучшать приложение.",
+      which put "Спасибо" twice on a card whose headline is already "Спасибо!". The
+      owner rewrote it to address the listener rather than thank them again.
     -->
     <string name="report_success_headline">Спасибо!</string>
     <string name="report_success_body_1">Сообщение отправлено.</string>
-    <string name="report_success_body_2">Спасибо, что помогаете нам улучшать приложение.</string>
+    <string name="report_success_body_2">Вы помогаете нам улучшать приложение.</string>
     <string name="report_success_done">Готово</string>
 
     <string name="report_back_description">Назад</string>

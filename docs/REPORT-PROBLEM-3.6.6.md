@@ -178,10 +178,14 @@ field and no reply channel anywhere in this flow — the report is one-way by
 construction — so the promise is one the app cannot keep. Shipped instead:
 
 > Сообщение отправлено.
-> Спасибо, что помогаете нам улучшать приложение.
+> Вы помогаете нам улучшать приложение.
 
-The geometry, the type, the colour and the two-line shape are the frame's; only the
-second sentence is true instead of false.
+The type, the colour and the two-line shape are the frame's; the sentence is true
+instead of false, and the gaps around it are wider by §8.3.
+
+The second line first read *"Спасибо, что помогаете нам улучшать приложение."*,
+which put «Спасибо» twice on a card whose headline is already «Спасибо!». The owner
+rewrote it to address the listener rather than thank them again.
 
 **D4 — the stream line.** The frame reads *"Поток — Мята FM, 128 kbps"*. No
 canonical bitrate exists anywhere in the app, so the stream is named — `MYATA` /
@@ -196,31 +200,78 @@ stream was fine and the listener still could not hear anything*.
 
 ## 8 · Known deviations from the frozen geometry
 
-One, and it is an expression of the frozen rhythm rather than a change to it.
+Three. One is an expression of the frozen rhythm rather than a change to it; two
+are owner decisions taken after seeing the first build on a real screen.
 
-**The diagnostics list is a 24dp pitch, not a 20dp box with a 4dp gap.** Figma
-authors six 20-high text boxes at 50, 74, 98, 122, 146, 170. Reproduced literally
-that is twelve independent `dp` values stacked, and at this project's QA density
-(420dpi, 2.625) both 20 and 4 land on a half pixel and round **up**: the pitch comes
-out at 64px against an exact 63, and by the sixth line the list had drifted 2.2dp
-and the card 3.1dp — which then pushed the Send button off its frozen 874 and the
-error banner with it.
+### 8.1 The diagnostics list is a 24dp pitch, not a 20dp box with a 4dp gap
+
+Figma authors six 20-high text boxes at 50, 74, 98, 122, 146, 170. Reproduced
+literally that is twelve independent `dp` values stacked, and at this project's QA
+density (420dpi, 2.625) both 20 and 4 land on a half pixel and round **up**: the
+pitch comes out at 64px against an exact 63, and by the sixth line the list had
+drifted 2.2dp and the card 3.1dp — which then pushed the Send button off its anchor
+and the error banner with it.
 
 Each line is now a 24dp box with its text centred and no gaps. The text centres land
 on 60, 84, 108, 132, 156, 180 — identical to the frozen boxes' own centres, because
 a 20 box inside a 24 pitch is centred in it — and 24dp is 63px exactly, so nothing
 accumulates. `ReportProblemLayoutTest` asserts the **centres** for that reason.
 
-Two related notes, not deviations:
+### 8.2 The category rows take an 8dp gap (reverses D6)
 
-- **Category rows touch** — 64 pitch on a 64-high row, a zero gap, unlike Settings,
-  which runs the same plate at 64 + 8. That is the frozen geometry and owner
-  decision D6, and `report_category_row_margin_top` is a named `0dp` so it reads as
-  a decision rather than an omission.
+The frozen frame stacks five 64-high rows on a **64 pitch** — a zero gap, so the
+block reads as one slab. G3 first shipped that literally, as owner decision D6; on
+a device it read as five rows crushed together, and the owner reversed it.
+
+They now take **8dp**, the same gap between plates that every other list in this app
+uses (`profile_row_margin_top`, on Settings, the profile and the appearance screen).
+8 rather than 10 from the range given, because 8 is the number the design system
+already has — a 10 here would be a sixth spacing value existing only on this screen.
+
+Pitch is 72, and everything below the list moves down by 32:
+
+| | frozen | shipped |
+|---|---|---|
+| categories | 110..430 | **110..462** |
+| `descLabel` | 446 | **478** |
+| `Input` | 476..596 | **508..628** |
+| `Diagnostics` | 612..850 | **644..882** |
+| `Button` | 874 | **906** |
+| `Banner / error` → button | 874 → 946 | **906 → 978** |
+
+Nothing horizontal moves, and the row itself — 358×64, r12, glyph at 32, label at
+72, check at 334 — is untouched.
+
+### 8.3 The success card breathes wider than the frozen frame
+
+Figma packs it to 236: 32 padding, the 64 badge, 20 to the headline, 12 to the body,
+32 below. On a real screen that reads as text pressed into a frame rather than as a
+confirmation, and the owner asked for air on all four gaps. Each grows by one 8dp
+step — the increment the rest of the app moves in:
+
+| | frozen | shipped |
+|---|---|---|
+| card padding top | 32 | **40** |
+| badge → headline | 20 | **28** |
+| headline → body | 12 | **20** |
+| card padding bottom | 32 | **40** |
+| card height | 236 | **268** |
+| `Готово` | 380 | **412** |
+
+The card's own 120 anchor, its 358 width, the 64 badge centred at 147, the type and
+the colours are all the frame's. The two text boxes (32 and 22) did **not** grow:
+the air is around the text, not inside it.
+
+### Two related notes, not deviations
+
 - **`report-sending` has no spinner.** The frame draws the button with the label
   «Отправляем…» and the disabled fill and nothing else — the word is the progress
   state. The auth screens swap a label for an indicator because their frames have no
   such label to change; this one does.
+- **Every deviation above is pinned by a test.** `ReportProblemLayoutTest` measures
+  the 8dp gap, the 72 pitch, the four success gaps and the 268 card, in both themes
+  at 320/360/390/412dp — so drifting back toward the frame, or further away from it,
+  fails there rather than landing quietly.
 
 ## 9 · Android TV
 

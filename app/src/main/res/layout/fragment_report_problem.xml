@@ -22,14 +22,14 @@
   beside the values; the anchors it lands are:
 
       band            0..64      prompt        80..102
-      categories    110..430     descLabel    446..468
-      Input         476..596     Diagnostics  612..850
-      Button        874..926     (error: banner 874..930, button 946..998)
+      categories    110..462     descLabel    478..500
+      Input         508..628     Diagnostics  644..882
+      Button        906..958     (error: banner 906..962, button 978..1030)
 
-  The five category rows **touch** - 64 pitch on a 64-high row - which is the
-  frozen geometry and owner decision D6. Settings runs the same plate at 64 + 8;
-  this screen does not, and `report_category_row_margin_top` is a named 0 rather
-  than an omitted attribute so that reads as a decision.
+  The five category rows sit on an **8dp** gap, the same one every other list in
+  this app uses. The frozen frame stacks them at a 64 pitch on a 64-high row - a
+  zero gap - and G3 shipped that literally before the owner reversed it as too
+  tight. dimens.xml carries the arithmetic and the reason.
 
   ## The rows are the appearance screen's component
 
@@ -122,8 +122,9 @@
 
                 <!--
                   `Row / Музыка не запускается` 2517:2134, 358x64 at y=110, and the
-                  four below it at 174 / 238 / 302 / 366. The first takes the 8 below
-                  the prompt; the rest take 0, which is the frozen zero gap.
+                  four below it on a 72 pitch. The first takes 8 below the prompt and
+                  so does every one after it - see dimens.xml for why the frozen zero
+                  gap was reversed.
 
                   Written out rather than included five times: `settings-appearance`
                   writes its three the same way, and an <include> inside a
@@ -641,8 +642,9 @@
                   Если понадобится, / мы ответим в Telegram." - and there is no
                   Telegram handle, no contact field and no reply channel anywhere in
                   this flow, so the second half is a promise the app cannot keep. The
-                  two-line shape, the type, the colour and every offset are the
-                  frame's; only the sentence is true instead of false.
+                  two-line shape, the type and the colour are the frame's; the
+                  sentence is true instead of false, and the gaps around it are wider
+                  than the frame's by owner decision - see dimens.xml.
                 -->
                 <TextView
                     android:id="@+id/report_success_body_1"

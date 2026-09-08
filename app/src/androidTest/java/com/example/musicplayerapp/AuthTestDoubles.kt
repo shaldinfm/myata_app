@@ -554,10 +554,11 @@ internal fun withMainActivity(body: (ActivityScenario<MainActivity>) -> Unit) {
 /**
  * Opens the settings shell from the HOME header control, and waits for it.
  *
- * One tap. The 40x40 gear beside the profile control is the Settings entry and a
- * plain `navigate` - nothing is decided on the way in - but the fragment
- * transaction is still not the frame the tap happened in, so this waits the way
- * everything else here does.
+ * One tap. G4a removed the gear this used to press and pointed the single frozen
+ * 40x40 control - the person, which is the only one the design draws - at
+ * `settings`. Still a plain `navigate` with nothing decided on the way in, but
+ * the fragment transaction is not the frame the tap happened in, so this waits
+ * the way everything else here does.
  *
  * It drove the PLAYER overflow's `PopupMenu` briefly, during G1a, which cost six
  * tests an API 24 skip: the menu opened there but its contents never reached the
@@ -569,7 +570,7 @@ internal fun withMainActivity(body: (ActivityScenario<MainActivity>) -> Unit) {
 internal fun openSettingsAndSettle(timeoutMs: Long = 15_000) {
     val instrumentation = InstrumentationRegistry.getInstrumentation()
     instrumentation.runOnMainSync {
-        resumedMainActivity().findViewById<android.view.View>(R.id.settings_entry).performClick()
+        resumedMainActivity().findViewById<android.view.View>(R.id.profile_entry).performClick()
     }
     awaitDestination(timeoutMs, "settings") { it.currentDestinationIdOrNull() == R.id.settings }
 }
@@ -577,15 +578,17 @@ internal fun openSettingsAndSettle(timeoutMs: Long = 15_000) {
 /**
  * Opens a profile and waits for the route to resolve.
  *
- * One tap again, as before G1: the 40x40 header control on HOME opens a profile
- * directly. G1 had briefly made it two, through the settings shell; G1a put the
- * control back.
+ * **Two taps as of G4a**, and this is the one helper where that matters. The
+ * frozen file makes `settings` the parent of the profile - `Row / Профиль` is
+ * the first row of 2517:2758, and neither profile frame carries a Settings row -
+ * so the route from HOME is through the settings shell rather than around it.
+ * G1 had this shape briefly, G1a reverted it, and G4a settles it on the design.
  *
  * Opening a profile is asynchronous, and deliberately so: `ProfileRoute` proves a
  * matching session before it navigates, rather than entering the authenticated
  * screen and letting it discover it should not have. That check is local and quick,
  * but it is not the same main-thread frame as the tap - so a suite that taps and
- * asserts in one breath reads the destination it started on.
+ * asserts in one breath reads the destination it started on. Both hops wait.
  *
  * This waits for *either* profile destination and asserts neither. Which one it landed
  * on is what the calling test is for, and one case ([ProfileAuthenticatedTest] B) exists
@@ -593,8 +596,9 @@ internal fun openSettingsAndSettle(timeoutMs: Long = 15_000) {
  */
 internal fun openProfileAndSettle(timeoutMs: Long = 15_000) {
     val instrumentation = InstrumentationRegistry.getInstrumentation()
+    openSettingsAndSettle(timeoutMs)
     instrumentation.runOnMainSync {
-        resumedMainActivity().findViewById<android.view.View>(R.id.profile_entry).performClick()
+        resumedMainActivity().findViewById<android.view.View>(R.id.settings_row_profile).performClick()
     }
     awaitDestination(timeoutMs, "a profile") { it.profileDestination() != null }
 }

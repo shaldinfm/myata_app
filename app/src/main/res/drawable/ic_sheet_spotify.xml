@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Spotify, `Sheet row / Spotify > Sheet / leading icon > Asset / logo/spotify`
+  2517:2569, decoded verbatim from the frozen file - a 24x24 vector filled
+  #191C1D, which is exactly `text_primary` in light and #F5F7FA in dark.
+
+  Tinted rather than hardcoded so the one drawable serves both pages. Replaces
+  `ic_sheet_disc`, the generic disc all four rows shared.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="@dimen/sheet_row_icon_size"
+    android:height="@dimen/sheet_row_icon_size"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@color/text_primary"
+        android:pathData="M12.000,0.000C5.373,0.000 0.000,5.373 0.000,12.000C0.000,18.628 5.373,24.000 12.000,24.000C18.628,24.000 24.000,18.628 24.000,12.000C24.000,5.373 18.628,0.001 12.000,0.001L12.000,0.000ZM17.503,17.308C17.288,17.660 16.827,17.772 16.474,17.555C13.657,15.834 10.110,15.445 5.933,16.399C5.530,16.491 5.129,16.239 5.037,15.836C4.945,15.433 5.196,15.032 5.600,14.940C10.171,13.895 14.092,14.346 17.255,16.279C17.608,16.495 17.719,16.955 17.503,17.308ZM18.972,14.040C18.701,14.480 18.125,14.619 17.685,14.348C14.459,12.365 9.543,11.791 5.727,12.949C5.233,13.099 4.710,12.820 4.560,12.326C4.411,11.831 4.690,11.310 5.184,11.159C9.542,9.837 14.960,10.477 18.664,12.754C19.104,13.024 19.243,13.600 18.972,14.040ZM19.098,10.637C15.230,8.340 8.849,8.129 5.157,9.249C4.564,9.429 3.937,9.095 3.757,8.502C3.577,7.908 3.912,7.282 4.505,7.101C8.744,5.815 15.791,6.063 20.243,8.707C20.778,9.023 20.953,9.712 20.636,10.245C20.321,10.778 19.630,10.954 19.098,10.637L19.098,10.637Z" />
+</vector>

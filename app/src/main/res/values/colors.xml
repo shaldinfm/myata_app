@@ -42,6 +42,13 @@
     <color name="text_heading">#003056</color>
     <color name="text_secondary">#42474E</color>
     <color name="outline">#E1E3E4</color>
+    <!--
+      The colour every frozen drop shadow is drawn in. Black in the file on both
+      pages - the dark page's shadows are the same nodes with the same
+      parameters - so this is one value with no dark override, and the per-layer
+      opacity lives in SoftShadowFrame where the file puts it.
+    -->
+    <color name="figma_shadow">#000000</color>
     <color name="primary">#1C4771</color>
     <color name="on_primary">#FFFFFF</color>
 
@@ -130,6 +137,15 @@
     <color name="brand_mini_player_title">#E0E8F2</color>
     <!-- play / pause glyph -->
     <color name="brand_mini_player_icon">#F5F7FA</color>
+    <!--
+      The connecting face's three dots, `Component / Dark / Mini-player /
+      buffering` 2436:771. #5FD9B4 is `primary` on the Dark page, and this is
+      deliberately NOT bound to it: the pill is #1C4771 in both themes, which is
+      light's `primary`, so binding would draw navy dots on a navy pill. Same
+      reason `brand_mini_player_icon` above is a single value - what sits on this
+      pill does not follow the theme, because the pill does not.
+    -->
+    <color name="brand_mini_player_buffering_dot">#5FD9B4</color>
 
     <!--
       Artist line. #DCEBFE on all four Light instances; #B3C4D1 on HOME and

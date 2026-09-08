@@ -19,7 +19,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
-import com.example.musicplayerapp.ui.profile.ProfileRoute
 import com.example.musicplayerapp.adapters.FavoritesAdapter
 import com.example.musicplayerapp.data.FavoriteTrack
 import com.example.musicplayerapp.databinding.FragmentFavoritesBinding
@@ -98,9 +97,6 @@ class FavoritesFragment : Fragment() {
             container,
             false
         )
-
-        // Update current fragment for navigation
-        (activity as MainActivity).viewModel.currentFragmentLiveData.value = "favorites"
 
         // Handle window insets for safe area
         //
@@ -218,8 +214,9 @@ class FavoritesFragment : Fragment() {
         // The 40x40 profile control. It opens profile-guest and does nothing else -
         // in particular it does not touch the identity boundary, so looking at the
         // profile never mints an anonymous uid.
+        // Same control, same destination as HOME's - see MainFragment.
         binding.profileEntry.root.setOnClickListener {
-            ProfileRoute.open(this)
+            findNavController().navigate(R.id.settings)
         }
 
 
@@ -347,7 +344,6 @@ class FavoritesFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        (activity as MainActivity).viewModel.currentFragmentLiveData.value = "favorites"
         (activity as MainActivity).binding.bottomNavView.visibility = View.VISIBLE
     }
 }

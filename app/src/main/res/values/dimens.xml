@@ -55,7 +55,15 @@
       The glyphs it stands in for are 11x14 and 12x14, so it reads as the same
       class of mark rather than as something that arrived from elsewhere.
     -->
-    <dimen name="mini_player_control_spinner">20dp</dimen>
+    <!--
+      The connecting dots, frozen `Mini-player / buffering` 2436:771: three 5x5
+      ellipses at x = 13, 21, 29 inside the trailing 48x48 slot. 5 across and 8
+      between centres, so the run is 21 wide - it centres in the mini player's 27
+      slot, and it also fits inside the PLAYER control's frozen 23.33 glyph box,
+      which is why one pair of numbers serves both surfaces.
+    -->
+    <dimen name="buffering_dot_size">5dp</dimen>
+    <dimen name="buffering_dot_pitch">8dp</dimen>
 
     <!--
       HOME, frozen 3.6.6 canonical.
@@ -369,7 +377,7 @@
     <!-- `Album Art (Organic Shape)`, 239x239 r20, image FILL, 1px stroke. -->
     <dimen name="player_artwork_size">239dp</dimen>
     <dimen name="player_artwork_corner">20dp</dimen>
-    <dimen name="player_artwork_stroke">1dp</dimen>
+    <dimen name="player_artwork_stroke">2dp</dimen>
     <dimen name="player_artwork_margin_top">16dp</dimen>
 
     <!--
@@ -444,30 +452,12 @@
     -->
     <dimen name="player_play_icon">27.33dp</dimen>
     <!--
-      The connecting indicator's own geometry.
-
-      Thickness is the point of these: the Material FILL 0 glyphs paint a 3.97dp
-      wall, the platform's indeterminate drawable painted 2.17dp, and the
-      indicator stands in for the glyph so it has to carry the glyph's weight. 4
-      is that wall, to the nearest whole dp.
-
-      Diameter is what must NOT change, so it is the diameter the platform
-      drawable painted, kept: its vector is a radius-18 circle with a 4-wide
-      stroke in a 48 viewport, drawn into player_play_icon's 27.33 box, so the
-      outer diameter was 2 x (18 + 2) x 27.33/48 = 22.78. Measured off the
-      screen before the swap: 22.75.
-
-      The inset exists to stop the drawable being rescaled. CircularDrawingDelegate
-      scales its canvas by bounds/preferred size, so the two have to agree or the
-      thickness above is not the thickness painted: inset is therefore whatever
-      makes the indicator's preferred size come to player_play_icon exactly.
-      PlayerControlRenderTest measures the painted stroke, so a Material release
-      that redefines how preferred size is composed fails there rather than
-      silently re-scaling this.
+      G4a removed the connecting indicator's diameter, thickness and inset with
+      the indicator itself. The connecting face is BufferingDotsView now, and its
+      dots are sized by buffering_dot_size / buffering_dot_pitch above; the box it
+      is drawn in is still player_play_icon, so the control reads the same size
+      through play -> connecting -> pause exactly as before.
     -->
-    <dimen name="player_play_spinner_diameter">22.78dp</dimen>
-    <dimen name="player_play_spinner_thickness">4dp</dimen>
-    <dimen name="player_play_spinner_inset">2.275dp</dimen>
     <dimen name="player_action_width">49dp</dimen>
     <dimen name="player_action_height">54dp</dimen>
     <!--
@@ -600,8 +590,15 @@
       height set on the view in XML anyway. The adapter sets it after inflation,
       which is the one place that wins.
     -->
-    <dimen name="player_history_title_line_height">22sp</dimen>
-    <dimen name="player_history_artist_line_height">18sp</dimen>
+    <!--
+      The line a Broadcast History row's title and artist are actually set on -
+      see HistoryRowTypography for why it is not the 28 and 20 of the tokens.
+      Shared by both lists as of G4a; they were player-only before, which is why
+      the other list never got them.
+    -->
+    <dimen name="history_row_title_line_height">22sp</dimen>
+    <dimen name="history_row_artist_line_height">18sp</dimen>
+
     <dimen name="player_history_title_height">22dp</dimen>
     <dimen name="player_history_artist_height">18dp</dimen>
 
@@ -704,13 +701,6 @@
       the drawable's own 40x40 viewport, so there is no icon-inset dimen here.
     -->
     <dimen name="profile_entry_size">40dp</dimen>
-    <!--
-      The gap between the two 40x40 header controls on HOME (G1). The frozen band
-      leaves 16..201 for the greeting and puts the profile control at 334..374,
-      so 133 is empty; Settings takes 286..326 and this is the 8 between them.
-      Nothing frozen moves to make room.
-    -->
-    <dimen name="home_header_control_gap">8dp</dimen>
 
     <!-- profile-guest 2517:2644 / 2517:3611. -->
     <dimen name="profile_header_height">64dp</dimen>
@@ -1017,10 +1007,19 @@
 
     <!-- `Sheet / trailing` on the ticked row: x=180 on a 358 sheet, w=162. -->
     <dimen name="sleep_timer_trailing_width">162dp</dimen>
-    <!-- The menu floats above the header it is anchored to. The frozen frame has
-         no shadow node - it is a flat surface on a 1px outline - so this is only
-         enough lift to separate the window, not a drawn elevation. -->
-    <dimen name="player_overflow_elevation">8dp</dimen>
+    <!--
+      The menu carries no shadow, because the frozen frame carries none.
+
+      `Menu / Плеер (таймер активен)` 2517:2093 has no effect node at all: an
+      r20 surface on a 1px `menuOutline`, and that outline is the whole edge
+      treatment. G2 read the same frame and still set 8dp "only enough lift to
+      separate the window" - which is a drawn shadow whatever it is called, and it
+      doubled an edge the design had already drawn once.
+
+      0 rather than deleting the dimen: PopupWindow's elevation defaults to a
+      platform value, so the number has to be stated to be zero.
+    -->
+    <dimen name="player_overflow_elevation">0dp</dimen>
 
     <!--
       Сообщить о проблеме (G3). report-empty 2517:2129 / report-filled 2517:2172 /

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  YouTube Music, `Sheet row / YouTube Music > Sheet / leading icon`
+  2523:172 + 2523:173, decoded verbatim from the frozen file.
+
+  The mark is drawn there as two overlapping vectors: a solid 24x24 disc, and a
+  14.574 ring-and-triangle on top of it painted in the sheet's own surface colour
+  (#F8F9FA light / #142D47 dark). That is a knockout expressed as a second fill,
+  and reproducing it literally would need the icon to know what it is sitting on.
+
+  So the two are merged into one path with `evenOdd`: the inner shapes become
+  real holes, the composite is identical, and it stays correct on any surface and
+  in either theme. The second vector sits at (17,17) against the first's (12,12),
+  so its geometry is translated by 5,5 into the shared 24 viewport.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="@dimen/sheet_row_icon_size"
+    android:height="@dimen/sheet_row_icon_size"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@color/text_primary"
+        android:fillType="evenOdd"
+        android:pathData="M11.997,24.000C14.371,24.001 16.691,23.297 18.665,21.979C20.639,20.661 22.177,18.787 23.086,16.594C23.995,14.401 24.233,11.989 23.770,9.661C23.307,7.333 22.164,5.194 20.486,3.516C18.808,1.837 16.670,0.694 14.342,0.231C12.015,-0.232 9.602,0.005 7.409,0.913C5.216,1.821 3.341,3.359 2.023,5.333C0.704,7.307 0.000,9.627 0.000,12.000C0.000,13.576 0.310,15.136 0.913,16.592C1.515,18.048 2.399,19.371 3.513,20.485C4.627,21.600 5.950,22.484 7.405,23.087C8.861,23.690 10.422,24.000 11.997,24.000ZM12.287,5.967C13.538,5.965 14.760,6.335 15.801,7.028C16.842,7.722 17.653,8.708 18.133,9.863C18.612,11.018 18.738,12.289 18.495,13.516C18.252,14.743 17.651,15.870 16.766,16.754C15.882,17.639 14.756,18.242 13.529,18.486C12.303,18.730 11.032,18.605 9.876,18.126C8.721,17.648 7.734,16.837 7.040,15.797C6.345,14.758 5.974,13.535 5.975,12.285C5.977,10.611 6.643,9.006 7.826,7.821C9.009,6.637 10.613,5.970 12.287,5.967ZM9.971,15.831L16.108,12.285L9.971,8.741L9.971,15.831ZM12.287,5.000C10.846,5.000 9.437,5.428 8.238,6.228C7.040,7.029 6.106,8.167 5.555,9.499C5.003,10.831 4.859,12.296 5.140,13.710C5.422,15.123 6.116,16.422 7.135,17.441C8.155,18.460 9.454,19.154 10.867,19.434C12.281,19.715 13.746,19.571 15.078,19.019C16.409,18.467 17.547,17.532 18.347,16.334C19.148,15.135 19.575,13.726 19.574,12.285C19.574,11.327 19.386,10.380 19.020,9.496C18.653,8.612 18.116,7.809 17.440,7.132C16.763,6.456 15.960,5.920 15.075,5.554C14.191,5.188 13.244,5.000 12.287,5.000Z" />
+</vector>

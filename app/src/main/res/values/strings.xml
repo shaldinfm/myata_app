@@ -77,7 +77,7 @@
       colon from the list, and a single break separates the two streams, so they
       read as one block of two entries rather than as two unrelated paragraphs.
     -->
-    <string name="about_paragraph_3">Дополнительно доступны тематические потоки:\n\nGOLD — «золотые» танцевальные хиты.\nXTRA — новая локальная инди-музыка.</string>
+    <string name="about_paragraph_3">Дополнительно доступны тематические потоки:\nGOLD — «золотые» танцевальные хиты.\nXTRA — новая локальная инди-музыка.</string>
     <string name="about_read_more">Читать подробнее</string>
     <!-- The same button once expanded. Not in Figma, which draws only the collapsed state. -->
     <string name="about_read_less">Свернуть</string>
@@ -230,7 +230,6 @@
     <!-- ACCOUNTS (Phase G-A3). Copy verbatim from profile-guest 2517:2644. -->
     <string name="profile_title">Профиль</string>
     <string name="profile_entry_description">Профиль</string>
-    <string name="settings_entry_description">Настройки</string>
     <string name="profile_back_description">Назад</string>
     <string name="profile_guest_heading">Вы не вошли</string>
     <string name="profile_guest_body_first">Радио, плеер, история эфира, таймер сна</string>

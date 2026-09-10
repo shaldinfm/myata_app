@@ -7,7 +7,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -19,6 +18,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
+import com.example.musicplayerapp.ui.CollectionOverflowMenu
 import com.example.musicplayerapp.adapters.FavoritesAdapter
 import com.example.musicplayerapp.data.FavoriteTrack
 import com.example.musicplayerapp.databinding.FragmentFavoritesBinding
@@ -32,6 +32,11 @@ import kotlinx.coroutines.launch
  * Fragment for displaying and managing favorite tracks collection.
  */
 class FavoritesFragment : Fragment() {
+    /** The frozen `Menu / Коллекция`; held so it can be dismissed with the view. */
+    private val overflowMenu by lazy {
+        CollectionOverflowMenu(onExportTxt = { exportTxt() }, onExportCsv = { exportCsv() })
+    }
+
 
     private lateinit var binding: FragmentFavoritesBinding
     private lateinit var viewModel: FavoritesViewModel
@@ -187,28 +192,12 @@ class FavoritesFragment : Fragment() {
         // formatting in FavoritesViewModel and the same two toasts. Only where
         // the user reaches them has moved.
         //
-        // A platform PopupMenu is deliberate and temporary: F2 replaces it with
-        // the frozen `Menu / Коллекция` surface. Relocating the actions first
-        // keeps export reachable across the interval instead of removing it and
-        // waiting for F2 to bring it back.
-
+        // The frozen `Menu / Коллекция` (G4a), replacing the platform PopupMenu
+        // that stood in for it. Same component as the PLAYER's menu - rounded
+        // card, 1px outline, no shadow, glyph-and-label rows - see
+        // CollectionOverflowMenu.
         binding.collectionOverflow.setOnClickListener { anchor ->
-            PopupMenu(anchor.context, anchor).apply {
-                menuInflater.inflate(R.menu.collection_overflow, menu)
-                setOnMenuItemClickListener { item ->
-                    when (item.itemId) {
-                        R.id.collection_action_export_txt -> {
-                            exportTxt()
-                            true
-                        }
-                        R.id.collection_action_export_csv -> {
-                            exportCsv()
-                            true
-                        }
-                        else -> false
-                    }
-                }
-            }.show()
+            overflowMenu.show(anchor)
         }
 
         // The 40x40 profile control. It opens profile-guest and does nothing else -
@@ -314,6 +303,7 @@ class FavoritesFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        overflowMenu.dismiss()
         // viewLifecycleOwner's scope cancels the jobs themselves; this drops the
         // entries, which outlive the view because the map does not belong to it.
         artworkJobs.clear()

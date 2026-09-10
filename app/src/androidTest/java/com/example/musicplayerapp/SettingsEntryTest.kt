@@ -265,14 +265,16 @@ class SettingsEntryTest {
     fun the_collection_overflow_is_still_only_its_own_actions() {
         withActivity {
             awaitHome()
+            // G4a replaced the platform PopupMenu with the frozen `Menu / Коллекция`
+            // card, so the rows are the clickable children of its layout now.
             val ids = onMain { activity ->
-                val menu = androidx.appcompat.widget.PopupMenu(activity, View(activity)).menu
-                activity.menuInflater.inflate(R.menu.collection_overflow, menu)
-                (0 until menu.size()).map { menu.getItem(it).itemId }
+                val root = activity.layoutInflater
+                    .inflate(R.layout.menu_collection_overflow, null) as android.view.ViewGroup
+                (0 until root.childCount).map { root.getChildAt(it) }.filter { it.isClickable }.map { it.id }
             }
             assertEquals("the collection overflow must have exactly two actions", 2, ids.size)
-            assertTrue(ids.contains(R.id.collection_action_export_txt))
-            assertTrue(ids.contains(R.id.collection_action_export_csv))
+            assertTrue(ids.contains(R.id.collection_overflow_export_txt))
+            assertTrue(ids.contains(R.id.collection_overflow_export_csv))
         }
 
         // A positive control first. `getIdentifier` answers 0 for *everything*
@@ -281,7 +283,7 @@ class SettingsEntryTest {
         // check that cannot tell "gone" from "asked wrongly" asserts nothing. So
         // resolve a menu that certainly exists through the identical call, and
         // fail loudly if even that comes back 0.
-        val known = context.resources.getIdentifier("collection_overflow", "menu", context.packageName)
+        val known = context.resources.getIdentifier("menu_collection_overflow", "layout", context.packageName)
         assertTrue(
             "getIdentifier resolved nothing under ${context.packageName}, so the " +
                 "absence check below would pass without meaning anything",

@@ -15,11 +15,17 @@
        pill and then cut by the pill's own rounded outline, which is the crop.
 
   A ripple with a mask is bounded: it cannot project past the view it is on, and
-  it is clipped to the mask rather than to whatever is behind it. The mask here
-  is the control's full 27x48 hit area with its corners taken to half the width,
-  so the pressed state fills exactly the target that receives the touch and stops
-  at its edge. Nothing about the control's size, position or hit target changes -
-  this file only decides where the ink is allowed to go.
+  it is clipped to the mask rather than to whatever is behind it.
+
+  **The mask is a circle - G4a.** It used to be the full 27x48 hit area with its
+  corners taken to half the width, which is a vertical stadium: 27 across and 48
+  tall, so the pressed and focused state drew a stretched oval around a round
+  control. The frozen control is round - `Button` 27x25 r9999 on the HOME pill,
+  `Mini-player / play` 48x48 r24 in the kit - so the ink is now a true 27dp
+  circle, the full width of the slot, inset top and bottom to sit centred on the
+  glyph. The slot, the 27x48 hit target and the control's position are all
+  unchanged: the touch still lands anywhere in the slot, only the drawn press
+  shape is round.
 
   `colorControlHighlight` is the theme's own press colour, so Light and Dark are
   both the platform's and neither needs a value here.
@@ -28,9 +34,12 @@
     android:color="?attr/colorControlHighlight">
 
     <item android:id="@android:id/mask">
-        <shape android:shape="rectangle">
-            <solid android:color="@android:color/white" />
-            <corners android:radius="@dimen/mini_player_control_corner" />
-        </shape>
+        <inset
+            android:insetTop="@dimen/mini_player_control_press_inset"
+            android:insetBottom="@dimen/mini_player_control_press_inset">
+            <shape android:shape="oval">
+                <solid android:color="@android:color/white" />
+            </shape>
+        </inset>
     </item>
 </ripple>

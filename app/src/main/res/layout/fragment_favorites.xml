@@ -92,6 +92,8 @@
                 android:layout_height="@dimen/collection_header_action_size"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/collection_overflow"
+                android:paddingBottom="@dimen/header_overflow_glyph_lift"
+                android:paddingStart="@dimen/collection_overflow_glyph_inset_start"
                 android:scaleType="center"
                 android:src="@drawable/ic_collection_overflow" />
 

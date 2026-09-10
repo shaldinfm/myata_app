@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Row / Системная > Icon / layout` 2523:127 on settings-appearance 2517:2817.
+  A disc split down the middle - the half-lit "follow the device" mark.
+
+  Decoded from the node's own geometry, not redrawn. The frame places an 18x18
+  vector at (3,3) of a 24x24 slot, so the path is authored in 18 units and the
+  group translates it by 3 - the frame's own numbers, stated rather than baked
+  into the coordinates.
+
+  Filled, like the palette glyph it replaces and unlike the stroked person/clock
+  set on the profile rows: that is what these nodes are. Colour is
+  `profile_row_icon`, the shared row-glyph token - #42474E in Light, #B3C4D1 in
+  Dark - which is what both canonical pages fill them with.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <group
+        android:translateX="3"
+        android:translateY="3">
+        <path
+            android:fillColor="@color/profile_row_icon"
+            android:fillType="evenOdd"
+            android:pathData="M9.000,18.000C13.971,18.000 18.000,13.971 18.000,9.000C18.000,4.029 13.971,0.000 9.000,0.000C4.029,0.000 0.000,4.029 0.000,9.000C0.000,13.971 4.029,18.000 9.000,18.000ZM9.000,16.650L9.000,1.350C13.225,1.350 16.650,4.775 16.650,9.000C16.650,13.225 13.225,16.650 9.000,16.650Z" />
+    </group>
+</vector>

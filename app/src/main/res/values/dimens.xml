@@ -45,11 +45,12 @@
     <dimen name="mini_player_button_width">27dp</dimen>
     <dimen name="mini_player_button_height">48dp</dimen>
     <!--
-      The press state's mask, half of mini_player_button_width, so the ripple
-      fills the 27x48 target and ends in a semicircle at each end instead of a
-      corner. See bg_mini_player_control.xml for why it is masked at all.
+      The press state's circle: the slot's full 27 width, centred in its 48 height,
+      so (48 - 27) / 2 = 10.5 of inset top and bottom leaves a 27x27 square for
+      the oval to fill. See bg_mini_player_control.xml for why it is masked at all
+      and why it is no longer the stadium the old 13.5 corner radius drew.
     -->
-    <dimen name="mini_player_control_corner">13.5dp</dimen>
+    <dimen name="mini_player_control_press_inset">10.5dp</dimen>
     <!--
       The connecting indicator, inside the 27 slot with a little air around it.
       The glyphs it stands in for are 11x14 and 12x14, so it reads as the same
@@ -334,34 +335,52 @@
     <dimen name="player_header_action_width">32dp</dimen>
     <dimen name="player_header_action_height">39dp</dimen>
     <!--
-      What lifts the ellipsis onto the same line as every other trailing header
-      control in the app.
+      Where the two ellipsis glyphs are drawn - G4a, measured rather than derived.
 
-      The two headers are different frozen components and they disagree by 7.5dp:
+      **What the frozen file actually says.** Both controls put their 4x16 ink in
+      the same place horizontally and lift it by the same amount inside their own
+      button:
 
-          HOME / COLLECTION / ABOUT US   `Header - TopAppBar`      64 at y=0
-                                          40 control centred      -> centre 32
-          PLAYER                         `Mobile Header (Subtle)`  47 at y=16
-                                          39 control centred      -> centre 39.5
+          PLAYER      `Mobile Header (Subtle)` 358x47 at (16,16)
+                      Button:margin 32.02 at x=325.98  -> ends 16 from the frame
+                      Button 20x39, ink 4x16 at (8,8)
+                      ink centre  x = 351.98  (38.02 from the 390 frame's right)
+                                  y = 20 in the 47 header, box centre 23.5 -> 3.5 up
 
-      Measured on the API 24 emulator at 420dpi before this: the Profile control
-      sat at 146.5px and the ellipsis at 166px - 19.5px, exactly the predicted
-      7.5dp. Owner decision is to align on the Profile control.
+          COLLECTION  `Header - TopAppBar` 390x64 at (0,0)
+                      Button:margin 32.02 at x=341.98  -> ends 16 from the frame
+                      Button 20x39 at y=12.5, ink 4x16 at (8,8)
+                      ink centre  x = 351.98  (38.02 from the right - identical)
+                                  y = 28.5 in the 64 header, box centre 32 -> 3.5 up
 
-      The lift is done with padding rather than by moving the box, so the 32x39
-      touch target, its position and the popup's anchor are all untouched and only
-      the drawn glyph moves:
+      So the trailing anchor IS shared and the lift IS shared; only the header
+      heights differ, which is why the two glyphs sit at different heights on
+      screen and must.
 
-          box top in the header      (47 - 39) / 2            =  4
-          content box after padding  39 - 15                  = 24
-          glyph centre               4 + 24 / 2               = 16
-          plus the header's own margin                        + 16
-                                                              = 32, the shared anchor
+      **What was rendered before, measured on API 24 at 420dpi:**
 
-      The 24dp drawable then exactly fills the 24dp content box, so `scaleType`
-      centre neither scales nor clips it.
+          PLAYER      ink centre 31.81dp from the right edge   (6.2 too far right)
+          COLLECTION  ink centre 39.81dp from the right edge   (1.8 too far left)
+                      -> the two were 8.00dp apart, which is the visible defect
+
+      **This supersedes a G3 decision.** G3 lifted the PLAYER ellipsis by 15dp to
+      put it on the HOME Profile control's 32dp line - a deliberate cross-screen
+      alignment, recorded here as owner-decided. The frozen file does not draw it
+      there: it draws 3.5 above the button's own centre, the same as COLLECTION's.
+      G4a follows the file, and the two screens are never on screen together for
+      the cross-screen line to be seen. `player_header_action_glyph_lift` back to
+      15 restores G3 if that call is reversed.
+
+      The moves are padding, so both touch targets, their positions and the
+      popups' anchors are untouched and only the drawn glyph moves.
+
+          lift        box 39 tall, content 39 - 7 = 32, centre 3.5 above box centre
+          player x    box 32 ending 16 from the right, centre 32 - 12.04/2 -> 38.02
+          coll.  x    box 48 ending 16 from the right, centre 40 - 3.96/2  -> 38.02
     -->
-    <dimen name="player_header_action_glyph_lift">15dp</dimen>
+    <dimen name="header_overflow_glyph_lift">7dp</dimen>
+    <dimen name="player_header_action_glyph_inset_end">12.04dp</dimen>
+    <dimen name="collection_overflow_glyph_inset_start">3.96dp</dimen>
     <!-- The swipe dots abut the header row: it ends at 63 and they start at 63.
          They end at 73 and the page starts at 79, so 6 between. -->
     <!--
@@ -1020,6 +1039,13 @@
       platform value, so the number has to be stated to be zero.
     -->
     <dimen name="player_overflow_elevation">0dp</dimen>
+    <!--
+      How far the COLLECTION menu is pulled up from its control, so both menus'
+      top edges sit the same 23dp below their ellipsis glyphs. PLAYER: glyph
+      centre 20 in a box ending at 43 -> 23. COLLECTION: glyph centre 28.5 in a
+      box ending at 56 -> 27.5. The difference is this. See CollectionOverflowMenu.
+    -->
+    <dimen name="collection_overflow_menu_lift">4.5dp</dimen>
 
     <!--
       Сообщить о проблеме (G3). report-empty 2517:2129 / report-filled 2517:2172 /

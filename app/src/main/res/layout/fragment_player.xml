@@ -100,7 +100,8 @@
                 android:layout_gravity="end|center_vertical"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/player_overflow_description"
-                android:paddingBottom="@dimen/player_header_action_glyph_lift"
+                android:paddingBottom="@dimen/header_overflow_glyph_lift"
+                android:paddingEnd="@dimen/player_header_action_glyph_inset_end"
                 android:scaleType="center"
                 android:src="@drawable/ic_player_overflow" />
         </FrameLayout>

@@ -176,11 +176,11 @@ class ReportEntryPointsTest {
                 val dp = { px: Int -> px / density }
 
                 assertEquals("menu width", 260f, dp(menu.width), 1.5f)
-                assertEquals("menu height", 160f, dp(menu.height), 1.5f)
+                // The compact menu (owner override, G4a review): 10 / 10 padding,
+                // so two rows are 10 + 48 + 4 + 48 + 10 = 120.
+                assertEquals("menu height", 120f, dp(menu.height), 1.5f)
                 assertEquals("top padding", 10f, dp(menu.paddingTop), 1.5f)
-                // The G2 debt, paid where a listener can see it: the frozen 50 is
-                // back now that a second row has arrived to earn it.
-                assertEquals("bottom padding", 50f, dp(menu.paddingBottom), 1.5f)
+                assertEquals("bottom padding", 10f, dp(menu.paddingBottom), 1.5f)
 
                 assertEquals(View.VISIBLE, timerRow.visibility)
                 assertEquals(View.VISIBLE, reportRow.visibility)
@@ -232,7 +232,7 @@ class ReportEntryPointsTest {
                 assertNotNull("the trailing slot must survive the new row", trailing)
                 // Nothing is armed in a fresh launch, and G2's rule is that the slot
                 // is GONE rather than blank in that state - so the label takes the
-                // full 160 the frozen no-trailing rows have.
+                // row's full remaining width.
                 assertEquals(View.GONE, trailing.visibility)
                 assertTrue("the timer row must still be tappable", timerRow.isClickable)
             }
@@ -312,9 +312,7 @@ class ReportEntryPointsTest {
                     View.GONE,
                     menu.findViewById<View>(R.id.player_overflow_report_problem).visibility,
                 )
-                // G2's menu again, including G2's owner decision about its padding:
-                // one 48dp row under a 50dp skirt would read as an unfinished
-                // surface, which is why the single-row value comes back with it.
+                // One row, under the same compact 10 / 10 padding as two rows.
                 assertEquals("menu height", 68f, menu.height / density, 1.5f)
                 assertEquals("bottom padding", 10f, menu.paddingBottom / density, 1.5f)
             }

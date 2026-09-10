@@ -81,7 +81,7 @@ enum class HomePlaylistsState {
                 PlaylistsState.READY -> EMPTY
                 PlaylistsState.ERROR -> if (isOnline) ERROR_FAILED else ERROR_OFFLINE
                 // LOADING, and null - the LiveData before its first value. Both mean
-                // "no answer yet", which is what the spinner says.
+                // "no answer yet", which is what the placeholder cards say.
                 else -> LOADING
             }
         }

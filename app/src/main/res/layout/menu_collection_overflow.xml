@@ -11,12 +11,15 @@
 
       menu            260x160, r20, `menuSurface` on a 1px INSIDE `menuOutline`
                       #F8F9FA / #1C3F5F light, #142D47 / #466D8F dark, no effect
-      padding         10 top, 50 bottom          (rows end at 110 of 160)
+      padding         10 top, 10 bottom          (compact - owner override; 120 tall)
       row             238x48 at x=11, pitch 52   (y = 10, 62)
-      icon slot       48 at x=12 in the row, 24 glyph centred in it
+      icon            24x24 box at card-x 16     (compact - was a 48 slot)
       glyph           `Icon / doc` 12x18 at (6,3) of the 24, stroke 1.8
-      label           x=70, Onest Medium 15/22, text_primary
+      label           card-x 56, Onest Medium 15/22, text_primary
       dividers        none
+
+  The padding and the icon / label positions are the compact row the owner chose
+  over the frozen frame, shared with the PLAYER menu - see menu_player_overflow.
 
   Both frozen rows carry the same doc glyph. There is no trailing value.
 -->
@@ -41,12 +44,12 @@
         android:focusable="true"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="@dimen/player_overflow_icon_slot_inset"
-        android:paddingEnd="0dp">
+        android:paddingStart="@dimen/overflow_row_pad_start"
+        android:paddingEnd="@dimen/overflow_row_pad_end">
 
         <ImageView
-            android:layout_width="@dimen/player_overflow_icon_slot"
-            android:layout_height="@dimen/player_overflow_icon_slot"
+            android:layout_width="@dimen/player_overflow_icon_size"
+            android:layout_height="@dimen/player_overflow_icon_size"
             android:contentDescription="@null"
             android:scaleType="center"
             android:src="@drawable/ic_menu_doc" />
@@ -55,7 +58,7 @@
             android:id="@+id/collection_overflow_export_txt_label"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/player_overflow_gap"
+            android:layout_marginStart="@dimen/overflow_label_gap"
             android:layout_weight="1"
             android:ellipsize="end"
             android:maxLines="1"
@@ -77,12 +80,12 @@
         android:focusable="true"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="@dimen/player_overflow_icon_slot_inset"
-        android:paddingEnd="0dp">
+        android:paddingStart="@dimen/overflow_row_pad_start"
+        android:paddingEnd="@dimen/overflow_row_pad_end">
 
         <ImageView
-            android:layout_width="@dimen/player_overflow_icon_slot"
-            android:layout_height="@dimen/player_overflow_icon_slot"
+            android:layout_width="@dimen/player_overflow_icon_size"
+            android:layout_height="@dimen/player_overflow_icon_size"
             android:contentDescription="@null"
             android:scaleType="center"
             android:src="@drawable/ic_menu_doc" />
@@ -91,7 +94,7 @@
             android:id="@+id/collection_overflow_export_csv_label"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/player_overflow_gap"
+            android:layout_marginStart="@dimen/overflow_label_gap"
             android:layout_weight="1"
             android:ellipsize="end"
             android:maxLines="1"

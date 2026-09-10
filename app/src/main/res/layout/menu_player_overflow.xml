@@ -25,35 +25,36 @@
   to close the gap left by Найти трек: the menu is the frozen menu with two rows
   missing, not a new two-row menu.
 
-  ## Geometry, and the debt G2 recorded being paid
+  ## Geometry - the compact row, by owner override (G4a review)
 
-  All of it from screens-3.6.6/spec/primitives.mjs:184, the frozen menu primitive
-  both menus are authored on:
+  The frozen primitive (screens-3.6.6/spec/primitives.mjs:184) puts a 48 icon
+  slot at x=12 in each row, the label at x=70, and 50 of padding under the last
+  row. Rendered, that measured identical to the file within 0.76dp - and the
+  owner rejected it on the rendered surface: the icon sat 38dp in from the card
+  edge and the menu carried a 50dp empty band. This is an explicit override of
+  the frozen frame, applied identically to this menu and to `Menu / Коллекция`:
 
-      menu            260 wide, r20, 10 top pad, 50 bottom pad
-      row             238x48 at x=11, pitch 52
-      icon slot       48 at x=12 in the row, 24 glyph centred in it
-      label           x=70, 15/22 Medium
-      trailing        x=160, w=70, 14/20 on `primary`
+      menu            260 wide, r20, 1px outline, no shadow   (unchanged)
+      padding         10 top, 10 bottom                        (was 10 / 50)
+      row             238x48 at x=11, pitch 52                 (unchanged)
+      content         16 from the card edge on both sides      (row pad 5 + 11)
+      icon            24x24 box at card-x 16                   (was a 48 slot at 23)
+      label           card-x 56, 16 after the icon             (was 81)
+      trailing        right-aligned, ending 16 from the card   (was 11)
 
-  G2 shipped **10 / 10** rather than the frozen 10 / 50, by owner decision and for
-  exactly as long as the menu carried one row: under a single 48dp line the 50 is
-  40dp of unexplained space. It recorded that as temporary in three places and
-  named the condition for repaying it - docs/SLEEP-TIMER-3.6.6.md §1, verbatim:
-  "**Restoring `player_overflow_menu_pad_bottom` to 50dp is part of shipping the
-  next Player action.**"
+  So two rows are 10 + 48 + 4 + 48 + 10 = **120** tall, not 160. The icon-16 /
+  label-56 rhythm is not invented for this: it is the one every settings and
+  profile row in the frozen file already uses, so the menus read as the same
+  family as the lists they open over.
 
-  G3 is that action, so the padding is the frozen 50 again and the menu is
-  10 + 2x52 + 46 = **160** tall - which is exactly the frozen two-row
-  `Menu / Коллекция` at 260x160. `SleepTimerSurfacesTest` measured the temporary
-  68 and now measures the 160; that is how the debt was kept from being forgotten
-  quietly, and it worked.
+  The G2 / G3 history - a 10 / 10 single-row menu, then the frozen 50 restored
+  as a debt G3 paid - is superseded rather than continued: one row and two rows
+  now share the same 10 of bottom padding.
 
-  ## The whole menu is absent in a build with no report endpoint
+  ## The report row is absent in a build with no report endpoint
 
-  Not this row alone - see PlayerOverflowMenu. A build without `report.properties`
-  draws the one-row menu G2 shipped, and there the 10 / 10 padding is applied
-  again, because it is again the right geometry for the surface being drawn.
+  See PlayerOverflowMenu. A build without `report.properties` draws the one-row
+  menu - 10 + 48 + 10 = 68 - under the same compact padding as the two-row one.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -79,28 +80,27 @@
         android:focusable="true"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="@dimen/player_overflow_icon_slot_inset"
-        android:paddingEnd="0dp">
+        android:paddingStart="@dimen/overflow_row_pad_start"
+        android:paddingEnd="@dimen/overflow_row_pad_end">
 
         <ImageView
-            android:layout_width="@dimen/player_overflow_icon_slot"
-            android:layout_height="@dimen/player_overflow_icon_slot"
+            android:layout_width="@dimen/player_overflow_icon_size"
+            android:layout_height="@dimen/player_overflow_icon_size"
             android:contentDescription="@null"
             android:scaleType="center"
             android:src="@drawable/ic_sleep_timer_clock" />
 
         <!--
-          Label at x=70 in a row whose content starts at 12: the 48 slot ends at
-          60, so the frozen gap is 10. Width is what is left after the trailing
-          value's 70 - the frozen `w - 22 - 70 - 70` = 98 on a 260 menu - and the
-          value is GONE rather than INVISIBLE when the timer is off, so the label
-          takes the full 160 the frozen no-trailing rows have.
+          Label 16 after the 24 icon box - card-x 56 in the compact row. Its width
+          is what is left after the trailing value's 70, and the value is GONE
+          rather than INVISIBLE when the timer is off, so the label then takes the
+          row's full remaining width.
         -->
         <TextView
             android:id="@+id/player_overflow_sleep_timer_label"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/player_overflow_gap"
+            android:layout_marginStart="@dimen/overflow_label_gap"
             android:layout_weight="1"
             android:ellipsize="end"
             android:maxLines="1"
@@ -145,12 +145,12 @@
         android:focusable="true"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="@dimen/player_overflow_icon_slot_inset"
-        android:paddingEnd="0dp">
+        android:paddingStart="@dimen/overflow_row_pad_start"
+        android:paddingEnd="@dimen/overflow_row_pad_end">
 
         <ImageView
-            android:layout_width="@dimen/player_overflow_icon_slot"
-            android:layout_height="@dimen/player_overflow_icon_slot"
+            android:layout_width="@dimen/player_overflow_icon_size"
+            android:layout_height="@dimen/player_overflow_icon_size"
             android:contentDescription="@null"
             android:scaleType="center"
             android:src="@drawable/ic_player_overflow_alert" />
@@ -159,7 +159,7 @@
             android:id="@+id/player_overflow_report_problem_label"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/player_overflow_gap"
+            android:layout_marginStart="@dimen/overflow_label_gap"
             android:layout_weight="1"
             android:ellipsize="end"
             android:maxLines="1"

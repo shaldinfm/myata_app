@@ -93,6 +93,8 @@
     <dimen name="home_playlist_card_size">160dp</dimen>
     <dimen name="home_playlist_card_corner">20dp</dimen>
     <dimen name="home_playlist_card_gap">16dp</dimen>
+    <!-- The playlist section's Retry: `history-error`'s 52-tall full-width button. -->
+    <dimen name="home_playlist_retry_height">52dp</dimen>
 
     <!--
       Bottom clearance: the height of the chrome that floats over the content.
@@ -968,26 +970,23 @@
     <dimen name="player_overflow_menu_width">260dp</dimen>
     <dimen name="player_overflow_menu_radius">20dp</dimen>
     <dimen name="player_overflow_menu_pad_top">10dp</dimen>
-    <dimen name="player_overflow_menu_pad_bottom">50dp</dimen>
     <!--
-      The one-row menu's bottom padding, for a build with no report endpoint, where
-      `Сообщить о проблеме` is absent and the menu is G2's again.
-
-      This is not a second opinion about the frozen 50. It is G2's owner decision
-      applied to the surface it was made about: under a single 48dp row the 50 is
-      40dp of unexplained space and reads as an unfinished menu. Two rows earn the
-      frozen number; one does not. PlayerOverflowMenu picks between them by how many
-      rows it is actually drawing, so neither value can be applied to the wrong menu.
+      10, not the frozen 50 - owner override in the G4a review, for both menus and
+      for any row count. See menu_player_overflow.xml for the compact row.
     -->
-    <dimen name="player_overflow_menu_pad_bottom_single_row">10dp</dimen>
+    <dimen name="player_overflow_menu_pad_bottom">10dp</dimen>
     <dimen name="player_overflow_row_inset">11dp</dimen>
     <dimen name="player_overflow_row_height">48dp</dimen>
     <dimen name="player_overflow_row_gap">4dp</dimen>
-    <dimen name="player_overflow_icon_slot_inset">12dp</dimen>
-    <dimen name="player_overflow_icon_slot">48dp</dimen>
     <dimen name="player_overflow_icon_size">24dp</dimen>
-    <dimen name="player_overflow_label_inset">70dp</dimen>
-    <dimen name="player_overflow_trailing_inset">160dp</dimen>
+    <!--
+      The compact row (owner override, G4a review), shared by both menus: 5 of
+      row padding inside the 11 row inset puts content 16 from the card edge on
+      both sides; the label sits 16 after the 24 icon box, at card-x 56.
+    -->
+    <dimen name="overflow_row_pad_start">5dp</dimen>
+    <dimen name="overflow_row_pad_end">5dp</dimen>
+    <dimen name="overflow_label_gap">16dp</dimen>
     <dimen name="player_overflow_trailing_width">70dp</dimen>
 
     <!--
@@ -1016,9 +1015,6 @@
     <dimen name="sleep_timer_button_height">52dp</dimen>
     <dimen name="sleep_timer_button_radius">12dp</dimen>
     <dimen name="sleep_timer_button_gutter">12dp</dimen>
-    <!-- Menu label at x=70 in a row whose content starts at 12: the 48 slot ends
-         at 60, so the frozen gap is 10. -->
-    <dimen name="player_overflow_gap">10dp</dimen>
 
     <!-- `Sheet / chevron` sits at x=318 on a 358 row whose padding ends at 342,
          so it hangs off the end of the trailing value with the row's own inset. -->

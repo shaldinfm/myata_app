@@ -263,6 +263,19 @@
       artwork, so the adapter loads a plain bitmap - rounding it a second time in
       Picasso, at a different radius, is what used to fight this.
     -->
+    <!--
+      A HOME playlist card that has not arrived yet - see `playlist_loading` in
+      fragment_main.xml. The card's own 160x160 r20, filled with `outline` at the
+      50% `history-loading` 2517:2420 gives its skeleton blocks.
+    -->
+    <style name="HomePlaylistSkeleton">
+        <item name="android:layout_width">@dimen/home_playlist_card_size</item>
+        <item name="android:layout_height">@dimen/home_playlist_card_size</item>
+        <item name="android:background">@drawable/bg_home_playlist_skeleton</item>
+        <item name="android:alpha">0.5</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+
     <style name="HomePlaylistCard">
         <item name="android:layout_width">@dimen/home_playlist_card_size</item>
         <item name="android:layout_height">@dimen/home_playlist_card_size</item>

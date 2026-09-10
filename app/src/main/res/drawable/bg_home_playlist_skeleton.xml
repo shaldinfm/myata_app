@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A placeholder HOME playlist card: the real card's r20, filled with `outline`
+  (#E1E3E4 light, #466D8F dark) - the skeleton colour `history-loading`
+  2517:2420 uses. The 50% opacity is on the view, in HomePlaylistSkeleton.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/outline" />
+    <corners android:radius="@dimen/home_playlist_card_corner" />
+</shape>

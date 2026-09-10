@@ -34,10 +34,9 @@ import com.example.musicplayerapp.ui.sleeptimer.SleepTimerText
  * does not exist, and a row opening it would be the dead control the whole rollout
  * rule exists to prevent. See [ReportConfig].
  *
- * The bottom padding follows the row count rather than being a constant, for the
- * reason G2's owner decision gives: the frozen 50 is the four-row menu's geometry,
- * and under one row it is 40dp of unexplained space. Two rows take the frozen 50
- * and the menu is the frozen 260x160; one row takes 10 and the menu is G2's 68.
+ * The bottom padding is one constant for any row count since the G4a review: the
+ * owner replaced the frozen 50 with a compact 10, so two rows are 120 tall and
+ * one row 68, with no per-count special case left to get wrong.
  */
 class PlayerOverflowMenu(
     private val onSleepTimer: () -> Unit,
@@ -96,14 +95,6 @@ class PlayerOverflowMenu(
             // GONE, not disabled: the row must not be drawn at all, and the menu
             // must close up around it rather than leave a gap where it was.
             reportRow.visibility = View.GONE
-            content.setPadding(
-                content.paddingLeft,
-                content.paddingTop,
-                content.paddingRight,
-                ctx.resources.getDimensionPixelSize(
-                    R.dimen.player_overflow_menu_pad_bottom_single_row
-                ),
-            )
         }
 
         window = popup

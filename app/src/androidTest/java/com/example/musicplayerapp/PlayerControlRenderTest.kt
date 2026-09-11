@@ -200,16 +200,29 @@ class PlayerControlRenderTest {
                     // in both themes, which is what it was. Against `primary` it
                     // reads in both.
                     //
-                    // The middle dot is the one sampled: with animations off
-                    // BufferingDotsView holds its phase where that dot is fully
-                    // opaque, so this is an exact colour match rather than a
-                    // blend, and it is deterministic on every run.
-                    val middle = raster.getPixel(ring.centerX(), ring.centerY())
-                    if (middle != glyphColour) {
-                        findings += "$where: the middle dot is $middle, not player_play_glyph $glyphColour"
+                    // With animations off - as instrumentation runs - the dots
+                    // rest on an ascending ramp, 35 / 67 / 100% left to right, so
+                    // the rightmost is fully opaque: sampling it is an exact
+                    // colour match rather than a blend, and deterministic.
+                    val pitch = dp(8).roundToInt()
+                    val rightmost = raster.getPixel(ring.centerX() + pitch, ring.centerY())
+                    if (rightmost != glyphColour) {
+                        findings += "$where: the rightmost dot is $rightmost, not player_play_glyph $glyphColour"
                     }
-                    if (middle == primary) {
+                    if (rightmost == primary) {
                         findings += "$where: the connecting face is the same colour as the surface it sits on"
+                    }
+                    // And the ramp itself, which is what keeps the still face
+                    // reading as progress rather than as an ellipsis: each dot
+                    // stands further from the surface colour than the one before.
+                    fun lum(c: Int) = 0.2126 * android.graphics.Color.red(c) +
+                        0.7152 * android.graphics.Color.green(c) + 0.0722 * android.graphics.Color.blue(c)
+                    val ground = lum(primary)
+                    val contrast = listOf(-pitch, 0, pitch).map {
+                        kotlin.math.abs(lum(raster.getPixel(ring.centerX() + it, ring.centerY())) - ground)
+                    }
+                    if (!(contrast[0] < contrast[1] && contrast[1] < contrast[2])) {
+                        findings += "$where: the resting dots are not an ascending ramp - contrast $contrast"
                     }
 
                     // ...and the surface really is under it: sample just outside

@@ -64,12 +64,18 @@ class BufferingDotsView @JvmOverloads constructor(
     /**
      * 0..1, advanced by the animator; each dot reads it at its own offset.
      *
-     * Starts at the resting quarter rather than 0, so the very first frame is a
-     * face worth showing: at 0 the leading dot is at its dimmest and the row
-     * reads as fading out. This is also the phase the view keeps when animations
-     * are switched off, and the one a test or a layout preview - neither of which
-     * attaches the view to a window, so neither of which starts the animator -
-     * will rasterise.
+     * Rests at 0, where the three dots stand at 35%, 67% and 100% - an ascending
+     * ramp left to right. That is the face kept when animations are switched off
+     * ("Remove animations" sets `animator_duration_scale` to 0), and it was chosen
+     * over the earlier resting quarter because of what that one looked like held
+     * still: dim - bright - dim is a symmetric ellipsis, a "more" glyph, and the
+     * owner read the static PLAYER control as exactly that. A ramp has a direction
+     * and reads as progress even when nothing moves.
+     *
+     * It is also the animator's own first frame, so with animations on the pulse
+     * starts from the same picture it rests on. A test or a layout preview -
+     * neither of which attaches the view to a window, so neither starts the
+     * animator - rasterises this face too.
      */
     private var phase = REST_PHASE
     private var animator: ValueAnimator? = null
@@ -86,7 +92,14 @@ class BufferingDotsView @JvmOverloads constructor(
         }
     }
 
-    /** A triangle wave per dot, offset by a third of the cycle each. */
+    /**
+     * A triangle wave per dot, offset by a quarter of the cycle each - 150ms at
+     * the 600ms [CYCLE_MS]. Each dot is a quarter-cycle further along than the
+     * one to its left, so it peaks 150ms *before* it: the brightest point travels
+     * right to left. Measured off the emulator's own display recorder at
+     * `animator_duration_scale` 1: 579ms mean peak-to-peak over 18 cycles and
+     * 134ms between neighbours, against the 600 / 150 set here.
+     */
     private fun alphaFor(index: Int): Float {
         val t = (phase + index * STAGGER) % 1f
         val up = if (t < 0.5f) t * 2f else (1f - t) * 2f
@@ -137,8 +150,8 @@ class BufferingDotsView @JvmOverloads constructor(
     private companion object {
         const val DOTS = 3
 
-        /** The phase the dots rest at: the middle one lit, the outer two dimmed. */
-        const val REST_PHASE = 0.25f
+        /** The phase the dots rest at: an ascending 35 / 67 / 100% ramp - see [phase]. */
+        const val REST_PHASE = 0f
         const val CYCLE_MS = 600L
         const val STAGGER = 0.25f
         const val MIN_ALPHA = 0.35f

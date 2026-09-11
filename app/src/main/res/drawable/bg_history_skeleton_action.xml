@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  history-loading 2517:2420 `s-action`: the row action's 40 ring, drawn as a 1px
+  INSIDE stroke on `outline` with no fill. The 0.50 is on the view.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@android:color/transparent" />
+    <stroke
+        android:width="@dimen/history_skeleton_action_stroke"
+        android:color="@color/outline" />
+</shape>

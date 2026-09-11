@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The find-track sheet's header and four service rows - the part every variant
+  shares (G4b).
+
+  Source: `find-track-sheet` 2517:2524 / `find-track-sheet_dark` 2517:3491 in the
+  FINAL file, whose note is the reason this is one file: "One find-track pattern
+  shared by Broadcast History, the player menu and Collection. Collection adds a
+  divider and a destructive row below these four; nothing else differs."
+
+      drag handle  (159,16)  40x4  r2   `outline`
+      title         (24,40) 300x32       Medium 24/32 `text_heading`  - the TRACK
+      subtitle      (24,78) 310x20       Regular 14/20 `text_secondary` - the ARTIST
+      rows          y = 112, 170, 228, 286    358x56, pitch 58
+
+  Included by sheet_find_track.xml (PLAYER and History - these rows, then the
+  sheet's 24 of bottom padding: 366 tall, the frozen frame's own height) and by
+  sheet_collection_track.xml (these rows, then its divider and remove row: 447).
+  A <merge>, so the rows are direct children of the card's column in both and
+  every anchor below is the one the Collection sheet has been measured at since F1.
+
+  The glyphs are the ones G4a decoded from the file for the Collection sheet - the
+  same four vectors the frozen find-track frame carries.
+
+  **The third row is "YouTube Music"**, the frame's label, and it opens a YouTube
+  Music search (owner decision, G4b correction pass) - see
+  `collection_sheet_youtube`.
+
+  The header stacks as gaps, not absolute tops (see the `sheet_*` dimens): a long
+  title or artist grows the sheet instead of overlapping the first row. Both
+  ellipsise at TWO lines - the artist used to stop at one, which the owner
+  rejected on a long Russian artist in the G4b review. Two, not unlimited: the
+  header can grow by at most one title line and one artist line, so the four
+  service rows always stay on a short window.
+-->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:orientation="vertical"
+    tools:parentTag="android.widget.LinearLayout">
+
+    <!-- `Bottom Sheet / drag handle`, 40x4 r2 on `outline`. -->
+    <View
+        android:layout_width="@dimen/sheet_handle_width"
+        android:layout_height="@dimen/sheet_handle_height"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="@dimen/sheet_handle_top"
+        android:background="@drawable/bg_sheet_handle" />
+
+    <TextView
+        android:id="@+id/sheet_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/sheet_title_gap"
+        android:layout_marginHorizontal="@dimen/sheet_text_inset"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:minHeight="@dimen/sheet_title_min_height"
+        android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.24_32"
+        android:textColor="@color/text_heading" />
+
+    <TextView
+        android:id="@+id/sheet_subtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/sheet_subtitle_gap"
+        android:layout_marginHorizontal="@dimen/sheet_text_inset"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:minHeight="@dimen/sheet_subtitle_min_height"
+        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+        android:textColor="@color/text_secondary" />
+
+    <!-- `Sheet row / Spotify`, y=112 -> the first row's gap is 14. -->
+    <LinearLayout
+        android:id="@+id/row_spotify"
+        style="@style/CollectionSheetRow"
+        android:layout_marginTop="@dimen/sheet_rows_top">
+
+        <ImageView
+            style="@style/CollectionSheetRowIcon"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_sheet_spotify" />
+
+        <TextView
+            style="@style/CollectionSheetRowLabel"
+            android:text="@string/collection_sheet_spotify"
+            android:textColor="@color/text_primary" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/row_apple_music"
+        style="@style/CollectionSheetRow">
+
+        <ImageView
+            style="@style/CollectionSheetRowIcon"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_sheet_apple_music" />
+
+        <TextView
+            style="@style/CollectionSheetRowLabel"
+            android:text="@string/collection_sheet_apple_music"
+            android:textColor="@color/text_primary" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/row_youtube"
+        style="@style/CollectionSheetRow">
+
+        <ImageView
+            style="@style/CollectionSheetRowIcon"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_sheet_youtube_music" />
+
+        <TextView
+            style="@style/CollectionSheetRowLabel"
+            android:text="@string/collection_sheet_youtube"
+            android:textColor="@color/text_primary" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/row_yandex"
+        style="@style/CollectionSheetRow">
+
+        <ImageView
+            style="@style/CollectionSheetRowIcon"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_sheet_yandex_music" />
+
+        <TextView
+            style="@style/CollectionSheetRowLabel"
+            android:text="@string/collection_sheet_yandex"
+            android:textColor="@color/text_primary" />
+    </LinearLayout>
+</merge>

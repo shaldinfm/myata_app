@@ -152,4 +152,7 @@
     <color name="disabled_container">#1E3754</color>
     <color name="disabled_content">#6F899F</color>
 
+
+    <!-- G4b: history-empty_dark / history-error_dark `Illustration`. -->
+    <color name="history_state_illustration">#1C4771</color>
 </resources>

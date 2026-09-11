@@ -31,13 +31,33 @@ class PlayerFragment : Fragment() {
      * anchored it is destroyed leaks it onto whatever is underneath.
      */
     private val overflow = PlayerOverflowMenu(
+        // Re-read at the tap rather than trusted from when the menu opened: the
+        // stream can move on in between, and the sheet is for what is playing now.
+        // Null means the placeholder is back up, and then there is nothing to open.
+        onFindTrack = { vm.nowPlayingQuery()?.let { FindTrackSheet.show(childFragmentManager, it) } },
         onSleepTimer = { SleepTimerSheet.show(childFragmentManager) },
         // The same destination `Settings > Прочее > Сообщить о проблеме` opens, in
         // the same state. A push rather than a tab move, so Back comes back here.
         onReportProblem = {
             findNavController().navigate(R.id.action_playerFragment_to_report_problem)
         },
+        onBroadcastHistory = ::openBroadcastHistory,
     )
+
+    /**
+     * `Menu / Плеер` > `История эфира`: the full-screen history (G4b).
+     *
+     * Only from the player itself. The row is in a popup that dismisses on the
+     * first tap, but a second tap can still land while the push is settling - and
+     * then the current destination is already the history, so it does nothing
+     * instead of stacking a second copy. The action is `launchSingleTop` as well,
+     * which is the graph saying the same thing.
+     */
+    private fun openBroadcastHistory() {
+        val nav = findNavController()
+        if (nav.currentDestination?.id != R.id.player) return
+        nav.navigate(R.id.action_playerFragment_to_broadcast_history)
+    }
 
     /** See [PlayerOverflowMenu.contentForTest]. */
     @androidx.annotation.VisibleForTesting
@@ -91,7 +111,11 @@ class PlayerFragment : Fragment() {
         // ViewModel at the moment it opens, so the value on the row is the same one
         // the sheet and the Settings row are showing - there is no second copy.
         binding.playerHeaderAction.setOnClickListener { anchor ->
-            overflow.show(anchor, vm.sleepTimer.value as? SleepTimerState.Armed)
+            overflow.show(
+                anchor,
+                timer = vm.sleepTimer.value as? SleepTimerState.Armed,
+                canFindTrack = vm.nowPlayingQuery() != null,
+            )
         }
 
         binding.viewPager.adapter = adapter

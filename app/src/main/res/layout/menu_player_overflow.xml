@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  PLAYER overflow menu. Two rows as of G3.
+  PLAYER overflow menu. All four frozen rows as of G4b.
 
   Source: canonical `Menu / Плеер` 2444:18763 (206x264, r20, `menuSurface` on a
   1px `menuOutline`), widened to 260 by the frozen proposal
@@ -8,22 +8,16 @@
   is 206 wide, which cannot hold a label plus a trailing value. Widened to 260.
   This is the only change proposed to the existing menu."
 
-  ## Two rows of the frozen four
+  ## The frozen four, in the frozen order
 
-  The frozen menu has four, in this order: Найти трек, **Таймер сна**, **Сообщить
-  о проблеме**, История эфира. The two in bold exist and are drawn; the other two
-  do not exist and are absent rather than inert.
+      1  Найти трек            G4b   opens FindTrackSheet for the current track
+      2  Таймер сна            G2    opens SleepTimerSheet
+      3  Сообщить о проблеме   G3    pushes report_problem
+      4  История эфира         G4b   pushes broadcast_history
 
-  That rule is not new here. An inert row is tolerable when it names a feature the
-  app genuinely has and cannot reach yet - `Row / Аватар` on
-  profile-authenticated - and is not tolerable when it names a feature with no
-  implementation behind it at all, because it is then a dead control asserting
-  that something exists. `SleepTimerSurfacesTest` has held it since G2 and still
-  does; only the membership of its two lists moved.
-
-  The two shipping rows keep their frozen **relative order**. Nothing is promoted
-  to close the gap left by Найти трек: the menu is the frozen menu with two rows
-  missing, not a new two-row menu.
+  G2 and G3 shipped rows 2 and 3 with 1 and 4 absent rather than inert, because
+  there was nothing behind them. G4b builds what was behind them, so the menu is
+  the whole frozen menu now and nothing is missing from it.
 
   ## Geometry - the compact row, by owner override (G4a review)
 
@@ -42,22 +36,28 @@
       label           card-x 56, 16 after the icon             (was 81)
       trailing        right-aligned, ending 16 from the card   (was 11)
 
-  So two rows are 10 + 48 + 4 + 48 + 10 = **120** tall, not 160. The icon-16 /
-  label-56 rhythm is not invented for this: it is the one every settings and
-  profile row in the frozen file already uses, so the menus read as the same
-  family as the lists they open over.
+  **The height is not a number of its own.** Every row is the same
+  `player_overflow_row_height`, every row after the first carries the same
+  `player_overflow_row_gap` above it, and the card carries the same 10 / 10. So
+  the menu is wrap_content and its height is whatever those give:
 
-  The G2 / G3 history - a 10 / 10 single-row menu, then the frozen 50 restored
-  as a debt G3 paid - is superseded rather than continued: one row and two rows
-  now share the same 10 of bottom padding.
+      4 rows   10 + 4*48 + 3*4 + 10  =  224
+      3 rows   10 + 3*48 + 2*4 + 10  =  172   (a build with no report endpoint)
+
+  There is no 224 anywhere in the resources to disagree with that sum.
 
   ## The report row is absent in a build with no report endpoint
 
-  See PlayerOverflowMenu. A build without `report.properties` draws the one-row
-  menu - 10 + 48 + 10 = 68 - under the same compact padding as the two-row one.
+  See PlayerOverflowMenu. Its gap goes with it, so the menu closes up around it.
+
+  ## Найти трек can be unavailable
+
+  With no identifiable track - the placeholder pair, or metadata still missing -
+  there is nothing to search for. The row is still drawn, in its frozen place, so
+  the menu does not change shape under the listener; PlayerOverflowMenu disables it
+  for that one opening. See there.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/player_overflow_root"
     android:layout_width="@dimen/player_overflow_menu_width"
@@ -67,13 +67,52 @@
     android:paddingTop="@dimen/player_overflow_menu_pad_top"
     android:paddingBottom="@dimen/player_overflow_menu_pad_bottom">
 
-    <!-- `Menu row / Таймер сна`, the second row of the frozen four and the only
-         one whose feature exists. -->
+    <!--
+      `Menu row / Найти трек`, row 1 of the frozen four (G4b). The glyph is the
+      magnifier the FINAL file draws in the node still named `Icon / disc` - see
+      ic_player_overflow_find_track.xml.
+    -->
+    <LinearLayout
+        android:id="@+id/player_overflow_find_track"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/player_overflow_row_height"
+        android:layout_marginStart="@dimen/player_overflow_row_inset"
+        android:layout_marginEnd="@dimen/player_overflow_row_inset"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/overflow_row_pad_start"
+        android:paddingEnd="@dimen/overflow_row_pad_end">
+
+        <ImageView
+            android:layout_width="@dimen/player_overflow_icon_size"
+            android:layout_height="@dimen/player_overflow_icon_size"
+            android:contentDescription="@null"
+            android:scaleType="center"
+            android:src="@drawable/ic_player_overflow_find_track" />
+
+        <TextView
+            android:id="@+id/player_overflow_find_track_label"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/overflow_label_gap"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/find_track"
+            android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.15_22"
+            android:textColor="@color/text_primary" />
+    </LinearLayout>
+
+    <!-- `Menu row / Таймер сна`, row 2 (G2). -->
     <LinearLayout
         android:id="@+id/player_overflow_sleep_timer"
         android:layout_width="match_parent"
         android:layout_height="@dimen/player_overflow_row_height"
         android:layout_marginStart="@dimen/player_overflow_row_inset"
+        android:layout_marginTop="@dimen/player_overflow_row_gap"
         android:layout_marginEnd="@dimen/player_overflow_row_inset"
         android:background="?attr/selectableItemBackground"
         android:clickable="true"
@@ -122,13 +161,10 @@
     </LinearLayout>
 
     <!--
-      `Menu row / Сообщить о проблеме` 2517:2104, the third of the frozen four and
-      the second whose feature exists (G3).
+      `Menu row / Сообщить о проблеме` 2517:2104, row 3 (G3).
 
-      52 pitch, so the 4dp gap sits between the two 48dp rows and neither of them
-      carries a margin of its own. The glyph is `Icon / alert` in the menu's
-      `textSecondary` rather than in `error`: it names an action, it is not a
-      warning about one.
+      The glyph is `Icon / alert` in the menu's `textSecondary` rather than in
+      `error`: it names an action, it is not a warning about one.
 
       No trailing value. Only Таймер сна has one in the frozen menu, and only when
       a timer is armed.
@@ -164,6 +200,47 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:text="@string/report_title"
+            android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.15_22"
+            android:textColor="@color/text_primary" />
+    </LinearLayout>
+
+    <!--
+      `Menu row / История эфира`, row 4 of the frozen four (G4b). `Icon / doc` is
+      2517:2114, stroke blob 50165 - the same geometry `Menu / Коллекция`'s export
+      rows carry, which G4a already decoded as ic_menu_doc. Measured equal, not
+      assumed: both nodes decode to the identical stroke outline.
+    -->
+    <LinearLayout
+        android:id="@+id/player_overflow_history"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/player_overflow_row_height"
+        android:layout_marginStart="@dimen/player_overflow_row_inset"
+        android:layout_marginTop="@dimen/player_overflow_row_gap"
+        android:layout_marginEnd="@dimen/player_overflow_row_inset"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/overflow_row_pad_start"
+        android:paddingEnd="@dimen/overflow_row_pad_end">
+
+        <ImageView
+            android:layout_width="@dimen/player_overflow_icon_size"
+            android:layout_height="@dimen/player_overflow_icon_size"
+            android:contentDescription="@null"
+            android:scaleType="center"
+            android:src="@drawable/ic_menu_doc" />
+
+        <TextView
+            android:id="@+id/player_overflow_history_label"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/overflow_label_gap"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/player_history"
             android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.15_22"
             android:textColor="@color/text_primary" />
     </LinearLayout>

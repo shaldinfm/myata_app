@@ -203,8 +203,9 @@ class CollectionTrackSheetLayoutTest {
                     if (title.lineCount > 2) {
                         findings += "$where: title took ${title.lineCount} lines, expected at most 2"
                     }
-                    if (subtitle.lineCount != 1) {
-                        findings += "$where: subtitle took ${subtitle.lineCount} lines, expected 1"
+                    // Two since the G4b owner decision, and never more.
+                    if (subtitle.lineCount !in 1..2) {
+                        findings += "$where: subtitle took ${subtitle.lineCount} lines, expected at most 2"
                     }
                     noClipping(title, "$where/title")
                     noClipping(subtitle, "$where/subtitle")
@@ -221,6 +222,137 @@ class CollectionTrackSheetLayoutTest {
         assertTrue(findings.joinToString("\n") { "  $it" }, findings.isEmpty())
     }
 
+    /**
+     * `Bottom Sheet / Найти трек` - find-track-sheet 2517:2524 (G4b).
+     *
+     * The PLAYER / History variant: the same card and the same four rows as the
+     * sheet above, at the same anchors, and nothing below them - so it ends 24
+     * under the last service at the frozen 366. Bound through [FindTrackRows], the
+     * binder both sheets use, so this is also the header wiring's test.
+     */
+    @Test
+    fun findTrackSheetIsTheSharedRowsWithoutTheDestructiveRow() {
+        onMainActivity { activity ->
+            for (night in listOf(false, true)) {
+                val theme = if (night) "dark" else "light"
+                val inflater = inflaterFor(activity, night)
+                for (widthDp in widthsDp) sweepFindTrack(inflater, theme, widthDp)
+            }
+        }
+
+        android.util.Log.i("COLLECTIONQA", "==== FIND-TRACK SHEET (API ${Build.VERSION.SDK_INT}) ====")
+        log.forEach { android.util.Log.i("COLLECTIONQA", "  $it") }
+        findings.forEach { android.util.Log.e("COLLECTIONQA", "  FINDING $it") }
+        assertTrue(
+            "Find-track sheet findings on API ${Build.VERSION.SDK_INT}:\n" +
+                findings.joinToString("\n") { "  $it" },
+            findings.isEmpty(),
+        )
+    }
+
+    private fun sweepFindTrack(inflater: LayoutInflater, theme: String, widthDp: Int) {
+        val ctx = inflater.context
+        val dp = dpIn(ctx)
+        val where = "$theme@${widthDp}dp/find-track"
+
+        val root = sheet(inflater, widthDp, R.layout.sheet_find_track) { r ->
+            com.example.musicplayerapp.ui.FindTrackRows.bind(r, artist = "MUSE", title = "CRYOGEN") {}
+        }
+        val card = root.findViewById<MaterialCardView>(R.id.sheet_card)
+        val cardTop = topInRoot(card)
+        val title = root.findViewById<TextView>(R.id.sheet_title)
+        val subtitle = root.findViewById<TextView>(R.id.sheet_subtitle)
+
+        // No divider and no `Удалить из коллекции`: absent, not hidden. The ids
+        // resolve - the Collection sheet has both - so null here is a real check.
+        if (root.findViewById<View>(R.id.row_remove) != null) {
+            findings += "$where: the find-track sheet carries the Collection delete row"
+        }
+        if (root.findViewById<View>(R.id.sheet_divider) != null) {
+            findings += "$where: the find-track sheet carries the Collection divider"
+        }
+
+        expect(where, "sheet leading margin", leftInRoot(card), dp(16))
+        expect(where, "sheet corner", card.radius.roundToInt(), dp(28))
+        expect(where, "sheet stroke width", card.strokeWidth, dp(1))
+        expect(where, "sheet stroke colour",
+            card.strokeColorStateList?.defaultColor ?: 0, colour(ctx, R.color.menu_outline))
+        expect(where, "sheet fill",
+            card.cardBackgroundColor.defaultColor, colour(ctx, R.color.menu_surface))
+        if (widthDp == 390) expect(where, "sheet width", card.width, dp(358))
+
+        // The frame's own text - the track over the artist - arrived through the
+        // shared binder.
+        if (title.text.toString() != "CRYOGEN") findings += "$where: the title is not the track"
+        if (subtitle.text.toString() != "MUSE") findings += "$where: the subtitle is not the artist"
+        expect(where, "title y", topInRoot(title) - cardTop, dp(40), roundings = 3)
+        expect(where, "subtitle y", topInRoot(subtitle) - cardTop, dp(78), roundings = 5)
+        expect(where, "title colour", title.currentTextColor, colour(ctx, R.color.text_heading))
+        expect(where, "subtitle colour", subtitle.currentTextColor, colour(ctx, R.color.text_secondary))
+
+        var previous: View? = null
+        for ((index, spec) in rows.withIndex()) {
+            val (id, y, label) = spec
+            val row = root.findViewById<View>(id)
+            expect(where, "${ctx.getString(label)} row y", topInRoot(row) - cardTop, dp(y),
+                roundings = 7 + 2 * index)
+            expect(where, "${ctx.getString(label)} row height", row.height, dp(56))
+            previous?.let {
+                expect(where, "${ctx.getString(label)} row pitch", topInRoot(row) - topInRoot(it), dp(58))
+            }
+            val text = (row as ViewGroup).findLabel()
+            if (text?.text?.toString() != ctx.getString(label)) {
+                findings += "$where: row at $y reads '${text?.text}'"
+            }
+            expect(where, "${ctx.getString(label)} label inset",
+                (text?.let { leftInRoot(it) } ?: 0) - leftInRoot(card), dp(76))
+            val glyph = (0 until row.childCount).mapNotNull { row.getChildAt(it) as? android.widget.ImageView }
+                .firstOrNull()
+            if (glyph?.drawable == null) findings += "$where: ${ctx.getString(label)} has no glyph"
+            if (!row.isClickable || !row.hasOnClickListeners()) {
+                findings += "$where: ${ctx.getString(label)} is not wired to a search"
+            }
+            previous = row
+        }
+
+        // 286 + 56 + the sheet's 24 of bottom padding = the frozen 366.
+        val last = root.findViewById<View>(R.id.row_yandex)
+        expect(where, "sheet height", card.height, dp(366), roundings = 15)
+        expect(where, "bottom padding",
+            (cardTop + card.height) - (topInRoot(last) + last.height), dp(24))
+
+        log += "$where: sheet ${card.width}x${card.height}, " +
+            "rows@${rows.map { topInRoot(root.findViewById<View>(it.first)) - cardTop }}"
+
+        // ---- a deliberately long artist: two lines, an ellipsis, nothing broken ----
+        val longArtist = "КРАСНОЗНАМЁННАЯ ДИВИЗИЯ ИМЕНИ МОЕЙ БАБУШКИ FEAT. НАУТИЛУС " +
+            "ПОМПИЛИУС, АУКЦЫОН И ЕЩЁ НЕСКОЛЬКО ПРИГЛАШЁННЫХ ИСПОЛНИТЕЛЕЙ"
+        val long = sheet(inflater, widthDp, R.layout.sheet_find_track) { r ->
+            com.example.musicplayerapp.ui.FindTrackRows.bind(r, artist = longArtist, title = "ФАК Ю") {}
+        }
+        val lCard = long.findViewById<MaterialCardView>(R.id.sheet_card)
+        val lSub = long.findViewById<TextView>(R.id.sheet_subtitle)
+        val lFirst = long.findViewById<View>(R.id.row_spotify)
+        val lLast = long.findViewById<View>(R.id.row_yandex)
+        val w = "$where/long-artist"
+        if (lSub.lineCount != 2) findings += "$w: artist took ${lSub.lineCount} lines, the rule is 2"
+        if ((lSub.layout?.getEllipsisCount(1) ?: 0) == 0) findings += "$w: a too-long artist is not ellipsised on line 2"
+        noClipping(lSub, "$w/artist")
+        noOverlap(w, "artist", lSub, "first row", lFirst)
+        // The rows move down by exactly the one extra artist line and keep their
+        // own rhythm: same pitch, same height, same 24 under the last one. "One
+        // line" is the subtitle's own rendered line pitch, read from its layout -
+        // not an assumed number: the first run of this assumed the token's 20 and
+        // the text sets on its natural line.
+        val extra = lSub.height - subtitle.height
+        val linePitch = lSub.layout.let { it.getLineBottom(1) - it.getLineBottom(0) }
+        expect(w, "extra artist line = one line of the artist", extra, linePitch.toFloat())
+        expect(w, "first row y", topInRoot(lFirst) - topInRoot(lCard), (topInRoot(root.findViewById(R.id.row_spotify)) - cardTop + extra).toFloat())
+        expect(w, "row height", lFirst.height, dp(56))
+        expect(w, "bottom padding", (topInRoot(lCard) + lCard.height) - (topInRoot(lLast) + lLast.height), dp(24))
+        log += "$w: artist ${lSub.lineCount}L, sheet ${lCard.height}px (+${lCard.height - card.height})"
+    }
+
     /* ---------------------------------------------------------------- infra -- */
 
     /** The label is the one child of a sheet row that carries text. */
@@ -230,10 +362,11 @@ class CollectionTrackSheetLayoutTest {
     private fun sheet(
         inflater: LayoutInflater,
         widthDp: Int,
+        layout: Int = R.layout.sheet_collection_track,
         prepare: ((ViewGroup) -> Unit)? = null,
     ): ViewGroup {
         val widthPx = dpIn(inflater.context)(widthDp).roundToInt()
-        val root = inflater.inflate(R.layout.sheet_collection_track, null) as ViewGroup
+        val root = inflater.inflate(layout, null) as ViewGroup
         prepare?.invoke(root)
         root.measure(
             View.MeasureSpec.makeMeasureSpec(widthPx, View.MeasureSpec.EXACTLY),

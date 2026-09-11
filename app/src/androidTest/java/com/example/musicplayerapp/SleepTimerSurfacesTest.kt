@@ -22,8 +22,8 @@ import org.junit.runner.RunWith
 /**
  * The three surfaces the timer appears on, and the one formatter behind them.
  *
- *  - `Menu / Плеер` - the frozen overflow, at the frozen 260, with two rows as
- *    of G3 and at the frozen 10 / 50 padding again.
+ *  - `Menu / Плеер` - the frozen overflow, at the frozen 260, with all four
+ *    rows as of G4b under the owner's compact 10 / 10 padding (G4a).
  *  - `sleep-timer-select` / `-active` - the sheet, in both of its list states.
  *  - `Row / Таймер сна` - the Settings row, whose geometry `SettingsLayoutTest`
  *    now measures alongside the two rows it already did.
@@ -58,39 +58,54 @@ class SleepTimerSurfacesTest {
                         visibility = View.VISIBLE
                     }
                 }
+                val findRow = menu.findViewById<View>(R.id.player_overflow_find_track)
                 val row = menu.findViewById<View>(R.id.player_overflow_sleep_timer)
                 val trailing = menu.findViewById<TextView>(R.id.player_overflow_sleep_timer_trailing)
                 val reportRow = menu.findViewById<View>(R.id.player_overflow_report_problem)
+                val historyRow = menu.findViewById<View>(R.id.player_overflow_history)
+                val ordered = listOf(findRow, row, reportRow, historyRow)
 
                 // The proposal's whole change to the canonical menu: 206 -> 260,
                 // because 206 cannot hold a label plus a trailing value.
                 expect(where, "menu width", menu.width, dp(260))
-                expect(where, "row height", row.height, dp(48))
-                expect(where, "row width", row.width, dp(238))
-                expect(where, "row x", leftIn(row, menu), dp(11))
-                expect(where, "first row y", topIn(row, menu), dp(10))
                 expect(where, "trailing value width", trailing.width, dp(70))
 
-                // The second row, G3's. 52 pitch is the frozen one: a 48dp row and
-                // a 4dp gap, so the second starts at 10 + 52 = 62.
-                expect(where, "second row height", reportRow.height, dp(48))
-                expect(where, "second row width", reportRow.width, dp(238))
-                expect(where, "second row x", leftIn(reportRow, menu), dp(11))
-                expect(where, "second row y", topIn(reportRow, menu), dp(62))
-                expect(
-                    where, "row pitch",
-                    topIn(reportRow, menu) - topIn(row, menu), dp(52),
-                )
+                // The frozen four at the frozen 52 pitch - a 48dp row and a 4dp
+                // gap - so they start at 10, 62, 114 and 166.
+                ordered.forEachIndexed { i, r ->
+                    expect(where, "row ${i + 1} height", r.height, dp(48))
+                    expect(where, "row ${i + 1} width", r.width, dp(238))
+                    expect(where, "row ${i + 1} x", leftIn(r, menu), dp(11))
+                    expect(where, "row ${i + 1} y", topIn(r, menu), dp(10 + 52 * i))
+                }
+                ordered.zipWithNext().forEachIndexed { i, (a, b) ->
+                    expect(where, "pitch ${i + 1}->${i + 2}", topIn(b, menu) - topIn(a, menu), dp(52))
+                }
 
                 // ## The compact menu - owner override, G4a review
                 //
                 // The frozen 10 / 50 padding and 48 icon slot were rejected on the
-                // rendered surface. 10 top, 10 bottom: 10 + 48 + 4 + 48 + 10 = 120.
-                expect(where, "two-row menu height", menu.height, dp(120))
+                // rendered surface. 10 top, 10 bottom, and nothing else: four rows
+                // are 10 + 4*48 + 3*4 + 10 = 224, a sum of the shared row dimens -
+                // there is no separate four-row geometry for this to drift from.
+                val res = inflater.context.resources
+                val derived = res.getDimensionPixelSize(R.dimen.player_overflow_menu_pad_top) +
+                    4 * res.getDimensionPixelSize(R.dimen.player_overflow_row_height) +
+                    3 * res.getDimensionPixelSize(R.dimen.player_overflow_row_gap) +
+                    res.getDimensionPixelSize(R.dimen.player_overflow_menu_pad_bottom)
+                expect(where, "four-row menu height", menu.height, dp(224))
+                expect(where, "four-row menu height = the row spec's own sum", menu.height, derived, tolerance = 0.5f)
                 expect(
                     where, "space below the last row",
-                    menu.height - (topIn(reportRow, menu) + reportRow.height), dp(10),
+                    menu.height - (topIn(historyRow, menu) + historyRow.height), dp(10),
                 )
+                // Every row shares the timer row's compact content rhythm.
+                for (r in ordered) {
+                    val glyph = (r as android.view.ViewGroup).getChildAt(0)
+                    val text = r.getChildAt(1)
+                    expect(where, "${resName(r)} icon x from the card", leftIn(glyph, menu), dp(16))
+                    expect(where, "${resName(r)} label x from the card", leftIn(text, menu), dp(56))
+                }
                 // Content 16 from the card edge: the 24 icon box at card-x 16, the
                 // label 16 after it at 56 - the settings rows' own rhythm.
                 val icon = (row as android.view.ViewGroup).getChildAt(0)
@@ -103,36 +118,27 @@ class SleepTimerSurfacesTest {
                     menu.width - (leftIn(trailing, menu) + trailing.width), dp(16),
                 )
 
-                // Two rows. The other two frozen entries are absent rather than
-                // inert - the whole rollout decision, held where a later edit that
-                // "just adds them greyed out" would trip over it. The trailing value
-                // the frozen active frame puts on the timer row is not a third
+                // Four rows, G4b: the two G2/G3 kept absent now have features
+                // behind them. The trailing value on the timer row is not a fifth
                 // entry, so the count is of rows rather than of text.
                 assertEquals(
-                    "the overflow must carry exactly the actions that exist",
-                    2, menuRows(menu).size,
+                    "the overflow must carry the frozen four",
+                    4, menuRows(menu).size,
                 )
-                // In the frozen order, and not reordered to close the gap the two
-                // absent rows leave: Таймер сна is the second of the frozen four and
-                // Сообщить о проблеме the third, so the timer stays above.
+                // In the frozen order - the rows the layout declares, top to bottom.
                 assertEquals(
-                    "Таймер сна",
-                    menu.findViewById<TextView>(R.id.player_overflow_sleep_timer_label).text.toString(),
+                    listOf("Найти трек", "Таймер сна", "Сообщить о проблеме", "История эфира"),
+                    listOf(
+                        R.id.player_overflow_find_track_label,
+                        R.id.player_overflow_sleep_timer_label,
+                        R.id.player_overflow_report_problem_label,
+                        R.id.player_overflow_history_label,
+                    ).map { menu.findViewById<TextView>(it).text.toString() },
                 )
                 assertEquals(
-                    "Сообщить о проблеме",
-                    menu.findViewById<TextView>(R.id.player_overflow_report_problem_label).text.toString(),
+                    "$where: the rows must be drawn in the frozen order",
+                    ordered.sortedBy { topIn(it, menu) }, ordered,
                 )
-                assertTrue(
-                    "$where: Таймер сна must stay above Сообщить о проблеме",
-                    topIn(row, menu) < topIn(reportRow, menu),
-                )
-                val labels = collectText(menu).filter { it.isNotBlank() }
-                for (absent in listOf("Найти трек", "История эфира")) {
-                    if (labels.any { it.contains(absent) }) {
-                        findings += "$where: `$absent` has no implementation and must not be drawn"
-                    }
-                }
             }
         }
         report("MENU")
@@ -399,6 +405,9 @@ class SleepTimerSurfacesTest {
         val group = menu as ViewGroup
         return (0 until group.childCount).map { group.getChildAt(it) }
     }
+
+    private fun resName(v: View): String =
+        runCatching { v.resources.getResourceEntryName(v.id) }.getOrDefault("row")
 
     private fun collectText(v: View): List<String> = when (v) {
         is TextView -> listOf(v.text.toString())

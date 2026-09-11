@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A history-loading 2517:2420 placeholder bar (G4b). Every bar in the frame is a
+  pill - 34x12 r6, 150x16 r8, 96x12 r6 - so one shape whose radius the platform
+  clamps to half the height draws all three exactly. Filled with `outline`; the
+  per-bar opacity (0.45 / 0.50 / 0.35) is on the view.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/outline" />
+    <corners android:radius="@dimen/history_skeleton_pill_radius" />
+</shape>

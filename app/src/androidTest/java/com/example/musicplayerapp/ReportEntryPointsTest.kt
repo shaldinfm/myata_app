@@ -158,11 +158,11 @@ class ReportEntryPointsTest {
      * `SleepTimerSurfacesTest` measures the layout in both themes and at four
      * widths; what it cannot see is the popup [com.example.musicplayerapp.ui.PlayerOverflowMenu]
      * actually opens. This opens the real one and measures what a listener gets:
-     * two rows under the compact 10 / 10 padding the owner chose over the frozen
-     * 10 / 50 in the G4a review.
+     * the frozen four rows (G4b) under the compact 10 / 10 padding the owner chose
+     * over the frozen 10 / 50 in the G4a review.
      */
     @Test
-    fun the_live_menu_has_two_rows_and_the_compact_bottom_padding() {
+    fun the_live_menu_has_the_frozen_four_rows_and_the_compact_bottom_padding() {
         ReportConfig.endpointOverrideForTest = configured
         withMainActivity {
             openPlayerAndSettle()
@@ -176,20 +176,24 @@ class ReportEntryPointsTest {
                 val density = activity.resources.displayMetrics.density
                 val dp = { px: Int -> px / density }
 
+                val findRow = menu.findViewById<View>(R.id.player_overflow_find_track)
+                val historyRow = menu.findViewById<View>(R.id.player_overflow_history)
+                val ordered = listOf(findRow, timerRow, reportRow, historyRow)
+
                 assertEquals("menu width", 260f, dp(menu.width), 1.5f)
                 // The compact menu (owner override, G4a review): 10 / 10 padding,
-                // so two rows are 10 + 48 + 4 + 48 + 10 = 120.
-                assertEquals("menu height", 120f, dp(menu.height), 1.5f)
+                // so the frozen four are 10 + 4*48 + 3*4 + 10 = 224.
+                assertEquals("menu height", 224f, dp(menu.height), 1.5f)
                 assertEquals("top padding", 10f, dp(menu.paddingTop), 1.5f)
                 assertEquals("bottom padding", 10f, dp(menu.paddingBottom), 1.5f)
 
-                assertEquals(View.VISIBLE, timerRow.visibility)
-                assertEquals(View.VISIBLE, reportRow.visibility)
-                assertTrue(
-                    "Таймер сна stays above Сообщить о проблеме, as the frozen menu orders them",
-                    timerRow.top < reportRow.top,
-                )
-                assertEquals("row pitch", 52f, dp(reportRow.top - timerRow.top), 1.5f)
+                ordered.forEach { assertEquals(View.VISIBLE, it.visibility) }
+                // Найти трек, Таймер сна, Сообщить о проблеме, История эфира - top
+                // to bottom, at the frozen 52 pitch.
+                ordered.zipWithNext().forEach { (a, b) ->
+                    assertTrue("rows must be in the frozen order", a.top < b.top)
+                    assertEquals("row pitch", 52f, dp(b.top - a.top), 1.5f)
+                }
 
                 // The sleep timer is still what it was: G3 added a row beside it and
                 // changed nothing about it.
@@ -199,10 +203,10 @@ class ReportEntryPointsTest {
                     menu.findViewById<TextView>(R.id.player_overflow_sleep_timer_label)
                         .text.toString(),
                 )
-                // The other two frozen rows are still absent rather than inert.
+                // G4b built the two rows G2 and G3 left absent: all four now.
                 assertEquals(
-                    "the live menu must carry exactly the actions that exist",
-                    2, (menu as android.view.ViewGroup).childCount,
+                    "the live menu must carry the frozen four",
+                    4, (menu as android.view.ViewGroup).childCount,
                 )
             }
         }
@@ -313,8 +317,9 @@ class ReportEntryPointsTest {
                     View.GONE,
                     menu.findViewById<View>(R.id.player_overflow_report_problem).visibility,
                 )
-                // One row, under the same compact 10 / 10 padding as two rows.
-                assertEquals("menu height", 68f, menu.height / density, 1.5f)
+                // Three rows - the report row and its gap gone - under the same
+                // compact 10 / 10 padding: 10 + 3*48 + 2*4 + 10 = 172.
+                assertEquals("menu height", 172f, menu.height / density, 1.5f)
                 assertEquals("bottom padding", 10f, menu.paddingBottom / density, 1.5f)
             }
         }

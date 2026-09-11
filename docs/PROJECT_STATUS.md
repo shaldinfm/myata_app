@@ -129,7 +129,7 @@ system rather than the choice. Full record:
 
 New design, Light / Dark / System, new screens, auth / profile / settings, cloud favorites, Supabase. The playback fixes already in `main` ship as part of the same 3.6.6 release. Each step needs explicit owner approval.
 
-This heading used to end "not started", which stopped being true some time ago and is now contradicted two sections above: A-F, G-A2..G-A8, G1, G2 (Sleep Timer), G3 (Report a problem) and G4a (mobile Figma fidelity) have landed. What remains of the list is Last.fm, stream quality, Найти трек, История эфира, the avatar picker (G5, blocked on artwork) and Android Auto.
+This heading used to end "not started", which stopped being true some time ago and is now contradicted two sections above: A-F, G-A2..G-A8, G1, G2 (Sleep Timer), G3 (Report a problem) and G4a (mobile Figma fidelity) have landed, and G4b (Найти трек / История эфира) is in review. What remains of the list is Last.fm, stream quality, the avatar picker (G5, blocked on artwork) and Android Auto.
 
 **G4a · Figma fidelity (mobile)** measured the shipped screens against the decoded
 `Дизайн Приложения ФИНАЛ.fig` in rendered pixels and corrected them: the single person
@@ -143,6 +143,15 @@ refresh glyph with animations off, and HOME playlist skeletons. Owner overrides 
 the frozen file: a compact overflow row (10 / 10 padding, icon at 16, label at
 56), and the Settings → Тема split disc. Найти трек / История эфира on the PLAYER
 remain G4b.
+
+**G4b · Найти трек / История эфира** completes `Menu / Плеер` with its frozen four
+rows under G4a's compact geometry. Найти трек opens one shared find-track sheet
+(the Collection sheet's rows, without its divider and delete row) for the current
+track; История эфира pushes a full-screen history with the file's loading /
+content / empty / error frames, whose rows open the same sheet. One history
+backend still - `HistoryRepository` now reports a failure instead of an empty list,
+so empty and error can differ. Full record:
+[FIND-TRACK-HISTORY-3.6.6.md](FIND-TRACK-HISTORY-3.6.6.md).
 
 **G3 · Сообщить о проблеме** ships the five frozen report frames behind both frozen
 entry points, and restores the Player overflow to its frozen 260×160 geometry — the

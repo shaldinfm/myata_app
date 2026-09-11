@@ -63,6 +63,11 @@ gap. In a build with no report endpoint the menu is G2's again, one row and 10 /
 — because that owner decision was about a one-row surface, and that is again what
 is being drawn.
 
+> **Superseded (G4b).** G4b built `Найти трек` and `История эфира`, so the menu is
+> the frozen four under G4a's compact 10 / 10: 224 tall, and 172 in a build with
+> no report endpoint, where this row and its gap go. See
+> [FIND-TRACK-HISTORY-3.6.6.md](FIND-TRACK-HISTORY-3.6.6.md).
+
 ## 3 · Settings
 
 `Section / Прочее` + `Row / Сообщить о проблеме` (no value, chevron, `message`

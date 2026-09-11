@@ -101,8 +101,14 @@ History explicitly.
 |---|---|---|
 | heading | 24/32 Bold | `Montserrat.Bold.24_32` — section headings are Montserrat at the frozen weight |
 | time | 14/20 Regular | `Onest.Regular.14_20`, START aligned — see below |
-| title | 17/28 Regular | `Onest.Regular.17_28` |
-| artist | 14/20 Regular | `Onest.Regular.14_20` |
+| title | 17/28 Regular | **16sp on a 20 line** since G4b (owner decision "B"), Onest Regular |
+| artist | 14/20 Regular | **13sp on an 18 line** since G4b, Onest Regular |
+
+> **G4b.** The owner chose typography "B" for the full-screen История эфира and
+> then asked for the same scale here, after a before/after render of this section
+> showed it fits: `HistoryRowTypography.applyPlayer` sets both rows. The one-line
+> floors are 21 + 19 - still 40 - so the 74 row, the cover at y=17 and the 374
+> section below are unchanged; only the type is smaller.
 | button | 22/28 Regular | `Montserrat.Medium.22_28` |
 
 The button's weight is not a liberty: the canonical snapshot still carries Muller,
@@ -272,6 +278,15 @@ and the string has to be true of both.
 A refresh over rows that are already up leaves them up — the section is inline on
 a scrolling page, and swapping it for a spinner on every poll would move
 everything under the reader's finger.
+
+> **G4b.** `HistoryRepository` now reports a failure as `HistoryResult.Failed`
+> instead of an empty list, so the full-screen История эфира can draw
+> `history-error` apart from `history-empty` - see
+> [FIND-TRACK-HISTORY-3.6.6.md](FIND-TRACK-HISTORY-3.6.6.md). This section does
+> not read the new flag and still has three states. The one thing it notices: a
+> refresh that **fails** over rows already up now leaves them up too, where it
+> used to replace them with the empty line. A stream switch still clears first, so
+> a failure on a new station shows nothing rather than the old station's list.
 
 **The error state cannot be isolated on device.** The app gates its whole UI on
 `radiomyata.ru/covers/playlists.txt`, the same host the history API is on, so

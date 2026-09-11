@@ -179,6 +179,37 @@
     <string name="player_history_artwork">Обложка трека из истории</string>
 
     <!--
+      G4b. `Найти трек` is the frozen `Menu row / Найти трек` label and the name of
+      the one action on a full-screen История эфира row, which opens the same
+      sheet. The full-screen title is `player_history` above, the same words.
+
+      history-empty 2517:2509 and history-error 2517:2547, verbatim - each body is
+      two centred lines in the frame, and the break is the frame's.
+    -->
+    <string name="find_track">Найти трек</string>
+    <string name="history_empty_title">Пока нет истории</string>
+    <string name="history_empty_body">Треки появятся здесь, как только\nначнётся эфир.</string>
+    <string name="history_empty_action">Обновить</string>
+    <string name="history_error_title">Не удалось загрузить</string>
+    <string name="history_error_body">Проверьте подключение\nи попробуйте ещё раз.</string>
+    <string name="history_error_action">Повторить</string>
+
+    <!--
+      history-content 2523:23 `Footer`: "Показаны последние 30 треков". The frame
+      only ever shows 30 - the ceiling the app holds - and a shorter history is
+      real (a quiet morning, or the current track taken off the head), so the
+      number is the list's own. The _many form is the one 30 takes, and reads
+      exactly as the frame does.
+
+      Three plain strings rather than a <plurals>: Android picks a quantity by the
+      DEVICE locale, and on an English phone that is one/other, which printed
+      "30 трека". HistoryFooterText applies the Russian rule instead.
+    -->
+    <string name="history_screen_footer_one">Показан последний %d трек</string>
+    <string name="history_screen_footer_few">Показаны последние %d трека</string>
+    <string name="history_screen_footer_many">Показаны последние %d треков</string>
+
+    <!--
       COLLECTION, frozen 3.6.6 canonical. Verbatim from `COLLECTION` and
       `COLLECTION pusto`, with one deliberate correction.
 
@@ -206,10 +237,12 @@
 
       The four service labels and the destructive one are the FINAL
       `collection-track-sheet` rows verbatim, in the owner-confirmed order:
-      Spotify, Apple Music, YouTube, Яндекс Музыка, divider, Удалить из
-      коллекции. The third reads "YouTube" and not "YouTube Music" because that
-      is what MusicSearchHelper.openYouTube actually searches - the sheet must
-      name the destination the user lands on, and the helper is untouched here.
+      Spotify, Apple Music, YouTube Music, Яндекс Музыка, divider, Удалить из
+      коллекции. The third read "YouTube" until G4b, because the row searched
+      youtube.com and a row must name the destination the user lands on. The
+      owner's G4b decision keeps that rule and changes both halves: the label is
+      the frame's "YouTube Music" and the row now opens a YouTube Music search
+      (MusicSearchHelper.openYouTubeMusic).
 
       The sheet has no title of its own: `Bottom Sheet / title` carries the TRACK
       and `Bottom Sheet / subtitle` the ARTIST, so both come from the row.
@@ -223,7 +256,7 @@
     <string name="collection_row_action">Действия с треком</string>
     <string name="collection_sheet_spotify">Spotify</string>
     <string name="collection_sheet_apple_music">Apple Music</string>
-    <string name="collection_sheet_youtube">YouTube</string>
+    <string name="collection_sheet_youtube">YouTube Music</string>
     <string name="collection_sheet_yandex">Яндекс Музыка</string>
     <string name="collection_sheet_remove">Удалить из коллекции</string>
     <string name="collection_removed">Трек удалён из коллекции</string>

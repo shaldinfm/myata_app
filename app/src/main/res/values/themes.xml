@@ -226,6 +226,12 @@
         <item name="cornerSize">@dimen/player_history_artwork_corner</item>
     </style>
 
+    <!-- Full-screen История эфира cover (G4b): `Album art` 48x48 r8, CROP. -->
+    <style name="ShapeAppearance.Myata.HistoryScreenArtwork" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/history_screen_artwork_corner</item>
+    </style>
+
     <!--
       HOME stream card, frozen 3.6.6 canonical: `плашка потока MYATA` and
       `... GOLD`, 316x198 with corner radius 14.

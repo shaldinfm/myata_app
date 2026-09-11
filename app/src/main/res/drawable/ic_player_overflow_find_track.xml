@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Menu row / Найти трек > Icon / disc`, sleep-timer-menu-active 2517:2094 (vector
+  2530:257) and its dark twin 2517:3061 (vector 2518:3908). G4b.
+
+  The node is still NAMED `disc` - the name the proposals spec gave it - but the
+  FINAL file draws a magnifier there: an 18x18 filled path at (3,3), NONZERO. The
+  spec's generic disc was replaced in the file, and the file is what ships.
+
+  The path below is that node's fillGeometry, decoded from the frozen file and
+  shifted by the node's own (3,3) into the 24 slot, copied verbatim. Both pages
+  carry the identical geometry and differ only in the fill: #42474E light,
+  #B3C4D1 dark, which is `text_secondary` - the menu glyph role the other three
+  rows' glyphs already use.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@color/text_secondary"
+        android:pathData="M19.600,21.000L13.300,14.700C12.800,15.100 12.225,15.417 11.575,15.650C10.925,15.883 10.233,16.000 9.500,16.000C7.683,16.000 6.146,15.371 4.888,14.113C3.629,12.854 3.000,11.317 3.000,9.500C3.000,7.683 3.629,6.146 4.888,4.888C6.146,3.629 7.683,3.000 9.500,3.000C11.317,3.000 12.854,3.629 14.113,4.888C15.371,6.146 16.000,7.683 16.000,9.500C16.000,10.233 15.883,10.925 15.650,11.575C15.417,12.225 15.100,12.800 14.700,13.300L21.000,19.600L19.600,21.000ZM9.500,14.000C10.750,14.000 11.812,13.562 12.688,12.688C13.562,11.812 14.000,10.750 14.000,9.500C14.000,8.250 13.562,7.188 12.688,6.312C11.812,5.438 10.750,5.000 9.500,5.000C8.250,5.000 7.188,5.438 6.312,6.312C5.438,7.188 5.000,8.250 5.000,9.500C5.000,10.750 5.438,11.812 6.312,12.688C7.188,13.562 8.250,14.000 9.500,14.000Z" />
+</vector>

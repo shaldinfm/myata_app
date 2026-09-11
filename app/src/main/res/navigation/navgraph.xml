@@ -76,6 +76,20 @@
             app:exitAnim="@anim/fade_out"
             app:popEnterAnim="@anim/fade_in"
             app:popExitAnim="@anim/fade_out" />
+        <!--
+          `Menu / Плеер` > `История эфира` (G4b). A push like the report action, so
+          Back returns to the player. launchSingleTop so a second tap that lands
+          while the first push is settling cannot stack a second history screen;
+          PlayerFragment also refuses to navigate from anywhere but the player.
+        -->
+        <action
+            android:id="@+id/action_playerFragment_to_broadcast_history"
+            app:destination="@id/broadcast_history"
+            app:launchSingleTop="true"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
     </fragment>
     <fragment
         android:id="@+id/info"
@@ -203,6 +217,21 @@
         android:id="@+id/report_problem"
         android:name="com.example.musicplayerapp.fragments.ReportProblemFragment"
         android:label="ReportProblemFragment" />
+
+    <!--
+      История эфира, full screen (G4b). history-content 2523:23 and its three
+      sibling states - loading, empty, error - in one destination, because they
+      are one screen showing one history in different conditions.
+
+      No actions of its own. The band's back pops to the player; a row's action
+      opens a bottom sheet, which is not a navigation. MainActivity hides the
+      bottom bar for it and NavScreen classifies it as pushed, so there is no
+      Mini Player either - the same as every other pushed frame.
+    -->
+    <fragment
+        android:id="@+id/broadcast_history"
+        android:name="com.example.musicplayerapp.fragments.BroadcastHistoryFragment"
+        android:label="BroadcastHistoryFragment" />
 
     <!--
       profile-guest (G-A3). A pushed destination, not a fifth root tab: the four

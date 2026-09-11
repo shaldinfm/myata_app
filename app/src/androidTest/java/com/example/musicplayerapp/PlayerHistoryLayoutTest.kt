@@ -68,9 +68,10 @@ import kotlin.math.roundToInt
  *
  *  - **The row's 74 is spent as 17 + 40 + 17, not the mock's 13 + 48 + 13.**
  *    Owner intent is that the normal one-line title over one-line artist reads
- *    inside the cover, so the text block is 40 rather than 48: the title on a 22
- *    line and the artist on an 18, both local to this surface and both the font's
- *    own natural line rather than the Figma leading. The row's vertical padding
+ *    inside the cover, so the text block is 40 rather than 48: since G4b the
+ *    owner's typography "B" - a 16sp title on a 20 line over a 13sp artist on an
+ *    18, on 21 + 19 floors (a 22 over an 18 line before) - local to this surface
+ *    rather than the Figma leading. The row's vertical padding
  *    takes up the other 8, which also puts the cover back on the mock's y=17 and
  *    the timestamp on its y=27. Row and section heights are the frozen ones.
  */
@@ -231,12 +232,19 @@ class PlayerHistoryLayoutTest {
 
             // The title and artist boxes abut, with no gap between them.
             expect(where, "artist follows title", topIn(artist, row), (topIn(title, row) + title.height).toFloat())
-            atLeast(where, "title box", title.height, dp(22))
-            atLeast(where, "artist box", artist.height, dp(18))
+            // G4b typography "B": 16sp on a 20 line over 13sp on an 18 line, with
+            // 21 + 19 floors - still the 40 block the cover beside it is. (A 20
+            // title floor let Onest's natural 20.6 one-line title through on API
+            // 28+, which is what the frozen 374 below caught.)
+            atLeast(where, "title box", title.height, dp(21))
+            atLeast(where, "artist box", artist.height, dp(19))
+            val sp = { v: Float -> android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, v, dm) }
+            expect(where, "title size (B)", title.textSize, sp(16f), tolerance = 0.5f)
+            expect(where, "artist size (B)", artist.textSize, sp(13f), tolerance = 0.5f)
 
             // The whole point of the local line heights: on normal one-line-over-
             // one-line metadata the text block reads inside the cover rather than
-            // hanging 8 below it. 22 + 18 = 40, the cover's own height, so the
+            // hanging 8 below it. 21 + 19 = 40, the cover's own height, so the
             // artist's bottom lands about level with the cover's bottom.
             expect(
                 where, "one-line text block height", rectIn(artist, row).bottom - topIn(title, row),
@@ -247,8 +255,8 @@ class PlayerHistoryLayoutTest {
                 rectIn(artist, row).bottom, rectIn(art, row).bottom.toFloat(), tolerance = dp(1.5f),
             )
             // ...and the lines are not squeezed below what the font needs. Onest
-            // Regular measures 21.71dp at 17sp and 17.90dp at 14sp with font
-            // padding off, so 22 and 18 are floors, not choices with slack.
+            // Regular measures ~20.6dp at 16sp and ~16.6dp at 13sp with font
+            // padding off, so 21 and 19 are floors the text fits inside.
             noClipping(title, "$where/title")
             noClipping(artist, "$where/artist")
 

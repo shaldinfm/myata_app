@@ -229,6 +229,13 @@ track; `MusicSearchHelper` is untouched. The third row reads **YouTube** and not
 "YouTube Music" because `openYouTube` searches youtube.com — the sheet names the
 destination the user actually lands on.
 
+> **Superseded (G4b).** The owner kept the rule - a row names where it lands -
+> and changed both halves: the third row is now **YouTube Music**, the frame's
+> label, and opens a YouTube Music search (`MusicSearchHelper.openYouTubeMusic`,
+> replacing `openYouTube`). The header and the four service rows are also now the
+> shared find-track include, with the artist allowed two lines. See
+> [FIND-TRACK-HISTORY-3.6.6.md](FIND-TRACK-HISTORY-3.6.6.md).
+
 The icons are the **canonical generic disc**, the same glyph on all four rows,
 tinted `primary`; the rows are told apart by their labels. That is what both
 canonical pages draw, and it is the owner's selection over the brand marks the

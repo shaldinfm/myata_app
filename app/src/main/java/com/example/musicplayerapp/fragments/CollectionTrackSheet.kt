@@ -4,11 +4,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.setFragmentResult
 import com.example.musicplayerapp.R
-import com.example.musicplayerapp.utils.MusicSearchHelper
+import com.example.musicplayerapp.ui.FindTrackRows
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -22,10 +21,12 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
  * row does what, and that is deliberately unchanged from the controls it
  * replaces:
  *
- *  - Spotify / Apple Music / YouTube / Яндекс Музыка call exactly the
- *    [MusicSearchHelper] functions the inline buttons called, with the same
- *    artist and track. The helper itself is untouched, so every destination and
- *    every search string is the one that shipped.
+ *  - Spotify / Apple Music / YouTube Music / Яндекс Музыка call the
+ *    MusicSearchHelper functions with the row's artist and track. Three are the
+ *    searches that shipped; the third opens YouTube Music rather than
+ *    youtube.com since the G4b owner decision. Since G4b the header and these
+ *    four rows are [FindTrackRows] - the same rows the PLAYER and History
+ *    [FindTrackSheet] draws - and only what follows them is this sheet's own.
  *  - `Удалить из коллекции` does not delete anything here. It reports the
  *    request back to [FavoritesFragment] through the fragment result API and
  *    closes, so the removal and its undo stay in one place next to the list that
@@ -68,28 +69,10 @@ class CollectionTrackSheet : BottomSheetDialogFragment() {
             state = BottomSheetBehavior.STATE_EXPANDED
         }
 
-        // `Bottom Sheet / title` is the track and `Bottom Sheet / subtitle` the
-        // artist - the same order the row above draws them in, not the reverse.
-        view.findViewById<TextView>(R.id.sheet_title).text = track
-        view.findViewById<TextView>(R.id.sheet_subtitle).text = artist
-
-        val ctx = requireContext()
-        view.findViewById<View>(R.id.row_spotify).setOnClickListener {
-            MusicSearchHelper.openSpotify(ctx, artist, track)
-            dismiss()
-        }
-        view.findViewById<View>(R.id.row_apple_music).setOnClickListener {
-            MusicSearchHelper.openAppleMusic(ctx, artist, track)
-            dismiss()
-        }
-        view.findViewById<View>(R.id.row_youtube).setOnClickListener {
-            MusicSearchHelper.openYouTube(ctx, artist, track)
-            dismiss()
-        }
-        view.findViewById<View>(R.id.row_yandex).setOnClickListener {
-            MusicSearchHelper.openYandexMusic(ctx, artist, track)
-            dismiss()
-        }
+        // The header and the four services are the shared find-track rows (G4b):
+        // the track as the title, the artist under it, and the same four
+        // MusicSearchHelper calls this sheet has always made.
+        FindTrackRows.bind(view, artist = artist, title = track) { dismiss() }
 
         view.findViewById<View>(R.id.row_remove).setOnClickListener {
             setFragmentResult(RESULT_REMOVE, Bundle().apply {

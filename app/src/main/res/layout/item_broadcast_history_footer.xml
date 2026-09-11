@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  history-content 2523:23 `Footer`: 24 below the last row, Onest 14/20 centred on
+  `text_secondary`. The frame reads "Показаны последние 30 треков"; the count is
+  the list's real length, in Russian agreement, so it reads exactly that at the 30
+  the app holds and stays true below it. See HistoryFooterText.
+-->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/history_footer"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_horizontal"
+    android:paddingTop="@dimen/history_screen_footer_gap"
+    android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+    android:textColor="@color/text_secondary"
+    tools:text="Показаны последние 30 треков" />

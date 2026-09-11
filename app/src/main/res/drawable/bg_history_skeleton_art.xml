@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- history-loading 2517:2420 `s-art`: 48x48 r8 on `outline`; the 0.50 is on the view. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/outline" />
+    <corners android:radius="@dimen/history_screen_artwork_corner" />
+</shape>

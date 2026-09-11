@@ -591,7 +591,10 @@
     <dimen name="player_history_artwork_size">40dp</dimen>
     <dimen name="player_history_artwork_corner">6dp</dimen>
     <!--
-      History row line heights, local to this surface.
+      History row line heights - since G4b the History bottom sheet's only
+      (HistoryRowTypography.apply). The PLAYER's two surfaces moved to the
+      owner's typography "B", history_player_* below; what follows is why these
+      two numbers exist, and was written when both PLAYER rows used them.
 
       The shared tokens set the title on a 28 line and the artist on a 20, which
       is the FINAL Figma leading, and 28 + 20 = 48 - a text block 8 taller than
@@ -614,14 +617,44 @@
     <!--
       The line a Broadcast History row's title and artist are actually set on -
       see HistoryRowTypography for why it is not the 28 and 20 of the tokens.
-      Shared by both lists as of G4a; they were player-only before, which is why
-      the other list never got them.
+      Shared by both lists as of G4a. Since G4b only the History bottom sheet
+      (HistoryRowTypography.apply) still uses these; the PLAYER's two surfaces are
+      on history_player_* below (applyPlayer).
     -->
     <dimen name="history_row_title_line_height">22sp</dimen>
     <dimen name="history_row_artist_line_height">18sp</dimen>
 
-    <dimen name="player_history_title_height">22dp</dimen>
-    <dimen name="player_history_artist_height">18dp</dimen>
+    <!--
+      The PLAYER's two history surfaces - embedded section and full-screen
+      История эфира - on the owner's G4b typography "B": title 16sp on a 20 line,
+      artist 13sp on an 18 line. See HistoryRowTypography.applyPlayer.
+
+      Onest Regular's natural line at 16sp is ~20.6dp, so 20 sets a wrapped title a
+      hair tight rather than airy; at 13sp it is ~16.6dp, and 18 gives it room.
+    -->
+    <dimen name="history_player_title_text_size">16sp</dimen>
+    <dimen name="history_player_title_line_height">20sp</dimen>
+    <dimen name="history_player_artist_text_size">13sp</dimen>
+    <dimen name="history_player_artist_line_height">18sp</dimen>
+
+    <!--
+      The one-line floors of those two rows: 21 + 19 = 40, exactly as the old
+      22 + 18 was. 40 is the embedded row's cover, so the embedded one-line row is
+      still 17 + 40 + 17 = the frozen 74 with the cover at its frozen y=17, and the
+      full-screen row is still 14 + 48 + 14 = 76. Only the type got smaller; no row
+      geometry moved.
+
+      Why 21 and not the title's 20 line: a smaller line height is applied only
+      BETWEEN lines on API 28+ (TextView sets addLastLineLineSpacing off), so a
+      one-line title keeps Onest's natural ~20.6dp at 16sp. A 20 floor let it
+      through and made the embedded row 75 on API 36 while API 24 - which does
+      apply it to the last line - measured 74; PlayerHistoryLayoutTest's frozen
+      374 section caught the +3px a row. 21 clears the natural line on every
+      level, and 19 holds the artist's 18 line with room, so the one-line block is
+      exactly 40 on both.
+    -->
+    <dimen name="player_history_title_height">21dp</dimen>
+    <dimen name="player_history_artist_height">19dp</dimen>
 
     <!-- `Button:margin > Button`, 324x54 r12, 16 above it. -->
     <dimen name="player_history_more_gap">16dp</dimen>
@@ -948,21 +981,22 @@
       padding on the rendered surface, and both menus - this one and
       `Menu / Коллекция` - now share one compact row:
 
-          padding   10 top, 10 bottom          two rows 120, one row 68
+          padding   10 top, 10 bottom          four rows 224; 172 with no report row
           content   16 from the card edge      overflow_row_pad_start / _end
           icon      24x24 box at card-x 16     player_overflow_icon_size
           label     card-x 56                  overflow_label_gap after the icon
           trailing  70 wide, ending 16 in      player_overflow_trailing_width
 
       See menu_player_overflow.xml. `SleepTimerSurfacesTest` and
-      `ReportEntryPointsTest` pin 120 / 10 and the 16 / 56 positions.
+      `ReportEntryPointsTest` pin 224 / 10 (172 without a report endpoint) and the
+      16 / 56 positions; the height is the row spec's sum, never its own number.
 
       History, superseded rather than continued: G2 shipped 10 / 10 for a single
       row; G3 restored the frozen 50 when its second row arrived (the "debt" in
       docs/SLEEP-TIMER-3.6.6.md); G4a replaced both with the compact 10.
 
-      The other two frozen rows - Найти трек, История эфира - are
-      still absent rather than inert; they are G4b.
+      G4b built the other two frozen rows - Найти трек, История эфира - so the menu
+      is the frozen four. Until then they were absent rather than inert.
     -->
     <dimen name="player_overflow_menu_width">260dp</dimen>
     <dimen name="player_overflow_menu_radius">20dp</dimen>
@@ -1207,4 +1241,60 @@
     <!-- card ends at 388, button at 412. -->
     <dimen name="report_success_button_margin_top">24dp</dimen>
 
+
+    <!--
+      Full-screen История эфира (G4b). history-content 2523:23, history-loading
+      2517:2420, history-empty 2517:2509, history-error 2517:2547 - identical
+      geometry on the dark twins. See fragment_broadcast_history.xml and the two
+      row layouts for how each number is spent.
+
+      Reused rather than redeclared: the 42 time column and the 21 / 19 one-line
+      text floors (player_history_*) under typography "B" (history_player_*), the
+      40 ring and its 48 target (collection_row_action_*),
+      the band and the 52 button (profile_*).
+    -->
+    <dimen name="history_screen_margin">16dp</dimen>
+    <dimen name="history_screen_list_top">16dp</dimen>
+    <!-- `Screen`'s own 24 of bottom padding, under the footer. -->
+    <dimen name="history_screen_list_bottom">24dp</dimen>
+    <dimen name="history_screen_row_gap">8dp</dimen>
+    <dimen name="history_screen_row_corner">8dp</dimen>
+    <dimen name="history_screen_row_stroke">1dp</dimen>
+    <!--
+      13 of padding plus the 1px stroke Figma counts into the layout: the content
+      of six of the eight frozen rows starts at 14 and their action ends 14 in.
+      Vertically 14 + 48 + 14 is the frame's 76 on one line.
+    -->
+    <dimen name="history_screen_row_padding_horizontal">14dp</dimen>
+    <dimen name="history_screen_row_padding_vertical">14dp</dimen>
+    <dimen name="history_screen_row_item_gap">8dp</dimen>
+    <dimen name="history_screen_artwork_size">48dp</dimen>
+    <dimen name="history_screen_artwork_corner">8dp</dimen>
+    <dimen name="history_screen_footer_gap">24dp</dimen>
+
+    <!-- history-loading `Skeleton N`: the loaded row's 76, its bars and ring. -->
+    <dimen name="history_skeleton_row_height">76dp</dimen>
+    <dimen name="history_skeleton_pill_radius">100dp</dimen>
+    <dimen name="history_skeleton_time_width">34dp</dimen>
+    <dimen name="history_skeleton_small_bar_height">12dp</dimen>
+    <dimen name="history_skeleton_title_width">150dp</dimen>
+    <dimen name="history_skeleton_title_height">16dp</dimen>
+    <!-- 6 into the 28 title slot; the artist bar 28 + 4 into the text box. -->
+    <dimen name="history_skeleton_title_top">6dp</dimen>
+    <dimen name="history_skeleton_artist_width">96dp</dimen>
+    <dimen name="history_skeleton_artist_top">32dp</dimen>
+    <dimen name="history_skeleton_action_stroke">1dp</dimen>
+
+    <!--
+      history-empty / history-error, from the band's bottom (the frames' y minus
+      the 64 band): circle 168 -> 104, headline 296 -> 32 under the circle, body
+      340 -> 12 under the headline, button 412 -> 28 under the two body lines.
+    -->
+    <dimen name="history_state_illustration_size">96dp</dimen>
+    <dimen name="history_state_illustration_top">104dp</dimen>
+    <dimen name="history_state_icon_size">24dp</dimen>
+    <dimen name="history_state_headline_gap">32dp</dimen>
+    <dimen name="history_state_headline_min_height">32dp</dimen>
+    <dimen name="history_state_body_gap">12dp</dimen>
+    <dimen name="history_state_button_gap">28dp</dimen>
 </resources>

@@ -11,48 +11,51 @@ import com.example.musicplayerapp.ui.sleeptimer.SleepTimerState
 import com.example.musicplayerapp.ui.sleeptimer.SleepTimerText
 
 /**
- * The frozen `Menu / Плеер`, as far as it currently exists.
+ * The frozen `Menu / Плеер`: all four rows as of G4b.
  *
  * A [PopupWindow] over an inflated layout rather than a platform `PopupMenu`: the
  * frozen menu is a 260-wide r20 `menuSurface` card whose row carries a trailing
- * value in `primary`, and a platform menu can draw none of that. The COLLECTION
- * overflow's own note already records the platform menu there as "deliberate and
- * temporary"; this one starts at the frozen surface instead of arriving at it.
+ * value in `primary`, and a platform menu can draw none of that.
  *
- * ## What the trailing value is, and when it is computed
+ * ## What is computed when the menu opens
  *
- * `sleep-timer-menu-active` puts the remaining time on the row - `24 мин`, in
- * `primary`. It is computed once, here, from the deadline at the moment the menu
- * opens. A popup is a transient surface measured in seconds and a minute-grained
- * value cannot go stale inside one, so there is no ticker: the number is right
- * when it is drawn, and the menu is gone long before it could stop being.
+ * Two things, both read once, here, at the moment the menu opens - a popup is a
+ * transient surface measured in seconds, so neither needs a ticker:
  *
- * ## Two rows, and one of them can be absent
+ *  - `sleep-timer-menu-active`'s trailing value, `24 мин` in `primary`, from the
+ *    timer's deadline. Minute-grained, so it cannot go stale inside one opening.
+ *  - whether `Найти трек` has a track to search for. With the placeholder pair on
+ *    screen or no metadata yet there is none, and the row is drawn disabled rather
+ *    than removed: it keeps its frozen place, so the menu is the same shape on
+ *    every opening, and it cannot be tapped into an empty sheet. The track itself
+ *    is re-read when the row is tapped, by the caller, so the sheet always opens
+ *    for what is playing at the tap and not at the opening.
  *
- * G3 added `Сообщить о проблеме`, the third of the frozen four. It is drawn only
- * when this build has a report endpoint: a form that cannot post is a feature that
- * does not exist, and a row opening it would be the dead control the whole rollout
- * rule exists to prevent. See [ReportConfig].
+ * ## One row can be absent
  *
- * The bottom padding is one constant for any row count since the G4a review: the
- * owner replaced the frozen 50 with a compact 10, so two rows are 120 tall and
- * one row 68, with no per-count special case left to get wrong.
+ * `Сообщить о проблеме` is drawn only when this build has a report endpoint: a
+ * form that cannot post is a feature that does not exist, and a row opening it
+ * would be the dead control the whole rollout rule exists to prevent. See
+ * [ReportConfig]. Its gap goes with it, so three rows are 172 and four are 224 -
+ * both sums of the same row dimens, never a height of their own.
  */
 class PlayerOverflowMenu(
+    private val onFindTrack: () -> Unit,
     private val onSleepTimer: () -> Unit,
     private val onReportProblem: () -> Unit,
+    private val onBroadcastHistory: () -> Unit,
 ) {
 
     private var window: PopupWindow? = null
 
     /**
      * Opens the menu under [anchor], showing [timer]'s remaining time when there is
-     * one.
+     * one, with `Найти трек` available only when [canFindTrack].
      *
      * Anchored to the trailing header control and pulled to its end, so the menu
      * hangs off the same edge the control sits on rather than off the screen.
      */
-    fun show(anchor: View, timer: SleepTimerState.Armed?) {
+    fun show(anchor: View, timer: SleepTimerState.Armed?, canFindTrack: Boolean) {
         dismiss()
 
         val ctx = anchor.context
@@ -80,6 +83,25 @@ class PlayerOverflowMenu(
             elevation = ctx.resources.getDimension(R.dimen.player_overflow_elevation)
         }
 
+        content.findViewById<View>(R.id.player_overflow_find_track).apply {
+            if (canFindTrack) {
+                setOnClickListener {
+                    popup.dismiss()
+                    onFindTrack()
+                }
+            } else {
+                // Disabled, not hidden (owner decision): hiding it would make the
+                // menu 172 or 224 depending on metadata. No listener at all - a
+                // listener would set the row clickable again - and not focusable,
+                // so neither a tap nor a key press can reach it; the platform
+                // disabled state is what accessibility announces.
+                isEnabled = false
+                isClickable = false
+                isFocusable = false
+                alpha = UNAVAILABLE_ALPHA
+            }
+        }
+
         content.findViewById<View>(R.id.player_overflow_sleep_timer).setOnClickListener {
             popup.dismiss()
             onSleepTimer()
@@ -97,6 +119,11 @@ class PlayerOverflowMenu(
             reportRow.visibility = View.GONE
         }
 
+        content.findViewById<View>(R.id.player_overflow_history).setOnClickListener {
+            popup.dismiss()
+            onBroadcastHistory()
+        }
+
         window = popup
         popup.showAsDropDown(anchor, 0, 0, Gravity.END)
     }
@@ -111,9 +138,18 @@ class PlayerOverflowMenu(
      *
      * A PopupWindow is a window of its own and is not in the activity's view tree,
      * so a test that searched the decor view for a row of this menu would find
-     * nothing. `ReportEntryPointsTest` measures the live surface - the two rows and
-     * the restored 10 / 50 padding - and this is how it reaches it.
+     * nothing. `ReportEntryPointsTest` and `PlayerMissingFlowsTest` measure the live
+     * surface, and this is how they reach it.
      */
     @androidx.annotation.VisibleForTesting
     fun contentForTest(): View? = window?.contentView
+
+    private companion object {
+        /**
+         * The Material disabled-content opacity. The frozen file draws no
+         * unavailable row, so this is the platform's convention rather than a
+         * design value - noted as such in the G4b report.
+         */
+        const val UNAVAILABLE_ALPHA = 0.38f
+    }
 }

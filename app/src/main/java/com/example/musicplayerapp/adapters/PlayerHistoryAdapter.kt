@@ -4,12 +4,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.core.widget.TextViewCompat
+import androidx.annotation.LayoutRes
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.ui.HistoryRowTypography
+import com.example.musicplayerapp.ui.RowActionTouchTarget
 import com.example.musicplayerapp.data.HistoryTrack
 import com.google.android.material.imageview.ShapeableImageView
 import com.squareup.picasso.Picasso
@@ -32,13 +33,30 @@ import com.squareup.picasso.Picasso
  * the caller's, passed in as [artworkFor]: this adapter states which row wants a
  * cover and takes a URL back, and knows nothing about how it is found.
  *
+ * ## Two rows since G4b
+ *
+ * The full-screen История эфира (`history-content` 2523:23) draws the same four
+ * things - time, cover, title, artist - in a card row of its own, plus one
+ * circular trailing action. It reuses this adapter with [rowLayout] rather than
+ * copying it, so both views bind a track the same way: the same text, the same
+ * [HistoryRowTypography] line metrics, the same late-artwork guard and the same
+ * row identity. The inline row has no action view, so [onFindTrack] never reaches
+ * it and the inline section behaves as it did. Its type did change with the full
+ * screen's: both rows are on the owner's G4b typography "B" through
+ * [HistoryRowTypography.applyPlayer].
+ *
  * @param artworkFor asks for a cover for one track. Called on bind, answered
  *   later on the main thread with a URL or null; a null leaves the frozen plate.
  * @param cancelArtwork withdraws a request whose row has been recycled.
+ * @param rowLayout the row to inflate. It must carry `tv_time`, `tv_title`,
+ *   `tv_artist` and `artwork`; it may carry `btn_row_action`.
+ * @param onFindTrack what that action does for its row's track.
  */
 class PlayerHistoryAdapter(
     private val artworkFor: (HistoryTrack, (String?) -> Unit) -> Unit,
     private val cancelArtwork: (HistoryTrack) -> Unit,
+    @LayoutRes private val rowLayout: Int = R.layout.item_player_history_track,
+    private val onFindTrack: ((HistoryTrack) -> Unit)? = null,
 ) : ListAdapter<HistoryTrack, PlayerHistoryAdapter.ViewHolder>(DiffCallback()) {
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -47,13 +65,18 @@ class PlayerHistoryAdapter(
         val tvArtist: TextView = itemView.findViewById(R.id.tv_artist)
         val artwork: ShapeableImageView = itemView.findViewById(R.id.artwork)
 
+        /** The full-screen row's 40dp ring; absent from the inline row. */
+        val action: View? = itemView.findViewById(R.id.btn_row_action)
+
         /** The track this holder is currently bound to, for late artwork. */
         var boundTo: HistoryTrack? = null
 
         init {
-            // History-local text metrics: the title on a 22 line and the artist on
-            // an 18, so the normal one-line-over-one-line block is 40 and reads
-            // inside the 40 cover. The dimens carry where those numbers come from.
+            // History-local text metrics, typography "B" since G4b: the title 16sp
+            // on a 20 line and the artist 13sp on an 18, over 21 + 19 floors, so the
+            // normal one-line-over-one-line block is 40 and reads inside the 40
+            // cover. The dimens carry where those numbers come from. (Before G4b it
+            // was 17 on a 22 line over 14 on an 18; the history below is of that.)
             //
             // includeFontPadding is the half that actually moved the number, and
             // finding that out is worth recording. These rows are inflated with
@@ -80,14 +103,18 @@ class PlayerHistoryAdapter(
             // bottom sheet's rows could be set the same way. Same numbers, same
             // effect here; the only change is that they are no longer private to
             // this adapter.
-            HistoryRowTypography.apply(tvTitle, tvArtist)
+            //
+            // G4b: both PLAYER surfaces are on the owner's typography "B" - 16 on
+            // a 20 line over 13 on an 18 - through applyPlayer; the History bottom
+            // sheet keeps apply and its own sizes.
+            HistoryRowTypography.applyPlayer(tvTitle, tvArtist)
         }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_player_history_track, parent, false)
-        return ViewHolder(view)
+            .inflate(rowLayout, parent, false)
+        return ViewHolder(view).also { holder -> holder.action?.let(RowActionTouchTarget::expand) }
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -97,6 +124,7 @@ class PlayerHistoryAdapter(
         holder.tvTime.text = track.getFormattedTime()
         holder.tvTitle.text = track.title
         holder.tvArtist.text = track.artist
+        holder.action?.setOnClickListener { onFindTrack?.invoke(track) }
 
         // Back to the bare plate first: a recycled holder still carries the
         // previous row's cover, and a lookup that finds nothing never paints.

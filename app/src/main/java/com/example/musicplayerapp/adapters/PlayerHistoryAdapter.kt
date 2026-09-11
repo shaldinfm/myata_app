@@ -99,7 +99,11 @@ class PlayerHistoryAdapter(
             // bottom sheet's rows could be set the same way. Same numbers, same
             // effect here; the only change is that they are no longer private to
             // this adapter.
-            HistoryRowTypography.apply(tvTitle, tvArtist)
+            //
+            // G4b: both PLAYER surfaces are on the owner's typography "B" - 16 on
+            // a 20 line over 13 on an 18 - through applyPlayer; the History bottom
+            // sheet keeps apply and its own sizes.
+            HistoryRowTypography.applyPlayer(tvTitle, tvArtist)
         }
     }
 

@@ -66,14 +66,31 @@ class HistoryRowTypographyTest {
     private val longTitle =
         "КРАСНОЗНАМЁННАЯ ДИВИЗИЯ ИМЕНИ МОЕЙ БАБУШКИ"
 
+    /** The PLAYER's rows are on the owner's G4b "B": a 20 title line (16sp). */
     @Test
     fun player_row_wrapped_title_is_set_on_the_history_line_not_the_token_line() {
-        assertLineSpacing(R.layout.item_player_history_track, "PLAYER row")
+        assertLineSpacing(
+            R.layout.item_player_history_track, "PLAYER row",
+            HistoryRowTypography::applyPlayer, R.dimen.history_player_title_line_height,
+        )
     }
 
+    /** The full-screen История эфира row shares the PLAYER's scale. */
+    @Test
+    fun screen_row_wrapped_title_is_set_on_the_history_line_not_the_token_line() {
+        assertLineSpacing(
+            R.layout.item_broadcast_history_track, "History screen row",
+            HistoryRowTypography::applyPlayer, R.dimen.history_player_title_line_height,
+        )
+    }
+
+    /** The unreachable History sheet keeps its own 22 line - G4b did not touch it. */
     @Test
     fun sheet_row_wrapped_title_is_set_on_the_history_line_not_the_token_line() {
-        assertLineSpacing(R.layout.item_history_track, "History sheet row")
+        assertLineSpacing(
+            R.layout.item_history_track, "History sheet row",
+            HistoryRowTypography::apply, R.dimen.history_row_title_line_height,
+        )
     }
 
     /**
@@ -86,7 +103,7 @@ class HistoryRowTypographyTest {
     @Test
     fun one_line_row_still_measures_the_frozen_forty() {
         withInflater { inflater, density ->
-            val row = inflate(inflater, R.layout.item_player_history_track, density) {
+            val row = inflate(inflater, R.layout.item_player_history_track, density, HistoryRowTypography::applyPlayer) {
                 it.findViewById<TextView>(R.id.tv_title).text = "CRYOGEN"
                 it.findViewById<TextView>(R.id.tv_artist).text = "MUSE"
             }
@@ -102,9 +119,14 @@ class HistoryRowTypographyTest {
         }
     }
 
-    private fun assertLineSpacing(layout: Int, where: String) {
+    private fun assertLineSpacing(
+        layout: Int,
+        where: String,
+        typography: (TextView, TextView) -> Unit,
+        lineDimen: Int,
+    ) {
         withInflater { inflater, density ->
-            val row = inflate(inflater, layout, density) {
+            val row = inflate(inflater, layout, density, typography) {
                 it.findViewById<TextView>(R.id.tv_title).text = longTitle
                 it.findViewById<TextView>(R.id.tv_artist).text = "MUSE"
             }
@@ -119,7 +141,7 @@ class HistoryRowTypographyTest {
             val spacingPx = layoutOf.getLineTop(1) - layoutOf.getLineTop(0)
             val spacingSp = spacingPx / title.resources.displayMetrics.scaledDensity
             val expected = title.resources
-                .getDimensionPixelSize(R.dimen.history_row_title_line_height) /
+                .getDimensionPixelSize(lineDimen) /
                 title.resources.displayMetrics.scaledDensity
 
             assertTrue(
@@ -143,10 +165,11 @@ class HistoryRowTypographyTest {
         inflater: LayoutInflater,
         layout: Int,
         density: Float,
+        typography: (TextView, TextView) -> Unit,
         prepare: (ViewGroup) -> Unit,
     ): ViewGroup {
         val root = inflater.inflate(layout, null) as ViewGroup
-        HistoryRowTypography.apply(
+        typography(
             root.findViewById(R.id.tv_title),
             root.findViewById(R.id.tv_artist),
         )

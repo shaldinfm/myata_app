@@ -1,5 +1,6 @@
 package com.example.musicplayerapp.ui
 
+import android.util.TypedValue
 import android.widget.TextView
 import androidx.core.widget.TextViewCompat
 import com.example.musicplayerapp.R
@@ -48,11 +49,40 @@ import com.example.musicplayerapp.R
  */
 object HistoryRowTypography {
 
-    /** Applies the history line metrics to one row's two text views. */
+    /**
+     * Applies the history line metrics to one row's two text views, at the sizes
+     * the row's layout gives them.
+     *
+     * Since G4b this is the History bottom sheet's row only (`HistoryAdapter`,
+     * unreachable in the shipping app): the PLAYER's two surfaces moved to
+     * [applyPlayer].
+     */
     fun apply(title: TextView, artist: TextView) {
         val res = title.resources
         set(title, res.getDimensionPixelSize(R.dimen.history_row_title_line_height))
         set(artist, res.getDimensionPixelSize(R.dimen.history_row_artist_line_height))
+    }
+
+    /**
+     * The PLAYER's two history surfaces - the embedded `История эфира` section and
+     * the full-screen История эфира - on the owner's G4b typography "B": Onest
+     * 16sp on a 20 line for the title, 13sp on an 18 line for the artist.
+     *
+     * Chosen from a rendered A/B of the full-screen rows and then confirmed on the
+     * embedded card, so both surfaces show one track at one scale. The sizes are set
+     * here rather than by a token for the reason the line heights already were:
+     * the rows are inflated outside `MyataTypography.Factory`, and the tokens carry
+     * the 17/28 and 14/20 every other surface uses.
+     *
+     * Size first, then line: [set] reads the font's metrics, and those change with
+     * the size.
+     */
+    fun applyPlayer(title: TextView, artist: TextView) {
+        val res = title.resources
+        title.setTextSize(TypedValue.COMPLEX_UNIT_PX, res.getDimension(R.dimen.history_player_title_text_size))
+        artist.setTextSize(TypedValue.COMPLEX_UNIT_PX, res.getDimension(R.dimen.history_player_artist_text_size))
+        set(title, res.getDimensionPixelSize(R.dimen.history_player_title_line_height))
+        set(artist, res.getDimensionPixelSize(R.dimen.history_player_artist_line_height))
     }
 
     /**

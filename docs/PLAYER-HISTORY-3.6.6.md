@@ -101,8 +101,14 @@ History explicitly.
 |---|---|---|
 | heading | 24/32 Bold | `Montserrat.Bold.24_32` — section headings are Montserrat at the frozen weight |
 | time | 14/20 Regular | `Onest.Regular.14_20`, START aligned — see below |
-| title | 17/28 Regular | `Onest.Regular.17_28` |
-| artist | 14/20 Regular | `Onest.Regular.14_20` |
+| title | 17/28 Regular | **16sp on a 20 line** since G4b (owner decision "B"), Onest Regular |
+| artist | 14/20 Regular | **13sp on an 18 line** since G4b, Onest Regular |
+
+> **G4b.** The owner chose typography "B" for the full-screen История эфира and
+> then asked for the same scale here, after a before/after render of this section
+> showed it fits: `HistoryRowTypography.applyPlayer` sets both rows. The one-line
+> floors are 21 + 19 - still 40 - so the 74 row, the cover at y=17 and the 374
+> section below are unchanged; only the type is smaller.
 | button | 22/28 Regular | `Montserrat.Medium.22_28` |
 
 The button's weight is not a liberty: the canonical snapshot still carries Muller,

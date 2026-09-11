@@ -105,9 +105,11 @@ flag and keeps its three states.
 ```
 
 On a 358 r8 card with a 1px `outline` stroke, everything centred on the row (the
-frame's counter-axis is CENTER). One-line rows are the frame's 76. Text is on G4a's
-natural 22 / 18 lines, so a wrapped title grows the row by 22, not 28. No
-`maxLines`, no ellipsis. The ring is the Collection row's control - the same
+frame's counter-axis is CENTER). One-line rows are the frame's 76. Text is the
+owner's typography "B" - title 16sp on a 20 line, artist 13sp on an 18 line
+(`HistoryRowTypography.applyPlayer`), the same scale as the embedded PLAYER
+section - so a wrapped title grows the row by 20. The floors are 21 + 19 = 40,
+which keeps every row dimension where it was. No `maxLines`, no ellipsis. The ring is the Collection row's control - the same
 `arrow_forward` component (2409:31540) - so it reuses both drawables and the 48
 touch target (`RowActionTouchTarget`, extracted from FavoritesAdapter). It opens
 `FindTrackSheet` for that row's track.
@@ -125,7 +127,7 @@ Both re-request.
 | | file | app | why |
 |---|---|---|---|
 | time column | 39 | 42 | Onest has proportional digits; `00:00` is 41.38dp (the PLAYER section's measurement). Cover and text sit 3 further in; the ring does not move. |
-| title leading | 28 | 22 | G4a's multiline correction; one-line rows are still 76. |
+| row type | title 17/28, artist 14/20 | title 16/20, artist 13/18 | owner decision "B" from a rendered A/B, on both PLAYER history surfaces; one-line rows are still 76 here and 74 in the embedded section. |
 | footer count | "последние 30 треков" | the real count, in Russian agreement | reads exactly as the frame at 30; a shorter list is not told it is 30. Agreement is chosen by `HistoryFooterText`, not `<plurals>`: Android picks quantities by the device locale, and on an English phone that printed "30 трека". |
 | rows 1-2 padding | 15 / 13 | 14 / 14 | the frame's six untouched rows are 14 / 14. |
 | unavailable Найти трек | not drawn | disabled at 0.38, no listener, not focusable | the file has no such state; owner decision: disabled, never hidden, so the menu is 224 either way. |

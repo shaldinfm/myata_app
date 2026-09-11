@@ -2,6 +2,13 @@
 <!--
   PLAYER Broadcast History row, frozen 3.6.6 canonical (Phase C).
 
+  > **G4b.** The text is now the owner's typography "B", shared with the
+  > full-screen История эфира: title 16sp on a 20 line, artist 13sp on an 18 line,
+  > set by HistoryRowTypography.applyPlayer (the tokens below still supply the
+  > Onest Regular face). The floors became 21 + 19 - still 40 - so everything
+  > below about the 74 row, the cover at 17 and the centring holds unchanged;
+  > read "22" below as the old title line, now 20 (floor 21, see the dimens).
+
   Source: `Broadcast History Section > History Item N` - light nodes 2396:30794,
   2399:31072, 2399:31091; dark 2444:18298, 2444:18316, 2444:18334. All six are
   the same row and differ only in their fills.

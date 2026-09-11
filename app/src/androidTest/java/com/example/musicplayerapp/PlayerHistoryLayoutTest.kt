@@ -231,8 +231,15 @@ class PlayerHistoryLayoutTest {
 
             // The title and artist boxes abut, with no gap between them.
             expect(where, "artist follows title", topIn(artist, row), (topIn(title, row) + title.height).toFloat())
-            atLeast(where, "title box", title.height, dp(22))
-            atLeast(where, "artist box", artist.height, dp(18))
+            // G4b typography "B": 16sp on a 20 line over 13sp on an 18 line, with
+            // 21 + 19 floors - still the 40 block the cover beside it is. (A 20
+            // title floor let Onest's natural 20.6 one-line title through on API
+            // 28+, which is what the frozen 374 below caught.)
+            atLeast(where, "title box", title.height, dp(21))
+            atLeast(where, "artist box", artist.height, dp(19))
+            val sp = { v: Float -> android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, v, dm) }
+            expect(where, "title size (B)", title.textSize, sp(16f), tolerance = 0.5f)
+            expect(where, "artist size (B)", artist.textSize, sp(13f), tolerance = 0.5f)
 
             // The whole point of the local line heights: on normal one-line-over-
             // one-line metadata the text block reads inside the cover rather than

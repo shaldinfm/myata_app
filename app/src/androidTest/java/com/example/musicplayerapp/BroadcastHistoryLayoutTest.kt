@@ -125,6 +125,10 @@ class BroadcastHistoryLayoutTest {
         expect(where, "text block centred", (blockTop + blockBottom) / 2f, rowMid, tolerance = dp(1f))
         expect(where, "artist follows title", topIn(tArtist, row0), rectIn(tTitle, row0).bottom.toFloat())
         if (widthDp == 390) expect(where, "text column at 390", tTitle.width, dp(176))
+        // The owner's G4b typography "B".
+        val sp = { v: Float -> TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, v, ctx.resources.displayMetrics) }
+        expect(where, "title size (B, 16sp)", tTitle.textSize, sp(16f), tolerance = 0.5f)
+        expect(where, "artist size (B, 13sp)", tArtist.textSize, sp(13f), tolerance = 0.5f)
 
         // `Button / find track`: 40 ring, pinned 14 from the end, centred.
         expect(where, "action size", action.width, dp(40))
@@ -202,7 +206,8 @@ class BroadcastHistoryLayoutTest {
                 }
                 if (wrapped.lineCount >= 2) {
                     val pitch = wrapped.layout.getLineTop(1) - wrapped.layout.getLineTop(0)
-                    val natural = if (wrapped === t) sp(22f) else sp(18f)
+                    // G4b typography "B": a 20 title line, an 18 artist line.
+                    val natural = if (wrapped === t) sp(20f) else sp(18f)
                     expect("$where/$what", "line pitch", pitch, natural, tolerance = 1.5f)
                 }
                 // Grows by real lines, around the same 14 of padding.

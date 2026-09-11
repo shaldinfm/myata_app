@@ -21,11 +21,14 @@
 
   **Vertical: 76 on one line, spent as 14 + 48 + 14.** The frame's 76 is 14 around
   its 48-tall text block (the 28 title slot over the 20 artist slot). That 28 is a
-  one-line slot, not a leading to repeat - G4a's HistoryRowTypography correction -
-  so the text here is set on the font's natural 22 / 18 lines (a 40 block) and the
-  48 cover is what holds the row at 76. A wrapped title grows the row by one real
-  22 line, not by the old 28: 98 at two title lines where the frame's own geometry
-  would give 104.
+  one-line slot, not a leading to repeat - G4a's HistoryRowTypography correction.
+
+  **Type: the owner's G4b "B".** The frame's 17 / 14 read heavy at full screen, so
+  the title is 16sp on a 20 line and the artist 13sp on an 18 line
+  (HistoryRowTypography.applyPlayer - the same scale as the embedded PLAYER
+  section). The floors are 21 + 19 = 40, and the 48 cover is what holds the row at
+  76. A wrapped title grows the row by one 20 line: 88 at two title lines, where
+  the frame's own geometry would give 104.
 
   **No maxLines, no ellipsis.** Rows are variable height and never truncate - the
   frame wraps a title and an artist on purpose so that is reviewable.
@@ -76,8 +79,8 @@
         app:shapeAppearanceOverlay="@style/ShapeAppearance.Myata.HistoryScreenArtwork" />
 
     <!--
-      `Text`: title over artist with no gap. The two minHeights are the G4a
-      natural lines, 22 + 18 = 40, which HistoryRowTypography sets the leading to.
+      `Text`: title over artist with no gap. The two minHeights are the 21 + 19 =
+      40 floors; HistoryRowTypography.applyPlayer sets the 16/20 and 13/18 type.
     -->
     <LinearLayout
         android:id="@+id/history_text"

@@ -69,6 +69,13 @@ class G4bCaptureTest {
         HistoryTrack("KAYTRANADA", "SLOW BURN", 1L, "10:13"),
     )
 
+    /** The embedded section's three rows: one line, a long wrapped title, one line. */
+    private val embeddedRows = listOf(
+        HistoryTrack("TWENTY ONE PILOTS", "CITY WALLS", 3L, "10:36"),
+        HistoryTrack("FRANC MOODY", "A LITTLE SOMETHING FOR THE WEEKEND", 2L, "10:27"),
+        HistoryTrack("TWO DOOR CINEMA CLUB", "WHAT YOU KNOW", 1L, "10:22"),
+    )
+
     @Before
     fun open() {
         assumeTrue(
@@ -183,6 +190,24 @@ class G4bCaptureTest {
                 await("long-artist sheet") { it.player()?.childFragmentManager?.findFragmentByTag(FindTrackSheet.TAG)?.view?.findViewById<View>(R.id.row_yandex)?.width ?: 0 > 0 }
                 shot("$tag-11-find-track-long-artist")
             }
+
+            // ---- the PLAYER's embedded history on the owner's "B" scale ----
+            HistoryRepository.sourceOverrideForTest = { _, _ -> HistoryResult.Loaded(embeddedRows) }
+            session {
+                openPlayer()
+                on { a -> nowPlaying(a, "MUSE", "UPRISING") }
+                await("embedded rows") { a ->
+                    val list = a.findViewById<RecyclerView>(R.id.history_list)
+                    list != null && list.visibility == View.VISIBLE && list.childCount >= embeddedRows.size
+                }
+                on { a ->
+                    val s = a.findViewById<View>(R.id.history_section)
+                    s.requestRectangleOnScreen(android.graphics.Rect(0, 0, s.width, s.height), true)
+                }
+                Thread.sleep(600)
+                shot("$tag-12-player-embedded-history")
+            }
+            HistoryRepository.sourceOverrideForTest = { _, _ -> HistoryResult.Loaded(frozenRows) }
 
             // ---- the placeholder: Найти трек drawn but unavailable ----
             session {

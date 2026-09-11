@@ -614,14 +614,44 @@
     <!--
       The line a Broadcast History row's title and artist are actually set on -
       see HistoryRowTypography for why it is not the 28 and 20 of the tokens.
-      Shared by both lists as of G4a; they were player-only before, which is why
-      the other list never got them.
+      Shared by both lists as of G4a. Since G4b only the History bottom sheet
+      (HistoryRowTypography.apply) still uses these; the PLAYER's two surfaces are
+      on history_player_* below (applyPlayer).
     -->
     <dimen name="history_row_title_line_height">22sp</dimen>
     <dimen name="history_row_artist_line_height">18sp</dimen>
 
-    <dimen name="player_history_title_height">22dp</dimen>
-    <dimen name="player_history_artist_height">18dp</dimen>
+    <!--
+      The PLAYER's two history surfaces - embedded section and full-screen
+      История эфира - on the owner's G4b typography "B": title 16sp on a 20 line,
+      artist 13sp on an 18 line. See HistoryRowTypography.applyPlayer.
+
+      Onest Regular's natural line at 16sp is ~20.6dp, so 20 sets a wrapped title a
+      hair tight rather than airy; at 13sp it is ~16.6dp, and 18 gives it room.
+    -->
+    <dimen name="history_player_title_text_size">16sp</dimen>
+    <dimen name="history_player_title_line_height">20sp</dimen>
+    <dimen name="history_player_artist_text_size">13sp</dimen>
+    <dimen name="history_player_artist_line_height">18sp</dimen>
+
+    <!--
+      The one-line floors of those two rows: 21 + 19 = 40, exactly as the old
+      22 + 18 was. 40 is the embedded row's cover, so the embedded one-line row is
+      still 17 + 40 + 17 = the frozen 74 with the cover at its frozen y=17, and the
+      full-screen row is still 14 + 48 + 14 = 76. Only the type got smaller; no row
+      geometry moved.
+
+      Why 21 and not the title's 20 line: a smaller line height is applied only
+      BETWEEN lines on API 28+ (TextView sets addLastLineLineSpacing off), so a
+      one-line title keeps Onest's natural ~20.6dp at 16sp. A 20 floor let it
+      through and made the embedded row 75 on API 36 while API 24 - which does
+      apply it to the last line - measured 74; PlayerHistoryLayoutTest's frozen
+      374 section caught the +3px a row. 21 clears the natural line on every
+      level, and 19 holds the artist's 18 line with room, so the one-line block is
+      exactly 40 on both.
+    -->
+    <dimen name="player_history_title_height">21dp</dimen>
+    <dimen name="player_history_artist_height">19dp</dimen>
 
     <!-- `Button:margin > Button`, 324x54 r12, 16 above it. -->
     <dimen name="player_history_more_gap">16dp</dimen>

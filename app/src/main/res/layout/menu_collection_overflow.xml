@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  COLLECTION overflow menu - frozen `Menu / Коллекция`, collection-overflow-menu
+  2517:2591 (light) / 2517:3558 (dark).
+
+  It replaces a platform PopupMenu: a 196-wide rectangular list with no icons, the
+  platform's own shadow and its own padding, which is what the owner's review
+  rejected. The frozen menu is the same component language as `Menu / Плеер`, and
+  the numbers are identical, so this is built from the same dimens rather than a
+  parallel set that could drift:
+
+      menu            260 wide, r20, `menuSurface` on a 1px INSIDE `menuOutline`
+                      #F8F9FA / #1C3F5F light, #142D47 / #466D8F dark, no effect
+      padding         10 top, 10 bottom          (compact - owner override; 120 tall)
+      row             238x48 at x=11, pitch 52   (y = 10, 62)
+      icon            24x24 box at card-x 16     (compact - was a 48 slot)
+      glyph           `Icon / doc` 12x18 at (6,3) of the 24, stroke 1.8
+      label           card-x 56, Onest Medium 15/22, text_primary
+      dividers        none
+
+  The padding and the icon / label positions are the compact row the owner chose
+  over the frozen frame, shared with the PLAYER menu - see menu_player_overflow.
+
+  Both frozen rows carry the same doc glyph. There is no trailing value.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/collection_overflow_root"
+    android:layout_width="@dimen/player_overflow_menu_width"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_player_overflow_menu"
+    android:orientation="vertical"
+    android:paddingTop="@dimen/player_overflow_menu_pad_top"
+    android:paddingBottom="@dimen/player_overflow_menu_pad_bottom">
+
+    <!-- `Menu row / Экспорт в TXT` -->
+    <LinearLayout
+        android:id="@+id/collection_overflow_export_txt"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/player_overflow_row_height"
+        android:layout_marginStart="@dimen/player_overflow_row_inset"
+        android:layout_marginEnd="@dimen/player_overflow_row_inset"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/overflow_row_pad_start"
+        android:paddingEnd="@dimen/overflow_row_pad_end">
+
+        <ImageView
+            android:layout_width="@dimen/player_overflow_icon_size"
+            android:layout_height="@dimen/player_overflow_icon_size"
+            android:contentDescription="@null"
+            android:scaleType="center"
+            android:src="@drawable/ic_menu_doc" />
+
+        <TextView
+            android:id="@+id/collection_overflow_export_txt_label"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/overflow_label_gap"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/collection_export_txt"
+            android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.15_22"
+            android:textColor="@color/text_primary" />
+    </LinearLayout>
+
+    <!-- `Menu row / Экспорт в CSV`, 52 pitch: the 4 gap sits between the rows. -->
+    <LinearLayout
+        android:id="@+id/collection_overflow_export_csv"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/player_overflow_row_height"
+        android:layout_marginStart="@dimen/player_overflow_row_inset"
+        android:layout_marginTop="@dimen/player_overflow_row_gap"
+        android:layout_marginEnd="@dimen/player_overflow_row_inset"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/overflow_row_pad_start"
+        android:paddingEnd="@dimen/overflow_row_pad_end">
+
+        <ImageView
+            android:layout_width="@dimen/player_overflow_icon_size"
+            android:layout_height="@dimen/player_overflow_icon_size"
+            android:contentDescription="@null"
+            android:scaleType="center"
+            android:src="@drawable/ic_menu_doc" />
+
+        <TextView
+            android:id="@+id/collection_overflow_export_csv_label"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/overflow_label_gap"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/collection_export_csv"
+            android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.15_22"
+            android:textColor="@color/text_primary" />
+    </LinearLayout>
+</LinearLayout>

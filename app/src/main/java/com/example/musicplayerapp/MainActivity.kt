@@ -25,6 +25,7 @@ import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.service.PlaybackLog
 import com.example.musicplayerapp.ui.MiniPlayer
 import com.example.musicplayerapp.ui.MyataTypography
+import com.example.musicplayerapp.ui.NavScreen
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 
@@ -56,6 +57,27 @@ class MainActivity : AppCompatActivity() {
     // `Intent?` override no longer overrides anything. Only the signature changes -
     // handleIntent still takes a nullable and still returns early on null, because
     // the intent that reaches it from onCreate genuinely can be null.
+    /**
+     * The [NavScreen] key for a navigation destination.
+     *
+     * Only the four destinations the frozen design gives a bottom bar have names
+     * of their own. Everything else - Profile, Settings and its subpages, the
+     * auth screens, Report, and every destination G4b and later push - is
+     * [NavScreen.PUSHED], which no allowlist contains.
+     *
+     * The `else` branch is the point of the function: a destination added later
+     * is classified without anyone editing this `when`, and is classified as the
+     * hiding case. Only a deliberate edit here can put a new screen back among
+     * the four.
+     */
+    private fun screenKeyOf(destinationId: Int): String = when (destinationId) {
+        R.id.home -> NavScreen.HOME
+        R.id.player -> NavScreen.PLAYER
+        R.id.favorites -> NavScreen.COLLECTION
+        R.id.info -> NavScreen.ABOUT
+        else -> NavScreen.PUSHED
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent) // Update the intent stored in this activity
@@ -290,10 +312,27 @@ class MainActivity : AppCompatActivity() {
             // bar, and settings is now what the 40x40 header control opens, so the
             // bar would otherwise be present on the parent of a screen that hides
             // it and absent on the child.
+            // The screen identity every "which screen am I on" question is
+            // answered from, written here and nowhere else.
+            //
+            // It used to be written by the four bottom-bar fragments about
+            // themselves, which meant the pushed screens - none of which wrote
+            // anything - left it naming the screen the listener had come from.
+            // That is what kept the Mini Player up over Profile and Settings.
+            // Deriving it from the destination removes the class of bug rather
+            // than the instance: see NavScreen for the default that makes a
+            // destination nobody has thought about hide the pill on its own.
+            viewModel.currentFragmentLiveData.value = screenKeyOf(destination.id)
+
             val hidesBottomBar = destination.id == R.id.profile ||
                 destination.id == R.id.profile_authenticated ||
                 destination.id == R.id.auth_sign_in ||
                 destination.id == R.id.auth_create_account ||
+                // auth_recovery was left out when the other two auth screens
+                // joined at G-A4c1. Its frozen frame has no bottom bar either and
+                // it is reached only from sign-in, so it was the one auth screen
+                // that still offered four destinations mid-password-reset.
+                destination.id == R.id.auth_recovery ||
                 destination.id == R.id.settings ||
                 destination.id == R.id.settings_appearance ||
                 // report_problem joined them at G3, for the same reason: the five

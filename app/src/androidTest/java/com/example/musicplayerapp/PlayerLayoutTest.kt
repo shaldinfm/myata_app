@@ -161,29 +161,32 @@ class PlayerLayoutTest {
             expect(where, "trailing action slot width", reserved.width, dp(32))
             expect(where, "trailing action slot height", reserved.height, dp(39))
 
-            // ## The ellipsis sits on the app's shared header line
+            // ## The ellipsis sits where its own frozen frame draws it - G4a
             //
-            // PLAYER's header is `Mobile Header (Subtle)`, 47 tall at y=16; every
-            // other section uses `Header - TopAppBar`, 64 tall at y=0 with a 40
-            // control centred in it. Centred in its own row the ellipsis lands at
-            // 39.5 while the Profile control lands at 32 - measured as 166px against
-            // 146.5px on the API 24 emulator, exactly the 7.5dp the two components
-            // differ by.
+            // `Mobile Header (Subtle)` is 47 tall at y=16, and its ellipsis ink is
+            // a 4x16 at (8,8) of a 20x39 `Button` whose `Button:margin` sits at y=4
+            // - ink centre 4 + 8 + 8 = 20 in the header, 3.5 above the button's own
+            // centre. COLLECTION's `Header - TopAppBar` lifts its ellipsis by the
+            // same 3.5 inside its button, so the two share a lift and a trailing
+            // anchor and differ only by their headers' heights.
             //
-            // The glyph is lifted onto 32 with padding, so the box itself does not
-            // move: `reserved`'s own y and size are asserted above and unchanged,
-            // which is what keeps the touch target and the popup anchor where they
-            // were. What is asserted here is where the glyph is *drawn* - with
-            // `scaleType=center` that is the centre of the content box.
+            // G3 instead lifted this glyph 15dp onto the HOME Profile control's 32dp
+            // line - a deliberate cross-screen alignment, asserted here until G4a.
+            // The frozen file does not draw it there, and G4a follows the file: see
+            // `header_overflow_glyph_lift` in dimens.xml for the full measurement
+            // and for how to restore G3 if that call is reversed.
             //
-            // 16 here plus the header's own 16dp margin is the 32 that HOME,
-            // COLLECTION and ABOUT US put their trailing control on.
+            // Still padding, so the box itself does not move: `reserved`'s own y
+            // and size are asserted above and unchanged, which keeps the touch
+            // target and the popup anchor where they were. What is asserted here is
+            // where the glyph is *drawn* - with `scaleType=center` that is the
+            // centre of the content box.
             val glyphCentre = topIn(reserved, header) + reserved.paddingTop +
                 (reserved.height - reserved.paddingTop - reserved.paddingBottom) / 2f
-            expect(where, "overflow glyph centre in the header", glyphCentre, dp(16))
+            expect(where, "overflow glyph centre in the header", glyphCentre, dp(20))
             expect(
                 where, "overflow glyph centre from the player top",
-                topIn(header, shell) + glyphCentre, dp(32),
+                topIn(header, shell) + glyphCentre, dp(36),
             )
 
             // And the box is where it always was - stated separately so a future

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Яндекс Музыка, `Sheet row / Яндекс Музыка > Sheet / leading icon >
+  Asset / logo/yandex-music` 2517:2583, decoded verbatim from the frozen file.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="@dimen/sheet_row_icon_size"
+    android:height="@dimen/sheet_row_icon_size"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@color/text_primary"
+        android:pathData="M23.773,9.148L23.679,8.683L19.721,7.991L22.021,4.880L21.754,4.587L18.371,6.209L18.799,1.901L18.451,1.702L16.392,5.186L14.079,0.000L13.678,0.000L14.226,5.013L8.410,0.359L7.915,0.505L12.394,6.130L3.530,3.178L3.129,3.630L11.044,8.138L0.120,9.041L0.000,9.720L11.352,10.956L1.885,18.788L2.286,19.333L13.558,13.203L11.325,24.000L12.007,24.000L16.325,13.842L18.959,21.793L19.427,21.434L18.344,13.350L22.449,18.003L22.717,17.578L19.574,11.807L23.960,13.429L24.000,12.937L20.069,10.039L23.773,9.148L23.773,9.148Z" />
+</vector>

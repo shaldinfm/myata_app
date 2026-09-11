@@ -102,7 +102,6 @@ class MyataStreamFragment() : Fragment() {
 
         vm = (activity as MainActivity).viewModel
 
-        vm.currentFragmentLiveData.value = "player"
         vm.ifNeedToNavigateStraightToPlayer = false
 
         arguments?.takeIf { it.containsKey(STREAM) }?.apply {
@@ -462,7 +461,6 @@ class MyataStreamFragment() : Fragment() {
     }
 
     override fun onResume() {
-        vm.currentFragmentLiveData.value = "player"
 
         // Removed updatePlayer() - syncing is now handled by MediaController
 

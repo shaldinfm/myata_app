@@ -27,6 +27,7 @@
         android:id="@+id/stream_scroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:clipChildren="false"
         android:clipToPadding="false"
         android:fillViewport="true"
         android:scrollbars="none"
@@ -47,6 +48,8 @@
             android:id="@+id/stream_content_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false"
             android:paddingBottom="@dimen/player_margin">
 
             <!--
@@ -56,22 +59,36 @@
               card's background instead, which is what fills the card while the
               artwork loads.
             -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/artwork_card"
-                style="@style/PlayerArtworkCard"
+            <!--
+              The frame paints the artwork's two frozen drop shadows and nothing
+              else: it is exactly the card's size, adds no margin and shifts
+              nothing, and the overhang is drawn past its own edges. The
+              ConstraintLayout around it and the scroller above that have
+              clipChildren off so the 20dp that falls below the artwork survives.
+            -->
+            <com.example.musicplayerapp.ui.SoftShadowFrame
+                android:id="@+id/artwork_shadow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/player_artwork_margin_top"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent">
+                app:layout_constraintTop_toTopOf="parent"
+                app:softShadowSpec="playerArtwork">
 
-                <ImageView
-                    android:id="@+id/photo"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:contentDescription="@string/player_artwork"
-                    android:scaleType="centerCrop"
-                    android:src="@drawable/zaglushka_logo" />
-            </com.google.android.material.card.MaterialCardView>
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/artwork_card"
+                    style="@style/PlayerArtworkCard">
+
+                    <ImageView
+                        android:id="@+id/photo"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:contentDescription="@string/player_artwork"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/zaglushka_logo" />
+                </com.google.android.material.card.MaterialCardView>
+            </com.example.musicplayerapp.ui.SoftShadowFrame>
 
             <!--
               `Track Info`: the title in Heading 1 above the artist, gap 8. The app
@@ -246,32 +263,39 @@
                   fill is behind it - see PlayerControl for what hiding the
                   surface used to do to it.
 
-                  Material's CircularProgressIndicator rather than a plain
-                  ProgressBar, for one reason: stroke weight. The platform's
-                  indeterminate drawable is a VectorDrawable whose strokeWidth is
-                  fixed against a fixed viewport, so its stroke is a constant
-                  fraction of its diameter and cannot be set - it painted 2.17dp
-                  against the Material glyphs' 3.97dp wall, and read visibly
-                  thinner than the control it stands in for. `trackThickness` is
-                  the only way to state that number, and this is the Material 3
-                  component for it, which is what the glyphs are now too.
+                  **Three dots, not a spinner - G4a.**
 
-                  Diameter and box are deliberately unchanged: the drawn circle
-                  keeps the 22.78dp the platform drawable painted and the view
-                  keeps its 27.33dp box - see dimens.xml for how the two are held
-                  together. The track is transparent so this stays an arc on the
-                  surface rather than a full ring, which is what it was.
+                  This slot held a Material CircularProgressIndicator, chosen at
+                  Phase B for its settable stroke weight. On a device with
+                  animations enabled it drew what it should: an arc, sweeping.
+                  With `animator_duration_scale` at 0 - Accessibility's "Remove
+                  animations", and the default on this project's QA emulators -
+                  its animators settle instead of running, and the shape they
+                  settle on is a ring with a solid triangular arrowhead. That is
+                  a **refresh glyph**. The one state that must never look like
+                  "tap to retry" looked exactly like it, and only for the users
+                  most likely to be given a still screen to read.
+
+                  Captured both ways before it was changed: see the G4a report.
+
+                  So the connecting face is now the same three dots the frozen
+                  file gives the Mini Player - `Component / Dark / Mini-player /
+                  buffering` 2436:771 - which is the only loading idiom the file
+                  states anywhere. It cannot degrade into a glyph that means
+                  something else, because it has no second shape to degrade into:
+                  BufferingDotsView holds the dots lit when the animator scale is
+                  0 rather than freezing mid-cycle.
+
+                  The run of dots is 21 wide and sits inside the frozen 23.33
+                  glyph box, so nothing moves or changes size between Play,
+                  connecting and Pause - the property the spinner was chosen to
+                  keep, kept.
                 -->
-                <com.google.android.material.progressindicator.CircularProgressIndicator
+                <com.example.musicplayerapp.ui.BufferingDotsView
                     android:id="@+id/loading_spinner"
                     android:layout_width="@dimen/player_play_icon"
                     android:layout_height="@dimen/player_play_icon"
-                    android:indeterminate="true"
-                    app:indicatorColor="@color/player_play_glyph"
-                    app:indicatorInset="@dimen/player_play_spinner_inset"
-                    app:indicatorSize="@dimen/player_play_spinner_diameter"
-                    app:trackColor="@android:color/transparent"
-                    app:trackThickness="@dimen/player_play_spinner_thickness"
+                    app:dotColor="@color/player_play_glyph"
                     android:visibility="gone"
                     app:layout_constraintBottom_toBottomOf="@id/btn_play"
                     app:layout_constraintEnd_toEndOf="@id/btn_play"

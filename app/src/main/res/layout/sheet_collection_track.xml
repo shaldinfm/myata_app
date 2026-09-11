@@ -100,8 +100,7 @@
                 <ImageView
                     style="@style/CollectionSheetRowIcon"
                     android:contentDescription="@null"
-                    android:src="@drawable/ic_sheet_disc"
-                    app:tint="@color/primary" />
+                    android:src="@drawable/ic_sheet_spotify" />
 
                 <TextView
                     style="@style/CollectionSheetRowLabel"
@@ -116,8 +115,7 @@
                 <ImageView
                     style="@style/CollectionSheetRowIcon"
                     android:contentDescription="@null"
-                    android:src="@drawable/ic_sheet_disc"
-                    app:tint="@color/primary" />
+                    android:src="@drawable/ic_sheet_apple_music" />
 
                 <TextView
                     style="@style/CollectionSheetRowLabel"
@@ -132,8 +130,7 @@
                 <ImageView
                     style="@style/CollectionSheetRowIcon"
                     android:contentDescription="@null"
-                    android:src="@drawable/ic_sheet_disc"
-                    app:tint="@color/primary" />
+                    android:src="@drawable/ic_sheet_youtube_music" />
 
                 <TextView
                     style="@style/CollectionSheetRowLabel"
@@ -148,8 +145,7 @@
                 <ImageView
                     style="@style/CollectionSheetRowIcon"
                     android:contentDescription="@null"
-                    android:src="@drawable/ic_sheet_disc"
-                    app:tint="@color/primary" />
+                    android:src="@drawable/ic_sheet_yandex_music" />
 
                 <TextView
                     style="@style/CollectionSheetRowLabel"

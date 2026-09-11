@@ -2,7 +2,6 @@ package com.example.musicplayerapp.ui
 
 import android.view.View
 import android.widget.ImageView
-import android.widget.ProgressBar
 import com.example.musicplayerapp.R
 
 /**
@@ -24,10 +23,15 @@ import com.example.musicplayerapp.R
  * do - an INVISIBLE view gets no touches - so a tap during connect still does
  * nothing and no second start command can be issued. It is only the appearance
  * that changes.
+ *
+ * `spinner` is a [View] rather than a `ProgressBar` since G4a: the connecting
+ * face is [BufferingDotsView], the frozen file's own loading idiom, and not a
+ * Material indeterminate indicator. See fragment_myata_stream.xml for what the
+ * indicator did on a device with animations turned off, which is why it went.
  */
 class PlayerControl(
     private val button: ImageView,
-    private val spinner: ProgressBar,
+    private val spinner: View,
 ) {
 
     fun render(state: PlayerControlState) {

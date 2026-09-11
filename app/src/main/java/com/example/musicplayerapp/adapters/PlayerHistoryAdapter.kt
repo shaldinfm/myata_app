@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.musicplayerapp.R
+import com.example.musicplayerapp.ui.HistoryRowTypography
 import com.example.musicplayerapp.data.HistoryTrack
 import com.google.android.material.imageview.ShapeableImageView
 import com.squareup.picasso.Picasso
@@ -74,16 +75,12 @@ class PlayerHistoryAdapter(
             // Deliberately not fixed by routing this inflater through the factory:
             // that would apply the shared token's 28 and 20 and put the block back
             // to 48, which is the thing being corrected.
-            val res = itemView.resources
-            for (view in listOf(tvTitle, tvArtist)) {
-                view.includeFontPadding = false
-            }
-            TextViewCompat.setLineHeight(
-                tvTitle, res.getDimensionPixelSize(R.dimen.player_history_title_line_height)
-            )
-            TextViewCompat.setLineHeight(
-                tvArtist, res.getDimensionPixelSize(R.dimen.player_history_artist_line_height)
-            )
+            //
+            // G4a moved the two calls into HistoryRowTypography so the History
+            // bottom sheet's rows could be set the same way. Same numbers, same
+            // effect here; the only change is that they are no longer private to
+            // this adapter.
+            HistoryRowTypography.apply(tvTitle, tvArtist)
         }
     }
 

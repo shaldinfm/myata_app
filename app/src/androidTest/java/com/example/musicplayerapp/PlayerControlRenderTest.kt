@@ -9,10 +9,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import com.google.android.material.progressindicator.CircularProgressIndicator
 import androidx.core.content.ContextCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.example.musicplayerapp.ui.BufferingDotsView
 import com.example.musicplayerapp.ui.PlayerControl
 import com.example.musicplayerapp.ui.PlayerControlState
 import org.junit.Assert.assertTrue
@@ -98,7 +98,7 @@ class PlayerControlRenderTest {
         val widthPx = dp(widthDp).roundToInt()
         val page = inflater.inflate(R.layout.fragment_myata_stream, null) as ViewGroup
         val button = page.findViewById<ImageView>(R.id.btn_play)
-        val spinner = page.findViewById<CircularProgressIndicator>(R.id.loading_spinner)
+        val spinner = page.findViewById<BufferingDotsView>(R.id.loading_spinner)
         val controls = page.findViewById<ViewGroup>(R.id.player_controls)
         val favourite = page.findViewById<View>(R.id.btn_favorite)
         val dislike = page.findViewById<View>(R.id.btn_dislike)
@@ -157,70 +157,88 @@ class PlayerControlRenderTest {
             when (state) {
                 PlayerControlState.CONNECTING -> {
                     if (button.drawable != null) {
-                        findings += "$where: the play/pause glyph is still set behind the progress indicator"
+                        findings += "$where: the play/pause glyph is still set behind the connecting face"
                     }
                     if (spinner.visibility != View.VISIBLE) {
-                        findings += "$where: the progress indicator is not shown"
+                        findings += "$where: the connecting face is not shown"
                     }
                     // The whole point: inside the control, not beside it.
                     val ring = rectIn(spinner, controls)
                     if (!fill.contains(ring)) {
-                        findings += "$where: the progress indicator at $ring is not inside the painted control $fill"
+                        findings += "$where: the connecting face at $ring is not inside the painted control $fill"
                     }
-                    expect(where, "progress indicator size", ring.width(), dp(27.33f), tolerance = dp(1))
-                    expect(where, "progress indicator centred in x", ring.centerX(), fill.centerX().toFloat())
-                    expect(where, "progress indicator centred in y", ring.centerY(), fill.centerY().toFloat())
+                    expect(where, "connecting face box", ring.width(), dp(27.33f), tolerance = dp(1))
+                    expect(where, "connecting face centred in x", ring.centerX(), fill.centerX().toFloat())
+                    expect(where, "connecting face centred in y", ring.centerY(), fill.centerY().toFloat())
+
+                    // **Three marks, not one.**
+                    //
+                    // This is the assertion G4a exists for. The slot held a
+                    // Material CircularProgressIndicator, which draws one ring -
+                    // and on a device with `animator_duration_scale` at 0 its
+                    // animators settle rather than run, and the shape they settle
+                    // on is a ring with a solid arrowhead: a refresh glyph, on the
+                    // one state that must never read as "tap to retry".
+                    //
+                    // Instrumentation runs with animations off, so this test sees
+                    // exactly the state that was wrong. Counting runs of ink along
+                    // the centre line is what tells a row of dots from a ring: a
+                    // ring crosses that line twice, three dots cross it six times
+                    // - three runs.
+                    val runs = inkRuns(raster, ring, primary)
+                    if (runs != 3) {
+                        findings += "$where: the connecting face paints $runs mark(s) across its " +
+                            "centre line, expected 3 - the frozen `Mini-player / buffering` " +
+                            "2436:771 is three dots, and a single run means a ring is back"
+                    }
+
                     // It stands in for the glyph, so it takes the glyph's colour,
                     // and it is legible only because the surface is behind it: the
                     // palette gives it no contrast of its own - #F8F9FA against a
                     // #F8F9FA `background` in Light and #0F253E against a #0F253E
-                    // one in Dark - so an indicator drawn off the control is
-                    // invisible in both themes, which is what it was. Against
-                    // `primary` it reads in both.
-                    val tint = spinner.indicatorColor.firstOrNull()
-                    if (tint != glyphColour) {
-                        findings += "$where: the progress indicator is tinted $tint, not player_play_glyph $glyphColour"
+                    // one in Dark - so a face drawn off the control is invisible
+                    // in both themes, which is what it was. Against `primary` it
+                    // reads in both.
+                    //
+                    // With animations off - as instrumentation runs - the dots
+                    // rest on an ascending ramp, 35 / 67 / 100% left to right, so
+                    // the rightmost is fully opaque: sampling it is an exact
+                    // colour match rather than a blend, and deterministic.
+                    val pitch = dp(8).roundToInt()
+                    val rightmost = raster.getPixel(ring.centerX() + pitch, ring.centerY())
+                    if (rightmost != glyphColour) {
+                        findings += "$where: the rightmost dot is $rightmost, not player_play_glyph $glyphColour"
                     }
-                    if (tint == primary) {
-                        findings += "$where: the progress indicator is the same colour as the surface it sits on"
+                    if (rightmost == primary) {
+                        findings += "$where: the connecting face is the same colour as the surface it sits on"
+                    }
+                    // And the ramp itself, which is what keeps the still face
+                    // reading as progress rather than as an ellipsis: each dot
+                    // stands further from the surface colour than the one before.
+                    fun lum(c: Int) = 0.2126 * android.graphics.Color.red(c) +
+                        0.7152 * android.graphics.Color.green(c) + 0.0722 * android.graphics.Color.blue(c)
+                    val ground = lum(primary)
+                    val contrast = listOf(-pitch, 0, pitch).map {
+                        kotlin.math.abs(lum(raster.getPixel(ring.centerX() + it, ring.centerY())) - ground)
+                    }
+                    if (!(contrast[0] < contrast[1] && contrast[1] < contrast[2])) {
+                        findings += "$where: the resting dots are not an ascending ramp - contrast $contrast"
                     }
 
-                    // It stands in for the glyph, so it has to weigh what the
-                    // glyph weighs. The Material FILL 0 pair paints a 3.97dp wall;
-                    // the platform's own indeterminate drawable painted 2.17dp,
-                    // which is what a fixed strokeWidth against a fixed viewport
-                    // gives you and the reason this is a Material indicator at
-                    // all - `trackThickness` is the only way to state the number.
-                    expect(where, "indicator stroke", spinner.trackThickness, dp(4))
-                    // ...at the diameter the platform drawable already painted,
-                    // which is the half of this that must NOT change.
-                    expect(
-                        where, "indicator diameter", spinner.indicatorSize, dp(22.78f),
-                        tolerance = dp(0.5f),
-                    )
-                    // The delegate scales its canvas by bounds/preferred size, so
-                    // the two numbers above are only the painted ones while the
-                    // indicator's preferred size matches its box. Assert the
-                    // agreement rather than trusting it: a Material release that
-                    // recomposes preferred size would silently rescale both.
-                    if (spinner.indicatorSize + 2 * spinner.indicatorInset != ring.width()) {
-                        findings += "$where: the indicator's own size " +
-                            "(${spinner.indicatorSize} + 2x${spinner.indicatorInset}) does not fill its " +
-                            "${ring.width()}px box, so the painted stroke is not trackThickness"
-                    }
                     // ...and the surface really is under it: sample just outside
-                    // the indicator's own box, where a round indicator paints
-                    // nothing, and require the fill.
+                    // the face's own box, where it paints nothing, and require the
+                    // fill.
                     for ((x, y) in listOf(
                         ring.left - 2 to ring.top - 2, ring.right + 1 to ring.top - 2,
                         ring.left - 2 to ring.bottom + 1, ring.right + 1 to ring.bottom + 1,
                     )) {
                         if (raster.getPixel(x, y) != primary) {
-                            findings += "$where: no surface behind the progress indicator at ($x,$y)"
+                            findings += "$where: no surface behind the connecting face at ($x,$y)"
                         }
                     }
                     log += "$where: control ${toDp(fill.width())}x${toDp(fill.height())}dp at " +
-                        "(${fill.left},${fill.top}), indicator ${toDp(ring.width())}dp inside it"
+                        "(${fill.left},${fill.top}), connecting face ${toDp(ring.width())}dp " +
+                        "inside it, $runs marks"
                 }
                 else -> {
                     if (spinner.visibility != View.GONE) {
@@ -441,6 +459,28 @@ class PlayerControlRenderTest {
                 }
             }
         }
+    }
+
+    /**
+     * How many separate horizontal runs of non-[surface] ink the centre line of
+     * [box] crosses.
+     *
+     * A ring gives 1 - its two crossings are one run each side, and the row
+     * through the centre of a circle drawn as an outline crosses left wall and
+     * right wall, which is 2; a row of three filled dots gives 3. Either way the
+     * count is the shape's identity, which is what needs pinning here rather than
+     * any single pixel.
+     */
+    private fun inkRuns(raster: Bitmap, box: Rect, surface: Int): Int {
+        var runs = 0
+        var inRun = false
+        val y = box.centerY()
+        for (x in box.left until box.right) {
+            val ink = raster.getPixel(x, y) != surface
+            if (ink && !inRun) runs++
+            inRun = ink
+        }
+        return runs
     }
 
     private fun rectIn(v: View, ancestor: View): Rect {

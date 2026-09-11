@@ -19,20 +19,33 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * How Settings is reached, and what did not move to let it be.
+ * How Settings is reached, and the control the frozen band actually draws.
  *
  * ## The decision this file holds
  *
- * The frozen design draws no path to `settings` from anywhere - no menu row, no
- * button, no tab, and no prototype link in the whole file. So the entry is an
- * owner-delegated product decision, and it is: **a second 40x40 control on the
- * HOME header, beside the profile control**.
+ * The frozen `Header - TopAppBar` (2393:1665 / 2444:10389) draws **one** 40x40 on
+ * the trailing edge, and decoding its glyph settles what it is: a circle r4 at
+ * (8,4) over a shoulders shape - the person. There is no gear anywhere in the
+ * file, and no prototype link to say where the person leads.
  *
- * Two earlier attempts are ruled out here as much as the chosen one is asserted:
+ * The owner's G4a decision: **the one drawn control opens `settings`**, and the
+ * profile is reached from inside it.
  *
- *  - **G1** retargeted the profile control itself to Settings. The profile must
- *    stay one tap from HOME, so `profile_control_still_opens_the_profile` holds
- *    that.
+ * That is not a demotion of the profile, it is where the frozen file puts it.
+ * `settings` 2517:2758 opens on `Row / Профиль` under a `Section / Аккаунт`
+ * heading, with a chevron and a live value; neither `profile-guest` 2517:2644 nor
+ * `profile-authenticated` 2517:2671 carries a Settings row. Settings is the
+ * parent. So the tree the design draws is HOME > settings > profile, and
+ * `the_profile_is_still_reachable_through_settings` walks exactly that.
+ *
+ * Three earlier attempts are ruled out here as much as the chosen one is
+ * asserted:
+ *
+ *  - **G1** retargeted the profile control to Settings, and this file then held
+ *    that it must not. G4a reverses that on the evidence above.
+ *  - **G1b** added a *second* 40x40 gear beside it, in the 133dp the band leaves
+ *    empty. `home_carries_one_forty_dp_control_on_the_trailing_edge` now holds
+ *    that the band is back to one control and the space is empty again.
  *  - **G1a** hung `Настройки` on the PLAYER and COLLECTION overflows. Those menus
  *    are for their own screens' actions - `Menu / Плеер` is Найти трек, Таймер
  *    сна, Сообщить о проблеме, История эфира; `Menu / Коллекция` is the two
@@ -40,13 +53,6 @@ import org.junit.runner.RunWith
  *    `the_collection_overflow_is_still_only_its_own_actions` holds that, and
  *    `PlayerLayoutTest` holds that the player's slot is reserved rather than
  *    drawn.
- *
- * ## What the addition costs, asserted
- *
- * The frozen band leaves 133dp empty between the greeting and the profile
- * control, and the new control sits in it. So the claim is not "it fits" but
- * "nothing frozen moved", and that is what
- * `the_new_control_moves_nothing_that_was_already_there` measures.
  */
 @RunWith(AndroidJUnit4::class)
 class SettingsEntryTest {
@@ -54,7 +60,7 @@ class SettingsEntryTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val context: Context get() = instrumentation.targetContext
 
-    /** 40dp, as Figma draws both controls, in this device's pixels. */
+    /** 40dp, as Figma draws the one control, in this device's pixels. */
     private val fortyPx: Float get() = 40 * context.resources.displayMetrics.density
 
     @Before
@@ -74,67 +80,45 @@ class SettingsEntryTest {
 
     // ==================== the control ====================
 
-    @Test
-    fun home_carries_two_forty_dp_controls_on_the_trailing_edge() {
-        withActivity {
-            awaitHome()
-            onMain { activity ->
-                val settings = activity.findViewById<View>(R.id.settings_entry)
-                val profile = activity.findViewById<View>(R.id.profile_entry)
-                assertNotNull("HOME must carry the Settings control", settings)
-                assertNotNull("HOME must still carry the profile control", profile)
-                assertEquals(View.VISIBLE, settings.visibility)
-                assertEquals(View.VISIBLE, profile.visibility)
-
-                for ((what, v) in listOf("settings" to settings, "profile" to profile)) {
-                    assertTrue(
-                        "$what control is ${v.width}x${v.height}, expected ~${fortyPx.toInt()}",
-                        abs(v.width - fortyPx) <= 2 && abs(v.height - fortyPx) <= 2,
-                    )
-                }
-
-                // Settings sits before the profile control, not after it: the
-                // profile keeps the frozen trailing anchor.
-                assertTrue(
-                    "the Settings control must sit before the profile control",
-                    settings.left < profile.left,
-                )
-            }
-        }
-    }
-
     /**
-     * The addition lands in space the frozen band already left empty.
+     * The band is back to the frozen one control, and it is the drawn one.
      *
-     * The profile control's trailing anchor is the frozen one - its right edge
-     * 16dp from the header's - and the greeting still starts at the leading 16.
-     * Those two are what would have had to move if the new control needed room,
-     * so they are what is measured.
+     * `childCount` is the assertion that carries the weight. The gear G1b added is
+     * no longer declared by any layout, so `R.id.settings_entry` does not exist
+     * and a test that looked it up would not compile - which is a stronger
+     * guarantee than any runtime absence check, but says nothing about a *second*
+     * control arriving under some other id. Counting the header's children does.
      */
     @Test
-    fun the_new_control_moves_nothing_that_was_already_there() {
+    fun home_carries_one_forty_dp_control_on_the_trailing_edge() {
         withActivity {
             awaitHome()
             onMain { activity ->
-                val header = activity.findViewById<View>(R.id.home_header)
+                val header = activity.findViewById<android.view.ViewGroup>(R.id.home_header)
                 val profile = activity.findViewById<View>(R.id.profile_entry)
-                val settings = activity.findViewById<View>(R.id.settings_entry)
                 val greeting = activity.findViewById<View>(R.id.home_greeting)
                 val d = context.resources.displayMetrics.density
 
+                assertNotNull("HOME must carry the profile control", profile)
+                assertEquals(View.VISIBLE, profile.visibility)
+                assertEquals(
+                    "the frozen band holds the greeting and one control, nothing else",
+                    2,
+                    header.childCount,
+                )
+                assertTrue(
+                    "the control is ${profile.width}x${profile.height}, expected ~${fortyPx.toInt()}",
+                    abs(profile.width - fortyPx) <= 2 && abs(profile.height - fortyPx) <= 2,
+                )
+
                 val trailing = header.width - (profile.left + profile.width)
                 assertTrue(
-                    "the profile control lost its frozen trailing anchor: gap ${trailing}px",
+                    "the control lost its frozen trailing anchor: gap ${trailing}px",
                     abs(trailing - 16 * d) <= 2,
                 )
                 assertTrue(
                     "the greeting lost its frozen leading anchor: left ${greeting.left}px",
                     abs(greeting.left - 16 * d) <= 2,
-                )
-                val gap = profile.left - (settings.left + settings.width)
-                assertTrue(
-                    "gap between the controls is ${gap}px, expected ~${(8 * d).toInt()}",
-                    abs(gap - 8 * d) <= 2,
                 )
                 assertTrue(
                     "the header band changed height: ${header.height}px",
@@ -164,12 +148,12 @@ class SettingsEntryTest {
     // ============ what it opens, and what it did not take over ============
 
     @Test
-    fun the_settings_control_opens_settings_and_hides_the_bottom_bar() {
+    fun the_one_control_opens_settings_and_hides_the_bottom_bar() {
         withActivity {
             awaitHome()
             assertEquals(View.VISIBLE, barVisibility())
 
-            tap(R.id.settings_entry)
+            tap(R.id.profile_entry)
             await("settings") { it.destination() == R.id.settings }
 
             assertNotNull(
@@ -180,12 +164,22 @@ class SettingsEntryTest {
         }
     }
 
-    /** The profile is still one tap from HOME - the whole point of the correction. */
+    /**
+     * The profile is still reachable, by the route the frozen file draws.
+     *
+     * Two taps now rather than one, and that is the change: `settings` is the
+     * parent frame and `Row / Профиль` is its first row. What must not change is
+     * that the row is live and lands on a real profile - an inert row here would
+     * make the whole re-route a regression rather than a correction.
+     */
     @Test
-    fun profile_control_still_opens_the_profile() {
+    fun the_profile_is_still_reachable_through_settings() {
         withActivity {
             awaitHome()
             tap(R.id.profile_entry)
+            await("settings") { it.destination() == R.id.settings }
+
+            tap(R.id.settings_row_profile)
             await("a profile") {
                 it.destination() == R.id.profile || it.destination() == R.id.profile_authenticated
             }
@@ -200,7 +194,7 @@ class SettingsEntryTest {
     fun back_from_settings_returns_to_home_with_the_bar() {
         withActivity {
             awaitHome()
-            tap(R.id.settings_entry)
+            tap(R.id.profile_entry)
             await("settings") { it.destination() == R.id.settings }
 
             tap(R.id.settings_back)
@@ -213,7 +207,7 @@ class SettingsEntryTest {
     fun settings_still_reaches_appearance_and_back_again() {
         withActivity {
             awaitHome()
-            tap(R.id.settings_entry)
+            tap(R.id.profile_entry)
             await("settings") { it.destination() == R.id.settings }
 
             tap(R.id.settings_row_theme)
@@ -241,7 +235,7 @@ class SettingsEntryTest {
     fun the_profile_row_inside_settings_still_routes() {
         withActivity {
             awaitHome()
-            tap(R.id.settings_entry)
+            tap(R.id.profile_entry)
             await("settings") { it.destination() == R.id.settings }
 
             tap(R.id.settings_row_profile)
@@ -271,16 +265,30 @@ class SettingsEntryTest {
     fun the_collection_overflow_is_still_only_its_own_actions() {
         withActivity {
             awaitHome()
+            // G4a replaced the platform PopupMenu with the frozen `Menu / Коллекция`
+            // card, so the rows are the clickable children of its layout now.
             val ids = onMain { activity ->
-                val menu = androidx.appcompat.widget.PopupMenu(activity, View(activity)).menu
-                activity.menuInflater.inflate(R.menu.collection_overflow, menu)
-                (0 until menu.size()).map { menu.getItem(it).itemId }
+                val root = activity.layoutInflater
+                    .inflate(R.layout.menu_collection_overflow, null) as android.view.ViewGroup
+                (0 until root.childCount).map { root.getChildAt(it) }.filter { it.isClickable }.map { it.id }
             }
             assertEquals("the collection overflow must have exactly two actions", 2, ids.size)
-            assertTrue(ids.contains(R.id.collection_action_export_txt))
-            assertTrue(ids.contains(R.id.collection_action_export_csv))
+            assertTrue(ids.contains(R.id.collection_overflow_export_txt))
+            assertTrue(ids.contains(R.id.collection_overflow_export_csv))
         }
 
+        // A positive control first. `getIdentifier` answers 0 for *everything*
+        // when the package it is handed is not the one the resources were built
+        // under - an applicationId suffix is enough to do it - and an absence
+        // check that cannot tell "gone" from "asked wrongly" asserts nothing. So
+        // resolve a menu that certainly exists through the identical call, and
+        // fail loudly if even that comes back 0.
+        val known = context.resources.getIdentifier("menu_collection_overflow", "layout", context.packageName)
+        assertTrue(
+            "getIdentifier resolved nothing under ${context.packageName}, so the " +
+                "absence check below would pass without meaning anything",
+            known != 0,
+        )
         assertEquals(
             "the player_overflow menu G1a added must be gone",
             0,
@@ -296,7 +304,7 @@ class SettingsEntryTest {
 
         withActivity {
             awaitHome()
-            tap(R.id.settings_entry)
+            tap(R.id.profile_entry)
             await("settings") { it.destination() == R.id.settings }
             tap(R.id.settings_back)
             await("HOME") { it.destination() == R.id.home }

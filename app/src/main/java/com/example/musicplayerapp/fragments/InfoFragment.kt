@@ -12,7 +12,6 @@ import androidx.navigation.fragment.findNavController
 import androidx.lifecycle.Observer
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
-import com.example.musicplayerapp.ui.profile.ProfileRoute
 import com.example.musicplayerapp.StreamsViewModel
 import com.example.musicplayerapp.databinding.FragmentInfoBinding
 import com.example.musicplayerapp.ui.AboutLinks
@@ -75,7 +74,6 @@ class InfoFragment : Fragment() {
 
         vm = (activity as MainActivity).viewModel
 
-        vm.currentFragmentLiveData.value = "info"
 
         // The eight tiles of the frozen `Section 3: Social Media`, in its order:
         // Telegram, Spotify, Instagram, TikTok / YouTube, Threads, Boosty,
@@ -182,8 +180,11 @@ class InfoFragment : Fragment() {
         // The 40x40 profile control. It opens profile-guest and does nothing else -
         // in particular it does not touch the identity boundary, so looking at the
         // profile never mints an anonymous uid.
+        // Same control, same destination as HOME's - see MainFragment. Routing
+        // the two headers' identical glyph to two different screens would be a
+        // worse answer than either one alone.
         binding.profileEntry.root.setOnClickListener {
-            ProfileRoute.open(this)
+            findNavController().navigate(R.id.settings)
         }
 
 
@@ -191,7 +192,6 @@ class InfoFragment : Fragment() {
     }
 
     override fun onResume() {
-        vm.currentFragmentLiveData.value = "info"
         super.onResume()
     }
 

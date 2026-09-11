@@ -22,11 +22,20 @@ package com.example.musicplayerapp.ui
 object MiniPlayerVisibility {
 
     /**
-     * `currentFragmentLiveData` keys for the screens the frozen design gives a
-     * mini player. PLAYER is absent because it already shows all of this full
-     * size. Any other key - the app sets none today - shows no pill.
+     * The screen keys the frozen design gives a mini player.
+     *
+     * `HOME`, `COLLECTION` (filled and empty alike) and `ABOUT` draw the pill;
+     * `PLAYER` is absent because it already shows all of this full size, and
+     * `PUSHED` - every Profile, Settings, auth, Report and later destination - is
+     * absent because no frozen pushed frame draws it either.
+     *
+     * This is an **allowlist**, and that is the whole safety property: the key
+     * now arrives from [NavScreen] via the shell's destination listener rather
+     * than from the screens themselves, so a destination nobody thought about
+     * lands on `PUSHED` and is hidden without anyone having to remember. See
+     * [NavScreen] for why the writing moved.
      */
-    val SCREENS = setOf("main", "favorites", "info")
+    val SCREENS = setOf(NavScreen.HOME, NavScreen.COLLECTION, NavScreen.ABOUT)
 
     fun shouldShow(
         screen: String?,

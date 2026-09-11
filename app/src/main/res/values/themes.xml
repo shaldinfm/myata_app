@@ -230,15 +230,21 @@
       HOME stream card, frozen 3.6.6 canonical: `плашка потока MYATA` and
       `... GOLD`, 316x198 with corner radius 14.
 
-      The frozen card carries two stacked shadows - the row's own r6 at y2, and
-      each card's r10 at y11 - which Android expresses as one elevation. 8dp is
-      the closest single value to the dominant one.
+      The frozen card carries two stacked shadows - the row's (0,2) blur 6 at 10%
+      and each card's (3,11) blur 10 at 25%. G1 collapsed both into 8dp of
+      elevation and said so here: "the closest single value to the dominant one".
+      It could not be closer than that, because elevation is symmetric and the
+      dominant layer is offset 3 to the right.
+
+      G4a draws them instead. The card is wrapped in a SoftShadowFrame in
+      fragment_main.xml, which paints both layers with their real offsets, blurs
+      and opacities, so the card itself now lifts nothing.
     -->
     <style name="HomeStreamCard">
         <item name="android:layout_width">@dimen/home_stream_card_width</item>
         <item name="android:layout_height">@dimen/home_stream_card_height</item>
         <item name="cardCornerRadius">@dimen/home_stream_card_corner</item>
-        <item name="cardElevation">8dp</item>
+        <item name="cardElevation">0dp</item>
         <item name="cardBackgroundColor">@android:color/transparent</item>
         <item name="strokeWidth">0dp</item>
         <item name="android:clickable">true</item>
@@ -257,21 +263,53 @@
       artwork, so the adapter loads a plain bitmap - rounding it a second time in
       Picasso, at a different radius, is what used to fight this.
     -->
+    <!--
+      A HOME playlist card that has not arrived yet - see `playlist_loading` in
+      fragment_main.xml. The card's own 160x160 r20, filled with `outline` at the
+      50% `history-loading` 2517:2420 gives its skeleton blocks.
+    -->
+    <style name="HomePlaylistSkeleton">
+        <item name="android:layout_width">@dimen/home_playlist_card_size</item>
+        <item name="android:layout_height">@dimen/home_playlist_card_size</item>
+        <item name="android:background">@drawable/bg_home_playlist_skeleton</item>
+        <item name="android:alpha">0.5</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+
     <style name="HomePlaylistCard">
         <item name="android:layout_width">@dimen/home_playlist_card_size</item>
         <item name="android:layout_height">@dimen/home_playlist_card_size</item>
         <item name="cardCornerRadius">@dimen/home_playlist_card_corner</item>
-        <item name="cardElevation">4dp</item>
+        <!--
+          No shadow. `Playlist N > Background` is a plain 160x160 r20 with an image
+          fill and no effect node - the stream cards beside it are the ones the
+          frozen frame lifts, and lifting these too flattened the distinction the
+          design draws between the two rows.
+        -->
+        <item name="cardElevation">0dp</item>
         <item name="cardBackgroundColor">@color/brand_playlist_card_placeholder</item>
         <item name="strokeWidth">0dp</item>
     </style>
 
     <!--
       PLAYER album art, frozen 3.6.6 canonical: `Album Art (Organic Shape) >
-      Current Track Artwork`, 239x239 at radius 20 with a 1px stroke and an image
-      fill set to FILL. The stroke is the `outline` role: #466D8F in dark is
-      exactly that role's dark value, and light's #FFFFFF is a near neighbour of
-      its #E1E3E4 - one role, so one token rather than a new pair.
+      Current Track Artwork`, 239x239 at radius 20 with an image fill set to FILL.
+
+      The stroke is the `outline` role: #466D8F in dark is exactly that role's
+      dark value, and light's #FFFFFF is a near neighbour of its #E1E3E4 - one
+      role, so one token rather than a new pair.
+
+      **Its width is 2, not 1** - G4a. The frozen stroke has always been 2 and
+      OUTSIDE; it was implemented as 1 and, being a MaterialCardView stroke,
+      INSIDE. The width is now the frozen one. The side it sits on cannot be:
+      MaterialCardView insets its stroke, and an outside stroke would make the box
+      243 and move every absolute offset on the screen below it. So the artwork
+      keeps its frozen 239 and the 2 is taken from the image rather than added
+      around it - see docs for the compromise.
+
+      The two drop shadows are drawn by the SoftShadowFrame wrapping this card in
+      fragment_myata_stream.xml, not by elevation: both layers have negative
+      spread, which elevation cannot express at all.
     -->
     <style name="PlayerArtworkCard">
         <item name="android:layout_width">@dimen/player_artwork_size</item>

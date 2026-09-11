@@ -82,20 +82,25 @@ class SleepTimerSurfacesTest {
                     topIn(reportRow, menu) - topIn(row, menu), dp(52),
                 )
 
-                // ## The G2 debt, paid
+                // ## The compact menu - owner override, G4a review
                 //
-                // G2 shipped 10 / 10 rather than the frozen 10 / 50 while the menu
-                // carried a single row, and pinned the temporary 68dp height right
-                // here so that a second row could not arrive without the padding
-                // being restored in the same change. It could not, and it did not:
-                // this is that assertion, updated by the change it was waiting for.
-                //
-                // 10 + 2x52 + 46 = 160, which is exactly the frozen two-row
-                // `Menu / Коллекция` at 260x160.
-                expect(where, "two-row menu height", menu.height, dp(160))
+                // The frozen 10 / 50 padding and 48 icon slot were rejected on the
+                // rendered surface. 10 top, 10 bottom: 10 + 48 + 4 + 48 + 10 = 120.
+                expect(where, "two-row menu height", menu.height, dp(120))
                 expect(
                     where, "space below the last row",
-                    menu.height - (topIn(reportRow, menu) + reportRow.height), dp(50),
+                    menu.height - (topIn(reportRow, menu) + reportRow.height), dp(10),
+                )
+                // Content 16 from the card edge: the 24 icon box at card-x 16, the
+                // label 16 after it at 56 - the settings rows' own rhythm.
+                val icon = (row as android.view.ViewGroup).getChildAt(0)
+                val label = menu.findViewById<View>(R.id.player_overflow_sleep_timer_label)
+                expect(where, "icon x from the card", leftIn(icon, menu), dp(16))
+                expect(where, "icon size", icon.width, dp(24))
+                expect(where, "label x from the card", leftIn(label, menu), dp(56))
+                expect(
+                    where, "trailing ends 16 from the card",
+                    menu.width - (leftIn(trailing, menu) + trailing.width), dp(16),
                 )
 
                 // Two rows. The other two frozen entries are absent rather than

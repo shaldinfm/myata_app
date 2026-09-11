@@ -45,17 +45,26 @@
     <dimen name="mini_player_button_width">27dp</dimen>
     <dimen name="mini_player_button_height">48dp</dimen>
     <!--
-      The press state's mask, half of mini_player_button_width, so the ripple
-      fills the 27x48 target and ends in a semicircle at each end instead of a
-      corner. See bg_mini_player_control.xml for why it is masked at all.
+      The press state's circle: the slot's full 27 width, centred in its 48 height,
+      so (48 - 27) / 2 = 10.5 of inset top and bottom leaves a 27x27 square for
+      the oval to fill. See bg_mini_player_control.xml for why it is masked at all
+      and why it is no longer the stadium the old 13.5 corner radius drew.
     -->
-    <dimen name="mini_player_control_corner">13.5dp</dimen>
+    <dimen name="mini_player_control_press_inset">10.5dp</dimen>
     <!--
       The connecting indicator, inside the 27 slot with a little air around it.
       The glyphs it stands in for are 11x14 and 12x14, so it reads as the same
       class of mark rather than as something that arrived from elsewhere.
     -->
-    <dimen name="mini_player_control_spinner">20dp</dimen>
+    <!--
+      The connecting dots, frozen `Mini-player / buffering` 2436:771: three 5x5
+      ellipses at x = 13, 21, 29 inside the trailing 48x48 slot. 5 across and 8
+      between centres, so the run is 21 wide - it centres in the mini player's 27
+      slot, and it also fits inside the PLAYER control's frozen 23.33 glyph box,
+      which is why one pair of numbers serves both surfaces.
+    -->
+    <dimen name="buffering_dot_size">5dp</dimen>
+    <dimen name="buffering_dot_pitch">8dp</dimen>
 
     <!--
       HOME, frozen 3.6.6 canonical.
@@ -84,6 +93,8 @@
     <dimen name="home_playlist_card_size">160dp</dimen>
     <dimen name="home_playlist_card_corner">20dp</dimen>
     <dimen name="home_playlist_card_gap">16dp</dimen>
+    <!-- The playlist section's Retry: `history-error`'s 52-tall full-width button. -->
+    <dimen name="home_playlist_retry_height">52dp</dimen>
 
     <!--
       Bottom clearance: the height of the chrome that floats over the content.
@@ -326,34 +337,52 @@
     <dimen name="player_header_action_width">32dp</dimen>
     <dimen name="player_header_action_height">39dp</dimen>
     <!--
-      What lifts the ellipsis onto the same line as every other trailing header
-      control in the app.
+      Where the two ellipsis glyphs are drawn - G4a, measured rather than derived.
 
-      The two headers are different frozen components and they disagree by 7.5dp:
+      **What the frozen file actually says.** Both controls put their 4x16 ink in
+      the same place horizontally and lift it by the same amount inside their own
+      button:
 
-          HOME / COLLECTION / ABOUT US   `Header - TopAppBar`      64 at y=0
-                                          40 control centred      -> centre 32
-          PLAYER                         `Mobile Header (Subtle)`  47 at y=16
-                                          39 control centred      -> centre 39.5
+          PLAYER      `Mobile Header (Subtle)` 358x47 at (16,16)
+                      Button:margin 32.02 at x=325.98  -> ends 16 from the frame
+                      Button 20x39, ink 4x16 at (8,8)
+                      ink centre  x = 351.98  (38.02 from the 390 frame's right)
+                                  y = 20 in the 47 header, box centre 23.5 -> 3.5 up
 
-      Measured on the API 24 emulator at 420dpi before this: the Profile control
-      sat at 146.5px and the ellipsis at 166px - 19.5px, exactly the predicted
-      7.5dp. Owner decision is to align on the Profile control.
+          COLLECTION  `Header - TopAppBar` 390x64 at (0,0)
+                      Button:margin 32.02 at x=341.98  -> ends 16 from the frame
+                      Button 20x39 at y=12.5, ink 4x16 at (8,8)
+                      ink centre  x = 351.98  (38.02 from the right - identical)
+                                  y = 28.5 in the 64 header, box centre 32 -> 3.5 up
 
-      The lift is done with padding rather than by moving the box, so the 32x39
-      touch target, its position and the popup's anchor are all untouched and only
-      the drawn glyph moves:
+      So the trailing anchor IS shared and the lift IS shared; only the header
+      heights differ, which is why the two glyphs sit at different heights on
+      screen and must.
 
-          box top in the header      (47 - 39) / 2            =  4
-          content box after padding  39 - 15                  = 24
-          glyph centre               4 + 24 / 2               = 16
-          plus the header's own margin                        + 16
-                                                              = 32, the shared anchor
+      **What was rendered before, measured on API 24 at 420dpi:**
 
-      The 24dp drawable then exactly fills the 24dp content box, so `scaleType`
-      centre neither scales nor clips it.
+          PLAYER      ink centre 31.81dp from the right edge   (6.2 too far right)
+          COLLECTION  ink centre 39.81dp from the right edge   (1.8 too far left)
+                      -> the two were 8.00dp apart, which is the visible defect
+
+      **This supersedes a G3 decision.** G3 lifted the PLAYER ellipsis by 15dp to
+      put it on the HOME Profile control's 32dp line - a deliberate cross-screen
+      alignment, recorded here as owner-decided. The frozen file does not draw it
+      there: it draws 3.5 above the button's own centre, the same as COLLECTION's.
+      G4a follows the file, and the two screens are never on screen together for
+      the cross-screen line to be seen. `player_header_action_glyph_lift` back to
+      15 restores G3 if that call is reversed.
+
+      The moves are padding, so both touch targets, their positions and the
+      popups' anchors are untouched and only the drawn glyph moves.
+
+          lift        box 39 tall, content 39 - 7 = 32, centre 3.5 above box centre
+          player x    box 32 ending 16 from the right, centre 32 - 12.04/2 -> 38.02
+          coll.  x    box 48 ending 16 from the right, centre 40 - 3.96/2  -> 38.02
     -->
-    <dimen name="player_header_action_glyph_lift">15dp</dimen>
+    <dimen name="header_overflow_glyph_lift">7dp</dimen>
+    <dimen name="player_header_action_glyph_inset_end">12.04dp</dimen>
+    <dimen name="collection_overflow_glyph_inset_start">3.96dp</dimen>
     <!-- The swipe dots abut the header row: it ends at 63 and they start at 63.
          They end at 73 and the page starts at 79, so 6 between. -->
     <!--
@@ -369,7 +398,7 @@
     <!-- `Album Art (Organic Shape)`, 239x239 r20, image FILL, 1px stroke. -->
     <dimen name="player_artwork_size">239dp</dimen>
     <dimen name="player_artwork_corner">20dp</dimen>
-    <dimen name="player_artwork_stroke">1dp</dimen>
+    <dimen name="player_artwork_stroke">2dp</dimen>
     <dimen name="player_artwork_margin_top">16dp</dimen>
 
     <!--
@@ -444,30 +473,12 @@
     -->
     <dimen name="player_play_icon">27.33dp</dimen>
     <!--
-      The connecting indicator's own geometry.
-
-      Thickness is the point of these: the Material FILL 0 glyphs paint a 3.97dp
-      wall, the platform's indeterminate drawable painted 2.17dp, and the
-      indicator stands in for the glyph so it has to carry the glyph's weight. 4
-      is that wall, to the nearest whole dp.
-
-      Diameter is what must NOT change, so it is the diameter the platform
-      drawable painted, kept: its vector is a radius-18 circle with a 4-wide
-      stroke in a 48 viewport, drawn into player_play_icon's 27.33 box, so the
-      outer diameter was 2 x (18 + 2) x 27.33/48 = 22.78. Measured off the
-      screen before the swap: 22.75.
-
-      The inset exists to stop the drawable being rescaled. CircularDrawingDelegate
-      scales its canvas by bounds/preferred size, so the two have to agree or the
-      thickness above is not the thickness painted: inset is therefore whatever
-      makes the indicator's preferred size come to player_play_icon exactly.
-      PlayerControlRenderTest measures the painted stroke, so a Material release
-      that redefines how preferred size is composed fails there rather than
-      silently re-scaling this.
+      G4a removed the connecting indicator's diameter, thickness and inset with
+      the indicator itself. The connecting face is BufferingDotsView now, and its
+      dots are sized by buffering_dot_size / buffering_dot_pitch above; the box it
+      is drawn in is still player_play_icon, so the control reads the same size
+      through play -> connecting -> pause exactly as before.
     -->
-    <dimen name="player_play_spinner_diameter">22.78dp</dimen>
-    <dimen name="player_play_spinner_thickness">4dp</dimen>
-    <dimen name="player_play_spinner_inset">2.275dp</dimen>
     <dimen name="player_action_width">49dp</dimen>
     <dimen name="player_action_height">54dp</dimen>
     <!--
@@ -600,8 +611,15 @@
       height set on the view in XML anyway. The adapter sets it after inflation,
       which is the one place that wins.
     -->
-    <dimen name="player_history_title_line_height">22sp</dimen>
-    <dimen name="player_history_artist_line_height">18sp</dimen>
+    <!--
+      The line a Broadcast History row's title and artist are actually set on -
+      see HistoryRowTypography for why it is not the 28 and 20 of the tokens.
+      Shared by both lists as of G4a; they were player-only before, which is why
+      the other list never got them.
+    -->
+    <dimen name="history_row_title_line_height">22sp</dimen>
+    <dimen name="history_row_artist_line_height">18sp</dimen>
+
     <dimen name="player_history_title_height">22dp</dimen>
     <dimen name="player_history_artist_height">18dp</dimen>
 
@@ -704,13 +722,6 @@
       the drawable's own 40x40 viewport, so there is no icon-inset dimen here.
     -->
     <dimen name="profile_entry_size">40dp</dimen>
-    <!--
-      The gap between the two 40x40 header controls on HOME (G1). The frozen band
-      leaves 16..201 for the greeting and puts the profile control at 334..374,
-      so 133 is empty; Settings takes 286..326 and this is the 8 between them.
-      Nothing frozen moves to make room.
-    -->
-    <dimen name="home_header_control_gap">8dp</dimen>
 
     <!-- profile-guest 2517:2644 / 2517:3611. -->
     <dimen name="profile_header_height">64dp</dimen>
@@ -929,56 +940,50 @@
       The 260 is adopted now rather than later, because re-widening the same surface
       when the trailing value arrives would be a second change to it.
 
-      Rows are 238x48 at x=11, pitch 52, first at y=10. The icon slot is 48 at x=12
-      inside the row with a 24 glyph centred in it; the label starts at x=70 and the
-      trailing value at x=160, w=70 - all relative to the row, and all straight out
-      of screens-3.6.6/spec/primitives.mjs:184.
+      ## The compact row - owner override (G4a)
 
-      ## The bottom padding is the frozen 50 again (G3)
+      Rows are 238x48 at x=11, pitch 52, first at y=10 - the frozen numbers. What
+      is not frozen any more is inside and below the rows: the owner rejected the
+      frozen primitive's 48 icon slot at x=12, label at x=70 and 50 of bottom
+      padding on the rendered surface, and both menus - this one and
+      `Menu / Коллекция` - now share one compact row:
 
-      The frozen vertical rhythm is "10 top, 52 pitch, 50 bottom", stated in that
-      file and reproduced identically by the two-row `Menu / Коллекция` at 260x160.
+          padding   10 top, 10 bottom          two rows 120, one row 68
+          content   16 from the card edge      overflow_row_pad_start / _end
+          icon      24x24 box at card-x 16     player_overflow_icon_size
+          label     card-x 56                  overflow_label_gap after the icon
+          trailing  70 wide, ending 16 in      player_overflow_trailing_width
 
-      G2 shipped **10 / 10** by owner decision, for as long as the menu carried a
-      single row: under one row the 50 is 40dp of unexplained space below one 48dp
-      line. That was recorded as temporary and as a debt against the next Player
-      action, in this file, in menu_player_overflow.xml and in
-      docs/SLEEP-TIMER-3.6.6.md §1 and §9 - "**Restoring
-      `player_overflow_menu_pad_bottom` to 50dp is part of shipping the next Player
-      action.**"
+      See menu_player_overflow.xml. `SleepTimerSurfacesTest` and
+      `ReportEntryPointsTest` pin 120 / 10 and the 16 / 56 positions.
 
-      G3 is that action. `Сообщить о проблеме` is the second of the frozen four, so
-      the padding is back to 50 and the geometry is whole: 10 + 2x52 + 46 = **160**,
-      which is the frozen two-row menu exactly. `SleepTimerSurfacesTest` measured
-      the temporary 68 and now measures the 160, which is how the debt was made
-      impossible to forget quietly.
+      History, superseded rather than continued: G2 shipped 10 / 10 for a single
+      row; G3 restored the frozen 50 when its second row arrived (the "debt" in
+      docs/SLEEP-TIMER-3.6.6.md); G4a replaced both with the compact 10.
 
-      The other two rows - Найти трек, История эфира - are still absent rather than
-      inert, and the height formula stays honest for them: four rows would be 264.
+      The other two frozen rows - Найти трек, История эфира - are
+      still absent rather than inert; they are G4b.
     -->
     <dimen name="player_overflow_menu_width">260dp</dimen>
     <dimen name="player_overflow_menu_radius">20dp</dimen>
     <dimen name="player_overflow_menu_pad_top">10dp</dimen>
-    <dimen name="player_overflow_menu_pad_bottom">50dp</dimen>
     <!--
-      The one-row menu's bottom padding, for a build with no report endpoint, where
-      `Сообщить о проблеме` is absent and the menu is G2's again.
-
-      This is not a second opinion about the frozen 50. It is G2's owner decision
-      applied to the surface it was made about: under a single 48dp row the 50 is
-      40dp of unexplained space and reads as an unfinished menu. Two rows earn the
-      frozen number; one does not. PlayerOverflowMenu picks between them by how many
-      rows it is actually drawing, so neither value can be applied to the wrong menu.
+      10, not the frozen 50 - owner override in the G4a review, for both menus and
+      for any row count. See menu_player_overflow.xml for the compact row.
     -->
-    <dimen name="player_overflow_menu_pad_bottom_single_row">10dp</dimen>
+    <dimen name="player_overflow_menu_pad_bottom">10dp</dimen>
     <dimen name="player_overflow_row_inset">11dp</dimen>
     <dimen name="player_overflow_row_height">48dp</dimen>
     <dimen name="player_overflow_row_gap">4dp</dimen>
-    <dimen name="player_overflow_icon_slot_inset">12dp</dimen>
-    <dimen name="player_overflow_icon_slot">48dp</dimen>
     <dimen name="player_overflow_icon_size">24dp</dimen>
-    <dimen name="player_overflow_label_inset">70dp</dimen>
-    <dimen name="player_overflow_trailing_inset">160dp</dimen>
+    <!--
+      The compact row (owner override, G4a review), shared by both menus: 5 of
+      row padding inside the 11 row inset puts content 16 from the card edge on
+      both sides; the label sits 16 after the 24 icon box, at card-x 56.
+    -->
+    <dimen name="overflow_row_pad_start">5dp</dimen>
+    <dimen name="overflow_row_pad_end">5dp</dimen>
+    <dimen name="overflow_label_gap">16dp</dimen>
     <dimen name="player_overflow_trailing_width">70dp</dimen>
 
     <!--
@@ -1007,9 +1012,6 @@
     <dimen name="sleep_timer_button_height">52dp</dimen>
     <dimen name="sleep_timer_button_radius">12dp</dimen>
     <dimen name="sleep_timer_button_gutter">12dp</dimen>
-    <!-- Menu label at x=70 in a row whose content starts at 12: the 48 slot ends
-         at 60, so the frozen gap is 10. -->
-    <dimen name="player_overflow_gap">10dp</dimen>
 
     <!-- `Sheet / chevron` sits at x=318 on a 358 row whose padding ends at 342,
          so it hangs off the end of the trailing value with the row's own inset. -->
@@ -1017,10 +1019,26 @@
 
     <!-- `Sheet / trailing` on the ticked row: x=180 on a 358 sheet, w=162. -->
     <dimen name="sleep_timer_trailing_width">162dp</dimen>
-    <!-- The menu floats above the header it is anchored to. The frozen frame has
-         no shadow node - it is a flat surface on a 1px outline - so this is only
-         enough lift to separate the window, not a drawn elevation. -->
-    <dimen name="player_overflow_elevation">8dp</dimen>
+    <!--
+      The menu carries no shadow, because the frozen frame carries none.
+
+      `Menu / Плеер (таймер активен)` 2517:2093 has no effect node at all: an
+      r20 surface on a 1px `menuOutline`, and that outline is the whole edge
+      treatment. G2 read the same frame and still set 8dp "only enough lift to
+      separate the window" - which is a drawn shadow whatever it is called, and it
+      doubled an edge the design had already drawn once.
+
+      0 rather than deleting the dimen: PopupWindow's elevation defaults to a
+      platform value, so the number has to be stated to be zero.
+    -->
+    <dimen name="player_overflow_elevation">0dp</dimen>
+    <!--
+      How far the COLLECTION menu is pulled up from its control, so both menus'
+      top edges sit the same 23dp below their ellipsis glyphs. PLAYER: glyph
+      centre 20 in a box ending at 43 -> 23. COLLECTION: glyph centre 28.5 in a
+      box ending at 56 -> 27.5. The difference is this. See CollectionOverflowMenu.
+    -->
+    <dimen name="collection_overflow_menu_lift">4.5dp</dimen>
 
     <!--
       Сообщить о проблеме (G3). report-empty 2517:2129 / report-filled 2517:2172 /

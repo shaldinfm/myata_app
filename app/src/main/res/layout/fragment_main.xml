@@ -74,38 +74,22 @@
                     android:textColor="@color/text_heading" />
 
                 <!--
-                  The Settings control, and the one piece of geometry in G1 that
-                  the frozen file does not draw.
+                  G4a removed the second control that used to sit here.
 
-                  The frozen band is 390 wide with the greeting at 16 and the
-                  profile control at 334..374 - 133dp of empty space between them.
-                  This 40x40 sits in that space at 286..326, 8 before the profile
-                  control, so **nothing frozen moves**: the greeting keeps its
-                  height, its leading padding and its centring (it is weight=1 and
-                  already ellipsizes), and the profile control keeps its exact
-                  trailing anchor.
+                  The frozen band draws **one** 40x40 on the trailing edge, at
+                  334..374 (2393:1665 / 2444:10389), and decoding its glyph settles
+                  what it is: a circle r4 at (8,4) over a shoulders shape - the
+                  person. The gear beside it was never in the file; G1 added it in
+                  the 133dp of empty space the band happened to leave, and said so
+                  in this comment. The owner's G4a decision is that the space stays
+                  empty and the one drawn control leads to `settings`.
 
-                  Same plate as the profile control - `bg_profile_entry`, the same
-                  40dp box, the same 16x16 glyph inset baked into the artwork - so
-                  this reuses a component rather than introducing a second visual
-                  language for header controls.
-
-                  HOME only. ABOUT US and the empty COLLECTION carry the profile
-                  control too, and deliberately do not get this one: HOME is the
-                  app's front door and is always one tap from the bottom bar, so a
-                  single entry is enough and three would be three places to keep in
-                  step. See docs/SETTINGS-APPEARANCE-3.6.6.md.
+                  Nothing is lost by that: `settings` opens on `Row / Профиль`
+                  (2517:2758), which is where the frozen file puts the profile -
+                  Settings is the parent, and neither profile frame carries a
+                  Settings row. So the person control still reaches the profile, one
+                  level down, through the row the design drew for it.
                 -->
-                <ImageView
-                    android:id="@+id/settings_entry"
-                    android:layout_width="@dimen/profile_entry_size"
-                    android:layout_height="@dimen/profile_entry_size"
-                    android:layout_marginEnd="@dimen/home_header_control_gap"
-                    android:background="@drawable/bg_profile_entry"
-                    android:contentDescription="@string/settings_entry_description"
-                    android:scaleType="fitCenter"
-                    android:src="@drawable/ic_settings_entry" />
-
                 <include
                 android:id="@+id/profile_entry"
                 layout="@layout/view_profile_entry" />
@@ -160,50 +144,80 @@
                         android:layout_width="match_parent"
                         android:layout_height="@dimen/home_stream_row_height"
                         android:layout_marginTop="@dimen/home_section_gap"
+                        android:clipChildren="false"
                         android:clipToPadding="false"
                         android:paddingStart="@dimen/home_margin"
                         android:paddingEnd="@dimen/home_margin"
                         android:scrollbars="none">
 
+                        <!--
+                          clipChildren off from here up. Each card's shadow is
+                          painted by its SoftShadowFrame *outside* that frame's
+                          own bounds - see the class for why that is allowed and
+                          what it buys - so any ancestor that still clips would
+                          shave the overhang. The row's 215 height is the frozen
+                          `Container` 2393:1691, which is already 17 taller than
+                          the 198 cards precisely to hold this.
+                        -->
                         <LinearLayout
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:clipChildren="false"
+                            android:clipToPadding="false"
                             android:orientation="horizontal">
 
-                            <com.google.android.material.card.MaterialCardView
-                                android:id="@+id/myata_stream_banner_container"
-                                style="@style/HomeStreamCard">
+                            <com.example.musicplayerapp.ui.SoftShadowFrame
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                app:softShadowSpec="homeStreamCard">
 
-                                <ImageView
-                                    android:id="@+id/myata_stream_banner"
-                                    style="@style/HomeStreamCardImage"
-                                    android:contentDescription="@string/home_stream_myata"
-                                    android:src="@drawable/myata_banner_new" />
-                            </com.google.android.material.card.MaterialCardView>
+                                <com.google.android.material.card.MaterialCardView
+                                    android:id="@+id/myata_stream_banner_container"
+                                    style="@style/HomeStreamCard">
 
-                            <com.google.android.material.card.MaterialCardView
-                                android:id="@+id/gold_stream_banner_container"
-                                style="@style/HomeStreamCard"
-                                android:layout_marginStart="@dimen/home_stream_card_gap">
+                                    <ImageView
+                                        android:id="@+id/myata_stream_banner"
+                                        style="@style/HomeStreamCardImage"
+                                        android:contentDescription="@string/home_stream_myata"
+                                        android:src="@drawable/myata_banner_new" />
+                                </com.google.android.material.card.MaterialCardView>
+                            </com.example.musicplayerapp.ui.SoftShadowFrame>
 
-                                <ImageView
-                                    android:id="@+id/gold_stream_banner"
-                                    style="@style/HomeStreamCardImage"
-                                    android:contentDescription="@string/home_stream_gold"
-                                    android:src="@drawable/gold_banner_new" />
-                            </com.google.android.material.card.MaterialCardView>
+                            <com.example.musicplayerapp.ui.SoftShadowFrame
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/home_stream_card_gap"
+                                app:softShadowSpec="homeStreamCard">
 
-                            <com.google.android.material.card.MaterialCardView
-                                android:id="@+id/xtra_stream_banner_container"
-                                style="@style/HomeStreamCard"
-                                android:layout_marginStart="@dimen/home_stream_card_gap">
+                                <com.google.android.material.card.MaterialCardView
+                                    android:id="@+id/gold_stream_banner_container"
+                                    style="@style/HomeStreamCard">
 
-                                <ImageView
-                                    android:id="@+id/xtra_stream_banner"
-                                    style="@style/HomeStreamCardImage"
-                                    android:contentDescription="@string/home_stream_xtra"
-                                    android:src="@drawable/xtra_banner_new" />
-                            </com.google.android.material.card.MaterialCardView>
+                                    <ImageView
+                                        android:id="@+id/gold_stream_banner"
+                                        style="@style/HomeStreamCardImage"
+                                        android:contentDescription="@string/home_stream_gold"
+                                        android:src="@drawable/gold_banner_new" />
+                                </com.google.android.material.card.MaterialCardView>
+                            </com.example.musicplayerapp.ui.SoftShadowFrame>
+
+                            <com.example.musicplayerapp.ui.SoftShadowFrame
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/home_stream_card_gap"
+                                app:softShadowSpec="homeStreamCard">
+
+                                <com.google.android.material.card.MaterialCardView
+                                    android:id="@+id/xtra_stream_banner_container"
+                                    style="@style/HomeStreamCard">
+
+                                    <ImageView
+                                        android:id="@+id/xtra_stream_banner"
+                                        style="@style/HomeStreamCardImage"
+                                        android:contentDescription="@string/home_stream_xtra"
+                                        android:src="@drawable/xtra_banner_new" />
+                                </com.google.android.material.card.MaterialCardView>
+                            </com.example.musicplayerapp.ui.SoftShadowFrame>
                         </LinearLayout>
                     </HorizontalScrollView>
 
@@ -262,12 +276,47 @@
                         android:visibility="gone"
                         tools:visibility="visible">
 
-                        <ProgressBar
+                        <!--
+                          LOADING - three static placeholder cards, not a spinner.
+
+                          This was a platform indeterminate ProgressBar. With
+                          `animator_duration_scale` at 0 - Accessibility's "Remove
+                          animations", and this project's QA emulators - its
+                          animated drawable does not run: on API 24 it drew nothing
+                          at all for the whole ~12s load budget, and on current
+                          Android it settled into a static arc that reads as a
+                          refresh arrow. Either way the one state that means "wait"
+                          looked like "nothing here" or "tap to retry". Same root
+                          cause as the PLAYER's connecting face (G4a).
+
+                          The frozen file draws no HOME loading state, so this
+                          takes the loading language it does draw -
+                          `history-loading` 2517:2420: static blocks in `outline`
+                          (#E1E3E4 light, #466D8F dark) at 50% - shaped as the
+                          160x160 r20 cards they stand in for, 16 apart, starting
+                          at the row's own 16. They do not animate, so they read
+                          the same with animations on or off, and when the cards
+                          land they replace these in the same place.
+                        -->
+                        <LinearLayout
                             android:id="@+id/playlist_loading"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_gravity="center"
-                            android:indeterminateTint="@color/text_secondary" />
+                            android:layout_gravity="top|start"
+                            android:contentDescription="@string/home_playlists_loading"
+                            android:importantForAccessibility="yes"
+                            android:orientation="horizontal">
+
+                            <View style="@style/HomePlaylistSkeleton" />
+
+                            <View
+                                style="@style/HomePlaylistSkeleton"
+                                android:layout_marginStart="@dimen/home_playlist_card_gap" />
+
+                            <View
+                                style="@style/HomePlaylistSkeleton"
+                                android:layout_marginStart="@dimen/home_playlist_card_gap" />
+                        </LinearLayout>
 
                         <LinearLayout
                             android:id="@+id/playlist_error"
@@ -288,15 +337,32 @@
                                 android:textColor="@color/text_secondary"
                                 tools:text="@string/splash_error_title" />
 
-                            <Button
+                            <!--
+                              ERROR - the message above says what failed; this says
+                              what to do about it, as a real button rather than a
+                              bare coloured word. The frozen file's own explicit
+                              retry is `history-empty`'s outlined `Обновить` /
+                              `history-error`'s `Повторить`: a full-width 52 r12
+                              button with a Montserrat Medium label. This is that
+                              button, on the app's existing secondary plate
+                              (surface fill, 1px outline) so it reads as an action
+                              without shouting over the streams above it. The click
+                              still goes to `refreshPlaylists` - only the drawing
+                              changed.
+                            -->
+                            <TextView
                                 android:id="@+id/playlist_retry"
-                                style="?attr/borderlessButtonStyle"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
+                                android:layout_width="match_parent"
+                                android:layout_height="@dimen/home_playlist_retry_height"
                                 android:layout_marginTop="@dimen/home_section_gap"
+                                android:background="@drawable/bg_profile_button_secondary"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:foreground="?attr/selectableItemBackground"
+                                android:gravity="center"
                                 android:text="@string/splash_retry"
-                                android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.16_22"
-                                android:textColor="@color/primary" />
+                                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.22_28"
+                                android:textColor="@color/text_heading" />
                         </LinearLayout>
                     </FrameLayout>
                 </LinearLayout>

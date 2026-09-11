@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.musicplayerapp.R
+import com.example.musicplayerapp.ui.HistoryRowTypography
 import com.example.musicplayerapp.data.HistoryTrack
 import com.example.musicplayerapp.utils.MusicSearchHelper
 
@@ -24,6 +25,14 @@ class HistoryAdapter : ListAdapter<HistoryTrack, HistoryAdapter.ViewHolder>(Diff
         val btnSpotify: ImageView = itemView.findViewById(R.id.btn_spotify)
         val btnAppleMusic: ImageView = itemView.findViewById(R.id.btn_apple_music)
         val btnYandex: ImageView = itemView.findViewById(R.id.btn_yandex)
+
+        init {
+            // The same line metrics the PLAYER's rows use. This list carried the
+            // 17/28 token's leading straight through until G4a, so a title that
+            // wrapped got 28 on every line - the excessive spacing that was
+            // reported. See HistoryRowTypography.
+            HistoryRowTypography.apply(tvTitle, tvArtist)
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {

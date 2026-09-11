@@ -153,16 +153,22 @@
 
             <!--
               Connecting / re-buffering. Centred in the same slot, on top of the
-              button so it stands where the glyph stood. It takes the glyph's own
-              colour because it stands in for the glyph.
+              button so it stands where the glyph stood.
+
+              The frozen file draws this face as three dots, not a spinner - see
+              BufferingDotsView - so an indeterminate ProgressBar, which is the
+              platform's idiom rather than this design's, is what used to be here
+              and is what this replaces. The slot, the row widths and the pill's
+              height are unchanged: the view fills the same 27x48 the glyph and
+              the spinner both took.
             -->
-            <ProgressBar
+            <com.example.musicplayerapp.ui.BufferingDotsView
                 android:id="@+id/mini_player_spinner"
-                android:layout_width="@dimen/mini_player_control_spinner"
-                android:layout_height="@dimen/mini_player_control_spinner"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
                 android:layout_gravity="center"
-                android:indeterminateTint="@color/brand_mini_player_icon"
                 android:visibility="gone"
+                app:dotColor="@color/brand_mini_player_buffering_dot"
                 tools:visibility="gone" />
         </FrameLayout>
     </LinearLayout>

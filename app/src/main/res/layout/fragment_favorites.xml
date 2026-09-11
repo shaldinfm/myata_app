@@ -79,12 +79,11 @@
                 android:textColor="@color/text_heading" />
 
             <!--
-              The frozen 3-dot overflow. Phase B fills it with the two export
-              actions the screen already had as inline pills, in a platform
-              PopupMenu; F2 replaces that styling with the frozen
-              `Menu / Коллекция` surface. It is hidden while the collection
-              is empty, which is what the frozen empty frame does too - there
-              is nothing to export.
+              The frozen 3-dot overflow. It opens the two export actions in
+              the `Menu / Коллекция` card - CollectionOverflowMenu, since G4a;
+              Phase B had them in a platform PopupMenu. It is hidden while the
+              collection is empty, which is what the frozen empty frame does too
+              - there is nothing to export.
             -->
             <ImageView
                 android:id="@+id/collection_overflow"
@@ -92,6 +91,8 @@
                 android:layout_height="@dimen/collection_header_action_size"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/collection_overflow"
+                android:paddingBottom="@dimen/header_overflow_glyph_lift"
+                android:paddingStart="@dimen/collection_overflow_glyph_inset_start"
                 android:scaleType="center"
                 android:src="@drawable/ic_collection_overflow" />
 

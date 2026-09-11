@@ -341,8 +341,8 @@ carries its own copy of the drawable, so it resolves within its own tree.
 | | why, and who owns it |
 |---|---|
 | **truncation retained** | the frozen row specifies neither ellipsis nor `maxLines`, only fixed boxes. The screen has always ellipsised at one line for the title and two for the artist. Changing that is behaviour, and whether Collection adopts History's variable-height, never-truncate rule is still a separate decision. `CollectionLayoutTest` asserts F3 did not take it by accident either. |
-| **PopupMenu styling** | unchanged by F1/F3. **F2** replaces it with the frozen 260×160 r20 `Menu / Коллекция` surface on `menu_surface`. The wording and the actions are already the frozen ones, and the export behaviour behind them is untouched here. |
-| **no profile control** | the frozen `COLLECTION pusto` header carries a 40×40 circular control in the trailing slot. It is the same node HOME and ABOUT US carry, it opens the profile, and it is **Phase G** — deferred here exactly as `fragment_main.xml` defers it. |
+| **PopupMenu styling** | unchanged by F1/F3; **G4a** replaced it with `CollectionOverflowMenu`, the `Menu / Коллекция` card on `menu_surface` - 260 wide, r20, and 120 tall under the owner's compact row rather than the frozen 160. The wording and the actions are already the frozen ones, and the export behaviour behind them is untouched here. |
+| **no profile control** | the frozen `COLLECTION pusto` header carries a 40×40 circular control in the trailing slot. It is the same node HOME and ABOUT US carry; it landed in Phase G and, since G4a, opens Settings like theirs. |
 
 ## The trailing action's 2dp
 

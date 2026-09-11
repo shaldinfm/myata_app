@@ -189,8 +189,8 @@
 
       The two export labels come from the proposals frame
       `collection-overflow-menu`, whose rows are "Экспорт в TXT" and
-      "Экспорт в CSV". Phase B puts them in a platform PopupMenu; F2 replaces the
-      styling with the frozen `Menu / Коллекция` surface, not the wording.
+      "Экспорт в CSV". Phase B put them in a platform PopupMenu; G4a moved them
+      into the `Menu / Коллекция` card, keeping the wording.
     -->
     <string name="collection_title">Моя коллекция</string>
     <string name="collection_subtitle">Здесь хранятся ваши сохранённые треки</string>

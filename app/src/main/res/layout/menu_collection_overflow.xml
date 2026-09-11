@@ -9,7 +9,7 @@
   the numbers are identical, so this is built from the same dimens rather than a
   parallel set that could drift:
 
-      menu            260x160, r20, `menuSurface` on a 1px INSIDE `menuOutline`
+      menu            260 wide, r20, `menuSurface` on a 1px INSIDE `menuOutline`
                       #F8F9FA / #1C3F5F light, #142D47 / #466D8F dark, no effect
       padding         10 top, 10 bottom          (compact - owner override; 120 tall)
       row             238x48 at x=11, pitch 52   (y = 10, 62)

@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — MyataRadio
 
-Last updated: 2026-09-05.
+Last updated: 2026-09-11.
 
 ## Current canonical state
 
@@ -97,13 +97,13 @@ Last updated: 2026-09-05.
 
 Two pushed destinations, `settings` and `settings_appearance`.
 
-**Settings is reached from a second 40x40 control on the HOME header**, beside
-the profile control, which still opens the profile in one tap. The frozen design
-draws no path to `settings` at all - the `.fig` was decoded in full and carries
-zero prototype metadata, and the word `Настройки` appears in it only as that
-screen's own heading - so the entry is an owner-delegated product decision. It
-lands in space the frozen band already leaves empty, so nothing frozen moves, and
-it reuses the existing circular-control component.
+**Settings is reached from the one 40x40 person control the frozen header draws**,
+on HOME, ABOUT US and the empty COLLECTION alike, and the profile is one level
+down, through Settings' own `Row / Профиль`, which is where the frozen `settings`
+frame puts it. That is the owner's G4a decision. G1b's second control, a gear
+beside the person, is gone: the `.fig` draws no gear anywhere, and the file has no
+prototype links, so the person's destination is owner-decided rather than read
+from the design.
 
 G1 briefly retargeted the profile control itself, and G1a briefly put `Настройки`
 on the PLAYER and COLLECTION overflows. Both were withdrawn; those menus are for
@@ -129,7 +129,20 @@ system rather than the choice. Full record:
 
 New design, Light / Dark / System, new screens, auth / profile / settings, cloud favorites, Supabase. The playback fixes already in `main` ship as part of the same 3.6.6 release. Each step needs explicit owner approval.
 
-This heading used to end "not started", which stopped being true some time ago and is now contradicted two sections above: A-F, G-A2..G-A8, G1, G2 (Sleep Timer) and G3 (Report a problem) have landed. What remains of the list is Last.fm, stream quality, Найти трек, История эфира, the avatar picker (G5, blocked on artwork) and Android Auto.
+This heading used to end "not started", which stopped being true some time ago and is now contradicted two sections above: A-F, G-A2..G-A8, G1, G2 (Sleep Timer), G3 (Report a problem) and G4a (mobile Figma fidelity) have landed. What remains of the list is Last.fm, stream quality, Найти трек, История эфира, the avatar picker (G5, blocked on artwork) and Android Auto.
+
+**G4a · Figma fidelity (mobile)** measured the shipped screens against the decoded
+`Дизайн Приложения ФИНАЛ.fig` in rendered pixels and corrected them: the single person
+control now opens Settings; the Mini Player hides on every pushed destination
+(the screen key is derived from the NavController, `NavScreen`); drawn shadows
+for the stream banners and PLAYER artwork (`SoftShadowFrame`), none on playlist
+cards; the streaming, theme and menu glyphs decoded from the file; the Collection
+overflow as the frozen menu card; history leading fixed (a `setLineHeight` no-op
+that had never run); three-dot loading faces instead of spinners that froze into a
+refresh glyph with animations off, and HOME playlist skeletons. Owner overrides of
+the frozen file: a compact overflow row (10 / 10 padding, icon at 16, label at
+56), and the Settings → Тема split disc. Найти трек / История эфира on the PLAYER
+remain G4b.
 
 **G3 · Сообщить о проблеме** ships the five frozen report frames behind both frozen
 entry points, and restores the Player overflow to its frozen 260×160 geometry — the

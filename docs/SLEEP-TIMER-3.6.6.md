@@ -77,6 +77,11 @@ there rather than landing quietly.
 
 > **Done (G3).** `Сообщить о проблеме` shipped as the second row, the padding is
 > the frozen 50 again, and that test now measures 260×160. See §9.1.
+>
+> **Superseded (G4a).** The owner replaced the frozen 50 with a compact 10 for
+> both overflow menus and any row count: two rows are 260×120, one row 68. The
+> icon now sits at card-x 16 and the label at 56. `SleepTimerSurfacesTest` pins
+> those numbers.
 
 ### The reserved slot becomes the control it was reserving
 

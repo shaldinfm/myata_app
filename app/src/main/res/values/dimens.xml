@@ -940,32 +940,29 @@
       The 260 is adopted now rather than later, because re-widening the same surface
       when the trailing value arrives would be a second change to it.
 
-      Rows are 238x48 at x=11, pitch 52, first at y=10. The icon slot is 48 at x=12
-      inside the row with a 24 glyph centred in it; the label starts at x=70 and the
-      trailing value at x=160, w=70 - all relative to the row, and all straight out
-      of screens-3.6.6/spec/primitives.mjs:184.
+      ## The compact row - owner override (G4a)
 
-      ## The bottom padding is the frozen 50 again (G3)
+      Rows are 238x48 at x=11, pitch 52, first at y=10 - the frozen numbers. What
+      is not frozen any more is inside and below the rows: the owner rejected the
+      frozen primitive's 48 icon slot at x=12, label at x=70 and 50 of bottom
+      padding on the rendered surface, and both menus - this one and
+      `Menu / Коллекция` - now share one compact row:
 
-      The frozen vertical rhythm is "10 top, 52 pitch, 50 bottom", stated in that
-      file and reproduced identically by the two-row `Menu / Коллекция` at 260x160.
+          padding   10 top, 10 bottom          two rows 120, one row 68
+          content   16 from the card edge      overflow_row_pad_start / _end
+          icon      24x24 box at card-x 16     player_overflow_icon_size
+          label     card-x 56                  overflow_label_gap after the icon
+          trailing  70 wide, ending 16 in      player_overflow_trailing_width
 
-      G2 shipped **10 / 10** by owner decision, for as long as the menu carried a
-      single row: under one row the 50 is 40dp of unexplained space below one 48dp
-      line. That was recorded as temporary and as a debt against the next Player
-      action, in this file, in menu_player_overflow.xml and in
-      docs/SLEEP-TIMER-3.6.6.md §1 and §9 - "**Restoring
-      `player_overflow_menu_pad_bottom` to 50dp is part of shipping the next Player
-      action.**"
+      See menu_player_overflow.xml. `SleepTimerSurfacesTest` and
+      `ReportEntryPointsTest` pin 120 / 10 and the 16 / 56 positions.
 
-      G3 is that action. `Сообщить о проблеме` is the second of the frozen four, so
-      the padding is back to 50 and the geometry is whole: 10 + 2x52 + 46 = **160**,
-      which is the frozen two-row menu exactly. `SleepTimerSurfacesTest` measured
-      the temporary 68 and now measures the 160, which is how the debt was made
-      impossible to forget quietly.
+      History, superseded rather than continued: G2 shipped 10 / 10 for a single
+      row; G3 restored the frozen 50 when its second row arrived (the "debt" in
+      docs/SLEEP-TIMER-3.6.6.md); G4a replaced both with the compact 10.
 
-      The other two rows - Найти трек, История эфира - are still absent rather than
-      inert, and the height formula stays honest for them: four rows would be 264.
+      The other two frozen rows - Найти трек, История эфира - are
+      still absent rather than inert; they are G4b.
     -->
     <dimen name="player_overflow_menu_width">260dp</dimen>
     <dimen name="player_overflow_menu_radius">20dp</dimen>

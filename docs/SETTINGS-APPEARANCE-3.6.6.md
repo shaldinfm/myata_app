@@ -16,6 +16,12 @@ Frozen sources: `settings` **2517:2758** (light) / **2517:3725** (dark) and
 `settings`.** The profile control is unchanged and still opens the profile in one
 tap.
 
+> **Superseded (G4a).** The gear is gone. The owner's G4a decision routes the one
+> person control the frozen header draws - on HOME, ABOUT US and the empty
+> COLLECTION - to `settings`, and the profile is reached through Settings'
+> `Row / Профиль`, where the frozen `settings` frame puts it. What follows is the G1b
+> record, kept as history.
+
 ### The design does not specify this, and that was established rather than assumed
 
 The `.fig` was decoded directly — ZIP → `canvas.fig` → Kiwi schema + zstd

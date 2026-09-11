@@ -42,6 +42,10 @@ action."*
 
 G3 is that action.
 
+> **Superseded (G4a).** The owner replaced the frozen 10 / 50 with a compact
+> 10 / 10 for both overflow menus - two rows 120 tall, icon at card-x 16, label at
+> 56 - so the table below is the G3 record, not the current geometry.
+
 | | one row (G2) | two rows (G3) |
 |---|---|---|
 | width | 260dp | 260dp |

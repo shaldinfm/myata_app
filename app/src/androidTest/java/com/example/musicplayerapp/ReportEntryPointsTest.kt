@@ -150,18 +150,19 @@ class ReportEntryPointsTest {
         assertEquals(-1, throughSettings.selectedCategory)
     }
 
-    // ==================== the frozen menu, with the restored geometry ====================
+    // ==================== the live menu, with the compact geometry ====================
 
     /**
      * The live menu, not the inflated layout.
      *
      * `SleepTimerSurfacesTest` measures the layout in both themes and at four
-     * widths; what it cannot see is the [com.example.musicplayerapp.ui.PlayerOverflowMenu]
-     * decision that puts the frozen 50dp back only when there are two rows to earn
-     * it. This opens the real popup and measures what a listener would actually get.
+     * widths; what it cannot see is the popup [com.example.musicplayerapp.ui.PlayerOverflowMenu]
+     * actually opens. This opens the real one and measures what a listener gets:
+     * two rows under the compact 10 / 10 padding the owner chose over the frozen
+     * 10 / 50 in the G4a review.
      */
     @Test
-    fun the_live_menu_has_two_rows_and_the_frozen_bottom_padding() {
+    fun the_live_menu_has_two_rows_and_the_compact_bottom_padding() {
         ReportConfig.endpointOverrideForTest = configured
         withMainActivity {
             openPlayerAndSettle()

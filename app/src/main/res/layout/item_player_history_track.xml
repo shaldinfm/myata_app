@@ -22,12 +22,13 @@
           | 42 START |            |                |         artist    |
 
   **There are no service actions in this row.** The owner-confirmed FINAL PLAYER
-  reference is time -> artwork -> title/artist and nothing else. Spotify, Apple
-  Music and Yandex Music stay on the surfaces that do carry them - the History
-  bottom sheet (`item_history_track.xml`) and Collection
-  (`item_favorite_track.xml`), both unchanged - and `MusicSearchHelper` is
-  untouched. Nothing is left behind here in their place: no hidden views, no
-  reserved width beside the text, no reserved line beneath it.
+  reference is time -> artwork -> title/artist and nothing else. Nothing is left
+  behind here in their place: no hidden views, no reserved width beside the text,
+  no reserved line beneath it. Streaming search lives on the find-track sheet, as
+  of G4b: Collection's track sheet, PLAYER > `Найти трек`, and the single circular
+  action on a full-screen История эфира row. (When this row was written the
+  inline buttons were still on Collection's row and the History bottom sheet's;
+  Collection moved them to its sheet in F3, and the bottom sheet is unreachable.)
 
   **Height. The row is the frozen 74, spent differently: 17 + 40 + 17.**
 
@@ -38,9 +39,10 @@
   wrapped.
 
   Owner intent is that the normal one-line title over one-line artist reads INSIDE
-  the cover, artist's bottom level with the cover's. So the block is 40: the title
-  on a 22 line and the artist on an 18, both local to this surface (see the dimens
-  for where the two numbers come from and why they cannot clip).
+  the cover, artist's bottom level with the cover's. So the block is 40: since G4b
+  the title 16sp on a 20 line over 21 of floor and the artist 13sp on an 18 over
+  19 (22 and 18 before), both local to this surface (see the dimens for where the
+  numbers come from and why they cannot clip).
 
   A 40 block beside a 40 cover leaves the row's own padding to make up the 74, and
   17 down is exactly what does it. It also puts the cover and the timestamp back on
@@ -161,8 +163,10 @@
     <!--
       `Container > Container`: the title above the artist, no gap between them -
       the frozen boxes abut at 28 and 48. Onest for both, by the typography
-      contract's Broadcast History entry; 17/28 on `text_primary` over 14/20 on
-      `text_secondary`, each an exact role match on both pages.
+      contract's Broadcast History entry; `text_primary` over `text_secondary`,
+      each an exact role match on both pages. The tokens below (17/28, 14/20)
+      supply the face; the size and line are the owner's G4b "B" - 16 / 20 over
+      13 / 18 - set by HistoryRowTypography.applyPlayer.
 
       The column runs to the row's own edge: nothing is beside it.
 

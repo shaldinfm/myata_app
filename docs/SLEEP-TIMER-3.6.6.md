@@ -26,6 +26,11 @@ plus canonical `Menu / Плеер` **2444:18763** (206×264) and `Row / Тайм
 The frozen menu has four: Найти трек, **Таймер сна**, Сообщить о проблеме,
 История эфира. This ships the second one and nothing else.
 
+> **Superseded.** G3 added Сообщить о проблеме and G4b the other two; the menu is
+> the frozen four now, under G4a's compact row. The reasoning below is kept as the
+> record of why the rows arrived one feature at a time rather than as greyed-out
+> placeholders. See [FIND-TRACK-HISTORY-3.6.6.md](FIND-TRACK-HISTORY-3.6.6.md).
+
 ### Why not four rows with three disabled
 
 The rule is already written down, in

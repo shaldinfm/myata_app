@@ -22,11 +22,17 @@ import com.example.musicplayerapp.R
  * every line after the first. One line looks right and three look airy, which is
  * exactly the complaint that produced this file.
  *
- * So the rows are set on the natural line instead - 22 for the 17sp title, 18 for
- * the 14sp artist - and the frozen one-line slot is preserved by `minHeight` on
- * the views rather than by inflating their leading. A single line still measures
- * the frozen 22 + 18 = 40; a wrapped one grows by a real line rather than by an
- * exaggerated one.
+ * So the rows are set on a line of their own instead, and the frozen one-line
+ * slot is preserved by `minHeight` on the views rather than by inflating their
+ * leading: a single line still measures 40, and a wrapped one grows by a real line
+ * rather than by an exaggerated one. Two sets of numbers, since G4b:
+ *
+ *  - [applyPlayer] - the PLAYER's embedded section and the full-screen История
+ *    эфира: the owner's typography "B", 16sp on a 20 line over 13sp on an 18, on
+ *    21 + 19 floors;
+ *  - [apply] - the unreachable History bottom sheet only: the natural line at the
+ *    tokens' sizes, 22 for the 17sp title and 18 for the 14sp artist. This was
+ *    both PLAYER surfaces' metric until G4b.
  *
  * ## includeFontPadding
  *

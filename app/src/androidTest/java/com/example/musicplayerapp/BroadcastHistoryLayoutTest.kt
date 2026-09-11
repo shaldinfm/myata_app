@@ -48,9 +48,10 @@ import kotlin.math.roundToInt
  *  - **Time column 42, not 39**, the PLAYER section's measured reason. The cover
  *    and the text therefore sit 3 further in (64 / 120, not 61 / 117) and the
  *    action does not move (304 at 390).
- *  - **Text on the natural 22 / 18 lines, not the 28 / 20 slots** - G4a's
- *    multiline correction. One-line rows are still the frame's 76, because the 48
- *    cover holds them there; wrapped rows grow by one real 22 line.
+ *  - **Typography "B": 16sp on a 20 line over 13sp on an 18, not the frame's
+ *    17/28 over 14/20** - the owner's G4b decision, on G4a's multiline correction.
+ *    One-line rows are still the frame's 76, because the 48 cover holds them
+ *    there; wrapped rows grow by one 20 line.
  */
 @RunWith(AndroidJUnit4::class)
 class BroadcastHistoryLayoutTest {
@@ -169,9 +170,9 @@ class BroadcastHistoryLayoutTest {
 
     /**
      * The frame wraps a title and an artist on purpose. Both keep every word, and
-     * the row grows by the NATURAL line - 22 for the 17sp title - not by the 28 the
-     * token would repeat. That is the G4a correction and this is where it would
-     * silently come undone.
+     * the row grows by the row's own line - 20 for the 16sp title (typography "B")
+     * - not by the 28 the token would repeat. That is the G4a correction and this
+     * is where it would silently come undone.
      */
     @Test
     fun wrappedRowsGrowByTheNaturalLine() {

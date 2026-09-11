@@ -96,8 +96,9 @@ class HistoryRowTypographyTest {
     /**
      * The one-line row still measures the frozen block.
      *
-     * Correcting the leading must not shrink the ordinary row: the 22 + 18 block
-     * is what makes the PLAYER's row the frozen 74 with its 17dp padding, and
+     * Correcting the leading must not shrink the ordinary row: the 21 + 19 floors
+     * (22 + 18 before G4b's typography "B") are what make the PLAYER's row the
+     * frozen 74 with its 17dp padding, and
      * `minHeight` rather than leading is what holds it there.
      */
     @Test

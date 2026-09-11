@@ -41,7 +41,9 @@ import com.squareup.picasso.Picasso
  * copying it, so both views bind a track the same way: the same text, the same
  * [HistoryRowTypography] line metrics, the same late-artwork guard and the same
  * row identity. The inline row has no action view, so [onFindTrack] never reaches
- * it and the inline section is exactly what it was.
+ * it and the inline section behaves as it did. Its type did change with the full
+ * screen's: both rows are on the owner's G4b typography "B" through
+ * [HistoryRowTypography.applyPlayer].
  *
  * @param artworkFor asks for a cover for one track. Called on bind, answered
  *   later on the main thread with a URL or null; a null leaves the frozen plate.
@@ -70,9 +72,11 @@ class PlayerHistoryAdapter(
         var boundTo: HistoryTrack? = null
 
         init {
-            // History-local text metrics: the title on a 22 line and the artist on
-            // an 18, so the normal one-line-over-one-line block is 40 and reads
-            // inside the 40 cover. The dimens carry where those numbers come from.
+            // History-local text metrics, typography "B" since G4b: the title 16sp
+            // on a 20 line and the artist 13sp on an 18, over 21 + 19 floors, so the
+            // normal one-line-over-one-line block is 40 and reads inside the 40
+            // cover. The dimens carry where those numbers come from. (Before G4b it
+            // was 17 on a 22 line over 14 on an 18; the history below is of that.)
             //
             // includeFontPadding is the half that actually moved the number, and
             // finding that out is worth recording. These rows are inflated with

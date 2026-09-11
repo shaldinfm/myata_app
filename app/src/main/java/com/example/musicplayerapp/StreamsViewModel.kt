@@ -48,6 +48,8 @@ import androidx.media3.common.Player
 import androidx.media3.common.MediaMetadata
 import android.content.ComponentName
 import com.example.musicplayerapp.data.HistoryRepository
+import com.example.musicplayerapp.data.HistoryResult
+import com.example.musicplayerapp.ui.FindTrackQuery
 import com.example.musicplayerapp.data.AppDatabase
 import com.example.musicplayerapp.data.FeedbackRepository
 import com.example.musicplayerapp.data.ReactionEvent
@@ -230,6 +232,16 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     val historyTracks: LiveData<List<HistoryTrack>> = _historyTracks
     private val _historyLoading = MutableLiveData<Boolean>(false)
     val historyLoading: LiveData<Boolean> = _historyLoading
+
+    /**
+     * Whether the last finished history request failed (G4b).
+     *
+     * Read only by the full-screen История эфира, which draws `history-error` for
+     * it. The PLAYER's inline section keeps its three states and never looks at
+     * this, so for it a failure still reads as "no history", as it always has.
+     */
+    private val _historyFailed = MutableLiveData<Boolean>(false)
+    val historyFailed: LiveData<Boolean> = _historyFailed
     private var lastHistoryStream: String? = null
     private var historyJob: Job? = null
     private var historyRefreshJob: Job? = null
@@ -952,14 +964,25 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         historyJob?.cancel()
         historyJob = viewModelScope.launch {
             _historyLoading.value = true
-            val history = historyRepository.getHistory(stream, HISTORY_LIMIT)
-            // Both on the main thread, in this order, and neither posted: the
-            // observers see one consistent pair. `postValue` for the tracks with
+            // A new attempt is not a failure yet. Cleared as the request starts so
+            // a retry from `history-error` shows the skeleton while it runs.
+            _historyFailed.value = false
+            // All on the main thread, in this order, and none posted: the
+            // observers see one consistent set. `postValue` for the tracks with
             // `value` for the flag used to deliver "not loading, no tracks" first
             // and the tracks a tick later, so a finished load flashed the empty
             // state before drawing itself.
-            historyRaw = history
-            republishHistory()
+            when (val result = historyRepository.fetchHistory(stream, HISTORY_LIMIT)) {
+                is HistoryResult.Loaded -> {
+                    historyRaw = result.tracks
+                    republishHistory()
+                }
+                // What is already held stays held. `history-error`'s own note:
+                // "Retry re-requests; it does not clear a cached list." A stream
+                // switch has already emptied it above, so a failure on a new
+                // stream still shows nothing rather than the old station's list.
+                is HistoryResult.Failed -> _historyFailed.value = true
+            }
             _historyLoading.value = false
         }
     }
@@ -995,6 +1018,17 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
      * of the history before the first metadata poll has even answered.
      */
     private fun currentTrackIdentity(): String? {
+        val state = currentTrackState() ?: return null
+        return BroadcastHistoryFeed.identityOf(state.artist, state.song)
+    }
+
+    /**
+     * The current stream's now-playing state, or null while it is still the
+     * placeholder pair - see [currentTrackIdentity] for why that pair is not a
+     * track. Shared by the history projection and by [nowPlayingQuery], so the two
+     * cannot disagree about whether something is playing.
+     */
+    private fun currentTrackState(): PlayerState? {
         val state = when (Streams.normalise(currentStreamLive.value) ?: Streams.DEFAULT) {
             Streams.GOLD -> currentGoldState.value
             Streams.XTRA -> currentXtraState.value
@@ -1007,7 +1041,22 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         ) {
             return null
         }
-        return BroadcastHistoryFeed.identityOf(state.artist, state.song)
+        return state
+    }
+
+    /**
+     * What PLAYER > `Найти трек` would search for right now (G4b), or null when
+     * there is nothing to search: the placeholder pair, no metadata yet, or a
+     * blank half.
+     *
+     * The same pair the PLAYER page draws - `song` as the title, `artist` under
+     * it - read from the same per-stream state, so the sheet's heading is the
+     * words the listener was just looking at. Read on demand, never observed: the
+     * sheet is a snapshot of one moment, see FindTrackSheet.
+     */
+    fun nowPlayingQuery(): FindTrackQuery? {
+        val state = currentTrackState() ?: return null
+        return FindTrackQuery.of(artist = state.artist, title = state.song)
     }
 
     /**
@@ -1083,7 +1132,7 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         /**
          * How much Broadcast History the app holds, for every view of it.
          *
-         * This used to disagree with itself: the fetch took
+         * This used to disagree with itself: the fetch took the old
          * `HistoryRepository.getHistory`'s default limit of 20 and the result was
          * then trimmed with `take(30)`, so the 30 could never be reached and the
          * real ceiling was the default nobody had written down here. Both ends

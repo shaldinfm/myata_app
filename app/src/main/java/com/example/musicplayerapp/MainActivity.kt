@@ -340,7 +340,10 @@ class MainActivity : AppCompatActivity() {
                 // is pushed from the player as well as from settings - so the bar
                 // would otherwise be present over one door's copy of the screen and
                 // absent over the other's.
-                destination.id == R.id.report_problem
+                destination.id == R.id.report_problem ||
+                // broadcast_history joined them at G4b. The four frozen history
+                // frames have a back band and no bottom bar, like report's.
+                destination.id == R.id.broadcast_history
 
             binding.bottomNavView.visibility =
                 if (hidesBottomBar) android.view.View.GONE

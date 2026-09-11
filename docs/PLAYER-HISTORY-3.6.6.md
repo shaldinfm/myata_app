@@ -273,6 +273,15 @@ A refresh over rows that are already up leaves them up — the section is inline
 a scrolling page, and swapping it for a spinner on every poll would move
 everything under the reader's finger.
 
+> **G4b.** `HistoryRepository` now reports a failure as `HistoryResult.Failed`
+> instead of an empty list, so the full-screen История эфира can draw
+> `history-error` apart from `history-empty` - see
+> [FIND-TRACK-HISTORY-3.6.6.md](FIND-TRACK-HISTORY-3.6.6.md). This section does
+> not read the new flag and still has three states. The one thing it notices: a
+> refresh that **fails** over rows already up now leaves them up too, where it
+> used to replace them with the empty line. A stream switch still clears first, so
+> a failure on a new station shows nothing rather than the old station's list.
+
 **The error state cannot be isolated on device.** The app gates its whole UI on
 `radiomyata.ru/covers/playlists.txt`, the same host the history API is on, so
 blocking that host replaces the entire screen with "Не удалось загрузить данные"

@@ -1207,4 +1207,59 @@
     <!-- card ends at 388, button at 412. -->
     <dimen name="report_success_button_margin_top">24dp</dimen>
 
+
+    <!--
+      Full-screen История эфира (G4b). history-content 2523:23, history-loading
+      2517:2420, history-empty 2517:2509, history-error 2517:2547 - identical
+      geometry on the dark twins. See fragment_broadcast_history.xml and the two
+      row layouts for how each number is spent.
+
+      Reused rather than redeclared: the 42 time column and the 22 / 18 text lines
+      (player_history_*), the 40 ring and its 48 target (collection_row_action_*),
+      the band and the 52 button (profile_*).
+    -->
+    <dimen name="history_screen_margin">16dp</dimen>
+    <dimen name="history_screen_list_top">16dp</dimen>
+    <!-- `Screen`'s own 24 of bottom padding, under the footer. -->
+    <dimen name="history_screen_list_bottom">24dp</dimen>
+    <dimen name="history_screen_row_gap">8dp</dimen>
+    <dimen name="history_screen_row_corner">8dp</dimen>
+    <dimen name="history_screen_row_stroke">1dp</dimen>
+    <!--
+      13 of padding plus the 1px stroke Figma counts into the layout: the content
+      of six of the eight frozen rows starts at 14 and their action ends 14 in.
+      Vertically 14 + 48 + 14 is the frame's 76 on one line.
+    -->
+    <dimen name="history_screen_row_padding_horizontal">14dp</dimen>
+    <dimen name="history_screen_row_padding_vertical">14dp</dimen>
+    <dimen name="history_screen_row_item_gap">8dp</dimen>
+    <dimen name="history_screen_artwork_size">48dp</dimen>
+    <dimen name="history_screen_artwork_corner">8dp</dimen>
+    <dimen name="history_screen_footer_gap">24dp</dimen>
+
+    <!-- history-loading `Skeleton N`: the loaded row's 76, its bars and ring. -->
+    <dimen name="history_skeleton_row_height">76dp</dimen>
+    <dimen name="history_skeleton_pill_radius">100dp</dimen>
+    <dimen name="history_skeleton_time_width">34dp</dimen>
+    <dimen name="history_skeleton_small_bar_height">12dp</dimen>
+    <dimen name="history_skeleton_title_width">150dp</dimen>
+    <dimen name="history_skeleton_title_height">16dp</dimen>
+    <!-- 6 into the 28 title slot; the artist bar 28 + 4 into the text box. -->
+    <dimen name="history_skeleton_title_top">6dp</dimen>
+    <dimen name="history_skeleton_artist_width">96dp</dimen>
+    <dimen name="history_skeleton_artist_top">32dp</dimen>
+    <dimen name="history_skeleton_action_stroke">1dp</dimen>
+
+    <!--
+      history-empty / history-error, from the band's bottom (the frames' y minus
+      the 64 band): circle 168 -> 104, headline 296 -> 32 under the circle, body
+      340 -> 12 under the headline, button 412 -> 28 under the two body lines.
+    -->
+    <dimen name="history_state_illustration_size">96dp</dimen>
+    <dimen name="history_state_illustration_top">104dp</dimen>
+    <dimen name="history_state_icon_size">24dp</dimen>
+    <dimen name="history_state_headline_gap">32dp</dimen>
+    <dimen name="history_state_headline_min_height">32dp</dimen>
+    <dimen name="history_state_body_gap">12dp</dimen>
+    <dimen name="history_state_button_gap">28dp</dimen>
 </resources>

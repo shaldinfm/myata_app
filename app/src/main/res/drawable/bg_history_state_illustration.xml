@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Illustration`, 96x96 r48, in history-empty 2517:2509 and history-error
+  2517:2547 (G4b). #E8EAED light, #1C4771 dark - see `history_state_illustration`.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/history_state_illustration" />
+</shape>

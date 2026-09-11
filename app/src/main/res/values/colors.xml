@@ -512,4 +512,18 @@
     <color name="disabled_container">#E8EAED</color>
     <color name="disabled_content">#8E969E</color>
 
+
+    <!--
+      Full-screen История эфира (G4b).
+
+      `history_state_illustration` is the 96 circle in history-empty / -error:
+      #E8EAED light, #1C4771 dark. Neither end is a role this palette already
+      pairs - light #E8EAED is `disabled_container` by value only, and dark
+      #1C4771 is `surface_container` - so it is declared as its own pair.
+
+      `brand_history_screen_artwork_placeholder` is the row's `Album art` plate,
+      #1C4771 on BOTH pages, so it is fixed and has no night variant.
+    -->
+    <color name="history_state_illustration">#E8EAED</color>
+    <color name="brand_history_screen_artwork_placeholder">#1C4771</color>
 </resources>

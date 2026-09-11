@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Full-screen История эфира row (G4b) - `History Item / …` in history-content
+  2523:23 / 2517:3296.
+
+  A 358-wide r8 card with a 1px `outline` stroke, and everything in it centred on
+  the row's vertical axis - the frame's own counter-axis alignment is CENTER, so
+  the time, the cover, the text block and the action all share one centre line,
+  on a one-line row and on a wrapped one alike.
+
+      14 | time 42 START | 8 | 48x48 r8 cover | 8 | title / artist | 8 | 40 ring | 14
+
+  **Horizontal.** The frame's rows carry 13 of padding plus the 1px stroke, which
+  Figma counts into the layout: the content starts at 14 on six of the eight rows
+  and the action ends 14 from the edge. (The first two rows were nudged by hand to
+  15 / 13; the six untouched rows are the pattern.) The time column is 42 rather
+  than the frame's 39 for the reason item_player_history_track.xml measured - Onest
+  has no tabular figures and `00:00` is 41.38dp - so the cover and text sit 3
+  further in than the frame and the text column is 3 narrower. The action does not
+  move: it is pinned to the end.
+
+  **Vertical: 76 on one line, spent as 14 + 48 + 14.** The frame's 76 is 14 around
+  its 48-tall text block (the 28 title slot over the 20 artist slot). That 28 is a
+  one-line slot, not a leading to repeat - G4a's HistoryRowTypography correction -
+  so the text here is set on the font's natural 22 / 18 lines (a 40 block) and the
+  48 cover is what holds the row at 76. A wrapped title grows the row by one real
+  22 line, not by the old 28: 98 at two title lines where the frame's own geometry
+  would give 104.
+
+  **No maxLines, no ellipsis.** Rows are variable height and never truncate - the
+  frame wraps a title and an artist on purpose so that is reviewable.
+
+  **One trailing action.** `Button / find track` is the Collection row's control:
+  the same `arrow_forward` component (2409:31540), rotated 45, in the same 40 ring
+  with a 2px INSIDE `primary` stroke. So it takes the Collection row's two
+  drawables verbatim, and RowActionTouchTarget gives it the same 48 target.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/history_row"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_history_screen_row"
+    android:paddingStart="@dimen/history_screen_row_padding_horizontal"
+    android:paddingTop="@dimen/history_screen_row_padding_vertical"
+    android:paddingEnd="@dimen/history_screen_row_padding_horizontal"
+    android:paddingBottom="@dimen/history_screen_row_padding_vertical">
+
+    <!-- `time`, Onest 14/20 on `text_secondary`, START in a fixed 42. -->
+    <TextView
+        android:id="@+id/tv_time"
+        android:layout_width="@dimen/player_history_time_width"
+        android:layout_height="wrap_content"
+        android:gravity="start"
+        android:maxLines="1"
+        android:minHeight="@dimen/player_history_time_height"
+        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+        android:textColor="@color/text_secondary"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="10:45" />
+
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/artwork"
+        android:layout_width="@dimen/history_screen_artwork_size"
+        android:layout_height="@dimen/history_screen_artwork_size"
+        android:layout_marginStart="@dimen/history_screen_row_item_gap"
+        android:background="@drawable/bg_history_screen_artwork"
+        android:contentDescription="@string/player_history_artwork"
+        android:scaleType="centerCrop"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/tv_time"
+        app:layout_constraintTop_toTopOf="parent"
+        app:shapeAppearanceOverlay="@style/ShapeAppearance.Myata.HistoryScreenArtwork" />
+
+    <!--
+      `Text`: title over artist with no gap. The two minHeights are the G4a
+      natural lines, 22 + 18 = 40, which HistoryRowTypography sets the leading to.
+    -->
+    <LinearLayout
+        android:id="@+id/history_text"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/history_screen_row_item_gap"
+        android:layout_marginEnd="@dimen/history_screen_row_item_gap"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btn_row_action"
+        app:layout_constraintStart_toEndOf="@id/artwork"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/tv_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="@dimen/player_history_title_height"
+            android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.17_28"
+            android:textColor="@color/text_primary"
+            tools:text="CRYOGEN" />
+
+        <TextView
+            android:id="@+id/tv_artist"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="@dimen/player_history_artist_height"
+            android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+            android:textColor="@color/text_secondary"
+            tools:text="MUSE" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/btn_row_action"
+        android:layout_width="@dimen/collection_row_action_size"
+        android:layout_height="@dimen/collection_row_action_size"
+        android:background="@drawable/bg_collection_row_action"
+        android:contentDescription="@string/find_track"
+        android:scaleType="center"
+        android:src="@drawable/ic_collection_row_action"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="@color/primary" />
+</androidx.constraintlayout.widget.ConstraintLayout>

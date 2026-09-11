@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Bottom Sheet / Найти трек` - find-track-sheet 2517:2525 / 2517:3492 (G4b).
+
+  What PLAYER > `Найти трек` opens for the current track, and what a История эфира
+  row's circular action opens for that row's track. The four service rows and
+  nothing under them: no divider and no `Удалить из коллекции`, "since there is
+  nothing saved to delete" (the spec's own words above the frame).
+
+      sheet     358 wide, r28, `menu_surface`, 1px `menu_outline`
+      rows      y = 112 / 170 / 228 / 286, then 24 of padding  ->  366 tall
+
+  The card is the Collection sheet's card, attribute for attribute, and the rows
+  are the same include - see include_find_track_rows.xml for why there is one.
+-->
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@android:color/transparent">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/sheet_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/sheet_margin"
+        app:cardBackgroundColor="@color/menu_surface"
+        app:cardCornerRadius="@dimen/sheet_corner"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/menu_outline"
+        app:strokeWidth="@dimen/sheet_stroke">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="@dimen/sheet_pad_bottom">
+
+            <include layout="@layout/include_find_track_rows" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</androidx.core.widget.NestedScrollView>

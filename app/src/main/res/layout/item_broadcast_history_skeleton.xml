@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  One `Skeleton N` row of history-loading 2517:2420 / 2517:3387 (G4b).
+
+  The loaded row's frame with placeholders for all four of its parts, so nothing
+  moves sideways when the data lands - the frame's own note: "Every horizontal
+  anchor matches the loaded row ... Placeholders for all four, including the
+  trailing action". The anchors are therefore the LOADED row's, including its 42
+  time column: the cover placeholder starts where the real cover will.
+
+      bar  34x12 r6  @0.45     centred, at the time column's start
+      art  48x48 r8  @0.50     centred
+      bar 150x16 r8  @0.50     the title slot, 6 into the 48 text box
+      bar  96x12 r6  @0.35     the artist slot, 28 + 4 into it
+      ring 40, 1px   @0.50     centred, pinned to the end
+
+  All on `outline`. Static: no shimmer and no platform spinner - with animations
+  off a Material indeterminate indicator settles into a refresh arrow (G4a), and
+  a still skeleton reads as "loading" without moving at all.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/history_skeleton_row_height"
+    android:background="@drawable/bg_history_screen_row"
+    android:paddingStart="@dimen/history_screen_row_padding_horizontal"
+    android:paddingTop="@dimen/history_screen_row_padding_vertical"
+    android:paddingEnd="@dimen/history_screen_row_padding_horizontal"
+    android:paddingBottom="@dimen/history_screen_row_padding_vertical">
+
+    <!-- The loaded row's 42 time column, holding the time bar at its start. -->
+    <Space
+        android:id="@+id/skeleton_time_column"
+        android:layout_width="@dimen/player_history_time_width"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/skeleton_time"
+        android:layout_width="@dimen/history_skeleton_time_width"
+        android:layout_height="@dimen/history_skeleton_small_bar_height"
+        android:alpha="0.45"
+        android:background="@drawable/bg_history_skeleton_bar"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="@id/skeleton_time_column"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/skeleton_art"
+        android:layout_width="@dimen/history_screen_artwork_size"
+        android:layout_height="@dimen/history_screen_artwork_size"
+        android:layout_marginStart="@dimen/history_screen_row_item_gap"
+        android:alpha="0.5"
+        android:background="@drawable/bg_history_skeleton_art"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/skeleton_time_column"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/skeleton_title"
+        android:layout_width="@dimen/history_skeleton_title_width"
+        android:layout_height="@dimen/history_skeleton_title_height"
+        android:layout_marginStart="@dimen/history_screen_row_item_gap"
+        android:layout_marginTop="@dimen/history_skeleton_title_top"
+        android:alpha="0.5"
+        android:background="@drawable/bg_history_skeleton_bar"
+        app:layout_constraintStart_toEndOf="@id/skeleton_art"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/skeleton_artist"
+        android:layout_width="@dimen/history_skeleton_artist_width"
+        android:layout_height="@dimen/history_skeleton_small_bar_height"
+        android:layout_marginStart="@dimen/history_screen_row_item_gap"
+        android:layout_marginTop="@dimen/history_skeleton_artist_top"
+        android:alpha="0.35"
+        android:background="@drawable/bg_history_skeleton_bar"
+        app:layout_constraintStart_toEndOf="@id/skeleton_art"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/skeleton_action"
+        android:layout_width="@dimen/collection_row_action_size"
+        android:layout_height="@dimen/collection_row_action_size"
+        android:alpha="0.5"
+        android:background="@drawable/bg_history_skeleton_action"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+</androidx.constraintlayout.widget.ConstraintLayout>

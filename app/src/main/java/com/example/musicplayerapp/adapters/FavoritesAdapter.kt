@@ -1,12 +1,11 @@
 package com.example.musicplayerapp.adapters
 
-import android.graphics.Rect
 import android.view.LayoutInflater
-import android.view.TouchDelegate
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import com.example.musicplayerapp.ui.RowActionTouchTarget
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -56,7 +55,7 @@ class FavoritesAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_favorite_track, parent, false)
-        return ViewHolder(view).also { expandActionTouchTarget(it) }
+        return ViewHolder(view).also { RowActionTouchTarget.expand(it.action) }
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -91,31 +90,6 @@ class FavoritesAdapter(
         holder.boundTo = null
         Picasso.get().cancelRequest(holder.artwork)
         holder.artwork.setImageDrawable(null)
-    }
-
-    /**
-     * The frozen control is a 40dp ring, which is below the platform's 48dp touch
-     * minimum. Growing the view would grow the ring - it is the background - so
-     * the drawn size stays 40 and the target is widened around it instead, which
-     * is the same answer docs/COLLECTION-3.6.6.md reached for the header
-     * overflow's 4x16 glyph in a 48dp slot.
-     */
-    private fun expandActionTouchTarget(holder: ViewHolder) {
-        val parent = holder.action.parent as? View ?: return
-        // On layout rather than on a post: onCreateViewHolder runs before the row
-        // has been measured, so a rect read from a posted runnable can still be
-        // the empty one and would install a delegate over nothing. Recomputing on
-        // every layout also keeps the target right when the row grows for a
-        // second artist line, which moves the control.
-        holder.action.addOnLayoutChangeListener { view, _, _, _, _, _, _, _, _ ->
-            val target = view.resources.getDimensionPixelSize(R.dimen.collection_row_action_touch)
-            val bounds = Rect().also { view.getHitRect(it) }
-            if (bounds.isEmpty) return@addOnLayoutChangeListener
-            val growX = ((target - bounds.width()) / 2).coerceAtLeast(0)
-            val growY = ((target - bounds.height()) / 2).coerceAtLeast(0)
-            bounds.inset(-growX, -growY)
-            parent.touchDelegate = TouchDelegate(bounds, view)
-        }
     }
 
     private class DiffCallback : DiffUtil.ItemCallback<FavoriteTrack>() {

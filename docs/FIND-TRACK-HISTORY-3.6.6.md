@@ -127,9 +127,27 @@ Both re-request.
 | time column | 39 | 42 | Onest has proportional digits; `00:00` is 41.38dp (the PLAYER section's measurement). Cover and text sit 3 further in; the ring does not move. |
 | title leading | 28 | 22 | G4a's multiline correction; one-line rows are still 76. |
 | footer count | "последние 30 треков" | the real count, in Russian agreement | reads exactly as the frame at 30; a shorter list is not told it is 30. Agreement is chosen by `HistoryFooterText`, not `<plurals>`: Android picks quantities by the device locale, and on an English phone that printed "30 трека". |
-| third service label | "YouTube Music" | "YouTube" | pre-existing recorded decision (`collection_sheet_youtube`): the helper opens youtube.com. |
 | rows 1-2 padding | 15 / 13 | 14 / 14 | the frame's six untouched rows are 14 / 14. |
-| unavailable Найти трек | not drawn | disabled at 0.38 | the file has no such state. |
+| unavailable Найти трек | not drawn | disabled at 0.38, no listener, not focusable | the file has no such state; owner decision: disabled, never hidden, so the menu is 224 either way. |
+
+## Owner decisions (G4b review)
+
+- **YouTube Music.** The third service is labelled «YouTube Music», as both frozen
+  sheets label it, and opens `https://music.youtube.com/search?q=…` through
+  `MusicSearchHelper.openYouTubeMusic` - the host the YouTube Music app claims, so
+  the app answers where installed and the browser otherwise. Spotify, Yandex Music
+  and YouTube Music now share one `artist - track` query builder; Apple Music keeps
+  its dashless one. This reaches Collection's sheet too: it is the same row.
+- **Artist on two lines.** The shared header ellipsises the title and the artist
+  at two lines each - never unlimited - and the sheet grows by the extra line. All
+  three sheets agree because they share the include.
+- **Snapshot.** Unchanged, and now tested: the stream moving on while the sheet is
+  open changes neither its heading nor what its rows search.
+- **Case.** Titles and artists are shown exactly as the metadata / API sends them.
+- **Overdraw.** Lint is 355 on the base and 356 here: the History root's opaque
+  background. Removing it is invisible at rest but not in the 250ms push fade,
+  where every sibling pushed screen covers the one it replaces - see the note in
+  `fragment_broadcast_history.xml`. Kept.
 
 ## Validation
 

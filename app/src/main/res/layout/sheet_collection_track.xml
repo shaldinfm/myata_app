@@ -33,8 +33,8 @@
   lands the title on its frozen 40, and so on down to the first row's 112. Every
   frozen anchor is reproduced on one-line content, and a long title grows the
   sheet instead of overlapping the row below it. The title ellipsises at two
-  lines and the subtitle at one, which is the same truncation the row it was
-  opened from has always had.
+  lines and, since the G4b owner decision, the subtitle at two as well - the
+  header is the shared find-track include, so all three sheets agree.
 -->
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"

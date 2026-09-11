@@ -166,6 +166,24 @@ class G4bCaptureTest {
                 shot("$tag-08-history-error")
             }
 
+            // ---- Найти трек on a deliberately long artist: two lines, then … ----
+            session {
+                openPlayer()
+                on { a ->
+                    nowPlaying(
+                        a,
+                        "КРАСНОЗНАМЁННАЯ ДИВИЗИЯ ИМЕНИ МОЕЙ БАБУШКИ FEAT. НАУТИЛУС ПОМПИЛИУС, " +
+                            "АУКЦЫОН И ЕЩЁ НЕСКОЛЬКО ПРИГЛАШЁННЫХ ИСПОЛНИТЕЛЕЙ",
+                        "ФАК Ю",
+                    )
+                    a.findViewById<View>(R.id.player_header_action).performClick()
+                }
+                awaitMenu()
+                on { a -> a.player()!!.overflowContentForTest()!!.findViewById<View>(R.id.player_overflow_find_track).performClick() }
+                await("long-artist sheet") { it.player()?.childFragmentManager?.findFragmentByTag(FindTrackSheet.TAG)?.view?.findViewById<View>(R.id.row_yandex)?.width ?: 0 > 0 }
+                shot("$tag-11-find-track-long-artist")
+            }
+
             // ---- the placeholder: Найти трек drawn but unavailable ----
             session {
                 openPlayer()

@@ -22,6 +22,19 @@
   a 96 circle at 104, the headline 32 under it, the body 12 under that, the button
   28 under the body. Anchored to the top as the frames are, not centred in
   whatever height the device has.
+
+  **The root's opaque background stays, and lint's one Overdraw warning with it.**
+  At rest it is redundant: activity_main's root already paints the same
+  `@color/background` under the nav host. It is not redundant in motion. Pushes
+  here fade the entering and the exiting screen together over 250ms
+  (anim/fade_in, fade_out), and every sibling pushed screen - report, settings,
+  settings-appearance, both profiles, auth, and the player itself - paints this
+  same opaque root, so each one covers the screen it replaces as it fades in.
+  Without it this would be the one pushed screen that turns see-through
+  mid-transition: at the midpoint the player behind shows at ~50% instead of
+  ~25%. Lint flags this file alone only because it is the one such layout whose
+  root is a plain view with tools:context; the siblings are <layout>-wrapped.
+  Kept by the owner's G4b rule: no visual change just to silence lint.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"

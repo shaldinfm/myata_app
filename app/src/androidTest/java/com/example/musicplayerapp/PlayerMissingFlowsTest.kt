@@ -268,6 +268,16 @@ class PlayerMissingFlowsTest {
                 assertFourServicesAndNoDeleteRow(view)
             }
 
+            // The sheet is a snapshot (owner decision): the stream moves on while
+            // it is open, and neither the heading nor the searches follow it.
+            on { setNowPlaying(it, artist = "FOALS", song = "NORTHERN LINE") }
+            Thread.sleep(400)
+            on {
+                val view = sheet.requireView()
+                assertEquals("CRYOGEN", view.findViewById<TextView>(R.id.sheet_title).text.toString())
+                assertEquals("MUSE", view.findViewById<TextView>(R.id.sheet_subtitle).text.toString())
+            }
+
             // A service tap goes out through MusicSearchHelper, unchanged: the same
             // https search, which an installed app or the browser answers. The
             // filter IS the assertion - scheme, host and the decoded path of
@@ -288,7 +298,8 @@ class PlayerMissingFlowsTest {
                 val deadline = System.currentTimeMillis() + 5_000
                 while (monitor.hits == 0 && System.currentTimeMillis() < deadline) Thread.sleep(25)
                 assertEquals(
-                    "the Spotify row must hand off exactly MusicSearchHelper's search for the sheet's track",
+                    "the Spotify row must hand off exactly MusicSearchHelper's search for the sheet's " +
+                        "track - the one it showed, not the one playing since",
                     1, monitor.hits,
                 )
             } finally {
@@ -296,6 +307,41 @@ class PlayerMissingFlowsTest {
             }
             await("the sheet to close after a choice") {
                 it.playerFragment()?.childFragmentManager?.findFragmentByTag(FindTrackSheet.TAG) == null
+            }
+        }
+    }
+
+    /**
+     * «YouTube Music» opens YouTube Music (owner decision): a search on
+     * `music.youtube.com`, the host the YouTube Music app claims - not youtube.com.
+     */
+    @Test
+    fun the_youtube_music_row_searches_youtube_music() {
+        withMainActivity {
+            openPlayerAndSettle()
+            on { activity ->
+                setNowPlaying(activity, artist = "MUSE", song = "CRYOGEN")
+                activity.findViewById<View>(R.id.player_header_action).performClick()
+                activity.playerFragment()!!.overflowContentForTest()!!
+                    .findViewById<View>(R.id.player_overflow_find_track).performClick()
+            }
+            val sheet = awaitSheet { it.playerFragment()?.childFragmentManager }
+            val monitor = instrumentation.addMonitor(
+                IntentFilter(Intent.ACTION_VIEW).apply {
+                    addDataScheme("https")
+                    addDataAuthority("music.youtube.com", null)
+                    addDataPath("/search", android.os.PatternMatcher.PATTERN_LITERAL)
+                },
+                Instrumentation.ActivityResult(Activity.RESULT_OK, null),
+                true,
+            )
+            try {
+                on { sheet.requireView().findViewById<View>(R.id.row_youtube).performClick() }
+                val deadline = System.currentTimeMillis() + 5_000
+                while (monitor.hits == 0 && System.currentTimeMillis() < deadline) Thread.sleep(25)
+                assertEquals("the YouTube Music row must search music.youtube.com", 1, monitor.hits)
+            } finally {
+                instrumentation.removeMonitor(monitor)
             }
         }
     }
@@ -318,8 +364,11 @@ class PlayerMissingFlowsTest {
                 assertEquals(4, (menu as ViewGroup).childCount)
                 assertEquals(View.VISIBLE, row.visibility)
                 assertFalse("nothing to search - the row must not be available", row.isEnabled)
+                assertFalse("a disabled row must not be clickable", row.isClickable)
+                assertFalse("a disabled row must carry no listener", row.hasOnClickListeners())
+                assertFalse("a disabled row must not take focus", row.isFocusable)
                 assertTrue(row.alpha < 1f)
-                // Even a forced click opens nothing: the tap re-reads the track.
+                // A forced click has nothing to call.
                 row.performClick()
             }
             Thread.sleep(500)
@@ -344,7 +393,7 @@ class PlayerMissingFlowsTest {
 
     private fun assertFourServicesAndNoDeleteRow(view: View) {
         assertEquals(
-            listOf("Spotify", "Apple Music", "YouTube", "Яндекс Музыка"),
+            listOf("Spotify", "Apple Music", "YouTube Music", "Яндекс Музыка"),
             listOf(R.id.row_spotify, R.id.row_apple_music, R.id.row_youtube, R.id.row_yandex).map { id ->
                 val row = view.findViewById<ViewGroup>(id)
                 assertNotNull(row)

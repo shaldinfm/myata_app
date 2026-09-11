@@ -21,10 +21,10 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
  * row does what, and that is deliberately unchanged from the controls it
  * replaces:
  *
- *  - Spotify / Apple Music / YouTube / Яндекс Музыка call exactly the
- *    MusicSearchHelper functions the inline buttons called, with the same
- *    artist and track. The helper itself is untouched, so every destination and
- *    every search string is the one that shipped. Since G4b the header and these
+ *  - Spotify / Apple Music / YouTube Music / Яндекс Музыка call the
+ *    MusicSearchHelper functions with the row's artist and track. Three are the
+ *    searches that shipped; the third opens YouTube Music rather than
+ *    youtube.com since the G4b owner decision. Since G4b the header and these
  *    four rows are [FindTrackRows] - the same rows the PLAYER and History
  *    [FindTrackSheet] draws - and only what follows them is this sheet's own.
  *  - `Удалить из коллекции` does not delete anything here. It reports the

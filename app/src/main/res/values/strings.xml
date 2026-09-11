@@ -237,10 +237,12 @@
 
       The four service labels and the destructive one are the FINAL
       `collection-track-sheet` rows verbatim, in the owner-confirmed order:
-      Spotify, Apple Music, YouTube, Яндекс Музыка, divider, Удалить из
-      коллекции. The third reads "YouTube" and not "YouTube Music" because that
-      is what MusicSearchHelper.openYouTube actually searches - the sheet must
-      name the destination the user lands on, and the helper is untouched here.
+      Spotify, Apple Music, YouTube Music, Яндекс Музыка, divider, Удалить из
+      коллекции. The third read "YouTube" until G4b, because the row searched
+      youtube.com and a row must name the destination the user lands on. The
+      owner's G4b decision keeps that rule and changes both halves: the label is
+      the frame's "YouTube Music" and the row now opens a YouTube Music search
+      (MusicSearchHelper.openYouTubeMusic).
 
       The sheet has no title of its own: `Bottom Sheet / title` carries the TRACK
       and `Bottom Sheet / subtitle` the ARTIST, so both come from the row.
@@ -254,7 +256,7 @@
     <string name="collection_row_action">Действия с треком</string>
     <string name="collection_sheet_spotify">Spotify</string>
     <string name="collection_sheet_apple_music">Apple Music</string>
-    <string name="collection_sheet_youtube">YouTube</string>
+    <string name="collection_sheet_youtube">YouTube Music</string>
     <string name="collection_sheet_yandex">Яндекс Музыка</string>
     <string name="collection_sheet_remove">Удалить из коллекции</string>
     <string name="collection_removed">Трек удалён из коллекции</string>

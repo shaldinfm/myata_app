@@ -22,14 +22,16 @@
   The glyphs are the ones G4a decoded from the file for the Collection sheet - the
   same four vectors the frozen find-track frame carries.
 
-  **The third label reads "YouTube", not the frame's "YouTube Music".** That is a
-  recorded decision, not an oversight - see `collection_sheet_youtube`:
-  MusicSearchHelper.openYouTube searches youtube.com, and a row must name the
-  destination it opens. G4b keeps both the helper and the label.
+  **The third row is "YouTube Music"**, the frame's label, and it opens a YouTube
+  Music search (owner decision, G4b correction pass) - see
+  `collection_sheet_youtube`.
 
   The header stacks as gaps, not absolute tops (see the `sheet_*` dimens): a long
-  title grows the sheet instead of overlapping the first row. The title
-  ellipsises at two lines and the subtitle at one.
+  title or artist grows the sheet instead of overlapping the first row. Both
+  ellipsise at TWO lines - the artist used to stop at one, which the owner
+  rejected on a long Russian artist in the G4b review. Two, not unlimited: the
+  header can grow by at most one title line and one artist line, so the four
+  service rows always stay on a short window.
 -->
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
@@ -63,7 +65,7 @@
         android:layout_marginTop="@dimen/sheet_subtitle_gap"
         android:layout_marginHorizontal="@dimen/sheet_text_inset"
         android:ellipsize="end"
-        android:maxLines="1"
+        android:maxLines="2"
         android:minHeight="@dimen/sheet_subtitle_min_height"
         android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
         android:textColor="@color/text_secondary" />

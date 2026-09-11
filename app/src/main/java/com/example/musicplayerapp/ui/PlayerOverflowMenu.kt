@@ -84,11 +84,21 @@ class PlayerOverflowMenu(
         }
 
         content.findViewById<View>(R.id.player_overflow_find_track).apply {
-            isEnabled = canFindTrack
-            alpha = if (canFindTrack) 1f else UNAVAILABLE_ALPHA
-            setOnClickListener {
-                popup.dismiss()
-                onFindTrack()
+            if (canFindTrack) {
+                setOnClickListener {
+                    popup.dismiss()
+                    onFindTrack()
+                }
+            } else {
+                // Disabled, not hidden (owner decision): hiding it would make the
+                // menu 172 or 224 depending on metadata. No listener at all - a
+                // listener would set the row clickable again - and not focusable,
+                // so neither a tap nor a key press can reach it; the platform
+                // disabled state is what accessibility announces.
+                isEnabled = false
+                isClickable = false
+                isFocusable = false
+                alpha = UNAVAILABLE_ALPHA
             }
         }
 

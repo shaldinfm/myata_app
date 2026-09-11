@@ -23,10 +23,11 @@ import com.example.musicplayerapp.utils.MusicSearchHelper
  *    then its own divider and `Удалить из коллекции`. The removal stays in that
  *    sheet and in FavoritesFragment; nothing here knows it exists.
  *
- * Every destination and every search string is [MusicSearchHelper]'s, unchanged.
- * This decides only which row calls which of its four functions. Whether an app
- * or a browser answers is the helper's `ACTION_VIEW` on an https link, as it has
- * always been.
+ * Every destination and every search string is [MusicSearchHelper]'s. This decides
+ * only which row calls which of its four functions. Whether an app or a browser
+ * answers is the helper's `ACTION_VIEW` on an https link, as it has always been.
+ * The third row searches YouTube Music and is labelled so (owner decision, G4b
+ * correction pass) - it used to search youtube.com under «YouTube».
  */
 object FindTrackRows {
 
@@ -34,7 +35,7 @@ object FindTrackRows {
     private val SERVICES: List<Pair<Int, (Context, String, String) -> Unit>> = listOf(
         R.id.row_spotify to MusicSearchHelper::openSpotify,
         R.id.row_apple_music to MusicSearchHelper::openAppleMusic,
-        R.id.row_youtube to MusicSearchHelper::openYouTube,
+        R.id.row_youtube to MusicSearchHelper::openYouTubeMusic,
         R.id.row_yandex to MusicSearchHelper::openYandexMusic,
     )
 

@@ -203,8 +203,9 @@ class CollectionTrackSheetLayoutTest {
                     if (title.lineCount > 2) {
                         findings += "$where: title took ${title.lineCount} lines, expected at most 2"
                     }
-                    if (subtitle.lineCount != 1) {
-                        findings += "$where: subtitle took ${subtitle.lineCount} lines, expected 1"
+                    // Two since the G4b owner decision, and never more.
+                    if (subtitle.lineCount !in 1..2) {
+                        findings += "$where: subtitle took ${subtitle.lineCount} lines, expected at most 2"
                     }
                     noClipping(title, "$where/title")
                     noClipping(subtitle, "$where/subtitle")
@@ -322,6 +323,34 @@ class CollectionTrackSheetLayoutTest {
 
         log += "$where: sheet ${card.width}x${card.height}, " +
             "rows@${rows.map { topInRoot(root.findViewById<View>(it.first)) - cardTop }}"
+
+        // ---- a deliberately long artist: two lines, an ellipsis, nothing broken ----
+        val longArtist = "КРАСНОЗНАМЁННАЯ ДИВИЗИЯ ИМЕНИ МОЕЙ БАБУШКИ FEAT. НАУТИЛУС " +
+            "ПОМПИЛИУС, АУКЦЫОН И ЕЩЁ НЕСКОЛЬКО ПРИГЛАШЁННЫХ ИСПОЛНИТЕЛЕЙ"
+        val long = sheet(inflater, widthDp, R.layout.sheet_find_track) { r ->
+            com.example.musicplayerapp.ui.FindTrackRows.bind(r, artist = longArtist, title = "ФАК Ю") {}
+        }
+        val lCard = long.findViewById<MaterialCardView>(R.id.sheet_card)
+        val lSub = long.findViewById<TextView>(R.id.sheet_subtitle)
+        val lFirst = long.findViewById<View>(R.id.row_spotify)
+        val lLast = long.findViewById<View>(R.id.row_yandex)
+        val w = "$where/long-artist"
+        if (lSub.lineCount != 2) findings += "$w: artist took ${lSub.lineCount} lines, the rule is 2"
+        if ((lSub.layout?.getEllipsisCount(1) ?: 0) == 0) findings += "$w: a too-long artist is not ellipsised on line 2"
+        noClipping(lSub, "$w/artist")
+        noOverlap(w, "artist", lSub, "first row", lFirst)
+        // The rows move down by exactly the one extra artist line and keep their
+        // own rhythm: same pitch, same height, same 24 under the last one. "One
+        // line" is the subtitle's own rendered line pitch, read from its layout -
+        // not an assumed number: the first run of this assumed the token's 20 and
+        // the text sets on its natural line.
+        val extra = lSub.height - subtitle.height
+        val linePitch = lSub.layout.let { it.getLineBottom(1) - it.getLineBottom(0) }
+        expect(w, "extra artist line = one line of the artist", extra, linePitch.toFloat())
+        expect(w, "first row y", topInRoot(lFirst) - topInRoot(lCard), (topInRoot(root.findViewById(R.id.row_spotify)) - cardTop + extra).toFloat())
+        expect(w, "row height", lFirst.height, dp(56))
+        expect(w, "bottom padding", (topInRoot(lCard) + lCard.height) - (topInRoot(lLast) + lLast.height), dp(24))
+        log += "$w: artist ${lSub.lineCount}L, sheet ${lCard.height}px (+${lCard.height - card.height})"
     }
 
     /* ---------------------------------------------------------------- infra -- */

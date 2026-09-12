@@ -1,5 +1,6 @@
 package com.example.musicplayerapp.ui
 
+import com.example.musicplayerapp.data.NowPlayingArtwork
 import com.example.musicplayerapp.data.PlayerState
 import com.example.musicplayerapp.data.Streams
 
@@ -35,9 +36,6 @@ data class MiniPlayerUiState(
 ) {
 
     companion object {
-
-        /** The repository's marker for "the artwork lookup found nothing". */
-        private const val NO_IMAGE = "NO_IMAGE"
 
         /**
          * Projects the current stream's metadata onto the pill.
@@ -82,7 +80,9 @@ data class MiniPlayerUiState(
                 return MiniPlayerUiState(fallbackTitle, fallbackArtist, null, isPlaying, control)
             }
 
-            val artwork = state.img?.takeUnless { it.isBlank() || it == NO_IMAGE }
+            // The same reading of `img` the player screen and CoverArt use: null
+            // and the "found nothing" marker are both "no cover for this track".
+            val artwork = NowPlayingArtwork.coverUrl(state.img)
             return MiniPlayerUiState(title, artist, artwork, isPlaying, control)
         }
     }

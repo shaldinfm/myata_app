@@ -152,4 +152,22 @@ class MiniPlayerUiStateTest {
         assertEquals(PlayerControlState.PAUSE, project("myata", myata = track("A", "a"), isPlaying = true).control)
         assertEquals(PlayerControlState.PLAY, project("myata", myata = track("A", "a")).control)
     }
+
+    /**
+     * G5a, the pill's half: the projection carries the artwork of the state it is
+     * given and has none of its own to fall back on, so a track change that has
+     * not resolved a cover yet shows no cover - never the one before it. The
+     * frame that follows from this is pinned by CoverArtTransitionTest, which is
+     * the same call the player screen makes.
+     */
+    @Test
+    fun `a track change with no cover yet shows none, not the previous track's`() {
+        val a = project("myata", myata = track("A", "a", img = "https://example.test/a.jpg"))
+        assertEquals("https://example.test/a.jpg", a.artworkUrl)
+
+        val b = project("myata", myata = track("B", "b", img = null))
+
+        assertEquals("b", b.title)
+        assertNull("the pill kept the finished track's cover", b.artworkUrl)
+    }
 }

@@ -150,26 +150,33 @@ class ArtworkRepositoryDispatchTest {
     }
 
     /**
-     * The shape of a cold miss since G5b: iTunes is asked, and nothing else is.
+     * The shape of a cold miss: iTunes first, and only when it matches nothing at
+     * all does the artist's photograph stand in - step 5 of the owner's fallback
+     * hierarchy, ahead of the branded plate but behind every release.
      *
-     * This used to assert the opposite - that Deezer was asked next and its answer
-     * used. What Deezer was asked for was the *artist's photograph*, which is not
-     * the record's artwork; the Last.fm call beside it travelled over a key the
-     * service rejects outright. Both are gone, so a track iTunes cannot place now
-     * resolves to no cover, and the player draws its own plate for it.
+     * What it must never do is pass that photograph off as a release's cover, so
+     * the result says which it is. Last.fm is not asked at all: its key is
+     * rejected by the service.
      */
     @Test
-    fun itunesIsTheOnlySourceAndAMissIsNoCover() {
+    fun anItunesMissFallsBackToTheArtistImage() {
         val canned = CannedResponses().apply { itunes = ITUNES_EMPTY }
         val repository = repositoryAnswering(canned)
 
         val result = runBlocking { repository.fetchArtwork("Bronski Beat", "Smalltown Boy") }
 
-        assertEquals("a miss is no cover, not a picture of the band", null, result.coverUrl)
-        assertTrue(
-            "only iTunes may be asked, but these hosts were: ${canned.hosts}",
-            canned.hosts.isNotEmpty() && canned.hosts.all { it.contains("itunes") }
+        assertEquals("https://example.invalid/artist-xl.jpg", result.coverUrl)
+        assertEquals(
+            "a photograph of the act must not be reported as a release's cover",
+            com.example.musicplayerapp.data.ArtworkSource.ARTIST_IMAGE,
+            result.source,
         )
+        assertTrue(
+            "iTunes is exhausted before the artist image is asked for: ${canned.hosts}",
+            canned.hosts.takeWhile { it.contains("itunes") }.isNotEmpty() &&
+                canned.hosts.first { !it.contains("itunes") }.contains("deezer")
+        )
+        assertTrue("Last.fm must not be asked: ${canned.hosts}", canned.hosts.none { it.contains("audioscrobbler") })
     }
 
     /**

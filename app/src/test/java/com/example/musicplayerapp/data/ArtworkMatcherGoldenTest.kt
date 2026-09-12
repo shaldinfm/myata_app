@@ -58,7 +58,8 @@ class ArtworkMatcherGoldenTest {
     /**
      * The headline case. A 2025 remix single called "Maneater (Nala Remix) -
      * Single" scored the old matcher's two boosts and beat the album the track is
-     * actually from.
+     * actually from. It is not refused - it is simply ranked below the canonical
+     * album, which is what the listener is hearing.
      */
     @Test
     fun `a remix single does not stand in for the original album`() {
@@ -118,16 +119,34 @@ class ArtworkMatcherGoldenTest {
         assertEquals("Кроме тебя - Single", choice.candidate.collectionName)
     }
 
-    /** Every candidate is on a Various Artists compilation, so there is no cover. */
+    /**
+     * Every candidate is on a Various Artists compilation. Those are the bottom
+     * rung of the hierarchy, not a refusal: the compilation really does carry this
+     * track, so its cover is shown - reported LOW, because it is not the release
+     * the listener is hearing.
+     */
     @Test
-    fun `a track that only appears on VA compilations gets no cover`() {
+    fun `a VA compilation is used when nothing else carries the track`() {
         val choice = choose(
             "ANTIBAZZ VS. DEEP MELANGE",
             "WONDERFUL LIFE",
             fixture("antibazz_wonderful_life"),
         )
 
-        assertNull("a Various Artists compilation is not this track's artwork", choice)
+        assertNotNull("a compilation beats no artwork at all", choice)
+        assertEquals(ArtworkConfidence.LOW, choice!!.confidence)
+    }
+
+    /** But it only wins when there is nothing better: the artist's own release. */
+    @Test
+    fun `a VA compilation loses to the artist's own release`() {
+        val compilation = candidate(
+            "Some Act", "Song", "Massive Dance Hits 2006",
+            collectionArtist = "Various Artists", releaseDate = "2006-01-01",
+        )
+        val album = candidate("Some Act", "Song", "The Album", releaseDate = "2006-06-01")
+
+        assertEquals("The Album", choose("SOME ACT", "SONG", listOf(compilation, album))?.candidate?.collectionName)
     }
 
     /** A reissue is the same record; the plain release is still the canonical one. */
@@ -178,13 +197,47 @@ class ArtworkMatcherGoldenTest {
         )
     }
 
+    /**
+     * The station asked for a live take and only a remix is offered. The remix is
+     * the same track, so it stands in rather than leaving the plate up - but the
+     * moment a live release is offered too, that one wins.
+     */
     @Test
-    fun `a remix is not accepted for a station title that asks for a live take`() {
-        val candidates = listOf(
-            candidate("Some Act", "Song (Bassline Remix)", "Song (Bassline Remix) - Single"),
+    fun `the version asked for wins, and another version stands in when it is absent`() {
+        val remix = candidate("Some Act", "Song (Bassline Remix)", "Song (Bassline Remix) - Single")
+        val live = candidate("Some Act", "Song (Live)", "Live at the Hall")
+
+        val onlyRemix = choose("SOME ACT", "SONG (LIVE)", listOf(remix))
+        assertNotNull("a remix of the right track beats no artwork", onlyRemix)
+        assertEquals(ArtworkConfidence.LOW, onlyRemix!!.confidence)
+
+        assertEquals(
+            "Live at the Hall",
+            choose("SOME ACT", "SONG (LIVE)", listOf(remix, live))?.candidate?.collectionName,
+        )
+    }
+
+    /**
+     * The whole hierarchy on one track, in one list: canonical, then reissue, then
+     * another version, then a compilation. Each rung is only reachable when every
+     * better one is missing.
+     */
+    @Test
+    fun `the fallback hierarchy is walked in order`() {
+        val canonical = candidate("Some Act", "Song", "The Album", releaseDate = "2001-01-01")
+        val reissue = candidate("Some Act", "Song", "The Album (Deluxe Edition)", releaseDate = "2001-01-01")
+        val remix = candidate("Some Act", "Song (Club Remix)", "Song (Club Remix) - Single", releaseDate = "2001-01-01")
+        val compilation = candidate(
+            "Some Act", "Song", "Ministry Dance Hits",
+            collectionArtist = "Various Artists", releaseDate = "2001-01-01",
         )
 
-        assertNull(choose("SOME ACT", "SONG (LIVE)", candidates))
+        fun pick(vararg c: ArtworkCandidate) = choose("SOME ACT", "SONG", c.toList())?.candidate?.collectionName
+
+        assertEquals("The Album", pick(compilation, remix, reissue, canonical))
+        assertEquals("The Album (Deluxe Edition)", pick(compilation, remix, reissue))
+        assertEquals("Song (Club Remix) - Single", pick(compilation, remix))
+        assertEquals("Ministry Dance Hits", pick(compilation))
     }
 
     /**
@@ -220,16 +273,6 @@ class ArtworkMatcherGoldenTest {
         val choice = choose("NELLY FURTADO", "MANEATER", fixture("maneater"))
 
         assertEquals("Nelly Furtado", choice?.candidate?.artistName)
-    }
-
-    @Test
-    fun `a VA compilation loses to the artist's own release`() {
-        val candidates = listOf(
-            candidate("Some Act", "Song", "Massive Dance Hits 2006", collectionArtist = "Various Artists", releaseDate = "2006-01-01"),
-            candidate("Some Act", "Song", "The Album", releaseDate = "2006-06-01"),
-        )
-
-        assertEquals("The Album", choose("SOME ACT", "SONG", candidates)?.candidate?.collectionName)
     }
 
     // ============== artist identity ==============
@@ -277,6 +320,23 @@ class ArtworkMatcherGoldenTest {
         val candidates = listOf(candidate("Breakbot", "Fantasy", "Fantasy (feat. Ruckazoid) - EP"))
 
         assertNotNull(choose("BREAKBOT FT. RUCKAZOID", "FANTASY", candidates))
+    }
+
+    /**
+     * The station writes `THE COURTEENERS`, iTunes indexes `Courteeners`, and the
+     * album is right there. Missing it over the word "the" cost the track its
+     * cover entirely - it fell through to an artist photograph on the device.
+     */
+    @Test
+    fun `a leading The is not part of the identity`() {
+        val candidates = listOf(
+            candidate("Courteeners", "Not Nineteen Forever", "St. Jude", releaseDate = "2008-04-04"),
+        )
+
+        val choice = choose("THE COURTEENERS", "NOT NINETEEN FOREVER", candidates)
+
+        assertEquals("St. Jude", choice?.candidate?.collectionName)
+        assertEquals(ArtworkConfidence.HIGH, choice?.confidence)
     }
 
     /** The substring trap: three Cyrillic letters that live inside another band. */

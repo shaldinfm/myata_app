@@ -25,6 +25,22 @@ data class ArtworkCandidate(
 /** How sure the matcher is, for reporting and for owner review. Never persisted. */
 enum class ArtworkConfidence { HIGH, MEDIUM, LOW }
 
+/**
+ * What the picture actually is.
+ *
+ * The distinction exists because step 5 of the owner's fallback hierarchy is a
+ * photograph of the artist, which is a reasonable thing to show when nothing else
+ * can be found and a wrong thing to call album artwork. Callers that need to know
+ * can ask; nothing persists it.
+ */
+enum class ArtworkSource {
+    /** A release's own cover. */
+    RELEASE,
+
+    /** A picture of the act, standing in because no release could be matched. */
+    ARTIST_IMAGE,
+}
+
 /** The chosen release, with why it was chosen. */
 data class ArtworkChoice(
     val candidate: ArtworkCandidate,
@@ -52,22 +68,31 @@ data class ArtworkChoice(
  *
  * ## What it does now
  *
- * Filter first, and rank only what survives:
+ * Rank almost everything; reject only what is genuinely not this record.
+ *
+ * **Coverage matters** (owner decision): the branded plate is the *last* resort,
+ * not the preferred answer when the match is imperfect. A remix, a reissue or a
+ * compilation that really does carry this track is still this track's artwork -
+ * it is simply worse than the canonical release, so it is ranked below it and
+ * used only when nothing better was offered.
  *
  *  1. **Artist** must match by *identity*, not by substring - whole normalised
  *     names, whole collaboration parts, or whole tokens, so `МОТ` can no longer
  *     match `Motörhead` and `AC/DC` is never reduced to `AC`.
- *  2. **Title** must match on its base, and the version has to agree: if the
- *     station does not say remix, live, acoustic, edit or version, a candidate
- *     that does is not the recording being played and usually does not share its
- *     artwork. If the station *does* say one, a candidate must carry a marker of
- *     the same family - the marker is honoured, never stripped away.
- *  3. **Hard rejections** for the things that are never the canonical cover:
- *     Various Artists compilations, tributes, karaoke, "made famous by", and
- *     instrument covers nobody asked for.
- *  4. **Ranking** is then a fixed sequence of tiers, ending in a lexicographic
- *     tie-break, so the same candidate list always produces the same answer
- *     whatever order the provider returned it in.
+ *  2. **Title** must match on its base. The version then decides *rank* rather
+ *     than admission: if the station does not say remix, live or acoustic, a
+ *     candidate that does is a different recording and sorts below the plain
+ *     release, but it is still offered when there is no plain release. If the
+ *     station *does* name a version, candidates of that family sort first - the
+ *     marker is honoured, never stripped away.
+ *  3. **Hard rejection** is kept for what is not this record at all: another
+ *     artist's cover, tributes, karaoke, "made famous by", and instrument covers
+ *     nobody asked for.
+ *  4. **[Level]** is the owner's fallback hierarchy - canonical, then reissue,
+ *     then another version, then a compilation - and it is the first thing
+ *     compared. Within a level a fixed sequence of tiers decides, ending in a
+ *     lexicographic tie-break, so the same candidates always produce the same
+ *     answer whatever order the provider returned them in.
  *
  * Nothing here fetches, caches or knows about a provider. It is a function of
  * (artist, title, candidates), which is what makes the golden tests possible.
@@ -154,6 +179,28 @@ object ArtworkMatcher {
     /** `Supafly Inc` and `Supafly` are one act; the suffix is not identity. */
     private val COMPANY_SUFFIXES = setOf("inc", "ltd", "llc")
 
+    /**
+     * The owner's fallback hierarchy, best first. Compared before anything else,
+     * so a worse *kind* of release never wins on a tie-break.
+     *
+     * What is not here is the artist photograph and the branded plate: those are
+     * steps 5 and 6, and neither is a candidate this matcher can return - the
+     * repository falls back to them only when nothing at all was matched.
+     */
+    internal enum class Level {
+        /** The release the track came out on. */
+        CANONICAL,
+
+        /** The same record again: remaster, deluxe, anniversary, reissue. */
+        REISSUE,
+
+        /** Another version of it - a remix, a live take, an edit, a re-release. */
+        ALTERNATE,
+
+        /** A compilation that really does carry this track. */
+        COMPILATION,
+    }
+
     // ============== entry point ==============
 
     /**
@@ -177,6 +224,16 @@ object ArtworkMatcher {
         return ArtworkChoice(best.candidate, best.confidence(), best.reason())
     }
 
+    /**
+     * Whether two credit strings name the same act, by the same reading the
+     * candidate filter uses.
+     *
+     * Exposed for the artist-image fallback, which has no release to judge and
+     * must at least be sure the photograph is of the right act.
+     */
+    fun sameArtist(station: String, candidate: String): Boolean =
+        ArtistIdentity.tier(ArtistIdentity.of(station), candidate) != null
+
     // ============== filtering ==============
 
     private fun score(
@@ -187,11 +244,7 @@ object ArtworkMatcher {
         val collection = Norm.text(candidate.collectionName)
         val credited = Norm.text(candidate.artistName)
 
-        // A Various Artists release says so in its own metadata. This is the field
-        // the old matcher never read, and it is why a dance compilation could win.
-        val collectionArtist = Norm.text(candidate.collectionArtistName.orEmpty())
-        if (collectionArtist.contains("various artists")) return null
-
+        // Not this record by anybody's reading: somebody else performing it.
         if (NEVER.any { collection.contains(it) || credited.contains(it) }) return null
 
         val candidateTitle = TitleParts.of(candidate.trackName)
@@ -204,54 +257,57 @@ object ArtworkMatcher {
         }
 
         val artistTier = ArtistIdentity.tier(stationArtist, candidate.artistName) ?: return null
+
+        // Only a title that is not this track at all is refused here.
         val titleTier = titleTier(wanted, candidateTitle) ?: return null
 
-        // A plain title on a live album or a remix collection is still that
-        // recording, not the studio one - the version marker is on the release
-        // rather than on the track.
-        val collectionMarkers = markersIn(Norm.tokens(candidate.collectionName))
-        if (wanted.markers.isEmpty() && collectionMarkers.any(::changesArtwork)) return null
-        if (wanted.markers.isNotEmpty() && !compatible(wanted.markers, candidateTitle.markers + collectionMarkers)) {
-            return null
+        // The version can sit on the release rather than on the track: a plain
+        // title on a live album is still the live recording.
+        val offered = candidateTitle.markers + markersIn(Norm.tokens(candidate.collectionName))
+        val otherVersion = if (wanted.markers.isEmpty()) {
+            offered.any(::changesArtwork)
+        } else {
+            !compatible(wanted.markers, offered)
         }
 
-        val releaseTier = when {
-            collection in COMPILATION_EXACT -> 2
-            COMPILATION_WORDS.any { collection.contains(it) } -> 2
-            REISSUE_WORDS.any { collection.contains(it) } -> 1
-            else -> 0
-        }
+        val variousArtists = Norm.text(candidate.collectionArtistName.orEmpty()).contains("various artists")
+        val compilation = variousArtists ||
+            collection in COMPILATION_EXACT ||
+            COMPILATION_WORDS.any { collection.contains(it) }
 
-        val exactRelease = ownReleaseTier(wanted, collection)
+        val level = when {
+            compilation -> Level.COMPILATION
+            otherVersion -> Level.ALTERNATE
+            REISSUE_WORDS.any { collection.contains(it) } -> Level.REISSUE
+            else -> Level.CANONICAL
+        }
 
         return Scored(
             candidate = candidate,
+            level = level,
             artistTier = artistTier,
             titleTier = titleTier,
-            releaseTier = releaseTier,
+            variousArtists = if (variousArtists) 1 else 0,
             releaseOrder = releaseOrder(candidate.releaseDate),
-            exactRelease = exactRelease,
+            exactRelease = ownReleaseTier(wanted, collection),
             trackCount = candidate.trackCount ?: 0,
         )
     }
 
-    /** Does the station's title agree with the candidate's? */
+    /**
+     * How well the candidate's title reads as the station's, or null when it is
+     * simply a different song - the one thing a title can be refused for.
+     *
+     * Within a match, plainer is better: an exact plain title, then one carrying
+     * a benign phrase, then a plural slip, then a trim or another version. Those
+     * last ones also raise [Level], so this only orders them among themselves.
+     */
     private fun titleTier(wanted: TitleParts, candidate: TitleParts): Int? {
         val exact = wanted.base == candidate.base
         val nearly = !exact && Norm.equalIgnoringPlural(wanted.base, candidate.base)
         if (!exact && !nearly) return null
 
         if (wanted.markers.isEmpty()) {
-            // The station is playing the record. A remix, a live take or an
-            // acoustic reading of it is a different record and, as a rule, a
-            // different cover - so it is not this track's artwork at all.
-            if (candidate.markers.any(::changesArtwork)) return null
-
-            // An edit or a "version" is the same record trimmed. It keeps its
-            // cover, so it stays - behind every plainer spelling of the title.
-            // Ordered so that any plainer spelling of the title outranks an
-            // edit: an exact plain title, then one carrying only a benign phrase,
-            // then a plural slip, and only then the trims.
             val benign = candidate.hasBenign
             val plain = candidate.markers.isEmpty()
             return when {
@@ -263,10 +319,17 @@ object ArtworkMatcher {
             }
         }
 
-        if (!compatible(wanted.markers, candidate.markers)) return null
-        // The same remixer named on both sides is the best a station string can do.
+        // The station named a version. One of the same family is what it asked
+        // for; anything else is a fallback and sorts after it.
+        val sameFamily = compatible(wanted.markers, candidate.markers)
         val sameName = wanted.markerWords.isNotEmpty() && wanted.markerWords == candidate.markerWords
-        return if (exact && sameName) 0 else if (exact) 1 else 2
+        return when {
+            sameFamily && exact && sameName -> 0
+            sameFamily && exact -> 1
+            sameFamily -> 2
+            exact -> 3
+            else -> 4
+        }
     }
 
     /** Does this marker mean a different record rather than a trim of the same one? */
@@ -316,39 +379,50 @@ object ArtworkMatcher {
 
     private class Scored(
         val candidate: ArtworkCandidate,
+        val level: Level,
         val artistTier: Int,
         val titleTier: Int,
-        val releaseTier: Int,
+        val variousArtists: Int,
         val releaseOrder: String,
         val exactRelease: Int,
         val trackCount: Int,
     ) {
+        /**
+         * How sure this is, which is mostly which rung of the hierarchy it came
+         * from. Anything below a canonical release is reported LOW: it is the
+         * right track, but not the release the listener is hearing, and the owner
+         * should be able to see that in the log.
+         */
         fun confidence(): ArtworkConfidence = when {
-            artistTier <= 1 && titleTier == 0 && releaseTier == 0 -> ArtworkConfidence.HIGH
-            artistTier <= 2 && titleTier <= 1 && releaseTier <= 1 -> ArtworkConfidence.MEDIUM
+            level == Level.CANONICAL && artistTier <= 1 && titleTier == 0 -> ArtworkConfidence.HIGH
+            level == Level.CANONICAL || level == Level.REISSUE -> ArtworkConfidence.MEDIUM
             else -> ArtworkConfidence.LOW
         }
 
         fun reason(): String =
-            "artist=$artistTier title=$titleTier release=$releaseTier " +
+            "level=$level artist=$artistTier title=$titleTier " +
                 "date=${releaseOrder.take(10)} own=$exactRelease"
     }
 
     /**
-     * The order the owner asked for, as a fixed sequence of comparisons:
-     * the artist must be right before anything else matters, then the title, then
-     * the kind of release - a canonical one before a reissue before a
-     * compilation - then the earliest such release, then the track's own single or
-     * EP over an album that merely contains it.
+     * The order the owner asked for, as a fixed sequence of comparisons: the
+     * rung of the hierarchy first, then how exactly the artist and the title
+     * match, then the earliest such release, then the track's own single or EP
+     * over an album that merely contains it, then the fuller release.
      *
      * The last comparison is lexicographic rather than positional on purpose: the
      * provider's own ordering is never consulted, so the same candidates always
      * produce the same cover however they arrive.
      */
     private val ORDER: Comparator<Scored> = compareBy(
+        // The hierarchy first: a canonical release outranks a reissue, which
+        // outranks another version, which outranks a compilation - whatever the
+        // finer tiers say about any of them.
+        { it.level },
         { it.artistTier },
         { it.titleTier },
-        { it.releaseTier },
+        // Among compilations, the artist's own beats a Various Artists one.
+        { it.variousArtists },
         { it.releaseOrder },
         { it.exactRelease },
         // Two releases of the same record on the same day - an album and an EP
@@ -374,6 +448,17 @@ object ArtworkMatcher {
                 val credited = stripCredits(normalised)
                 return ArtistIdentity(normalised, credited, Norm.tokens(credited))
             }
+
+            /**
+             * A leading definite article is not part of an act's identity.
+             *
+             * The station writes `THE COURTEENERS`; iTunes indexes them as
+             * `Courteeners`, and `St. Jude` was being missed over the word "the"
+             * alone - the track fell all the way to an artist photograph. Both
+             * sides are read the same way, so `The The` still matches itself.
+             */
+            private fun withoutArticle(name: String): String =
+                name.removePrefix("the ").ifEmpty { name }
 
             /** Everything up to the first credit word: `A ft. B` is A's record. */
             private fun stripCredits(normalised: String): String {
@@ -414,10 +499,18 @@ object ArtworkMatcher {
                 val candidate = Norm.text(candidateArtist)
                 if (candidate.isEmpty() || station.normalised.isEmpty()) return null
 
-                if (Norm.same(candidate, station.normalised)) return 0
+                if (Norm.same(candidate, station.normalised) ||
+                    Norm.same(withoutArticle(candidate), withoutArticle(station.normalised))
+                ) {
+                    return 0
+                }
 
                 val candidateCredited = stripCredits(candidate)
-                if (Norm.same(candidateCredited, station.credited)) return 1
+                if (Norm.same(candidateCredited, station.credited) ||
+                    Norm.same(withoutArticle(candidateCredited), withoutArticle(station.credited))
+                ) {
+                    return 1
+                }
 
                 val candidateParts = parts(candidate)
 
@@ -427,9 +520,9 @@ object ArtworkMatcher {
                 val stationParts = parts(station.normalised)
                 if (stationParts.size > 1 && stationParts.toSet() == candidateParts.toSet()) return 1
 
-                val stationName = station.credited
+                val stationName = withoutArticle(station.credited)
                 if (stationName.isNotEmpty() && stationName.length >= 3) {
-                    val at = candidateParts.indexOfFirst { Norm.same(it, stationName) }
+                    val at = candidateParts.indexOfFirst { Norm.same(withoutArticle(it), stationName) }
                     if (at == 0) return 2
                     if (at > 0) return 3
 
@@ -437,7 +530,7 @@ object ArtworkMatcher {
                     // station's name is there, as a whole token. Whole tokens are
                     // what keeps `мот` out of `Motörhead`.
                     val candidateTokens = Norm.tokens(candidate).map(Norm::translit).toSet()
-                    val stationTokens = station.tokens.map(Norm::translit)
+                    val stationTokens = Norm.tokens(stationName).map(Norm::translit)
                     if (stationTokens.isNotEmpty() && candidateTokens.containsAll(stationTokens)) return 4
                 }
 

@@ -13,26 +13,26 @@ import java.util.concurrent.ConcurrentHashMap
  * Repository for fetching album artwork from a search provider.
  * This is the SINGLE source of truth for artwork in the app.
  *
- * ## Source (G5b)
+ * ## Sources (G5b)
  *
- * iTunes, and only iTunes. Two fallbacks were removed rather than repaired:
+ * The owner's fallback hierarchy, in order, and the plate is the *last* rung
+ * rather than the preferred one:
  *
- *  - **Deezer** was asked for the *artist's photograph* and its answer was used as
- *    though it were the release's cover. A picture of the band is not the artwork
- *    of the record, and it was reaching the player as a confident result for 1 in
- *    18 tracks in the G5 recon sample.
- *  - **Last.fm** was asked over an API key that the service has been rejecting
- *    outright (HTTP 403, "Invalid API key"), so the call could only ever cost a
- *    round trip; the scrape beside it read whatever `og:image` a page happened to
- *    carry, which for a track page can also be an artist shot.
+ *  1. iTunes, ranked by [ArtworkMatcher] - a canonical release, else a reissue,
+ *     else another version of the track, else a compilation that carries it;
+ *  2. Deezer's picture of the artist, when iTunes matched nothing at all. It is
+ *     returned as [ArtworkSource.ARTIST_IMAGE] and never pretends to be a
+ *     release's cover;
+ *  3. nothing, which the player draws as its own branded plate.
  *
- * Neither is replaced here - that would be a new provider, which G5b does not add.
- * A track iTunes cannot place now resolves to *no cover*, which the player already
- * draws as its own branded plate. A correct plate beats a confident wrong cover.
+ * **Last.fm is not in the list.** It was asked over an API key the service
+ * rejects outright - HTTP 403, "Invalid API key", every time we have measured it -
+ * so that path could only ever cost a round trip and return nothing. The scrape
+ * beside it read whatever `og:image` a page happened to carry. Both are gone; a
+ * working key or a replacement provider is a separate, owner-approved change.
  *
- * Which of the candidates iTunes returns is the right one is [ArtworkMatcher]'s
- * decision, not this class's: everything here is the request, the parse and the
- * cache.
+ * Which of the iTunes candidates is the right one is [ArtworkMatcher]'s decision,
+ * not this class's: everything here is the request, the parse and the cache.
  */
 class ArtworkRepository(private val httpClient: OkHttpClient) {
 
@@ -55,6 +55,8 @@ class ArtworkRepository(private val httpClient: OkHttpClient) {
         val coverUrl: String?,
         val backgroundUrl: String? = null,
         val confidence: ArtworkConfidence? = null,
+        /** Whether [coverUrl] is a release's cover or a stand-in picture of the act. */
+        val source: ArtworkSource? = null,
     )
 
     /**
@@ -104,20 +106,33 @@ class ArtworkRepository(private val httpClient: OkHttpClient) {
                 Log.e("ArtworkRepo", "iTunes search error", e)
             }
 
-            if (choice == null) {
-                Log.d("ArtworkRepo", "No canonical cover for $artist - $track")
-            } else {
+            val result = if (choice != null) {
                 Log.d(
                     "ArtworkRepo",
                     "Cover for $artist - $track: ${choice.candidate.collectionName} " +
                         "[${choice.confidence}] ${choice.reason}"
                 )
+                ArtworkResult(
+                    coverUrl = choice.candidate.artworkUrl,
+                    confidence = choice.confidence,
+                    source = ArtworkSource.RELEASE,
+                )
+            } else {
+                // Step 5: no release could be matched, so the act's own picture
+                // stands in rather than the plate. Marked as what it is.
+                val artistImage = fetchArtistImageFromDeezer(queryArtist)
+                if (artistImage != null) {
+                    Log.d("ArtworkRepo", "Artist image for $artist - $track (no release matched)")
+                } else {
+                    Log.d("ArtworkRepo", "Nothing found at all for $artist - $track")
+                }
+                ArtworkResult(
+                    coverUrl = artistImage,
+                    confidence = artistImage?.let { ArtworkConfidence.LOW },
+                    source = artistImage?.let { ArtworkSource.ARTIST_IMAGE },
+                )
             }
 
-            val result = ArtworkResult(
-                coverUrl = choice?.candidate?.artworkUrl,
-                confidence = choice?.confidence,
-            )
             cache[cacheKey] = result
             result
         }
@@ -168,6 +183,52 @@ class ArtworkRepository(private val httpClient: OkHttpClient) {
                 artworkUrl = artworkUrl.replace("100x100bb", "600x600bb"),
             )
         }
+    }
+
+    // ==================== artist image (last resort) ====================
+
+    /**
+     * A picture of the act, for when no release could be matched at all.
+     *
+     * Step 5 of the hierarchy, and deliberately strict about *who*: the Deezer
+     * result's name has to be the same act by the matcher's own reading, so a
+     * search for one artist cannot come back with a photograph of another. It is
+     * still only a photograph, which is why the result carries
+     * [ArtworkSource.ARTIST_IMAGE].
+     */
+    private fun fetchArtistImageFromDeezer(artist: String): String? {
+        if (artist.isBlank()) return null
+        try {
+            val encoded = java.net.URLEncoder.encode(artist, "UTF-8")
+            val request = Request.Builder()
+                .url("https://api.deezer.com/search/artist?q=$encoded")
+                .header("User-Agent", "MyataRadio/1.0")
+                .build()
+
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return null
+
+                val body = response.body?.string() ?: return null
+                val json = Gson().fromJson(body, Map::class.java) ?: return null
+
+                @Suppress("UNCHECKED_CAST")
+                val data = json["data"] as? List<Map<String, Any>> ?: return null
+
+                for (item in data) {
+                    val name = item["name"] as? String ?: continue
+                    if (!ArtworkMatcher.sameArtist(artist, name)) continue
+                    val picture = item["picture_xl"] as? String
+                        ?: item["picture_big"] as? String
+                        ?: continue
+                    // Deezer answers with a placeholder path when it holds no photo.
+                    if (picture.contains("/artist//")) continue
+                    return picture
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("ArtworkRepo", "Deezer artist image failed: ${e.message}")
+        }
+        return null
     }
 
     // ==================== query text ====================

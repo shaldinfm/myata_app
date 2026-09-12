@@ -88,11 +88,14 @@ data class ArtworkChoice(
  *  3. **Hard rejection** is kept for what is not this record at all: another
  *     artist's cover, tributes, karaoke, "made famous by", and instrument covers
  *     nobody asked for.
- *  4. **[Level]** is the owner's fallback hierarchy - canonical, then reissue,
- *     then another version, then a compilation - and it is the first thing
- *     compared. Within a level a fixed sequence of tiers decides, ending in a
- *     lexicographic tie-break, so the same candidates always produce the same
- *     answer whatever order the provider returned them in.
+ *  4. **[Level]** is the owner's fallback hierarchy - the track's own single or
+ *     EP, then its studio album, then another release carrying it, then a
+ *     reissue, then another version, then a compilation. It is compared straight
+ *     after the artist and *before* the release date, because an earlier generic
+ *     EP is not a better answer than the album the track belongs to. Within a
+ *     level a fixed sequence of tiers decides, ending in a lexicographic
+ *     tie-break, so the same candidates always produce the same answer whatever
+ *     order the provider returned them in.
  *
  * Nothing here fetches, caches or knows about a provider. It is a function of
  * (artist, title, candidates), which is what makes the golden tests possible.
@@ -188,16 +191,22 @@ object ArtworkMatcher {
      * repository falls back to them only when nothing at all was matched.
      */
     internal enum class Level {
-        /** The release the track came out on. */
-        CANONICAL,
+        /** The track's own single or EP - the release it came out as. */
+        OWN_RELEASE,
 
-        /** The same record again: remaster, deluxe, anniversary, reissue. */
+        /** The studio album it belongs to. */
+        STUDIO_ALBUM,
+
+        /** Another legitimate release carrying it: a label EP, a sampler, a set. */
+        OTHER_RELEASE,
+
+        /** The same record again: remaster, deluxe, anniversary, expanded. */
         REISSUE,
 
-        /** Another version of it - a remix, a live take, an edit, a re-release. */
+        /** Another version of it - a remix, a live take, an edit, a re-recording. */
         ALTERNATE,
 
-        /** A compilation that really does carry this track. */
+        /** A compilation or anthology that really does carry this track. */
         COMPILATION,
     }
 
@@ -270,16 +279,51 @@ object ArtworkMatcher {
             !compatible(wanted.markers, offered)
         }
 
-        val variousArtists = Norm.text(candidate.collectionArtistName.orEmpty()).contains("various artists")
-        val compilation = variousArtists ||
+        // Whose release is this? A collection credited to somebody other than the
+        // act - "Various Artists", a label, a series - is a compilation whatever it
+        // calls itself, and that is structured metadata rather than a guess about
+        // an English album title. Absent means no signal, not a compilation.
+        val collectionArtist = candidate.collectionArtistName?.takeIf { it.isNotBlank() }
+        val foreignCollection = collectionArtist != null &&
+            !sameArtist(collectionArtist, candidate.artistName)
+
+        val compilation = foreignCollection ||
             collection in COMPILATION_EXACT ||
             COMPILATION_WORDS.any { collection.contains(it) }
 
-        val level = when {
+        // iTunes names the format in the collection: "- Single", "- EP", or an
+        // album. Combined with whether the release is named after the track, that
+        // is enough to tell the track's own single from a label EP that merely
+        // carries it.
+        val singleOrEp = collection.endsWith(" single") || collection.endsWith(" ep")
+        val ownTier = ownReleaseTier(wanted, collection)
+
+        // The track's own release is either one the provider labels a single or an
+        // EP, or one simply named after the track - a self-titled release is that
+        // track's release whether or not iTunes puts "- Single" after it. Getting
+        // this wrong let a 2015 re-release single outrank the 2005 record of the
+        // same name, because only the newer one carried the label.
+        val ownRelease = ownTier == 0 || (singleOrEp && ownTier <= 1)
+
+        val classified = when {
             compilation -> Level.COMPILATION
             otherVersion -> Level.ALTERNATE
             REISSUE_WORDS.any { collection.contains(it) } -> Level.REISSUE
-            else -> Level.CANONICAL
+            ownRelease -> Level.OWN_RELEASE
+            !singleOrEp -> Level.STUDIO_ALBUM
+            else -> Level.OTHER_RELEASE
+        }
+
+        // A release the station's act does not *lead* is not that act's own
+        // release of the record, however it is packaged: it is somebody else's
+        // single carrying them as a guest, or a later re-recording credited to a
+        // new pairing. It can still be the right artwork, so it is demoted rather
+        // than refused - which is what keeps a 2017 re-release from outranking the
+        // artist's own original just because the re-release is a "- Single".
+        val level = if (artistTier >= 2 && classified < Level.OTHER_RELEASE) {
+            Level.OTHER_RELEASE
+        } else {
+            classified
         }
 
         return Scored(
@@ -287,7 +331,7 @@ object ArtworkMatcher {
             level = level,
             artistTier = artistTier,
             titleTier = titleTier,
-            variousArtists = if (variousArtists) 1 else 0,
+            variousArtists = if (foreignCollection) 1 else 0,
             releaseOrder = releaseOrder(candidate.releaseDate),
             exactRelease = ownReleaseTier(wanted, collection),
             trackCount = candidate.trackCount ?: 0,
@@ -389,13 +433,17 @@ object ArtworkMatcher {
     ) {
         /**
          * How sure this is, which is mostly which rung of the hierarchy it came
-         * from. Anything below a canonical release is reported LOW: it is the
-         * right track, but not the release the listener is hearing, and the owner
-         * should be able to see that in the log.
+         * from.
+         *
+         * Only the track's own release or its album can be HIGH, and only with a
+         * clean artist and title. A compilation or an anthology never is, however
+         * exactly the artist and title match: the artwork is worth keeping, but it
+         * is a label's package rather than this record's cover, and the log should
+         * say so. Another version of the recording is LOW for the same reason.
          */
         fun confidence(): ArtworkConfidence = when {
-            level == Level.CANONICAL && artistTier <= 1 && titleTier == 0 -> ArtworkConfidence.HIGH
-            level == Level.CANONICAL || level == Level.REISSUE -> ArtworkConfidence.MEDIUM
+            level <= Level.STUDIO_ALBUM && artistTier <= 1 && titleTier <= 1 -> ArtworkConfidence.HIGH
+            level <= Level.REISSUE && artistTier <= 3 -> ArtworkConfidence.MEDIUM
             else -> ArtworkConfidence.LOW
         }
 
@@ -415,21 +463,31 @@ object ArtworkMatcher {
      * produce the same cover however they arrive.
      */
     private val ORDER: Comparator<Scored> = compareBy(
-        // The hierarchy first: a canonical release outranks a reissue, which
-        // outranks another version, which outranks a compilation - whatever the
-        // finer tiers say about any of them.
+        // The hierarchy first - the track's own single, its album, another release
+        // carrying it, a reissue, another version, a compilation. It sits above
+        // the release date on purpose: an earlier generic EP is not a better
+        // answer than the studio album the track belongs to. Identity is not lost
+        // by ranking it second, because a candidate the station's act does not
+        // lead has already been demoted out of the top two rungs above.
         { it.level },
+        // Then how exactly this is the act: the credited name, then a credit with
+        // the guests stripped, then a member of a billed pairing.
         { it.artistTier },
+        // How exactly the title reads, which inside one level is what separates a
+        // plain title from a trim of it.
         { it.titleTier },
-        // Among compilations, the artist's own beats a Various Artists one.
+        // Among compilations, the artist's own beats one credited to somebody else.
         { it.variousArtists },
+        // The date is a tie-break *within* a class, not a rank of its own.
         { it.releaseOrder },
         { it.exactRelease },
-        // Two releases of the same record on the same day - an album and an EP
-        // that both carry the track - are separated by which is the fuller
-        // release, so the answer is the album rather than whichever name happens
-        // to sort first.
-        { -it.trackCount },
+        // Two releases of the same class carrying the track on the same date: the
+        // leaner one is the original album, and the longer one is a retrospective
+        // or an expanded edition of it. iTunes dates a track by when the *track*
+        // came out, so a 2023 career collection and the 2004 album it draws from
+        // both read as 2004 and only their length tells them apart. Album against
+        // EP is not decided here - that is what the levels above are for.
+        { it.trackCount },
         { Norm.text(it.candidate.collectionName) },
         { Norm.text(it.candidate.trackName) },
     )

@@ -384,9 +384,9 @@ class ArtworkMatcherGoldenTest {
 
     /**
      * Two releases of the same record on the same day: the album that carries the
-     * track among others, and an EP that also carries it. The fuller release is
-     * the answer, rather than whichever name sorts first - which is how `Gaslight`
-     * was landing on an EP instead of `L.A. Times` in the recon sample.
+     * track among others, and an EP that also carries it. The album is the answer,
+     * by release class - this is how `Gaslight` was landing on an EP instead of
+     * `L.A. Times` in the recon sample.
      */
     @Test
     fun `an album beats an EP released the same day`() {
@@ -397,6 +397,21 @@ class ArtworkMatcherGoldenTest {
         assertEquals("L.A. Times", choose("TRAVIS", "GASLIGHT", listOf(album, ep))?.candidate?.collectionName)
     }
 
+    /**
+     * Two albums of the same class, both dated by the track rather than by
+     * themselves: a career retrospective draws on the original album, so iTunes
+     * reports the same date for both and only their length separates them. The
+     * leaner one is the album the track came out on.
+     */
+    @Test
+    fun `the original album beats a longer retrospective dated the same`() {
+        val original = candidate("Some Act", "Song", "The First Album", releaseDate = "2004-06-07").copy(trackCount = 12)
+        val retrospective = candidate("Some Act", "Song", "Diamonds And Rarities", releaseDate = "2004-06-07").copy(trackCount = 20)
+
+        assertEquals("The First Album", choose("SOME ACT", "SONG", listOf(retrospective, original))?.candidate?.collectionName)
+        assertEquals("The First Album", choose("SOME ACT", "SONG", listOf(original, retrospective))?.candidate?.collectionName)
+    }
+
     /** The track's own single still outranks the album that contains it. */
     @Test
     fun `the track's own single beats a bigger album of the same day`() {
@@ -404,6 +419,72 @@ class ArtworkMatcherGoldenTest {
         val album = candidate("Some Act", "Song", "The Album", releaseDate = "2020-01-01").copy(trackCount = 12)
 
         assertEquals("Song - Single", choose("SOME ACT", "SONG", listOf(album, single))?.candidate?.collectionName)
+    }
+
+    /**
+     * Release quality outranks a raw earlier date.
+     *
+     * An EP that merely carries the track - a label sampler, an artist EP - is not
+     * a better answer than the studio album the track belongs to, even when the EP
+     * came out first. The date is a tie-break inside a class, not a rank of its
+     * own.
+     */
+    @Test
+    fun `a studio album beats an earlier EP that merely carries the track`() {
+        val earlierEp = candidate("Some Act", "Song", "Some Act - EP", releaseDate = "2004-05-24").copy(trackCount = 5)
+        val album = candidate("Some Act", "Song", "The Studio Album", releaseDate = "2005-02-14").copy(trackCount = 13)
+
+        assertEquals("The Studio Album", choose("SOME ACT", "SONG", listOf(earlierEp, album))?.candidate?.collectionName)
+        assertEquals("The Studio Album", choose("SOME ACT", "SONG", listOf(album, earlierEp))?.candidate?.collectionName)
+    }
+
+    /** And the track's own single still comes before its album. */
+    @Test
+    fun `the track's own single outranks the album it is on`() {
+        val single = candidate("Some Act", "Song", "Song - Single", releaseDate = "2005-01-01")
+        val album = candidate("Some Act", "Song", "The Studio Album", releaseDate = "2005-02-14").copy(trackCount = 13)
+
+        assertEquals("Song - Single", choose("SOME ACT", "SONG", listOf(album, single))?.candidate?.collectionName)
+    }
+
+    /**
+     * Confidence has to say what kind of release this is.
+     *
+     * A label anthology or a compilation is worth keeping when nothing better
+     * carries the track, but it is a package rather than this record's cover, so
+     * it is never reported HIGH however exactly the artist and title match.
+     */
+    @Test
+    fun `a compilation or anthology is never high confidence`() {
+        val anthology = candidate("Some Act", "Song", "[Label] 40 Years - EP", releaseDate = "2004-02-09").copy(trackCount = 5)
+        val series = candidate(
+            "Some Act", "Song", "Club Sounds Volume 12",
+            collectionArtist = "Various Artists", releaseDate = "2004-01-01",
+        )
+
+        for (only in listOf(anthology, series)) {
+            val choice = choose("SOME ACT", "SONG", listOf(only))
+            assertNotNull("the artwork is still worth keeping", choice)
+            assertTrue(
+                "${only.collectionName} was reported ${choice!!.confidence}",
+                choice.confidence != ArtworkConfidence.HIGH,
+            )
+        }
+    }
+
+    /**
+     * A release the station's act does not lead is somebody else's - a later
+     * re-recording, or a single that carries them as a guest. It is demoted, so it
+     * cannot outrank the act's own release just by being a "- Single".
+     */
+    @Test
+    fun `a re-release led by another act loses to the act's own album`() {
+        val reRelease = candidate("Another Act & Some Act", "Song", "Song - Single", releaseDate = "2017-06-01")
+        val original = candidate("Some Act", "Song", "The Studio Album", releaseDate = "2007-03-01").copy(trackCount = 11)
+
+        val choice = choose("SOME ACT", "SONG", listOf(reRelease, original))
+
+        assertEquals("The Studio Album", choice?.candidate?.collectionName)
     }
 
     // ============== stability ==============

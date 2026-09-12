@@ -106,7 +106,9 @@ object ArtworkMatcher {
 
     /**
      * Version words that usually mean *different artwork*: a remix single, a live
-     * album, an acoustic session. Rejected when the station did not ask for one.
+     * album, an acoustic session. A candidate carrying one when the station asked
+     * for none is not refused - it drops to [Level.ALTERNATE] and is used only
+     * when no plainer release was offered.
      *
      * Grouped into families because a station that says "remix" should be allowed
      * any remix, not only the one whose DJ it happens to name.
@@ -125,12 +127,14 @@ object ArtworkMatcher {
     /**
      * The families that mean a *different record*, and so a different cover: a
      * remix single, a live album, an acoustic session, an instrumental. A
-     * candidate carrying one of these when the station asked for none is rejected.
+     * candidate carrying one of these when the station asked for none drops to
+     * [Level.ALTERNATE], below every release of the recording itself.
      *
      * [EDIT_FAMILY] is deliberately not among them. A radio edit or a single
      * version is the same recording trimmed, released under the same artwork, so
-     * rejecting it costs a correct cover and gains nothing - it is demoted instead
-     * (see [titleTier]), which lets a plain title win whenever there is one.
+     * treating it as another record costs a correct cover and gains nothing - it
+     * keeps its level and loses on [titleTier] instead, which lets a plain title
+     * win whenever there is one.
      */
     private val VERSION_ALTERING = listOf(REMIX_FAMILY, LIVE_FAMILY, ACOUSTIC_FAMILY, INSTRUMENTAL_FAMILY)
 
@@ -456,7 +460,8 @@ object ArtworkMatcher {
      * The order the owner asked for, as a fixed sequence of comparisons: the
      * rung of the hierarchy first, then how exactly the artist and the title
      * match, then the earliest such release, then the track's own single or EP
-     * over an album that merely contains it, then the fuller release.
+     * over an album that merely contains it, and finally the leaner release of
+     * two dated alike - the album rather than the retrospective drawn from it.
      *
      * The last comparison is lexicographic rather than positional on purpose: the
      * provider's own ordering is never consulted, so the same candidates always

@@ -150,21 +150,25 @@ class ArtworkRepositoryDispatchTest {
     }
 
     /**
-     * Source priority, and the shape of a cold miss: iTunes is asked three times
-     * before Deezer is asked at all. Every one of those is a serial round trip.
+     * The shape of a cold miss since G5b: iTunes is asked, and nothing else is.
+     *
+     * This used to assert the opposite - that Deezer was asked next and its answer
+     * used. What Deezer was asked for was the *artist's photograph*, which is not
+     * the record's artwork; the Last.fm call beside it travelled over a key the
+     * service rejects outright. Both are gone, so a track iTunes cannot place now
+     * resolves to no cover, and the player draws its own plate for it.
      */
     @Test
-    fun theFallbacksKeepTheirOrderWhenItunesFindsNothing() {
+    fun itunesIsTheOnlySourceAndAMissIsNoCover() {
         val canned = CannedResponses().apply { itunes = ITUNES_EMPTY }
         val repository = repositoryAnswering(canned)
 
         val result = runBlocking { repository.fetchArtwork("Bronski Beat", "Smalltown Boy") }
 
-        assertEquals("https://example.invalid/artist-xl.jpg", result.coverUrl)
+        assertEquals("a miss is no cover, not a picture of the band", null, result.coverUrl)
         assertTrue(
-            "iTunes is exhausted before Deezer is tried, one request at a time: ${canned.hosts}",
-            canned.hosts.takeWhile { it.contains("itunes") }.isNotEmpty() &&
-                canned.hosts.first { !it.contains("itunes") }.contains("deezer")
+            "only iTunes may be asked, but these hosts were: ${canned.hosts}",
+            canned.hosts.isNotEmpty() && canned.hosts.all { it.contains("itunes") }
         )
     }
 

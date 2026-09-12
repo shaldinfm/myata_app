@@ -150,22 +150,33 @@ class ArtworkRepositoryDispatchTest {
     }
 
     /**
-     * Source priority, and the shape of a cold miss: iTunes is asked three times
-     * before Deezer is asked at all. Every one of those is a serial round trip.
+     * The shape of a cold miss: iTunes first, and only when it matches nothing at
+     * all does the artist's photograph stand in - step 5 of the owner's fallback
+     * hierarchy, ahead of the branded plate but behind every release.
+     *
+     * What it must never do is pass that photograph off as a release's cover, so
+     * the result says which it is. Last.fm is not asked at all: its key is
+     * rejected by the service.
      */
     @Test
-    fun theFallbacksKeepTheirOrderWhenItunesFindsNothing() {
+    fun anItunesMissFallsBackToTheArtistImage() {
         val canned = CannedResponses().apply { itunes = ITUNES_EMPTY }
         val repository = repositoryAnswering(canned)
 
         val result = runBlocking { repository.fetchArtwork("Bronski Beat", "Smalltown Boy") }
 
         assertEquals("https://example.invalid/artist-xl.jpg", result.coverUrl)
+        assertEquals(
+            "a photograph of the act must not be reported as a release's cover",
+            com.example.musicplayerapp.data.ArtworkSource.ARTIST_IMAGE,
+            result.source,
+        )
         assertTrue(
-            "iTunes is exhausted before Deezer is tried, one request at a time: ${canned.hosts}",
+            "iTunes is exhausted before the artist image is asked for: ${canned.hosts}",
             canned.hosts.takeWhile { it.contains("itunes") }.isNotEmpty() &&
                 canned.hosts.first { !it.contains("itunes") }.contains("deezer")
         )
+        assertTrue("Last.fm must not be asked: ${canned.hosts}", canned.hosts.none { it.contains("audioscrobbler") })
     }
 
     /**

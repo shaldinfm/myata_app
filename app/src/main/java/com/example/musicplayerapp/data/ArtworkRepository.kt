@@ -1,6 +1,7 @@
 package com.example.musicplayerapp.data
 
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -9,26 +10,53 @@ import okhttp3.Request
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Repository for fetching album/artist artwork from various sources.
+ * Repository for fetching album artwork from a search provider.
  * This is the SINGLE source of truth for artwork in the app.
- * 
- * Sources (in priority order):
- * 1. iTunes (album art)
- * 2. Deezer (artist image)
- * 3. Last.fm (scraping + API)
+ *
+ * ## Sources (G5b)
+ *
+ * The owner's fallback hierarchy, in order, and the plate is the *last* rung
+ * rather than the preferred one:
+ *
+ *  1. iTunes, ranked by [ArtworkMatcher] - a canonical release, else a reissue,
+ *     else another version of the track, else a compilation that carries it;
+ *  2. Deezer's picture of the artist, when iTunes matched nothing at all. It is
+ *     returned as [ArtworkSource.ARTIST_IMAGE] and never pretends to be a
+ *     release's cover;
+ *  3. nothing, which the player draws as its own branded plate.
+ *
+ * **Last.fm is not in the list.** It was asked over an API key the service
+ * rejects outright - HTTP 403, "Invalid API key", every time we have measured it -
+ * so that path could only ever cost a round trip and return nothing. The scrape
+ * beside it read whatever `og:image` a page happened to carry. Both are gone; a
+ * working key or a replacement provider is a separate, owner-approved change.
+ *
+ * Which of the iTunes candidates is the right one is [ArtworkMatcher]'s decision,
+ * not this class's: everything here is the request, the parse and the cache.
  */
 class ArtworkRepository(private val httpClient: OkHttpClient) {
-    
-    companion object {
-        private const val LAST_FM_API_KEY = "4361b8f101111d4e0220aa025a7cc3e1"
-    }
 
-    // In-memory cache: key = "artist|track"
+    /**
+     * In-memory cache, keyed on the *whole* pair.
+     *
+     * The key used to be the artist cut at its first separator and the title with
+     * every bracket and the word "remix" stripped out, so `Song`, `Song (Live)`
+     * and `Song (X Remix)` were one key and the first answer served all three.
+     * Now that a version marker decides which release is correct, it has to be
+     * part of the identity of the question as well (G5 recon, cache correctness).
+     */
     private val cache = ConcurrentHashMap<String, ArtworkResult>()
-    
+
+    /**
+     * @property confidence how sure the matcher was, for logs and tests. Nothing
+     *   in the UI reads it and nothing persists it.
+     */
     data class ArtworkResult(
         val coverUrl: String?,
-        val backgroundUrl: String? = null
+        val backgroundUrl: String? = null,
+        val confidence: ArtworkConfidence? = null,
+        /** Whether [coverUrl] is a release's cover or a stand-in picture of the act. */
+        val source: ArtworkSource? = null,
     )
 
     /**
@@ -41,58 +69,70 @@ class ArtworkRepository(private val httpClient: OkHttpClient) {
      * into its own catch, so the result was an empty one that then got cached.
      */
     suspend fun fetchArtwork(artist: String, track: String): ArtworkResult {
-        val cleanArtist = getCleanArtistName(artist)
-        val cleanTrack = track
-            .replace(Regex("\\(.*?\\)|\\[.*?\\]"), "")
-            .replace(Regex("(?i)\\b(RMX|REMIX)\\b"), "")
-            .trim()
-
-        val cacheKey = "$cleanArtist|$cleanTrack"
+        val cacheKey = "${TrackKey.normalize(artist)}\u001F${TrackKey.normalize(track)}"
 
         // Return cached result if available. Deliberately ahead of the switch, so
         // a hit costs the caller no dispatch at all.
         cache[cacheKey]?.let { return it }
 
         return withContext(Dispatchers.IO) {
-            var resultUrl: String? = null
+            val queryArtist = searchableArtist(artist)
+            val queryTitle = searchableTitle(track)
 
+            var choice: ArtworkChoice? = null
             try {
-                // Stage 1: iTunes search with clean artist + track
-                val queryArtist = cleanArtist.replace("&", " ")
-                val query1 = "$queryArtist $cleanTrack"
+                // Stage 1: the artist as the provider is most likely to index it,
+                // with the title's own name and no version brackets.
+                val query1 = "$queryArtist $queryTitle".trim()
                 Log.d("ArtworkRepo", "Stage 1: $query1")
-                resultUrl = executeItunesSearch(query1, cleanArtist, cleanTrack)
+                choice = executeItunesSearch(query1, artist, track)
 
-                // Stage 2: Full artist + clean track
-                if (resultUrl == null && artist != cleanArtist) {
-                    val query2 = "$artist $cleanTrack"
+                // Stage 2: the artist exactly as the station wrote it, credits and
+                // all - some collaborations are indexed under the full string.
+                if (choice == null && queryArtist != artist.trim()) {
+                    val query2 = "${artist.trim()} $queryTitle".trim()
                     Log.d("ArtworkRepo", "Stage 2: $query2")
-                    resultUrl = executeItunesSearch(query2, artist, cleanTrack)
+                    choice = executeItunesSearch(query2, artist, track)
                 }
 
-                // Stage 3: Track only (fallback for compilations)
-                if (resultUrl == null && cleanTrack.length >= 4) {
-                    Log.d("ArtworkRepo", "Stage 3 (Track only): $cleanTrack")
-                    resultUrl = executeItunesSearch(cleanTrack, artist, cleanTrack)
+                // Stage 3: the title alone. Safe to try now that the artist has to
+                // match by identity: before G5b this stage was where an unrelated
+                // act with a similar name could win.
+                if (choice == null && queryTitle.length >= 4) {
+                    Log.d("ArtworkRepo", "Stage 3 (Track only): $queryTitle")
+                    choice = executeItunesSearch(queryTitle, artist, track)
                 }
-
             } catch (e: Exception) {
                 Log.e("ArtworkRepo", "iTunes search error", e)
             }
 
-            // Deezer fallback (artist image)
-            if (resultUrl == null) {
-                Log.d("ArtworkRepo", "Trying Deezer for artist image...")
-                resultUrl = fetchArtistImageFromDeezer(cleanArtist)
+            val result = if (choice != null) {
+                Log.d(
+                    "ArtworkRepo",
+                    "Cover for $artist - $track: ${choice.candidate.collectionName} " +
+                        "[${choice.confidence}] ${choice.reason}"
+                )
+                ArtworkResult(
+                    coverUrl = choice.candidate.artworkUrl,
+                    confidence = choice.confidence,
+                    source = ArtworkSource.RELEASE,
+                )
+            } else {
+                // Step 5: no release could be matched, so the act's own picture
+                // stands in rather than the plate. Marked as what it is.
+                val artistImage = fetchArtistImageFromDeezer(queryArtist)
+                if (artistImage != null) {
+                    Log.d("ArtworkRepo", "Artist image for $artist - $track (no release matched)")
+                } else {
+                    Log.d("ArtworkRepo", "Nothing found at all for $artist - $track")
+                }
+                ArtworkResult(
+                    coverUrl = artistImage,
+                    confidence = artistImage?.let { ArtworkConfidence.LOW },
+                    source = artistImage?.let { ArtworkSource.ARTIST_IMAGE },
+                )
             }
 
-            // Last.fm fallback (scrape)
-            if (resultUrl == null) {
-                Log.d("ArtworkRepo", "Trying Last.fm scrape...")
-                resultUrl = fetchArtistImageFromLastFm(cleanArtist, cleanTrack)
-            }
-
-            val result = ArtworkResult(coverUrl = resultUrl)
             cache[cacheKey] = result
             result
         }
@@ -100,7 +140,7 @@ class ArtworkRepository(private val httpClient: OkHttpClient) {
 
     // ==================== iTunes ====================
 
-    private fun executeItunesSearch(term: String, expectedArtist: String, expectedTrack: String): String? {
+    private fun executeItunesSearch(term: String, expectedArtist: String, expectedTrack: String): ArtworkChoice? {
         val encodedTerm = java.net.URLEncoder.encode(term, "UTF-8")
         val url = "https://itunes.apple.com/search?term=$encodedTerm&media=music&entity=song&limit=20"
 
@@ -108,322 +148,120 @@ class ArtworkRepository(private val httpClient: OkHttpClient) {
 
         return httpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) return@use null
-            
+
             val bodyContent = response.body?.string() ?: return@use null
-            val json = Gson().fromJson(bodyContent, Map::class.java)
-            @Suppress("UNCHECKED_CAST")
-            val results = json["results"] as? List<Map<String, Any>> ?: return@use null
+            val candidates = parseCandidates(bodyContent)
+            if (candidates.isEmpty()) return@use null
 
-            if (results.isEmpty()) return@use null
-
-            val simpleExpectedArtist = simplifyString(expectedArtist)
-            val simpleExpectedTrack = simplifyString(expectedTrack)
-            val validMatches = mutableListOf<Map<String, Any>>()
-
-            for (item in results) {
-                val trackName = item["trackName"] as? String ?: continue
-                val artistName = item["artistName"] as? String ?: continue
-                val artworkUrl = item["artworkUrl100"] as? String ?: continue
-
-                val simpleArtistName = simplifyString(artistName)
-                val simpleTrackName = simplifyString(trackName)
-
-                val matchArtist = isFuzzyMatch(simpleArtistName, simpleExpectedArtist) ||
-                                  isWordMatch(simpleArtistName, simpleExpectedArtist) ||
-                                  isWordMatch(simpleExpectedArtist, simpleArtistName) ||
-                                  isTransliterationMatch(simpleArtistName, simpleExpectedArtist)
-
-                val matchTrack = isWordMatch(simpleTrackName, simpleExpectedTrack) ||
-                                 isTransliterationMatch(simpleTrackName, simpleExpectedTrack)
-
-                // Exclude piano covers
-                val isPianoCover = (simpleTrackName.contains("piano") || simpleArtistName.contains("piano")) &&
-                                   !simpleExpectedTrack.contains("piano") &&
-                                   !simpleExpectedArtist.contains("piano")
-
-                if (matchArtist && matchTrack && !isPianoCover) {
-                    validMatches.add(item)
-                }
-            }
-
-            if (validMatches.isEmpty()) return@use null
-
-            val bestMatch = validMatches.maxByOrNull { item ->
-                val collectionName = item["collectionName"] as? String ?: ""
-                val itemName = item["trackName"] as? String ?: ""
-                calculateAlbumPriority(collectionName, itemName, expectedTrack)
-            }
-            
-            bestMatch?.get("artworkUrl100")?.toString()?.replace("100x100bb", "600x600bb")
+            ArtworkMatcher.choose(expectedArtist, expectedTrack, candidates)
         }
     }
 
-    private fun calculateAlbumPriority(collectionName: String, trackName: String?, expectedTrack: String?): Int {
-        val lowerName = collectionName.lowercase()
-        var score = 1
+    /**
+     * The provider's answer as [ArtworkCandidate]s. Anything without the three
+     * fields a decision needs - who, what, and a picture - is not a candidate.
+     */
+    @VisibleForTesting
+    internal fun parseCandidates(body: String): List<ArtworkCandidate> {
+        val json = Gson().fromJson(body, Map::class.java) ?: return emptyList()
 
-        // Penalize compilations
-        if (lowerName.contains("greatest hits") || lowerName.contains("best of") ||
-            lowerName.contains("essential") || lowerName.contains("anthology") ||
-            lowerName.contains("collection") || lowerName.contains("compilation")) {
-            return 0
+        @Suppress("UNCHECKED_CAST")
+        val results = json["results"] as? List<Map<String, Any>> ?: return emptyList()
+
+        return results.mapNotNull { item ->
+            val trackName = item["trackName"] as? String ?: return@mapNotNull null
+            val artistName = item["artistName"] as? String ?: return@mapNotNull null
+            val artworkUrl = item["artworkUrl100"] as? String ?: return@mapNotNull null
+
+            ArtworkCandidate(
+                trackName = trackName,
+                artistName = artistName,
+                collectionName = item["collectionName"] as? String ?: "",
+                collectionArtistName = item["collectionArtistName"] as? String,
+                releaseDate = item["releaseDate"] as? String,
+                trackCount = (item["trackCount"] as? Number)?.toInt(),
+                artworkUrl = artworkUrl.replace("100x100bb", "600x600bb"),
+            )
         }
-
-        // Penalize piano/tribute if not expected
-        if (expectedTrack != null) {
-            val lowerTrack = trackName?.lowercase() ?: ""
-            val lowerExpected = expectedTrack.lowercase()
-            if ((lowerTrack.contains("piano") || lowerTrack.contains("tribute") || lowerTrack.contains("cover")) &&
-                !lowerExpected.contains("piano") && !lowerExpected.contains("tribute") && !lowerExpected.contains("cover")) {
-                return -5
-            }
-        }
-
-        // Boost singles
-        if (lowerName.contains(" - single") || lowerName.contains(" (single)")) {
-            score += 2
-        }
-
-        // Boost title tracks
-        if (trackName != null) {
-            val simpleTrack = simplifyString(trackName)
-            val simpleColl = simplifyString(collectionName)
-            if (simpleColl.contains(simpleTrack)) {
-                score += 3
-            }
-        }
-
-        return score
     }
 
-    // ==================== Deezer ====================
+    // ==================== artist image (last resort) ====================
 
+    /**
+     * A picture of the act, for when no release could be matched at all.
+     *
+     * Step 5 of the hierarchy, and deliberately strict about *who*: the Deezer
+     * result's name has to be the same act by the matcher's own reading, so a
+     * search for one artist cannot come back with a photograph of another. It is
+     * still only a photograph, which is why the result carries
+     * [ArtworkSource.ARTIST_IMAGE].
+     */
     private fun fetchArtistImageFromDeezer(artist: String): String? {
+        if (artist.isBlank()) return null
         try {
-            val encodedTerm = java.net.URLEncoder.encode(artist, "UTF-8")
-            val url = "https://api.deezer.com/search/artist?q=$encodedTerm"
-
+            val encoded = java.net.URLEncoder.encode(artist, "UTF-8")
             val request = Request.Builder()
-                .url(url)
+                .url("https://api.deezer.com/search/artist?q=$encoded")
                 .header("User-Agent", "MyataRadio/1.0")
                 .build()
 
             httpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return null
 
-                val bodyContent = response.body?.string() ?: return null
-                val json = Gson().fromJson(bodyContent, Map::class.java)
+                val body = response.body?.string() ?: return null
+                val json = Gson().fromJson(body, Map::class.java) ?: return null
+
                 @Suppress("UNCHECKED_CAST")
                 val data = json["data"] as? List<Map<String, Any>> ?: return null
 
-                val simpleExpected = simplifyString(artist)
-
                 for (item in data) {
                     val name = item["name"] as? String ?: continue
-                    if (simplifyString(name) == simpleExpected) {
-                        val pic = item["picture_xl"] as? String ?: item["picture_big"] as? String
-                        if (pic != null && !pic.contains("/artist//")) {
-                            return pic
-                        }
-                    }
+                    if (!ArtworkMatcher.sameArtist(artist, name)) continue
+                    val picture = item["picture_xl"] as? String
+                        ?: item["picture_big"] as? String
+                        ?: continue
+                    // Deezer answers with a placeholder path when it holds no photo.
+                    if (picture.contains("/artist//")) continue
+                    return picture
                 }
             }
         } catch (e: Exception) {
-            Log.e("ArtworkRepo", "Deezer error: ${e.message}")
+            Log.e("ArtworkRepo", "Deezer artist image failed: ${e.message}")
         }
         return null
     }
 
-    // ==================== Last.fm ====================
+    // ==================== query text ====================
 
-    private fun fetchArtistImageFromLastFm(artist: String, track: String?): String? {
-        try {
-            val finalArtist = java.net.URLEncoder.encode(artist, "UTF-8")
-
-            // Try track page first
-            if (track != null) {
-                val finalTrack = java.net.URLEncoder.encode(track, "UTF-8")
-                val trackUrl = "https://www.last.fm/music/$finalArtist/_/$finalTrack"
-                scrapeLastFmPage(trackUrl)?.let { return it }
-            }
-
-            // Try artist API
-            tryFetchArtistImage(artist)?.let { return it }
-
-            // Try splitting artist names
-            val separators = listOf(" & ", " vs. ", " feat. ", " ft. ", " pres. ", " / ", " x ", ", ")
-            for (sep in separators) {
-                if (artist.contains(sep, ignoreCase = true)) {
-                    val primaryArtist = artist.split(sep, ignoreCase = true)[0].trim()
-                    if (primaryArtist.isNotEmpty() && primaryArtist != artist) {
-                        tryFetchArtistImage(primaryArtist)?.let { return it }
-                    }
-                }
-            }
-
-        } catch (e: Exception) {
-            Log.e("ArtworkRepo", "Last.fm error: ${e.message}")
-        }
-        return null
+    /**
+     * The artist as a search term: the credited act, without the guests.
+     *
+     * It removes credits (`feat.`, `ft.`, `with`, `pres.`) and bracketed asides,
+     * and nothing else. In particular it does **not** cut the name at a comma or a
+     * slash the way `getCleanArtistName` did, which searched iTunes for `AC` when
+     * the station was playing `AC/DC`, and for `Earth` when it was playing
+     * `Earth, Wind & Fire`.
+     */
+    private fun searchableArtist(artist: String): String {
+        val withoutBrackets = artist.replace(Regex("\\(.*?\\)|\\[.*?\\]|\\{.*?\\}"), " ")
+        val credit = Regex("(?i)\\b(feat\\.?|ft\\.?|featuring|with|pres\\.?|presents)\\b")
+        val head = credit.split(withoutBrackets).firstOrNull().orEmpty()
+        return head.replace(Regex("\\s+"), " ").trim().ifEmpty { artist.trim() }
     }
 
-    private fun scrapeLastFmPage(url: String): String? {
-        try {
-            val request = Request.Builder()
-                .url(url)
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-                .build()
-
-            httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return null
-                val html = response.body?.string() ?: return null
-
-                val regex = Regex("property=[\"']og:image[\"']\\s+content=[\"']([^\"']+)[\"']|content=[\"']([^\"']+)[\"']\\s+property=[\"']og:image[\"']")
-                val match = regex.find(html) ?: return null
-
-                val result = match.groups[1]?.value ?: match.groups[2]?.value ?: return null
-
-                // Filter out placeholder images
-                if (result.contains("default_artist") || result.contains("star_") ||
-                    result.contains("lastfm_logo") || result.contains("15d8133be114.png") ||
-                    result.contains("4128a6eb29f94943c9d206c08e625904") ||
-                    result.contains("2a96cbd8b46e442fc41c2b86b821562f") ||
-                    result.contains("c6f59c1e5e7240a3a385ca9e9d268632")) {
-                    return null
-                }
-
-                return result.replace("300x300", "600x600")
-            }
-        } catch (e: Exception) {
-            Log.d("ArtworkRepo", "Scrape failed for $url")
-        }
-        return null
-    }
-
-    private fun tryFetchArtistImage(artistName: String): String? {
-        try {
-            // https, not http: cleartext is no longer permitted for this host, and
-            // the api_key travelled in the query string of a plaintext request.
-            val artistUrl = "https://ws.audioscrobbler.com/2.0/?method=artist.getInfo&api_key=$LAST_FM_API_KEY&artist=${java.net.URLEncoder.encode(artistName, "UTF-8")}&format=json"
-            val request = Request.Builder().url(artistUrl).build()
-
-            httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return null
-                val json = response.body?.string() ?: return null
-                val jsonObject = org.json.JSONObject(json)
-                val artistObj = jsonObject.optJSONObject("artist") ?: return null
-                val images = artistObj.optJSONArray("image") ?: return null
-
-                for (i in images.length() - 1 downTo 0) {
-                    val img = images.getJSONObject(i)
-                    val imgUrl = img.optString("#text")
-                    if (imgUrl.isNotEmpty() &&
-                        !imgUrl.contains("2a96cbd8b46e442fc41c2b86b821562f") &&
-                        !imgUrl.contains("4128a6eb29f94943c9d206c08e625904") &&
-                        !imgUrl.contains("c6f59c1e5e7240a3a385ca9e9d268632")) {
-                        return imgUrl
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            // Ignore errors
-        }
-        return null
-    }
-
-    // ==================== String Helpers ====================
-
-    private fun simplifyString(input: String): String {
-        val nfd = java.text.Normalizer.normalize(input, java.text.Normalizer.Form.NFD)
-        val pattern = java.util.regex.Pattern.compile("\\p{InCombiningDiacriticalMarks}+")
-        var clean = pattern.matcher(nfd).replaceAll("")
-
-        clean = clean.replace("Ø", "O", ignoreCase = true)
-                     .replace("ø", "o", ignoreCase = true)
-                     .replace("Æ", "AE", ignoreCase = true)
-                     .replace("æ", "ae", ignoreCase = true)
-
-        val connectors = Regex("(?i)\\b(feat\\.|ft\\.|vs\\.|feat|ft|vs|and|featuring|presents|pres\\.)\\b|&")
-        clean = connectors.replace(clean, " ")
-
-        clean = clean.replace(Regex("[^\\p{L}\\p{Nd}]"), " ").lowercase()
-        return clean.replace(Regex("\\s+"), " ").trim()
-    }
-
-    private fun getCleanArtistName(artist: String): String {
-        val splitRegex = Regex("[,|;*\\\\/]|(?i)\\b(feat\\.?|ft\\.?|vs\\.?|pres\\.?|with|featuring|x)\\b", RegexOption.IGNORE_CASE)
-        var cleaned = artist.split(splitRegex)[0]
-
-        cleaned = cleaned.replace(Regex("\\(.*?\\)|\\{.*?\\}|\\[.*?\\]"), "")
-
-        // Normalize diacritics
-        cleaned = cleaned.replace("ð", "d", ignoreCase = true)
-            .replace("Ð", "D").replace("ø", "o", ignoreCase = true)
-            .replace("Ø", "O").replace("æ", "ae", ignoreCase = true)
-            .replace("Æ", "AE").replace("þ", "th", ignoreCase = true)
-            .replace("Þ", "TH").replace("í", "i", ignoreCase = true)
-            .replace("ï", "i", ignoreCase = true).replace("ü", "u", ignoreCase = true)
-            .replace("ö", "o", ignoreCase = true).replace("ä", "a", ignoreCase = true)
-            .replace("ë", "e", ignoreCase = true).replace("ñ", "n", ignoreCase = true)
-            .replace("ß", "ss")
-
-        cleaned = cleaned.replace(" & ", " and ").replace(" + ", " and ")
-        cleaned = cleaned.replace(Regex("[^\\p{L}\\p{N}\\s&'\\+\\-,.]"), " ")
-
-        return cleaned.trim()
-    }
-
-    private fun isFuzzyMatch(text1: String, text2: String): Boolean {
-        val stopWords = setOf("the", "a", "an", "or", "of", "feat", "ft", "vs", "featuring", "presents", "pres", "with", "&")
-
-        fun getTokens(text: String): Set<String> {
-            return text.lowercase()
-                .split(Regex("[\\s\\p{Punct}]+"))
-                .filter { it.length > 1 && !stopWords.contains(it) }
-                .toSet()
-        }
-
-        val tokens1 = getTokens(text1)
-        val tokens2 = getTokens(text2)
-
-        if (tokens1.isEmpty() || tokens2.isEmpty()) return false
-
-        val intersection = tokens1.intersect(tokens2)
-        val ratio1 = intersection.size.toDouble() / tokens1.size
-        val ratio2 = intersection.size.toDouble() / tokens2.size
-
-        return ratio1 >= 0.66 || ratio2 >= 0.66
-    }
-
-    private fun isWordMatch(text: String, word: String): Boolean {
-        if (word.isEmpty()) return true
-        return try {
-            val pattern = "\\b${java.util.regex.Pattern.quote(word)}\\b".toRegex()
-            pattern.containsMatchIn(text)
-        } catch (e: Exception) {
-            text.contains(word)
-        }
-    }
-
-    private fun transliterate(text: String): String {
-        val mapping = mapOf(
-            'а' to "a", 'б' to "b", 'в' to "v", 'г' to "g", 'д' to "d", 'е' to "e", 'ё' to "e",
-            'ж' to "zh", 'з' to "z", 'и' to "i", 'й' to "y", 'к' to "k", 'л' to "l", 'м' to "m",
-            'н' to "n", 'о' to "o", 'п' to "p", 'р' to "r", 'с' to "s", 'т' to "t", 'у' to "u",
-            'ф' to "f", 'х' to "kh", 'ц' to "ts", 'ч' to "ch", 'ш' to "sh", 'щ' to "shch",
-            'ъ' to "", 'ы' to "y", 'ь' to "", 'э' to "e", 'ю' to "yu", 'я' to "ya"
-        )
-        val sb = StringBuilder()
-        for (char in text.lowercase()) {
-            sb.append(mapping[char] ?: char)
-        }
-        return sb.toString()
-    }
-
-    private fun isTransliterationMatch(text1: String, text2: String): Boolean {
-        val t1 = transliterate(text1)
-        val t2 = transliterate(text2)
-        return t1.contains(t2, ignoreCase = true) || t2.contains(t1, ignoreCase = true)
+    /**
+     * The title as a search term: its own name, without the version brackets.
+     *
+     * The marker is dropped from the *query* only, so the search reaches the
+     * release, and it is fully honoured when the answers are judged - a station
+     * asking for a live take will not be given the studio cover, because
+     * [ArtworkMatcher] still requires the versions to agree.
+     */
+    private fun searchableTitle(track: String): String {
+        val withoutBrackets = track.replace(Regex("\\(.*?\\)|\\[.*?\\]"), " ")
+        val dash = withoutBrackets.indexOf(" - ")
+        val head = if (dash > 0) withoutBrackets.substring(0, dash) else withoutBrackets
+        return head.replace(Regex("\\s+"), " ").trim().ifEmpty { track.trim() }
     }
 
     /**

@@ -2,7 +2,6 @@ package com.example.musicplayerapp.fragments
 
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -30,11 +29,11 @@ import com.example.musicplayerapp.data.PlayerState
 import com.example.musicplayerapp.databinding.FragmentMyataStreamBinding
 import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.ui.BroadcastHistoryState
+import com.example.musicplayerapp.ui.CoverArt
 import com.example.musicplayerapp.ui.PlayerControl
 import com.example.musicplayerapp.ui.PlayerControlState
 import kotlinx.coroutines.Job
 import com.example.musicplayerapp.utils.ServiceUtils
-import com.squareup.picasso.Picasso
 import android.content.ClipboardManager
 import android.content.ClipData
 import android.content.Context
@@ -523,92 +522,31 @@ class MyataStreamFragment() : Fragment() {
     }
 
     fun updateUI(it: PlayerState){
-        if (it != null) {
-            if(it.artist!=null) {
-                if(!it.artist!!.isBlank()) {
-                    if (it.img != null && !it.img!!.isBlank() && it.img != "NO_IMAGE") {
-                        // Only reload image if URL has changed
-                    if (currentImageUrl != it.img) {
-                        currentImageUrl = it.img
-                        
-                        // Only animate if we haven't animated this URL yet
-                        if (vm.lastAnimatedImageUrl != it.img) {
-                            vm.lastAnimatedImageUrl = it.img
-                            // Load new image directly without placeholder to keep old image visible
-                            binding.photo.alpha = 1f
-                            Picasso.get()
-                                .load(Uri.parse(it.img))
-                                .noPlaceholder()
-                                .error(R.drawable.zaglushka_logo)
-                                .fit()
-                                .centerCrop()
-                                .into(binding.photo, object : com.squareup.picasso.Callback {
-                                    override fun onSuccess() {
-                                        Log.d("Picasso", "Image loaded successfully: ${it.img}")
-                                    }
-                                    override fun onError(e: Exception?) {
-                                        currentImageUrl = "NO_IMAGE"
-                                        binding.photo.setImageResource(R.drawable.zaglushka_logo)
-                                        Log.e("Picasso", "Error loading image: ${it.img}", e)
-                                    }
-                                })
-                        } else {
-                            // Already animated this URL - just load without placeholder
-                            binding.photo.alpha = 1f
-                            Picasso.get()
-                                .load(Uri.parse(it.img))
-                                .noPlaceholder()
-                                .error(R.drawable.zaglushka_logo)
-                                .fit()
-                                .centerCrop()
-                                .into(binding.photo, object : com.squareup.picasso.Callback {
-                                    override fun onError(e: Exception?) {
-                                        currentImageUrl = "NO_IMAGE"
-                                        binding.photo.setImageResource(R.drawable.zaglushka_logo)
-                                        Log.e("Picasso", "Error loading image: ${it.img}", e)
-                                    }
+        val artist = it.artist
 
-                                    override fun onSuccess() {
-                                        // Image loaded successfully
-                                    }
-                                })
-                        }
-                    } else {
-                        // Same image - ensure alpha is 1f (in case it was changed)
-                        binding.photo.alpha = 1f
-                    }
-                    } else if (it.img == "NO_IMAGE") {
-                         // No image found by API - show logo placeholder
-                         // Always force update if current is not NO_IMAGE or if it's null
-                         if (currentImageUrl != "NO_IMAGE") {
-                             currentImageUrl = "NO_IMAGE"
-                             binding.photo.setImageResource(R.drawable.zaglushka_logo)
-                             binding.photo.alpha = 1f
-                         }
-                    }
-                    // For null/blank img during track transitions, keep existing image
-                    // Picasso will handle placeholder during loading
-
-                    binding.mainSong.text = it.song
-                    binding.mainAuthor.text = it.artist
-                    
-                }
-                else{
-                    currentImageUrl = null
-                    binding.mainAuthor.text = getString(R.string.slogan_placeholder)
-                    binding.mainSong.text = getString(R.string.brand_name)
-                    // Show logo placeholder immediately without animation
-                    binding.photo.setImageResource(R.drawable.zaglushka_logo)
-                    binding.photo.alpha = 1f
-                }
-            }
-        }
-        else {
+        if (artist.isNullOrBlank()) {
+            // Nothing is playing yet, or the metadata is between tracks: the brand
+            // pair and the plate, as before. The plate matters here too - a state
+            // with no metadata must not keep the last track's cover either.
             currentImageUrl = null
             binding.mainAuthor.text = getString(R.string.slogan_placeholder)
             binding.mainSong.text = getString(R.string.brand_name)
             binding.photo.setImageResource(R.drawable.zaglushka_logo)
             binding.photo.alpha = 1f
+            return
+        }
+
+        binding.mainSong.text = it.song
+        binding.mainAuthor.text = artist
+
+        // The cover the ViewModel says belongs to *this* track, and nothing else.
+        // A track change arrives here with no cover yet - the lookup for it has
+        // only just started - and CoverArt puts the plate up for it rather than
+        // leaving the finished track's artwork standing under the new title
+        // (G5 recon, issue B). It is the same call the Mini Player makes, so the
+        // two surfaces cannot disagree about when a cover comes down.
+        currentImageUrl = CoverArt.render(binding.photo, it.img, currentImageUrl) {
+            currentImageUrl = null
         }
     }
 

@@ -1,14 +1,12 @@
 package com.example.musicplayerapp.ui
 
 import android.view.View
-import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat
 import androidx.lifecycle.LifecycleOwner
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.StreamsViewModel
 import com.example.musicplayerapp.databinding.ViewMiniPlayerBinding
-import com.squareup.picasso.Picasso
 
 /**
  * Binds the frozen 3.6.6 Mini Player to the playback state the app already has.
@@ -142,23 +140,13 @@ class MiniPlayer(
     }
 
     private fun loadArtwork(url: String?) {
-        if (url == loadedArtworkUrl) return
-        loadedArtworkUrl = url
-
-        if (url == null) {
-            views.miniPlayerArtwork.setImageResource(R.drawable.zaglushka_logo)
-            return
+        // The player screen's rule, called the same way: the cover comes down as
+        // soon as the track's does, and the plate stands until the next one has
+        // decoded. Before G5a this kept the previous cover up through a track
+        // change, which is the pill's half of recon issue B.
+        loadedArtworkUrl = CoverArt.render(views.miniPlayerArtwork, url, loadedArtworkUrl) {
+            loadedArtworkUrl = null
         }
-        // noPlaceholder so the previous cover stays put while the next one
-        // decodes, which is what the player screen does and what stops the pill
-        // flashing the logo on every track change.
-        Picasso.get()
-            .load(url.toUri())
-            .noPlaceholder()
-            .error(R.drawable.zaglushka_logo)
-            .fit()
-            .centerCrop()
-            .into(views.miniPlayerArtwork)
     }
 
     /**

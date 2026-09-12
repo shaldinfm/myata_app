@@ -56,6 +56,7 @@ import com.example.musicplayerapp.data.ReactionEvent
 import com.example.musicplayerapp.data.*
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -162,7 +163,6 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     @SuppressLint("StaticFieldLeak")
     private val context = getApplication<Application>().applicationContext
     var isUIActive = true
-    var lastAnimatedImageUrl: String? = null  // Track URL of last animated cover art
     var cachedTopInset: Int? = null // Cache for window insets to prevent UI jumping
     
     // Favorites
@@ -188,6 +188,16 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     private val feedbackRepository = FeedbackRepository(client)
     private val artworkRepository = ArtworkRepository(client)
     private val metadataRepository = MetadataRepository(client)
+
+    /**
+     * Which cover each stream's current track is entitled to.
+     *
+     * The one place that decides whether an artwork answer still belongs on
+     * screen. Both writers of the now-playing state go through it, so neither can
+     * publish a cover for a track that has finished, and neither can undo the
+     * other's answer for the track that is playing. See [NowPlayingArtwork].
+     */
+    private val artworkOwner = NowPlayingArtwork()
 
     private var mediaController: MediaController? = null
 
@@ -493,34 +503,40 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
             val artist = metadata.artist?.toString()
             val song = metadata.title?.toString()
             val artUrl = metadata.artworkUri?.toString()
-            
-            if (artist != null && song != null) {
-                // VALIDATION: Identify which stream this metadata belongs to based on the current media item's URI
-                val currentUri = mediaController?.currentMediaItem?.localConfiguration?.uri?.toString() ?: ""
-                val streamKey = when {
-                    currentUri.contains("myata_hits") -> "myata_hits"
-                    currentUri.contains("gold") -> "gold"
-                    currentUri.contains("/myata") || currentUri.endsWith("/myata") -> "myata"
-                    else -> currentStreamLive.value ?: "myata"
-                }
 
-                val newState = PlayerState(artist, song, artUrl)
-                
-                // DEDUPLICATION: Only update if anything actually changed to avoid flickering
-                val currentState = when(streamKey) {
-                    "myata" -> currentMyataState.value
-                    "gold" -> currentGoldState.value
-                    "myata_hits" -> currentXtraState.value
-                    else -> null
-                }
+            if (artist == null || song == null) return
 
-                if (currentState?.artist != artist || currentState?.song != song || currentState?.img != artUrl) {
-                    when(streamKey) {
-                        "myata" -> currentMyataState.postValue(newState)
-                        "gold" -> currentGoldState.postValue(newState)
-                        "myata_hits" -> currentXtraState.postValue(newState)
-                    }
-                }
+            // VALIDATION: Identify which stream this metadata belongs to based on the current media item's URI
+            val currentUri = mediaController?.currentMediaItem?.localConfiguration?.uri?.toString() ?: ""
+            val streamKey = when {
+                currentUri.contains("myata_hits") -> "myata_hits"
+                currentUri.contains("gold") -> "gold"
+                currentUri.contains("/myata") || currentUri.endsWith("/myata") -> "myata"
+                else -> currentStreamLive.value ?: "myata"
+            }
+            val live = liveFor(streamKey) ?: return
+
+            // The second writer of the now-playing state announces its track the
+            // same way the poll does, so a session reporting a new track drops the
+            // previous track's cover here too.
+            val identity = NowPlayingArtwork.identityOf(artist, song)
+            artworkOwner.announce(streamKey, identity)
+
+            // The session's own cover is the service's resolution of this same
+            // track, so it counts as an answer for it. A session that has not
+            // resolved one yet reports null, and null must never take away what the
+            // resolver has already found for the same track (G5 recon, issue 3) -
+            // which is why what gets published is read back from the owner instead
+            // of taken from this callback.
+            if (artUrl != null) artworkOwner.offer(streamKey, identity, artUrl)
+            val img = artworkOwner.current(streamKey)
+
+            val newState = PlayerState(artist, song, img)
+
+            // DEDUPLICATION: Only update if anything actually changed to avoid flickering
+            val currentState = live.value
+            if (currentState?.artist != artist || currentState?.song != song || currentState?.img != img) {
+                live.postValue(newState)
             }
         }
     }
@@ -754,31 +770,12 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         viewModelScope.launch {
             metadataRepository.pollMetadata().collect { states ->
                 states.forEach { (streamKey, newState) ->
-                    val currentStateProp = when (streamKey) {
-                        "myata" -> currentMyataState
-                        "gold" -> currentGoldState
-                        "myata_hits" -> currentXtraState
-                        else -> null
-                    }
+                    val currentStateProp = liveFor(streamKey) ?: return@forEach
+                    val current = currentStateProp.value
 
-                    val current = currentStateProp?.value
-                    
                     // Update metadata if artist/song changed OR if we have no image and current is null
                     if (current == null || current.artist != newState.artist || current.song != newState.song) {
-                        currentStateProp?.postValue(newState)
-                        
-                        // Fetch artwork asynchronously
-                        viewModelScope.launch {
-                            val artwork = artworkRepository.fetchArtwork(newState.artist ?: "", newState.song ?: "")
-                            val latest = currentStateProp?.value
-                            // Update ONLY if still on the same track
-                            if (latest != null && latest.artist == newState.artist && latest.song == newState.song) {
-                                currentStateProp.postValue(latest.copy(
-                                    img = artwork.coverUrl ?: "NO_IMAGE",
-                                    backgroundImg = artwork.backgroundUrl
-                                ))
-                            }
-                        }
+                        publishTrack(streamKey, currentStateProp, newState)
 
                         // Also notify service if this is the active stream to sync lock screen
                         if (currentStreamLive.value == streamKey && isPlaying.value == true) {
@@ -794,6 +791,103 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
                 }
             }
         }
+    }
+
+    /**
+     * The LiveData one stream's now-playing state lives in, or null if that is
+     * not a stream at all.
+     *
+     * Both writers of that state - the poll above and the session callback below -
+     * resolve it through here, so neither can publish one stream's track into
+     * another's state, and an unrecognised key resolves through [Streams.normalise]
+     * rather than falling through to nothing (issue #14).
+     */
+    private fun liveFor(stream: String?): MutableLiveData<PlayerState?>? =
+        when (Streams.normalise(stream)) {
+            Streams.MYATA -> currentMyataState
+            Streams.GOLD -> currentGoldState
+            Streams.XTRA -> currentXtraState
+            else -> null
+        }
+
+    /**
+     * Announces a track on [stream] and publishes it with the cover that belongs
+     * to it - which for a track just starting is usually no cover at all.
+     *
+     * The published state carries what [artworkOwner] holds for this track, never
+     * what the previous state carried. A new track therefore reaches the screen
+     * with its own artwork or with none, and the finished track's cover cannot
+     * stand under the new title while a lookup runs (G5 recon, issue B). When the
+     * same track is re-announced - the poll and the session both report it - the
+     * cover it already owns comes straight back and nothing is looked up again.
+     */
+    private fun publishTrack(
+        stream: String,
+        live: MutableLiveData<PlayerState?>,
+        state: PlayerState,
+    ) {
+        val identity = NowPlayingArtwork.identityOf(state.artist, state.song)
+        val owned = artworkOwner.announce(stream, identity)
+        live.postValue(state.copy(img = owned))
+        if (owned == null) requestArtwork(stream, live, state, identity)
+    }
+
+    /**
+     * Resolves the cover for one track and publishes it if that track is still
+     * the one playing.
+     *
+     * [identity] is what decides that, and deliberately not the LiveData. The
+     * state above is published with `postValue`, which is delivered on a later
+     * main-thread message, while a lookup answered from [ArtworkRepository]'s
+     * cache returns without suspending at all - so reading the state back here
+     * would read the *previous* track and drop the answer it had just been given.
+     * That is what used to happen, and on a repeated track it left the previous
+     * cover on screen for the whole of the new one (G5 recon, issue 2). A cache
+     * hit and a network lookup now take the same path and are checked the same way.
+     */
+    private fun requestArtwork(
+        stream: String,
+        live: MutableLiveData<PlayerState?>,
+        state: PlayerState,
+        identity: String,
+    ) {
+        val artist = state.artist
+        val song = state.song
+
+        if (artist.isNullOrBlank() || song.isNullOrBlank()) {
+            // A stream between tracks has nothing to look a cover up by, and a
+            // search for the empty string is how a cover belonging to no track
+            // would arrive. The plate stands instead.
+            publishArtwork(stream, live, state, identity, NowPlayingArtwork.NO_IMAGE)
+            return
+        }
+
+        viewModelScope.launch {
+            val cover = try {
+                artworkRepository.fetchArtwork(artist, song).coverUrl
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("StreamsViewModel", "artwork lookup failed for $artist - $song", e)
+                null
+            }
+            publishArtwork(stream, live, state, identity, cover ?: NowPlayingArtwork.NO_IMAGE)
+        }
+    }
+
+    /** Publishes [img] only while [identity] is still what [stream] is playing. */
+    private fun publishArtwork(
+        stream: String,
+        live: MutableLiveData<PlayerState?>,
+        state: PlayerState,
+        identity: String,
+        img: String,
+    ) {
+        if (!artworkOwner.offer(stream, identity, img)) return
+        // The artist and title are the ones this lookup was made for, carried in
+        // the state it was made from - so a late answer cannot pair its cover with
+        // another track's metadata even if it reached this line.
+        live.postValue(state.copy(img = img))
     }
 
     fun triggerMetadataUpdate() {

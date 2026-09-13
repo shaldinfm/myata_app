@@ -57,6 +57,21 @@ import kotlin.math.ceil
  *
  * Each layer's opacity is baked into the mask, so the paint carries only the
  * colour and the two layers keep their different alphas.
+ *
+ * ## The outside stroke
+ *
+ * A spec can also carry a Figma `OUTSIDE` stroke, which this frame paints as a
+ * filled rounded rect [strokeDp] larger than the child on every side, behind it.
+ * Two things follow from drawing it here rather than as the card's own stroke:
+ *
+ *  - the child keeps its frozen size and its whole image - a MaterialCardView
+ *    stroke is inside, so it would cover the image's outer pixels instead;
+ *  - the child's anti-aliased rounded edge blends into the stroke colour, not
+ *    into whatever the card is filled with. A card stroke drawn over a darker
+ *    fill leaks that fill at its outermost pixels, which reads as a second edge.
+ *
+ * Figma computes a layer's drop shadows from its stroked silhouette, so when a
+ * stroke is set the shadow mask is built from that larger shape too.
  */
 class SoftShadowFrame @JvmOverloads constructor(
     context: Context,
@@ -82,6 +97,9 @@ class SoftShadowFrame @JvmOverloads constructor(
     private var layers: List<Layer> = emptyList()
     private var radiusDp = 0f
     private var shadowColor = Color.BLACK
+    private var strokeDp = 0f
+    private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val strokeRect = RectF()
 
     private var mask: Bitmap? = null
     private var maskLeft = 0
@@ -120,6 +138,9 @@ class SoftShadowFrame @JvmOverloads constructor(
                 // drawn smaller than the artwork, which is what keeps it from
                 // haloing out sideways.
                 radiusDp = 20f
+                strokeDp = resources.getDimension(R.dimen.player_artwork_stroke) /
+                    resources.displayMetrics.density
+                strokePaint.color = ContextCompat.getColor(context, R.color.player_artwork_stroke)
                 layers = listOf(
                     Layer(dx = 0f, dy = 5.975f, blur = 7.46875f, spread = -4.48125f, alpha = 0.10f),
                     Layer(dx = 0f, dy = 14.9375f, blur = 18.6719f, spread = -3.73438f, alpha = 0.10f),
@@ -147,7 +168,7 @@ class SoftShadowFrame @JvmOverloads constructor(
         // own bitmap.
         var left = 0f; var top = 0f; var right = 0f; var bottom = 0f
         for (l in layers) {
-            val reach = 1.5f * l.blur + l.spread
+            val reach = 1.5f * l.blur + l.spread + strokeDp
             left = maxOf(left, reach - l.dx)
             right = maxOf(right, reach + l.dx)
             top = maxOf(top, reach - l.dy)
@@ -164,10 +185,10 @@ class SoftShadowFrame @JvmOverloads constructor(
             Bitmap.Config.ALPHA_8,
         )
         val c = Canvas(bmp)
-        val r = dp(radiusDp)
+        val r = dp(radiusDp + strokeDp)
         val p = Paint(Paint.ANTI_ALIAS_FLAG)
         for (l in layers) {
-            val s = dp(l.spread)
+            val s = dp(l.spread + strokeDp)
             val rect = RectF(
                 maskLeft + dp(l.dx) - s,
                 maskTop + dp(l.dy) - s,
@@ -189,6 +210,12 @@ class SoftShadowFrame @JvmOverloads constructor(
         if (bmp != null && !bmp.isRecycled) {
             paint.color = shadowColor
             canvas.drawBitmap(bmp, -maskLeft.toFloat(), -maskTop.toFloat(), paint)
+        }
+        if (strokeDp > 0f) {
+            val o = dp(strokeDp)
+            val r = dp(radiusDp) + o
+            strokeRect.set(-o, -o, width + o, height + o)
+            canvas.drawRoundRect(strokeRect, r, r, strokePaint)
         }
         super.onDraw(canvas)
     }

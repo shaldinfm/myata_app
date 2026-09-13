@@ -53,18 +53,16 @@
             android:paddingBottom="@dimen/player_margin">
 
             <!--
-              `Current Track Artwork`, 239x239 r20 with a 1px outline and an image
-              fill set to FILL. The frozen `Background+Blur` behind it is a 229
-              square under an opaque 239 one, so it never shows; its colour is the
-              card's background instead, which is what fills the card while the
-              artwork loads.
+              `Current Track Artwork`, 239x239 r20 with a 2 OUTSIDE stroke and an
+              image fill set to FILL. The frozen `Background+Blur` behind it is not
+              drawn - see brand_player_artwork_backdrop.
             -->
             <!--
-              The frame paints the artwork's two frozen drop shadows and nothing
-              else: it is exactly the card's size, adds no margin and shifts
-              nothing, and the overhang is drawn past its own edges. The
-              ConstraintLayout around it and the scroller above that have
-              clipChildren off so the 20dp that falls below the artwork survives.
+              The frame paints the artwork's 2 outside stroke and its two frozen
+              drop shadows: it is exactly the card's size, adds no margin and
+              shifts nothing, and the ring and the shadows are drawn past its own
+              edges. The ConstraintLayout around it and the scroller above that
+              have clipChildren off so the overhang survives.
             -->
             <com.example.musicplayerapp.ui.SoftShadowFrame
                 android:id="@+id/artwork_shadow"

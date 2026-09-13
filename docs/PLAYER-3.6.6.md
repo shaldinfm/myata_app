@@ -146,8 +146,8 @@ re-skin never appeared on a real device. One implementation now.
 | "Сейчас играет" | `player_header_label` | `#42474E` | `#F5F7FA` |
 | track title | `text_primary` | `#191C1D` | `#F5F7FA` |
 | artist | `text_secondary` | `#42474E` | `#B3C4D1` |
-| artwork stroke | `outline` | `#E1E3E4` | `#466D8F` |
-| artwork backdrop | `brand_player_artwork_backdrop` | `#1C4771` | same |
+| artwork stroke, 2 outside (G5e) | `player_artwork_stroke` | `#FFFFFF` | `#466D8F` |
+| artwork backdrop (not drawn since G5e) | `brand_player_artwork_backdrop` | `#1C4771` | same |
 | play/pause | `primary` / `on_primary` | `#1C4771` / `#FFFFFF` | `#5FD9B4` / `#0F253E` |
 | like | `player_like` | `#3F4A3C` | `#F5F7FA` |
 | like, in the collection | `primary` | | |
@@ -162,16 +162,23 @@ a single node. Declare a pair only when the two values are different roles.
 
 - artist: `#B3C4D1` is exactly `text_secondary` dark; light's `#2F353C` against
   `#42474E` is the same role → one token.
-- artwork stroke: `#466D8F` is exactly `outline` dark; light's `#FFFFFF` against
-  `#E1E3E4` is the same role → one token.
+- artwork stroke: `#466D8F` is exactly `outline` dark, and light's `#FFFFFF` was
+  first read as a near neighbour of `#E1E3E4`. G5e measured it on the device and
+  reversed that: on the `#F8F9FA` background `#E1E3E4` is a visible grey edge where
+  the design has a white ring, so the stroke is its own pair, `player_artwork_stroke`.
 - header label: `#F5F7FA` is exactly `text_primary` **dark** while `#42474E` is
   exactly `text_secondary` **light** — different roles → its own pair.
 
 The artwork backdrop is `#1C4771` on both pages, so it is fixed and gets no night
-variant. In Figma it is a 229 square behind an opaque 239 one and never really
-shows; here it is the artwork card's background, which is the one state where it
-earns its place — the colour the design put behind the art fills the card while
-the art loads.
+variant. **G5e:** it is no longer the card's fill. The loading placeholder is
+opaque, so the fill never showed as a colour - only as a navy fringe at the
+anti-aliased edge of the old inside stroke, which read as a double edge. The
+stroke is now drawn 2 outside the 239 artwork by `SoftShadowFrame`, with both
+drop shadows built from that 243 r22 silhouette, as Figma computes them.
+
+The frozen `Background+Blur` (50% navy, layer blur 24) is not a covered square
+either: its blur carries a faint navy haze past the card's top and left edges.
+It is not drawn, by owner decision (G5e).
 
 ## Two `Controls` rows, one of them stale
 

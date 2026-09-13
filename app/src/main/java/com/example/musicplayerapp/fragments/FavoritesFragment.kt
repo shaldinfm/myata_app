@@ -286,8 +286,8 @@ class FavoritesFragment : Fragment() {
 
     /**
      * A cover for one row. [FavoriteTrack] has no artwork of its own, so this
-     * goes through the ViewModel to ArtworkRepository, which derives one from the
-     * row's artist and track.
+     * goes through the ViewModel to the app's one artwork resolver, which derives
+     * one from the row's artist and track.
      */
     private fun requestArtwork(track: FavoriteTrack, onResult: (String?) -> Unit) {
         artworkJobs.remove(track)?.cancel()

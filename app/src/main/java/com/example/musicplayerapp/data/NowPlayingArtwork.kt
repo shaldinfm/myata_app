@@ -26,7 +26,7 @@ package com.example.musicplayerapp.data
  *
  * It holds three entries at most, one per stream. Nothing here fetches, nothing
  * here caches across tracks, and nothing here knows what a provider is: the
- * lookup cache is still [ArtworkRepository]'s, untouched by G5a.
+ * lookup cache G5a left in [ArtworkRepository] moved to [ArtworkResolver] in G5c.
  */
 class NowPlayingArtwork {
 

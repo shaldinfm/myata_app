@@ -186,7 +186,17 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     // Repositories
     private val historyRepository = HistoryRepository(client)
     private val feedbackRepository = FeedbackRepository(client)
-    private val artworkRepository = ArtworkRepository(client)
+    /**
+      * The application's one artwork resolver (G5c).
+      *
+      * It used to be this ViewModel's own [ArtworkRepository], with a cache no
+      * other surface could see - so the Collection looked every track up again,
+      * the service looked the current track up a second time, and the three pager
+      * pages each asked for every History row. One resolver means one lookup per
+      * track for the whole app, and the de-duplication that makes the History
+      * screen cost one request per row instead of three.
+      */
+     private val artwork = ArtworkModule.resolver(app)
     private val metadataRepository = MetadataRepository(client)
 
     /**
@@ -838,7 +848,7 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
      *
      * [identity] is what decides that, and deliberately not the LiveData. The
      * state above is published with `postValue`, which is delivered on a later
-     * main-thread message, while a lookup answered from [ArtworkRepository]'s
+     * main-thread message, while a lookup answered from [ArtworkResolver]'s
      * cache returns without suspending at all - so reading the state back here
      * would read the *previous* track and drop the answer it had just been given.
      * That is what used to happen, and on a repeated track it left the previous
@@ -864,13 +874,20 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
 
         viewModelScope.launch {
             val cover = try {
-                artworkRepository.fetchArtwork(artist, song).coverUrl
+                // The track on screen goes in the priority lane, so it never
+                // queues behind a History screen's worth of row lookups.
+                artwork.resolve(artist, song, ArtworkPriority.CURRENT_TRACK).coverUrl
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.e("StreamsViewModel", "artwork lookup failed for $artist - $song", e)
                 null
             }
+
+            // The one image the listener is guaranteed to look at: warm its bytes
+            // so the player is not waiting on the download when it paints.
+            artwork.prefetchImage(cover)
+
             publishArtwork(stream, live, state, identity, cover ?: NowPlayingArtwork.NO_IMAGE)
         }
     }
@@ -1194,19 +1211,19 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
      *
      * [HistoryTrack] carries artist, track and a timestamp and has nowhere to put
      * artwork, while the frozen inline section draws a cover per row, so it is
-     * derived from the artist and track by [ArtworkRepository] - the app's single
-     * source of truth for artwork, which the now-playing metadata above already
-     * goes through and whose in-memory cache both therefore share. This adds a
-     * view of the existing history, not a second store beside it.
+     * resolved from the artist and track by the app's one [ArtworkResolver] - the
+     * same instance the now-playing lookup above, the Collection and the playback
+     * service use, so a track already resolved anywhere comes back from its cache
+     * and a row being resolved elsewhere is joined rather than asked twice. It
+     * runs in the bulk lane, so a screen of rows never delays the current track.
+     * This adds a view of the existing history, not a second store beside it.
      *
-     * No dispatcher is stated here: `fetchArtwork` switches to IO itself around
-     * its blocking body (#45), so a wrapper at this call site would only dispatch
-     * to the dispatcher the callee is about to move to anyway. It would also cost
-     * a cache hit a round trip the repository deliberately keeps it clear of, by
-     * reading the cache ahead of its own switch.
+     * No dispatcher is stated here: the provider call switches to IO itself
+     * (#45), and a cache hit is answered before any switch, so a wrapper at this
+     * call site would only cost that hit a round trip.
      */
     suspend fun historyArtworkUrl(track: HistoryTrack): String? =
-        runCatching { artworkRepository.fetchArtwork(track.artist, track.title).coverUrl }
+        runCatching { artwork.resolve(track.artist, track.title, ArtworkPriority.BULK).coverUrl }
             .getOrNull()
 
     fun formUrl(songArtist: List<String>): String{

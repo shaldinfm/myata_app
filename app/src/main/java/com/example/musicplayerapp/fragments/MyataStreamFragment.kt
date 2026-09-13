@@ -425,8 +425,9 @@ class MyataStreamFragment() : Fragment() {
      * A cover for one history row.
      *
      * [com.example.musicplayerapp.data.HistoryTrack] has no artwork of its own, so
-     * this goes through the ViewModel to ArtworkRepository, which derives one from
-     * the artist and track and caches it. Only bound rows ask, so the reveal step
+     * this goes through the ViewModel to the app's one artwork resolver, which
+     * derives one from the artist and track and shares the answer with every
+     * surface. Only bound rows ask, so the reveal step
      * is what bounds how many lookups a single tap can start.
      *
      * The job is held so a recycled row can withdraw its request, and the whole

@@ -4,7 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.musicplayerapp.data.AppDatabase
-import com.example.musicplayerapp.data.ArtworkRepository
+import com.example.musicplayerapp.data.ArtworkModule
+import com.example.musicplayerapp.data.ArtworkPriority
 import com.example.musicplayerapp.data.FavoriteTrack
 import com.example.musicplayerapp.data.FeedbackRepository
 import com.example.musicplayerapp.data.ReactionEvent
@@ -26,7 +27,8 @@ class FavoritesViewModel(application: Application) : AndroidViewModel(applicatio
     private val reactionDao = database.reactionDao()
     private val httpClient = SecureNetModule.getOkHttpClient(application)
     private val feedbackRepository = FeedbackRepository(httpClient)
-    private val artworkRepository = ArtworkRepository(httpClient)
+    /** The application's one artwork resolver - the same one the player uses. */
+    private val artwork = ArtworkModule.resolver(application)
 
     /**
      * The Collection: every LIKED track, most recently liked first.
@@ -109,18 +111,19 @@ class FavoritesViewModel(application: Application) : AndroidViewModel(applicatio
      * A cover for one Collection row, or null if none can be found.
      *
      * [FavoriteTrack] stores artist and track and has nowhere to put artwork,
-     * while the FINAL row draws a 64x64 cover, so it is derived from the artist
-     * and track by [ArtworkRepository] - the app's single source of truth for
-     * artwork, and the same route the PLAYER history rows take. Nothing about
-     * the schema changes: this is a view of what the collection already stores.
+     * while the FINAL row draws a 64x64 cover, so it is resolved from the artist
+     * and track by the app's one [com.example.musicplayerapp.data.ArtworkResolver] -
+     * the same instance and the same cache the PLAYER and its history rows use,
+     * in the bulk lane. Nothing about the schema changes: this is a view of what
+     * the collection already stores.
      *
      * No dispatcher is stated here, for the reason StreamsViewModel records on
-     * its own artwork lookup: `fetchArtwork` switches to IO itself around its
-     * blocking body, and reads its cache ahead of that switch, so a wrapper here
-     * would only cost a cache hit a round trip.
+     * its own artwork lookup: the provider call switches to IO itself and a cache
+     * hit is answered before any switch, so a wrapper here would only cost that
+     * hit a round trip.
      */
     suspend fun artworkUrl(track: FavoriteTrack): String? =
-        runCatching { artworkRepository.fetchArtwork(track.artist, track.track).coverUrl }
+        runCatching { artwork.resolve(track.artist, track.track, ArtworkPriority.BULK).coverUrl }
             .getOrNull()
 
     /**

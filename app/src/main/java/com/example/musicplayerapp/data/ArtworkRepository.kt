@@ -7,7 +7,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.util.concurrent.ConcurrentHashMap
+import java.io.IOException
 
 /**
  * Repository for fetching album artwork from a search provider.
@@ -34,22 +34,79 @@ import java.util.concurrent.ConcurrentHashMap
  * Which of the iTunes candidates is the right one is [ArtworkMatcher]'s decision,
  * not this class's: everything here is the request, the parse and the cache.
  */
-class ArtworkRepository(private val httpClient: OkHttpClient) {
+class ArtworkRepository(
+    private val httpClient: OkHttpClient,
+    /**
+     * The client cover images are fetched with - bigger payloads, longer clocks
+     * and its own disk cache. Defaults to [httpClient] so a test can pass one.
+     */
+    private val imageClient: OkHttpClient = httpClient,
+    /**
+     * Whether the release search is worth asking right now. Measured from Russia,
+     * `itunes.apple.com` can be unreachable on one ISP while Deezer and both image
+     * CDNs are fine - and in that case every lookup used to wait out the whole
+     * iTunes deadline before reaching the Deezer step that was going to answer.
+     */
+    private val itunesHealth: ProviderHealth = ProviderHealth(),
+    /** The same for the artist-image fallback. */
+    private val deezerHealth: ProviderHealth = ProviderHealth(),
+) : ArtworkProvider {
 
     /**
-     * In-memory cache, keyed on the *whole* pair.
+     * A provider that has stopped answering, remembered so it is not asked again
+     * straight away.
      *
-     * The key used to be the artist cut at its first separator and the title with
-     * every bracket and the word "remix" stripped out, so `Song`, `Song (Live)`
-     * and `Song (X Remix)` were one key and the first answer served all three.
-     * Now that a version marker decides which release is correct, it has to be
-     * part of the identity of the question as well (G5 recon, cache correctness).
+     * After [failuresToOpen] consecutive transport failures the provider is
+     * skipped for [cooldownMs], then tried again; one answer - even an empty one -
+     * clears it. This is transport health only: which candidate is the right cover
+     * is still entirely [ArtworkMatcher]'s decision whenever the provider is asked.
      */
-    private val cache = ConcurrentHashMap<String, ArtworkResult>()
+    class ProviderHealth(
+        private val now: () -> Long = System::currentTimeMillis,
+        private val failuresToOpen: Int = 3,
+        private val cooldownMs: Long = 60_000L,
+    ) {
+        private val failures = java.util.concurrent.atomic.AtomicInteger(0)
+
+        @Volatile
+        private var openUntil = 0L
+
+        /** Worth asking now. */
+        fun available(): Boolean {
+            val until = openUntil
+            if (until == 0L) return true
+            if (now() < until) return false
+            // Cooldown over: try it again from a clean count, so one more failure
+            // does not reopen it on the strength of failures from the last outage.
+            openUntil = 0L
+            failures.set(0)
+            return true
+        }
+
+        /** It answered - with something or with nothing, but it answered. */
+        fun answered() {
+            failures.set(0)
+            openUntil = 0L
+        }
+
+        /** It could not be reached. */
+        fun unreachable() {
+            // Already known to be down: a request that was in flight when it was
+            // declared down is not news, and must not push the cooldown further out.
+            if (openUntil != 0L) return
+            if (failures.incrementAndGet() >= failuresToOpen) {
+                openUntil = now() + cooldownMs
+                failures.set(0)
+            }
+        }
+    }
 
     /**
      * @property confidence how sure the matcher was, for logs and tests. Nothing
      *   in the UI reads it and nothing persists it.
+     * @property outcome whether this is an answer or the absence of one, and if
+     *   absent, whose fault that was. [ArtworkResolver] caches on it: an answer is
+     *   kept, a confirmed no-match expires, a failure is only a cooldown.
      */
     data class ArtworkResult(
         val coverUrl: String?,
@@ -57,30 +114,40 @@ class ArtworkRepository(private val httpClient: OkHttpClient) {
         val confidence: ArtworkConfidence? = null,
         /** Whether [coverUrl] is a release's cover or a stand-in picture of the act. */
         val source: ArtworkSource? = null,
+        val outcome: ArtworkOutcome = if (coverUrl != null) ArtworkOutcome.RESOLVED else ArtworkOutcome.NO_MATCH,
     )
 
     /**
-     * Main entry point: fetches artwork for a given artist and track.
-     * Uses cache if available. Returns null URLs if nothing found.
+     * Fetches artwork for a given artist and track - one lookup, no caching.
+     *
+     * Caching moved out to [ArtworkResolver] in G5c, along with the decision of
+     * what a null answer means. This asks the providers and reports what came
+     * back, including *why* nothing did: a provider that could not be reached is
+     * an [ArtworkOutcome.FAILED] to be tried again, while a provider that
+     * answered and had nothing is an [ArtworkOutcome.NO_MATCH]. Telling those
+     * apart is what stopped one bad minute from meaning a session of plates.
      *
      * Every stage below blocks on OkHttp, so the dispatcher switch lives here
      * rather than at each call site: callers pass whatever context they are on,
      * and on Dispatchers.Main every stage threw NetworkOnMainThreadException
      * into its own catch, so the result was an empty one that then got cached.
      */
-    suspend fun fetchArtwork(artist: String, track: String): ArtworkResult {
-        val cacheKey = "${TrackKey.normalize(artist)}\u001F${TrackKey.normalize(track)}"
-
-        // Return cached result if available. Deliberately ahead of the switch, so
-        // a hit costs the caller no dispatch at all.
-        cache[cacheKey]?.let { return it }
-
+    override suspend fun fetchArtwork(artist: String, track: String): ArtworkResult {
         return withContext(Dispatchers.IO) {
             val queryArtist = searchableArtist(artist)
             val queryTitle = searchableTitle(track)
 
             var choice: ArtworkChoice? = null
-            try {
+
+            // Not asked at all while it is known to be down: the lookup goes
+            // straight to the fallback instead of spending its deadline here.
+            val itunesAsked = itunesHealth.available()
+            var itunesUnreachable = !itunesAsked
+            if (!itunesAsked) {
+                Log.d("ArtworkRepo", "iTunes skipped (recently unreachable) for $artist - $track")
+            }
+
+            if (itunesAsked) try {
                 // Stage 1: the artist as the provider is most likely to index it,
                 // with the title's own name and no version brackets.
                 val query1 = "$queryArtist $queryTitle".trim()
@@ -102,6 +169,12 @@ class ArtworkRepository(private val httpClient: OkHttpClient) {
                     Log.d("ArtworkRepo", "Stage 3 (Track only): $queryTitle")
                     choice = executeItunesSearch(queryTitle, artist, track)
                 }
+                itunesHealth.answered()
+            } catch (e: IOException) {
+                // Could not be reached, rather than asked and found wanting.
+                itunesUnreachable = true
+                itunesHealth.unreachable()
+                Log.e("ArtworkRepo", "iTunes unreachable: ${e.javaClass.simpleName} ${e.message}")
             } catch (e: Exception) {
                 Log.e("ArtworkRepo", "iTunes search error", e)
             }
@@ -116,25 +189,73 @@ class ArtworkRepository(private val httpClient: OkHttpClient) {
                     coverUrl = choice.candidate.artworkUrl,
                     confidence = choice.confidence,
                     source = ArtworkSource.RELEASE,
+                    outcome = ArtworkOutcome.RESOLVED,
                 )
             } else {
                 // Step 5: no release could be matched, so the act's own picture
                 // stands in rather than the plate. Marked as what it is.
-                val artistImage = fetchArtistImageFromDeezer(queryArtist)
-                if (artistImage != null) {
-                    Log.d("ArtworkRepo", "Artist image for $artist - $track (no release matched)")
+                var deezerUnreachable = !deezerHealth.available()
+                val artistImage = if (deezerUnreachable) {
+                    null
                 } else {
-                    Log.d("ArtworkRepo", "Nothing found at all for $artist - $track")
+                    try {
+                        fetchArtistImageFromDeezer(queryArtist).also { deezerHealth.answered() }
+                    } catch (e: IOException) {
+                        deezerUnreachable = true
+                        deezerHealth.unreachable()
+                        Log.e("ArtworkRepo", "Deezer unreachable: ${e.javaClass.simpleName}")
+                        null
+                    }
                 }
+
+                val outcome = when {
+                    // The fallback answered, but the release search was never
+                    // really asked - so this is what to show *for now*.
+                    artistImage != null && itunesUnreachable -> ArtworkOutcome.PARTIAL
+                    artistImage != null -> ArtworkOutcome.RESOLVED
+                    // Nothing, and not every provider could be asked: that is not
+                    // evidence the track has no artwork.
+                    itunesUnreachable || deezerUnreachable -> ArtworkOutcome.FAILED
+                    else -> ArtworkOutcome.NO_MATCH
+                }
+
+                Log.d(
+                    "ArtworkRepo",
+                    when (outcome) {
+                        ArtworkOutcome.RESOLVED -> "Artist image for $artist - $track (no release matched)"
+                        ArtworkOutcome.PARTIAL -> "Artist image for $artist - $track (release search unreachable; will retry)"
+                        ArtworkOutcome.NO_MATCH -> "Nothing found at all for $artist - $track"
+                        ArtworkOutcome.FAILED -> "Provider unreachable for $artist - $track; will retry"
+                    }
+                )
+
                 ArtworkResult(
                     coverUrl = artistImage,
                     confidence = artistImage?.let { ArtworkConfidence.LOW },
                     source = artistImage?.let { ArtworkSource.ARTIST_IMAGE },
+                    outcome = outcome,
                 )
             }
 
-            cache[cacheKey] = result
             result
+        }
+    }
+
+    /**
+     * Downloads a cover and throws the bytes away, so the next reader finds it in
+     * the HTTP cache instead of on the network.
+     *
+     * Both artwork CDNs send a `max-age` measured in months, so this is an
+     * ordinary cache fill with no expiry policy of our own. Failures are silent:
+     * a warm-up that did not happen costs a slower first paint and nothing else.
+     */
+    override suspend fun warmImage(url: String) {
+        withContext(Dispatchers.IO) {
+            runCatching {
+                imageClient.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                    response.body?.bytes()
+                }
+            }
         }
     }
 
@@ -147,7 +268,10 @@ class ArtworkRepository(private val httpClient: OkHttpClient) {
         val request = Request.Builder().url(url).build()
 
         return httpClient.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) return@use null
+            // A 403 or a 5xx is the provider refusing to answer, which is not the
+            // same as answering that it has nothing - it is thrown so the caller
+            // records a failure and tries again later.
+            if (!response.isSuccessful) throw IOException("iTunes HTTP ${response.code}")
 
             val bodyContent = response.body?.string() ?: return@use null
             val candidates = parseCandidates(bodyContent)
@@ -206,7 +330,7 @@ class ArtworkRepository(private val httpClient: OkHttpClient) {
                 .build()
 
             httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return null
+                if (!response.isSuccessful) throw IOException("Deezer HTTP ${response.code}")
 
                 val body = response.body?.string() ?: return null
                 val json = Gson().fromJson(body, Map::class.java) ?: return null
@@ -225,6 +349,8 @@ class ArtworkRepository(private val httpClient: OkHttpClient) {
                     return picture
                 }
             }
+        } catch (e: IOException) {
+            throw e
         } catch (e: Exception) {
             Log.e("ArtworkRepo", "Deezer artist image failed: ${e.message}")
         }
@@ -262,12 +388,5 @@ class ArtworkRepository(private val httpClient: OkHttpClient) {
         val dash = withoutBrackets.indexOf(" - ")
         val head = if (dash > 0) withoutBrackets.substring(0, dash) else withoutBrackets
         return head.replace(Regex("\\s+"), " ").trim().ifEmpty { track.trim() }
-    }
-
-    /**
-     * Clears the in-memory cache. Useful when memory is low.
-     */
-    fun clearCache() {
-        cache.clear()
     }
 }

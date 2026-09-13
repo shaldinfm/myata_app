@@ -27,9 +27,9 @@ import com.squareup.picasso.Picasso
  *
  * Artwork is the one thing a [HistoryTrack] cannot supply. The model carries
  * artist, track and a formatted timestamp and nothing else, while the frozen row
- * draws a cover, so the cover is resolved from the artist and track through
- * ArtworkRepository - the app's single source of truth for artwork, already held
- * by the ViewModel and already backed by an in-memory cache. That resolution is
+ * draws a cover, so the cover is resolved from the artist and track through the
+ * app's one artwork resolver (G5c), shared with the PLAYER, the Collection and the
+ * playback service and backed by its cache. That resolution is
  * the caller's, passed in as [artworkFor]: this adapter states which row wants a
  * cover and takes a URL back, and knows nothing about how it is found.
  *

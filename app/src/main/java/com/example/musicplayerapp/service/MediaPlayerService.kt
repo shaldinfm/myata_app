@@ -76,6 +76,8 @@ class MediaPlayerService(): MediaSessionService(){
     private var lastFetchedArtist: String? = null
     private var lastFetchedSong: String? = null
     private var currentAlbumArtUrl: String? = null
+    // A cover lookup has finished (found or not) for lastFetchedArtist/lastFetchedSong.
+    private var artworkSettled = false
     private var fetchJob: kotlinx.coroutines.Job? = null
     
     // HTTPS URLs (по умолчанию)
@@ -1398,19 +1400,22 @@ class MediaPlayerService(): MediaSessionService(){
     // fetchJob declared at class level (line 63)
 
     private fun updateMetadata(artist: String, song: String) {
-        // Cancel any pending start fetch from previous track
-        fetchJob?.cancel()
-
-        // Deduplicate updates EXCEPT when we are force-clearing metadata on pause/stop
-        val isReset = artist.isBlank() && song.isBlank()
-        if (!isReset && this.artist == artist && this.song == song) {
-            Log.d("MetadataPolling", "Metadata unchanged, skipping update: $artist - $song")
-            return
-        }
-
         // Use placeholders for empty metadata to keep UI clean
         val finalArtist = if (artist.isBlank()) getString(R.string.slogan_placeholder) else artist
         val finalSong = if (song.isBlank()) getString(R.string.brand_name) else song
+
+        // Deduplicate updates EXCEPT when we are force-clearing metadata on pause/stop -
+        // and only when the session really still shows this track (G5d): startStop
+        // installs a bare MediaItem before calling here, and skipping then left the
+        // notification on the raw stream title with no artist and no artwork.
+        val isReset = artist.isBlank() && song.isBlank()
+        if (!isReset && this.artist == artist && this.song == song &&
+            SessionMetadataPolicy.isInstalled(installedSessionMetadata(), finalSong, finalArtist, currentAlbumArtUrl) &&
+            (artworkSettled || fetchJob?.isActive == true)
+        ) {
+            Log.d("MetadataPolling", "Metadata unchanged, skipping update: $artist - $song")
+            return
+        }
 
         // Fix: Don't overwrite valid metadata with empty strings during playback
         if (artist.isBlank() && song.isBlank() && (this.artist.isNotBlank() || this.song.isNotBlank()) && exoPlayer.isPlaying) {
@@ -1429,6 +1434,7 @@ class MediaPlayerService(): MediaSessionService(){
             Log.d("MetadataPolling", "Track changed, resetting art: $artist - $song")
             currentAlbumArt = getPlaceholderBitmap()
             currentAlbumArtUrl = null // Reset URL for new track
+            artworkSettled = false
             lastFetchedArtist = artist
             lastFetchedSong = song
             // Cancel any pending fetch for the previous track
@@ -1437,42 +1443,26 @@ class MediaPlayerService(): MediaSessionService(){
             Log.d("MetadataPolling", "Same track, keeping current art: $artist - $song")
         }
         
-        val metadataBuilder = MediaMetadata.Builder()
-            .setArtist(finalArtist)
-            .setTitle(finalSong)
-            .setDisplayTitle(finalSong)
-            .setSubtitle(finalArtist)
-            .setAlbumTitle(getStreamDisplayName())
-            
-        // Preserve current artwork URL if available to prevent flickering
-        currentAlbumArtUrl?.let {
-            metadataBuilder.setArtworkUri(android.net.Uri.parse(it))
+        // Force Media3 metadata update. Preserve current artwork URL if available to prevent flickering
+        applySessionMetadata(finalArtist, finalSong, currentAlbumArtUrl)
+
+        // Async: Fetch and set album art - unless a lookup for this same track has
+        // already finished or is still running (a refresh must not restart or lose it).
+        if (!SessionMetadataPolicy.shouldFetchArtwork(
+                isPlaceholder = isReset,
+                trackChanged = trackChanged,
+                artworkSettled = artworkSettled,
+                fetchInFlight = fetchJob?.isActive == true,
+            )
+        ) {
+            return
         }
-            
-        // Force Media3 metadata update
-        val metadata = metadataBuilder.build()
-        exoPlayer.currentMediaItem?.let {
-            val newItem = it.buildUpon().setMediaMetadata(metadata).build()
-            exoPlayer.replaceMediaItem(exoPlayer.currentMediaItemIndex, newItem)
-        }
-        
-        // Async: Fetch and set album art
+
         // We capture currentArtist/currentSong to avoid race conditions
         val currentArtist = artist
         val currentSong = song
-        
+
         fetchJob = serviceScope.launch {
-            // Don't fetch artwork for placeholders/resets
-            if (currentArtist.isBlank() && currentSong.isBlank()) {
-                return@launch
-            }
-
-            // If it's the same track and we already have a real image, don't re-fetch!
-            if (!trackChanged && currentAlbumArt != null && currentAlbumArt != getPlaceholderBitmap()) {
-                Log.d("MetadataPolling", "Already have art for $artist - $song, skipping fetch.")
-                return@launch
-            }
-
             try {
                 val albumArtUrl = fetchAlbumArtUrl(currentArtist, currentSong)
                 val bitmap = if (albumArtUrl != null) {
@@ -1485,24 +1475,19 @@ class MediaPlayerService(): MediaSessionService(){
                 val finalBitmap = bitmap ?: getPlaceholderBitmap()
                 
                 withContext(Dispatchers.Main) {
-                    // Only update if the track hasn't changed while we were fetching art
-                    if (artist == currentArtist && song == currentSong) {
+                    // Only update if the track hasn't changed while we were fetching art.
+                    // lastFetched* is the raw identity the lookup was made for.
+                    if (lastFetchedArtist == currentArtist && lastFetchedSong == currentSong) {
                         currentAlbumArt = finalBitmap // UPDATE THE CACHED BITMAP FOR ADAPTER
                         updateMediaSessionWithArt(finalBitmap, currentArtist, currentSong)
                         Log.d("MetadataPolling", if (bitmap != null) "Album art set: $albumArtUrl" else "Using placeholder logo")
-                        
-                        // Update player metadata with art URL and bitmap
-                        val updatedMetadata = exoPlayer.mediaMetadata.buildUpon()
-                        if (albumArtUrl != null) {
-                            updatedMetadata.setArtworkUri(android.net.Uri.parse(albumArtUrl))
-                        }
-                        
+
                         currentAlbumArtUrl = albumArtUrl // Persist the URL
-                        val metadata = updatedMetadata.build()
-                        exoPlayer.currentMediaItem?.let {
-                            val newItem = it.buildUpon().setMediaMetadata(metadata).build()
-                            exoPlayer.replaceMediaItem(exoPlayer.currentMediaItemIndex, newItem)
-                        }
+                        artworkSettled = true
+                        // Rebuilt from the service's own title/artist, not from
+                        // exoPlayer.mediaMetadata: that merges the stream's ICY title,
+                        // so on a bare item it would write the raw `ARTIST - TITLE` in.
+                        applySessionMetadata(this@MediaPlayerService.artist, this@MediaPlayerService.song, albumArtUrl)
                         Log.d("MetadataPolling", "Updated player metadata with art URL")
                     } else {
                         Log.d("MetadataPolling", "Track changed, skipping art update for: $currentArtist - $currentSong")
@@ -1512,7 +1497,7 @@ class MediaPlayerService(): MediaSessionService(){
                 Log.e("MetadataPolling", "Failed to load album art: ${e.message}")
                 // Set placeholder on error
                 withContext(Dispatchers.Main) {
-                    if (artist == currentArtist && song == currentSong) {
+                    if (lastFetchedArtist == currentArtist && lastFetchedSong == currentSong) {
                         updateMediaSessionWithArt(getPlaceholderBitmap(), currentArtist, currentSong)
                     }
                 }
@@ -1520,6 +1505,30 @@ class MediaPlayerService(): MediaSessionService(){
         }
     }
     
+    /** What the player's current MediaItem itself carries - not the ICY-merged player metadata. */
+    private fun installedSessionMetadata(): SessionMetadataPolicy.Installed? =
+        exoPlayer.currentMediaItem?.mediaMetadata?.let {
+            SessionMetadataPolicy.Installed(it.title?.toString(), it.artist?.toString(), it.artworkUri?.toString())
+        }
+
+    /** Puts title, artist and cover on the current MediaItem; Media3 updates the notification from it. */
+    private fun applySessionMetadata(finalArtist: String, finalSong: String, artworkUrl: String?) {
+        val metadataBuilder = MediaMetadata.Builder()
+            .setArtist(finalArtist)
+            .setTitle(finalSong)
+            .setDisplayTitle(finalSong)
+            .setSubtitle(finalArtist)
+            .setAlbumTitle(getStreamDisplayName())
+        artworkUrl?.let {
+            metadataBuilder.setArtworkUri(android.net.Uri.parse(it))
+        }
+        val metadata = metadataBuilder.build()
+        exoPlayer.currentMediaItem?.let {
+            val newItem = it.buildUpon().setMediaMetadata(metadata).build()
+            exoPlayer.replaceMediaItem(exoPlayer.currentMediaItemIndex, newItem)
+        }
+    }
+
     private fun getPlaceholderBitmap(): Bitmap? {
         return try {
             android.graphics.BitmapFactory.decodeResource(resources, R.drawable.zaglushka_logo)

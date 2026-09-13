@@ -147,7 +147,6 @@ re-skin never appeared on a real device. One implementation now.
 | track title | `text_primary` | `#191C1D` | `#F5F7FA` |
 | artist | `text_secondary` | `#42474E` | `#B3C4D1` |
 | artwork stroke, 2 outside (G5e) | `player_artwork_stroke` | `#FFFFFF` | `#466D8F` |
-| artwork backdrop (not drawn since G5e) | `brand_player_artwork_backdrop` | `#1C4771` | same |
 | play/pause | `primary` / `on_primary` | `#1C4771` / `#FFFFFF` | `#5FD9B4` / `#0F253E` |
 | like | `player_like` | `#3F4A3C` | `#F5F7FA` |
 | like, in the collection | `primary` | | |
@@ -169,16 +168,21 @@ a single node. Declare a pair only when the two values are different roles.
 - header label: `#F5F7FA` is exactly `text_primary` **dark** while `#42474E` is
   exactly `text_secondary` **light** — different roles → its own pair.
 
-The artwork backdrop is `#1C4771` on both pages, so it is fixed and gets no night
-variant. **G5e:** it is no longer the card's fill. The loading placeholder is
-opaque, so the fill never showed as a colour - only as a navy fringe at the
-anti-aliased edge of the old inside stroke, which read as a double edge. The
-stroke is now drawn 2 outside the 239 artwork by `SoftShadowFrame`, with both
-drop shadows built from that 243 r22 silhouette, as Figma computes them.
+**G5e - the artwork edge.** Until G5e the card's fill was the frozen backdrop
+colour `#1C4771` (`brand_player_artwork_backdrop`), on the reasoning that it would
+fill the card while the art loads. The loading placeholder is opaque, so it never
+showed as a colour - only as a navy fringe at the anti-aliased edge of the old
+inside stroke, which read as a double edge. The stroke is now drawn 2 outside the
+239 artwork by `SoftShadowFrame`, with both drop shadows built from that 243 r22
+silhouette, as Figma computes them; the card's fill is the stroke colour.
 
-The frozen `Background+Blur` (50% navy, layer blur 24) is not a covered square
-either: its blur carries a faint navy haze past the card's top and left edges.
-It is not drawn, by owner decision (G5e).
+**Rejected: the `Background+Blur` halo.** The frozen `Album Art (Organic Shape) >
+Background+Blur` is a 229 r20 rect at (-1,-1), `#1C4771` on both pages, 50%
+opacity, layer blur 24. It is not fully covered by the artwork: the blur carries
+a faint navy haze past the card's top and left edges, most visible in light. The
+owner reviewed it against the G5e render and decided **not** to draw it. It has
+no runtime resource; the colour was removed with the decision, so a future
+change that revives the halo starts from the values here.
 
 ## Two `Controls` rows, one of them stale
 

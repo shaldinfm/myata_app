@@ -275,25 +275,6 @@
     <color name="brand_playlist_card_placeholder">#EDEEEF</color>
 
     <!--
-      PLAYER album art backdrop.
-
-      Provenance: canonical PLAYER, `Player Section > Album Art (Organic Shape) >
-      Background+Blur`, 229x229 r20. #1C4771 on both pages, so it is fixed and gets
-      no night variant.
-
-      Not drawn at the moment - G5e. It used to be the artwork card's fill, on the
-      reasoning that it would show while the art loads. It never does: the
-      placeholder the card shows while loading is fully opaque. What it did show
-      was a navy hairline at the card's anti-aliased edge, outside the stroke.
-
-      In Figma it is not fully covered either: it sits at 50% under a layer blur
-      of 24, which carries a faint navy haze past the card's top and left edges.
-      The owner decided (G5e) not to draw that halo; the colour stays as the
-      record of the frozen layer.
-    -->
-    <color name="brand_player_artwork_backdrop">#1C4771</color>
-
-    <!--
       PLAYER album art stroke - G5e.
 
       Provenance: canonical PLAYER, `Current Track Artwork`, 2 OUTSIDE. #FFFFFF

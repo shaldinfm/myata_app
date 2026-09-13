@@ -55,7 +55,7 @@
             <!--
               `Current Track Artwork`, 239x239 r20 with a 2 OUTSIDE stroke and an
               image fill set to FILL. The frozen `Background+Blur` behind it is not
-              drawn - see brand_player_artwork_backdrop.
+              drawn, by owner decision - see docs/PLAYER-3.6.6.md.
             -->
             <!--
               The frame paints the artwork's 2 outside stroke and its two frozen

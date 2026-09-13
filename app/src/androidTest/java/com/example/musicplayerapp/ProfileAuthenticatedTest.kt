@@ -165,11 +165,14 @@ class ProfileAuthenticatedTest {
 
         val seen = mutableSetOf<Int?>()
         withMainActivity { scenario ->
-            // Tapped directly rather than through `openProfile`, which returns as soon
-            // as either profile is showing. Sampling from the tap itself is what makes
-            // a destination that was entered and then left visible here - and that is
-            // exactly the behaviour being ruled out.
-            scenario.tap(R.id.profile_entry)
+            // G4a: the profile is reached through Settings, and the Settings row is
+            // where the route is decided. That row is tapped directly rather than
+            // through `openProfile`, which returns as soon as either profile is
+            // showing. Sampling from the tap itself is what makes a destination that
+            // was entered and then left visible here - and that is exactly the
+            // behaviour being ruled out.
+            openSettingsAndSettle()
+            scenario.tap(R.id.settings_row_profile)
             repeat(60) {
                 runCatching { on { seen += it.currentDestinationId() } }
                 Thread.sleep(25)
@@ -326,14 +329,21 @@ class ProfileAuthenticatedTest {
                 it.currentDestinationId() == R.id.profile_authenticated
             }
 
-            // One Back, and we are at the screen the profile was opened from.
+            // One Back, and we are at the screen the profile was opened from - Settings,
+            // as of G4a.
             scenario.tap(R.id.profile_back)
             on { activity ->
                 assertEquals(
                     "Back must not reach the auth screens or the guest profile",
-                    R.id.home,
+                    R.id.settings,
                     activity.currentDestinationId(),
                 )
+            }
+
+            // And one more reaches HOME, so nothing is hiding under Settings either.
+            scenario.tap(R.id.settings_back)
+            on { activity ->
+                assertEquals(R.id.home, activity.currentDestinationId())
                 assertEquals(
                     View.VISIBLE,
                     activity.findViewById<View>(R.id.bottomNavView).visibility,
@@ -643,6 +653,14 @@ class ProfileAuthenticatedTest {
             on {
                 assertEquals(
                     "the authenticated profile must be gone from the stack",
+                    R.id.settings,
+                    it.currentDestinationId(),
+                )
+            }
+            scenario.tap(R.id.settings_back)
+            on {
+                assertEquals(
+                    "one more Back must reach HOME, not the account card",
                     R.id.home,
                     it.currentDestinationId(),
                 )

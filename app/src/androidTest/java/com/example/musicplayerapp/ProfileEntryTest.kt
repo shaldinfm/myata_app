@@ -152,8 +152,20 @@ class ProfileEntryTest {
             scenario.onActivity { it.findViewById<View>(R.id.profile_back).performClick() }
             InstrumentationRegistry.getInstrumentation().waitForIdleSync()
 
+            // G4a: Settings opened it, so that is where Back lands.
             scenario.onActivity { activity ->
-                assertEquals("Back must return to HOME", R.id.home, activity.currentDestinationId())
+                assertEquals("Back must return to Settings", R.id.settings, activity.currentDestinationId())
+                assertEquals(
+                    "settings has no bottom bar",
+                    View.GONE,
+                    activity.findViewById<View>(R.id.bottomNavView).visibility,
+                )
+                activity.findViewById<View>(R.id.settings_back).performClick()
+            }
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+            scenario.onActivity { activity ->
+                assertEquals("one more Back must return to HOME", R.id.home, activity.currentDestinationId())
                 assertEquals(
                     View.VISIBLE,
                     activity.findViewById<View>(R.id.bottomNavView).visibility,

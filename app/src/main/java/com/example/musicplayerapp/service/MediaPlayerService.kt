@@ -61,8 +61,11 @@ class MediaPlayerService(): MediaSessionService(){
     // OkHttp client for API requests (full TLS validation, extra roots bundled)
     private val httpClient by lazy { SecureNetModule.getOkHttpClient(this) }
     
-    // Artwork Repository (single source of truth for album art)
-    private val artworkRepository by lazy { com.example.musicplayerapp.data.ArtworkRepository(httpClient) }
+    // The application's one artwork resolver, shared with the ViewModels (G5c).
+    // It used to be a third ArtworkRepository with a third private cache, so the
+    // current track was looked up here as well as in the UI. Same answers, same
+    // matching - only the ownership of the lookup and its cache changed.
+    private val artworkResolver by lazy { com.example.musicplayerapp.data.ArtworkModule.resolver(this) }
     
     // Image cache for album art
     private val albumArtCache = mutableMapOf<String, Bitmap?>()
@@ -1542,7 +1545,11 @@ class MediaPlayerService(): MediaSessionService(){
     // ============== ARTWORK FETCHING (Delegated to ArtworkRepository) ==============
     
     private suspend fun fetchAlbumArtUrl(artist: String, track: String): String? {
-        return artworkRepository.fetchArtwork(artist, track).coverUrl
+        return artworkResolver.resolve(
+            artist,
+            track,
+            com.example.musicplayerapp.data.ArtworkPriority.CURRENT_TRACK,
+        ).coverUrl
     }
     
     // ============== BITMAP LOADING ==============

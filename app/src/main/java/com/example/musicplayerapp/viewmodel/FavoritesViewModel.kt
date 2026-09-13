@@ -4,7 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.musicplayerapp.data.AppDatabase
-import com.example.musicplayerapp.data.ArtworkRepository
+import com.example.musicplayerapp.data.ArtworkModule
+import com.example.musicplayerapp.data.ArtworkPriority
 import com.example.musicplayerapp.data.FavoriteTrack
 import com.example.musicplayerapp.data.FeedbackRepository
 import com.example.musicplayerapp.data.ReactionEvent
@@ -26,7 +27,8 @@ class FavoritesViewModel(application: Application) : AndroidViewModel(applicatio
     private val reactionDao = database.reactionDao()
     private val httpClient = SecureNetModule.getOkHttpClient(application)
     private val feedbackRepository = FeedbackRepository(httpClient)
-    private val artworkRepository = ArtworkRepository(httpClient)
+    /** The application's one artwork resolver - the same one the player uses. */
+    private val artwork = ArtworkModule.resolver(application)
 
     /**
      * The Collection: every LIKED track, most recently liked first.
@@ -120,7 +122,7 @@ class FavoritesViewModel(application: Application) : AndroidViewModel(applicatio
      * would only cost a cache hit a round trip.
      */
     suspend fun artworkUrl(track: FavoriteTrack): String? =
-        runCatching { artworkRepository.fetchArtwork(track.artist, track.track).coverUrl }
+        runCatching { artwork.resolve(track.artist, track.track, ArtworkPriority.BULK).coverUrl }
             .getOrNull()
 
     /**

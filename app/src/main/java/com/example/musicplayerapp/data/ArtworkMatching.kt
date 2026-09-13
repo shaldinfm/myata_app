@@ -26,6 +26,33 @@ data class ArtworkCandidate(
 enum class ArtworkConfidence { HIGH, MEDIUM, LOW }
 
 /**
+ * Whether a lookup produced an answer, and if not, why not.
+ *
+ * The distinction [ArtworkResolver] caches on. Before G5c "the provider said no"
+ * and "the provider could not be reached" were the same empty result, and both
+ * were remembered for the life of the process - so a minute of bad network at
+ * launch meant a session with no artwork at all.
+ */
+enum class ArtworkOutcome {
+    /** Every provider that should have been asked was asked, and this is the answer. */
+    RESOLVED,
+
+    /**
+     * Something to show, reached without the primary provider - an artist image
+     * because the release search could not be asked. Worth drawing now, not worth
+     * believing forever: once the release search is reachable again this track
+     * may well have a real cover.
+     */
+    PARTIAL,
+
+    /** The providers answered and had nothing for this track. */
+    NO_MATCH,
+
+    /** A provider could not be reached and nothing could be shown. Not a fact about the track. */
+    FAILED,
+}
+
+/**
  * What the picture actually is.
  *
  * The distinction exists because step 5 of the owner's fallback hierarchy is a

@@ -120,32 +120,65 @@ class ArtworkRepositoryDispatchTest {
     }
 
     /**
-     * The cache read sits ahead of the dispatcher switch on purpose. A repeat
-     * track - which 15-second metadata polling produces constantly - must cost
-     * neither a request nor a thread hop.
+     * The repository no longer caches - `ArtworkResolver` does, since G5c.
+     *
+     * This asks twice on purpose and expects two requests. The cache moved out
+     * because the decision it has to make is not the repository's: whether a null
+     * answer may be remembered depends on *why* it was null, and one shared cache
+     * for the whole app was the point. What the repository still owes the resolver
+     * is an honest answer each time it is asked, which is what this pins.
+     * `ArtworkResolverTest` covers the caching itself.
      */
     @Test
-    fun aRepeatLookupIsAnsweredFromCacheWithoutAskingAgain() {
+    fun theRepositoryItselfNoLongerCachesAndAnswersEveryTime() {
         val canned = CannedResponses()
         val repository = repositoryAnswering(canned)
 
         val first = runBlocking { repository.fetchArtwork("Bronski Beat", "Smalltown Boy") }
         val requestsAfterFirst = canned.threads.size
+        val second = runBlocking { repository.fetchArtwork("Bronski Beat", "Smalltown Boy") }
 
-        val second = runBlocking {
-            withContext(Dispatchers.Main) {
-                val onMain = repository.fetchArtwork("Bronski Beat", "Smalltown Boy")
-                // A hit returns on the caller's own thread: it never left main.
-                assertEquals(Looper.getMainLooper().thread, Thread.currentThread())
-                onMain
-            }
-        }
-
-        assertEquals(first.coverUrl, second.coverUrl)
+        assertEquals("the same question gets the same answer", first.coverUrl, second.coverUrl)
         assertEquals(
-            "a cache hit must not reach the network",
-            requestsAfterFirst,
+            "the second lookup reached the provider again",
+            requestsAfterFirst * 2,
             canned.threads.size
+        )
+    }
+
+    /**
+     * The outcome is the field the resolver's cache policy turns on, so a hit, a
+     * confirmed miss and an unreachable provider have to be distinguishable here.
+     */
+    @Test
+    fun theOutcomeSaysWhetherNothingWasFoundOrNothingCouldBeAsked() {
+        val hit = repositoryAnswering(CannedResponses())
+        assertEquals(
+            com.example.musicplayerapp.data.ArtworkOutcome.RESOLVED,
+            runBlocking { hit.fetchArtwork("Bronski Beat", "Smalltown Boy") }.outcome
+        )
+
+        val empty = repositoryAnswering(
+            CannedResponses().apply {
+                itunes = ITUNES_EMPTY
+                deezer = """{"data":[]}"""
+            }
+        )
+        assertEquals(
+            "the providers answered and had nothing",
+            com.example.musicplayerapp.data.ArtworkOutcome.NO_MATCH,
+            runBlocking { empty.fetchArtwork("No Such Artist", "No Such Track") }.outcome
+        )
+
+        val broken = ArtworkRepository(
+            OkHttpClient.Builder()
+                .addInterceptor { throw java.io.IOException("network is blocked") }
+                .build()
+        )
+        assertEquals(
+            "a provider that could not be reached is not a no-match",
+            com.example.musicplayerapp.data.ArtworkOutcome.FAILED,
+            runBlocking { broken.fetchArtwork("Bronski Beat", "Smalltown Boy") }.outcome
         )
     }
 

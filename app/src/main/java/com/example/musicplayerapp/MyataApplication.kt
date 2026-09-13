@@ -1,6 +1,7 @@
 package com.example.musicplayerapp
 
 import android.app.Application
+import com.example.musicplayerapp.data.ArtworkModule
 import com.example.musicplayerapp.data.supabase.IdentityReconciler
 import com.example.musicplayerapp.data.supabase.ReactionSyncScheduler
 import com.squareup.picasso.OkHttp3Downloader
@@ -36,11 +37,20 @@ class MyataApplication : Application() {
         // no request and no user row.
         ReactionSyncScheduler.onAppStart(this)
 
-        // Configure Picasso to use the shared, fully validating OkHttpClient.
-        // Old Android TV/projector trust stores are handled by the extra roots
-        // bundled in SecureNetModule, not by disabling certificate checks.
+        // Configure Picasso to use the artwork image client (G5c): the same
+        // fully validating stack - old Android TV/projector trust stores are
+        // handled by the extra roots bundled in SecureNetModule, not by disabling
+        // certificate checks - plus a disk cache and bounded deadlines.
+        //
+        // The disk cache is what survives a process restart. Both artwork CDNs
+        // send a `max-age` measured in months, so an ordinary HTTP cache holds
+        // every cover already seen with no expiry policy of our own; before this
+        // the client had no cache at all and every cold start re-downloaded
+        // everything. The deadlines matter for the same reason they do on the API
+        // side: the shared client would wait 30 s to connect and another 30 to
+        // read, with no overall limit.
         try {
-            val client = SecureNetModule.getOkHttpClient(this)
+            val client = ArtworkModule.imageClient(this)
             val picasso = Picasso.Builder(this)
                 .downloader(OkHttp3Downloader(client))
                 .listener { _, uri, exception -> 

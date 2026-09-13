@@ -301,30 +301,30 @@
       PLAYER album art, frozen 3.6.6 canonical: `Album Art (Organic Shape) >
       Current Track Artwork`, 239x239 at radius 20 with an image fill set to FILL.
 
-      The stroke is the `outline` role: #466D8F in dark is exactly that role's
-      dark value, and light's #FFFFFF is a near neighbour of its #E1E3E4 - one
-      role, so one token rather than a new pair.
+      **This card has no stroke of its own** - G5e. The frozen stroke is 2 and
+      OUTSIDE, and the SoftShadowFrame wrapping this card in
+      fragment_myata_stream.xml paints it as a 243 r22 ring behind the card, past
+      the frame's own edges. The card stays the frozen 239 and moves nothing.
 
-      **Its width is 2, not 1** - G4a. The frozen stroke has always been 2 and
-      OUTSIDE; it was implemented as 1 and, being a MaterialCardView stroke,
-      INSIDE. The width is now the frozen one. The side it sits on cannot be:
-      MaterialCardView insets its stroke, and an outside stroke would make the box
-      243 and move every absolute offset on the screen below it. So the artwork
-      keeps its frozen 239 and the 2 is taken from the image rather than added
-      around it - see docs for the compromise.
+      G4a had it as a MaterialCardView stroke, which is INSIDE: it covered 2 of
+      the image on every side and was drawn over a navy card fill. On the device
+      the outermost anti-aliased pixels of that stroke let the navy through, which
+      read as a second, darker edge around a grey one.
 
-      The two drop shadows are drawn by the SoftShadowFrame wrapping this card in
-      fragment_myata_stream.xml, not by elevation: both layers have negative
-      spread, which elevation cannot express at all.
+      The fill is the stroke colour, so the image's own anti-aliased edge blends
+      into the ring and not into anything darker. It only ever shows through a
+      cover with transparent pixels; the loading placeholder is opaque.
+
+      The two drop shadows are drawn by the same frame, not by elevation: both
+      layers have negative spread, which elevation cannot express at all.
     -->
     <style name="PlayerArtworkCard">
         <item name="android:layout_width">@dimen/player_artwork_size</item>
         <item name="android:layout_height">@dimen/player_artwork_size</item>
         <item name="cardCornerRadius">@dimen/player_artwork_corner</item>
         <item name="cardElevation">0dp</item>
-        <item name="cardBackgroundColor">@color/brand_player_artwork_backdrop</item>
-        <item name="strokeColor">@color/outline</item>
-        <item name="strokeWidth">@dimen/player_artwork_stroke</item>
+        <item name="cardBackgroundColor">@color/player_artwork_stroke</item>
+        <item name="strokeWidth">0dp</item>
     </style>
 
     <!--

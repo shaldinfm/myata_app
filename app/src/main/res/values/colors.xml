@@ -275,19 +275,18 @@
     <color name="brand_playlist_card_placeholder">#EDEEEF</color>
 
     <!--
-      PLAYER album art backdrop.
+      PLAYER album art stroke - G5e.
 
-      Provenance: canonical PLAYER, `Player Section > Album Art (Organic Shape) >
-      Background+Blur`, 229x229 r20. #1C4771 on both pages, so it is fixed and gets
-      no night variant.
+      Provenance: canonical PLAYER, `Current Track Artwork`, 2 OUTSIDE. #FFFFFF
+      light, #466D8F dark.
 
-      In Figma it is a 229 square sitting behind an opaque 239 artwork, so all but
-      one pixel of it is covered and it never really shows. Here it is the artwork
-      card's own background, which is the one state where it earns its place: the
-      colour the frozen design put behind the art is what fills the card while the
-      art loads, instead of a hole.
+      It used to be the `outline` role, on the argument that light's #FFFFFF is a
+      near neighbour of #E1E3E4. On the device it is not: #E1E3E4 on the #F8F9FA
+      background reads as a grey edge where the design has a bright white ring,
+      and that grey was most of what made the card look dirty. Dark's value is
+      still exactly `outline`, so this is a pair, not a new role.
     -->
-    <color name="brand_player_artwork_backdrop">#1C4771</color>
+    <color name="player_artwork_stroke">#FFFFFF</color>
 
     <!--
       PLAYER Broadcast History, "Показать ещё" (Phase C).

@@ -55,6 +55,12 @@
     <color name="player_header_label">#F5F7FA</color>
 
     <!--
+      PLAYER album art stroke. Exactly `outline` in dark, while light is #FFFFFF
+      rather than outline's #E1E3E4 - see values/colors.xml.
+    -->
+    <color name="player_artwork_stroke">#466D8F</color>
+
+    <!--
       PLAYER swipe indicator, inactive pages. Dark states a solid #6F899F where
       light states `primary` at 50% - see values/colors.xml for why that forces a
       pair. The active marker is `primary` in both and has no resource here.

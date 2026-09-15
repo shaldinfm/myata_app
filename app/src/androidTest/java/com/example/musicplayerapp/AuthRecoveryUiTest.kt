@@ -583,23 +583,6 @@ class AuthRecoveryUiTest {
         }
     }
 
-    private fun openProfileAndSettle() {
-        on { it.findViewById<View>(R.id.profile_entry).performClick() }
-        sync()
-        awaitDestination(R.id.profile)
-    }
-
-    private fun awaitDestination(id: Int, timeoutMs: Long = 10_000) {
-        val deadline = System.currentTimeMillis() + timeoutMs
-        while (System.currentTimeMillis() < deadline) {
-            var there = false
-            on { there = it.currentDestinationId() == id }
-            if (there) return
-            Thread.sleep(25)
-        }
-        fail("never reached destination $id")
-    }
-
     /** See `AuthFormTest.on`: `onActivity` deadlocks on API 24 against a live spinner. */
     private fun on(block: (MainActivity) -> Unit) {
         InstrumentationRegistry.getInstrumentation().runOnMainSync {

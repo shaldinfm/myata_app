@@ -307,6 +307,9 @@
     <string name="auth_have_account">Уже есть аккаунт? Войти</string>
     <string name="auth_back_description">Назад</string>
     <string name="auth_progress_description">Выполняется запрос</string>
+    <!-- The show/hide control on a password input, named for what a tap will do. -->
+    <string name="auth_password_show_description">Показать пароль</string>
+    <string name="auth_password_hide_description">Скрыть пароль</string>
 
     <!--
       Local validation. Attached to the field that failed, because the listener can

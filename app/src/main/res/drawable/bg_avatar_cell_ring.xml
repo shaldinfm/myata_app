@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Avatar cell NN` 2523:146.. / 2517:3688.., unselected: a 1dp INSIDE stroke over the
+  artwork, `outline` (#E1E3E4 light, #466D8F dark). Drawn as the cell's foreground so
+  it sits on top of the image, as an inside stroke does in Figma. GradientDrawable
+  insets the oval by half the stroke, so the ring stays inside the 76dp box.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <stroke
+        android:width="@dimen/avatar_cell_ring"
+        android:color="@color/outline" />
+</shape>

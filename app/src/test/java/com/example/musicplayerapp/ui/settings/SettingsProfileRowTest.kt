@@ -4,12 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * The three outcomes of the `Settings > Профиль` value.
- *
- * The interesting one is the middle: a session that exists but names no address.
- * It is not a hypothetical - `AccountInfo.email` is nullable because an account
- * created by other means can genuinely have none, and an install whose session has
- * not restored yet has none either.
+ * `Settings > Аккаунт > Профиль`: the account's display name, never its address (G6a).
  */
 class SettingsProfileRowTest {
 
@@ -17,44 +12,43 @@ class SettingsProfileRowTest {
     fun `signed out ignores whatever the session said`() {
         assertEquals(
             SettingsProfileRow.Value.SignedOut,
-            SettingsProfileRow.value(signedIn = false, rawEmail = "denis@example.com"),
+            SettingsProfileRow.value(signedIn = false, accountFound = true, rawDisplayName = "Денис"),
         )
     }
 
     @Test
-    fun `signed in with an address shows it`() {
+    fun `signed in with a display name shows the name`() {
         assertEquals(
-            SettingsProfileRow.Value.Address("denis@example.com"),
-            SettingsProfileRow.value(signedIn = true, rawEmail = "denis@example.com"),
+            SettingsProfileRow.Value.Name("Денис"),
+            SettingsProfileRow.value(signedIn = true, accountFound = true, rawDisplayName = "Денис"),
         )
     }
 
     @Test
-    fun `signed in with no address falls back to the weaker claim`() {
+    fun `the name is trimmed the same way the account card trims it`() {
         assertEquals(
-            SettingsProfileRow.Value.SignedIn,
-            SettingsProfileRow.value(signedIn = true, rawEmail = null),
+            SettingsProfileRow.Value.Name("Денис"),
+            SettingsProfileRow.value(signedIn = true, accountFound = true, rawDisplayName = "  Денис  "),
         )
     }
 
     @Test
-    fun `a blank address is an absent one`() {
-        // ProfileAccount.email trims and treats empty as absent; the row inherits
-        // that rather than rendering a row with nothing after the label.
-        for (blank in listOf("", "   ", "\t", "\n")) {
+    fun `an account with no usable name gets the account model's fallback, not an address`() {
+        for (blank in listOf(null, "", "   ", "\t", "\n")) {
             assertEquals(
-                "blank address [$blank] must not be shown",
-                SettingsProfileRow.Value.SignedIn,
-                SettingsProfileRow.value(signedIn = true, rawEmail = blank),
+                "display name [$blank] must fall back to Пользователь",
+                SettingsProfileRow.Value.Unnamed,
+                SettingsProfileRow.value(signedIn = true, accountFound = true, rawDisplayName = blank),
             )
         }
     }
 
     @Test
-    fun `an address is trimmed the same way the account card trims it`() {
+    fun `signed in but the account is not readable right now falls back to the weaker claim`() {
         assertEquals(
-            SettingsProfileRow.Value.Address("denis@example.com"),
-            SettingsProfileRow.value(signedIn = true, rawEmail = "  denis@example.com  "),
+            SettingsProfileRow.Value.SignedIn,
+            SettingsProfileRow.value(signedIn = true, accountFound = false, rawDisplayName = null),
         )
     }
+
 }

@@ -169,9 +169,12 @@ class MainActivity : AppCompatActivity() {
         // line the live theme is what it has always been, and the random
         // AppTheme0..9 below still applies on top of it.
         //
-        // No setKeepOnScreenCondition. The splash is dismissed by the first frame
-        // the app draws; nothing is held back to show branding for longer.
-        installSplashScreen()
+        // Held for one reason only (G6a): a registered install's stored session, so HOME's
+        // first frame greets the account instead of flashing the guest header. Local
+        // restore only, capped by StartupAccountGate.TIMEOUT_MS; every other install is
+        // not held at all, and nothing is held back to show branding for longer.
+        val splash = installSplashScreen()
+        splash.setKeepOnScreenCondition { com.example.musicplayerapp.data.supabase.StartupAccountGate.isHolding }
 
         // Before super.onCreate, and it has to be: AppCompat installs its own
         // inflater factory during onCreate and skips it if one is already set, so
@@ -210,6 +213,9 @@ class MainActivity : AppCompatActivity() {
              finish()
              return
         }
+
+        // After the TV redirect, which never shows this splash. No frame is drawn before it.
+        com.example.musicplayerapp.data.supabase.StartupAccountGate.start(applicationContext)
 
         dismissReceiver = closeBroadcastReceiver()
         LocalBroadcastManager.getInstance(this)
@@ -326,6 +332,9 @@ class MainActivity : AppCompatActivity() {
 
             val hidesBottomBar = destination.id == R.id.profile ||
                 destination.id == R.id.profile_authenticated ||
+                // profile_avatar joined them at G6a: its frames have a back band and
+                // no bottom bar, like the profile it is pushed from.
+                destination.id == R.id.profile_avatar ||
                 destination.id == R.id.auth_sign_in ||
                 destination.id == R.id.auth_create_account ||
                 // auth_recovery was left out when the other two auth screens

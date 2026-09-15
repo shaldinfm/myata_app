@@ -8,8 +8,10 @@ import com.example.musicplayerapp.data.Reaction
 import com.example.musicplayerapp.data.ReactionOutboxEntry
 import com.example.musicplayerapp.data.TrackReaction
 import com.example.musicplayerapp.data.supabase.AccountInfo
+import com.example.musicplayerapp.data.supabase.AccountRefreshResult
 import com.example.musicplayerapp.data.supabase.AuthFailure
 import com.example.musicplayerapp.data.supabase.AuthResult
+import com.example.musicplayerapp.data.supabase.AvatarUpdateResult
 import com.example.musicplayerapp.data.supabase.DeleteAccountOutcome
 import kotlinx.coroutines.CompletableDeferred
 import com.example.musicplayerapp.data.supabase.DeletionStatusOutcome
@@ -156,6 +158,10 @@ internal class FakeEmailAuthApi : EmailAuthApi {
     fun release() {
         gate?.complete(Unit)
         updateGate?.complete(Unit)
+        restoreGate?.complete(Unit)
+        prepareBlocksThread?.let { while (it.count > 0) it.countDown() }
+        accountGate?.complete(Unit)
+        refreshGate?.complete(Unit)
     }
 
     override suspend fun requestPasswordReset(email: String): RecoveryResult {
@@ -188,9 +194,103 @@ internal class FakeEmailAuthApi : EmailAuthApi {
         }
     }
 
+    /**
+     * The cold start's stored-session restore, held open until a test completes it.
+     *
+     * Null is an install whose session is already restored - every ordinary case. Set and
+     * not yet complete, it is the window the real Auth plugin has on a cold start: the
+     * session exists on disk, and [currentUid] and [currentAccount] still answer null.
+     */
+    var restoreGate: CompletableDeferred<Unit>? = null
+
+    /** How many readers waited for the restore. A guest's HOME must not be one of them. */
+    var restoreWaits = 0
+
+    // A restore that threw leaves no session behind, exactly as the plugin's would.
+    private val restored: Boolean get() = (restoreGate?.isCompleted ?: true) && restoreThrows == null
+
+    /** When set, the restore fails with this - after any [restoreGate] - instead of settling. */
+    var restoreThrows: Throwable? = null
+
+    /**
+     * When set, [prepareSession] blocks its thread on this - no suspension point, the way a
+     * synchronized client construction would - until a test counts it down.
+     */
+    var prepareBlocksThread: java.util.concurrent.CountDownLatch? = null
+
+    override suspend fun prepareSession() {
+        prepareBlocksThread?.await()
+    }
+
+    override suspend fun awaitSessionRestored() {
+        restoreWaits++
+        restoreGate?.await()
+        restoreThrows?.let { throw it }
+    }
+
     /** What the account card reads. Null session means null account, as in life. */
-    override suspend fun currentAccount(): AccountInfo? =
-        session?.let { AccountInfo(it, accountName, accountEmail) }
+    /**
+     * Holds [currentAccount] open - after counting the call - like a slow session read. The
+     * way a test sees what a recreated screen draws before any read has come back.
+     */
+    var accountGate: CompletableDeferred<Unit>? = null
+
+    override suspend fun currentAccount(): AccountInfo? {
+        currentAccountCalls++
+        accountGate?.await()
+        return if (!restored) null else session?.let { AccountInfo(it, accountName, accountEmail, accountAvatar) }
+    }
+
+    /** How many times the session's account was read. */
+    var currentAccountCalls = 0
+
+    /** `user_metadata.avatar_id` on the live session. Null models an account that never chose. */
+    var accountAvatar: String? = null
+
+    /** When set, the next [updateAvatar] fails with this and stores nothing. */
+    var avatarFailure: AuthFailure? = null
+
+    /** Holds [updateAvatar] open until a test completes it - the in-flight Save. */
+    var avatarGate: CompletableDeferred<Unit>? = null
+
+    /** Every key [updateAvatar] was asked to store, in order, including failed ones. */
+    val avatarUpdates = mutableListOf<String>()
+
+    /**
+     * What the server holds for `avatar_id` when another device changed it.
+     *
+     * Null means the server agrees with this device's session, which is every ordinary
+     * case. Set, it is the second-device scenario: [currentAccount] keeps answering from
+     * the stale local copy until [refreshAccount] copies this across.
+     */
+    var serverAvatar: String? = null
+
+    /** When set, [refreshAccount] fails with this - offline - and changes nothing. */
+    var refreshFailure: AuthFailure? = null
+
+    /** How many times the account was re-read from the "server". */
+    var refreshCalls = 0
+
+    /** Holds [refreshAccount] open - after counting the call - until a test completes it. */
+    var refreshGate: CompletableDeferred<Unit>? = null
+
+    override suspend fun refreshAccount(): AccountRefreshResult {
+        refreshCalls++
+        refreshGate?.await()
+        val live = session?.takeIf { restored } ?: return AccountRefreshResult.Unavailable("no session")
+        refreshFailure?.let { return AccountRefreshResult.Unavailable(it.javaClass.simpleName) }
+        serverAvatar?.let { accountAvatar = it; serverAvatar = null }
+        return AccountRefreshResult.Refreshed(AccountInfo(live, accountName, accountEmail, accountAvatar))
+    }
+
+    override suspend fun updateAvatar(avatarId: String): AvatarUpdateResult {
+        avatarUpdates += avatarId
+        avatarGate?.await()
+        avatarFailure?.let { return AvatarUpdateResult.Failed(it) }
+        if (session == null) return AvatarUpdateResult.Failed(AuthFailure.Unknown(detail = "no session"))
+        accountAvatar = avatarId
+        return AvatarUpdateResult.Updated(avatarId)
+    }
 
     /**
      * How many times the session was asked for.
@@ -203,7 +303,7 @@ internal class FakeEmailAuthApi : EmailAuthApi {
 
     override suspend fun currentUid(): String? {
         currentUidCalls++
-        return session
+        return if (restored) session else null
     }
 
     /**
@@ -451,6 +551,7 @@ internal class CountingIdentity(private val uid: String?) {
 internal object TestIsolation {
 
     fun restoreBackends() {
+        com.example.musicplayerapp.data.supabase.AccountRefresh.resetForTest()
         if (LiveSupabase.isOptedIn) {
             ReactionSyncBackend.overrideForInstrumentation(null, null)
             EmailAuthBackend.overrideForInstrumentation(null)
@@ -482,6 +583,9 @@ internal object TestIsolation {
         override suspend fun updatePassword(newPassword: String): RecoveryResult =
             RecoveryResult.Failed(AuthFailure.NetworkFailure(WHY))
         override suspend fun currentAccount(): AccountInfo? = null
+        override suspend fun updateAvatar(avatarId: String): AvatarUpdateResult =
+            AvatarUpdateResult.Failed(AuthFailure.NetworkFailure(WHY))
+        override suspend fun refreshAccount(): AccountRefreshResult = AccountRefreshResult.Unavailable(WHY)
         override suspend fun currentUid(): String? = null
         override suspend fun signOutLocal(): Boolean = true
 

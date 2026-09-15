@@ -1297,4 +1297,36 @@
     <dimen name="history_state_headline_min_height">32dp</dimen>
     <dimen name="history_state_body_gap">12dp</dimen>
     <dimen name="history_state_button_gap">28dp</dimen>
+
+    <!--
+      profile-avatar 2523:137 / 2517:3678 (G6a), 390x702.
+
+          band                  0..64
+          Current              96..192   (32 below the band, 96x96, 2dp primary ring)
+          caption             208..228   (16 below)
+          grid                244..602   (16 below; 4x4, 76 cells, 18 gutters) - the frame
+                                         G6a ships 4x6 for 24 avatars: 244..790
+          Сохранить on 4x6    814..866   then 24 of scroll clearance
+          Сохранить           626..678   (24 below, 358x52, r12)
+
+      4·76 + 3·18 = 358, the content width at 390dp. Wider screens keep the 76dp
+      cells and the 16dp margins and spread the column gutters; narrower ones shrink
+      the cells so four still fit. Row gutters stay 18 - see AvatarGridLayout.
+    -->
+    <dimen name="avatar_current_margin_top">32dp</dimen>
+    <dimen name="avatar_current_size">96dp</dimen>
+    <dimen name="avatar_caption_margin_top">16dp</dimen>
+    <dimen name="avatar_grid_margin_top">16dp</dimen>
+    <dimen name="avatar_cell_size">76dp</dimen>
+    <dimen name="avatar_cell_gutter">18dp</dimen>
+    <dimen name="avatar_cell_ring">1dp</dimen>
+    <dimen name="avatar_cell_ring_selected">2dp</dimen>
+    <dimen name="avatar_badge_size">24dp</dimen>
+    <dimen name="avatar_save_margin_top">24dp</dimen>
+    <!--
+      Below `Сохранить`, before the navigation bar inset: the frame's own 24 (702 - 678).
+      Deliberately not content_bottom_clearance, whose 154 reserves room for the Mini
+      Player - hidden on this pushed screen - and would add 130dp of empty scroll.
+    -->
+    <dimen name="avatar_scroll_bottom_clearance">24dp</dimen>
 </resources>

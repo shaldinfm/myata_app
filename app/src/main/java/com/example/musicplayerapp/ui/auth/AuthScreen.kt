@@ -2,6 +2,7 @@ package com.example.musicplayerapp.ui.auth
 
 import android.view.View
 import android.widget.TextView
+import androidx.annotation.DimenRes
 import androidx.annotation.StringRes
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -47,7 +48,16 @@ fun TextView.setInlineError(@StringRes message: Int?) {
  * These screens hide the bottom bar, so nothing else is reserving the navigation
  * inset for them and the scroll has to clear it itself.
  */
-fun applyAuthInsets(root: View, scroll: View) {
+fun applyAuthInsets(
+    root: View,
+    scroll: View,
+    /**
+     * Space kept below the scroll's last child, before the navigation bar. The shared
+     * `content_bottom_clearance` by default; a screen that is never under the Mini Player
+     * and ends on its own button may pass less (the avatar picker does).
+     */
+    @DimenRes bottomClearance: Int = R.dimen.content_bottom_clearance,
+) {
     ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
         val bars = insets.getInsets(
             WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
@@ -58,7 +68,7 @@ fun applyAuthInsets(root: View, scroll: View) {
             scroll.paddingLeft,
             scroll.paddingTop,
             scroll.paddingRight,
-            view.resources.getDimensionPixelSize(R.dimen.content_bottom_clearance) + bars.bottom,
+            view.resources.getDimensionPixelSize(bottomClearance) + bars.bottom,
         )
         insets
     }

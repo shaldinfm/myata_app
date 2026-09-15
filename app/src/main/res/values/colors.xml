@@ -525,4 +525,24 @@
     -->
     <color name="history_state_illustration">#E8EAED</color>
     <color name="brand_history_screen_artwork_placeholder">#1C4771</color>
+
+    <!--
+      profile-avatar 2523:137 / 2517:3678 (G6a).
+
+      The check on the selected cell's badge and the `Сохранить` label. Dark is
+      exactly `on_primary` (#0F253E); light is #E3E8ED on this frame and #FFFFFF on
+      every other filled button, so it is a pair rather than `on_primary` or
+      `profile_primary_button_label`. Everything else on the screen is an existing
+      role: cell ring `outline`, selected ring / badge / current ring `primary`,
+      caption `text_secondary`.
+    -->
+    <color name="avatar_on_primary">#E3E8ED</color>
+
+    <!--
+      The check on the selected avatar's badge: #F5F7FA on the light badge, #0F253E on the
+      dark one - owner-specified (G6a, 2026-09-14), opaque. It was avatar_on_primary; the
+      decoded 2523:154 stroke reads #E3E8ED, and the owner's value supersedes it. The
+      `Сохранить` label keeps avatar_on_primary.
+    -->
+    <color name="avatar_badge_check">#F5F7FA</color>
 </resources>

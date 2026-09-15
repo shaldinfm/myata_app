@@ -1,0 +1,30 @@
+{
+  "about": "The owner-approved G6a avatar set (2026-09-14). Grid order, row by row: myata-01..04 is the top row of the 4x6 picker. Sources are owner-created candidates kept outside the repo; only the prepared 384px WebP exports ship.",
+  "provenance": "Owner-created with an image generator (each source PNG carries an OpenAI gpt-image C2PA manifest, which WebP export does not carry over). Cleared for use by Radio Myata. A similarity review against the Material 3 Design Kit renders is documented in docs/PROFILE-AVATAR-3.6.6.md as a known release consideration; it is not a selection criterion.",
+  "avatars": [
+    { "id": "myata-01", "source": "myata_06.png",   "version": "original" },
+    { "id": "myata-02", "source": "myata_19.png",   "version": "original" },
+    { "id": "myata-03", "source": "myata_18v2.png", "version": "revised v2" },
+    { "id": "myata-04", "source": "myata_16.png",   "version": "original" },
+    { "id": "myata-05", "source": "myata_08.png",   "version": "original" },
+    { "id": "myata-06", "source": "myata_10.png",   "version": "original" },
+    { "id": "myata-07", "source": "myata_17.png",   "version": "original" },
+    { "id": "myata-08", "source": "myata_04.png",   "version": "original" },
+    { "id": "myata-09", "source": "myata_15.png",   "version": "original" },
+    { "id": "myata-10", "source": "myata_03.png",   "version": "original" },
+    { "id": "myata-11", "source": "myata_23.png",   "version": "original" },
+    { "id": "myata-12", "source": "myata_11.png",   "version": "original" },
+    { "id": "myata-13", "source": "myata_12.png",   "version": "original (v2 not selected)" },
+    { "id": "myata-14", "source": "myata_20.png",   "version": "original" },
+    { "id": "myata-15", "source": "myata_02v2.png", "version": "revised v2" },
+    { "id": "myata-16", "source": "myata_22.png",   "version": "original" },
+    { "id": "myata-17", "source": "myata_13.png",   "version": "original" },
+    { "id": "myata-18", "source": "myata_21.png",   "version": "original" },
+    { "id": "myata-19", "source": "myata_24.png",   "version": "original" },
+    { "id": "myata-20", "source": "myata_09.png",   "version": "original" },
+    { "id": "myata-21", "source": "myata_05.png",   "version": "original (v2 not selected)" },
+    { "id": "myata-22", "source": "myata_14.png",   "version": "original" },
+    { "id": "myata-23", "source": "myata_07.png",   "version": "original" },
+    { "id": "myata-24", "source": "myata_01v2.png", "version": "revised v2" }
+  ]
+}

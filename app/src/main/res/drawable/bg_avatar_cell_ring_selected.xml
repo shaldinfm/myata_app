@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The selected cell, 2523:151 / 2517:3698: the same inside ring at 2dp in `primary`
+  (#1C4771 light, #5FD9B4 dark). The `Current` preview 2523:144 carries the same ring.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <stroke
+        android:width="@dimen/avatar_cell_ring_selected"
+        android:color="@color/primary" />
+</shape>

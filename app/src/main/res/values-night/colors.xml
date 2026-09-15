@@ -161,4 +161,8 @@
 
     <!-- G4b: history-empty_dark / history-error_dark `Illustration`. -->
     <color name="history_state_illustration">#1C4771</color>
+
+    <!-- profile-avatar_dark 2517:3678 - see values/colors.xml. -->
+    <color name="avatar_on_primary">#0F253E</color>
+    <color name="avatar_badge_check">#0F253E</color>
 </resources>

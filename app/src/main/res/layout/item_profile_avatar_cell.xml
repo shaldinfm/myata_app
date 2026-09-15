@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Avatar cell NN · avatar/m3-NN` 2523:146.. / 2517:3688..: a 76dp circle filled with
+  the artwork, a 1dp inside ring in `outline` - 2dp in `primary` when selected - and,
+  on the selected cell only, the 24dp `Selected badge` flush with the bottom-right
+  corner of the box (x=52, y=52), carrying the check.
+
+  Sized by AvatarGridLayout, which is why nothing here names 76dp. The whole cell is
+  the touch target; the ring and the badge are drawing, not views anyone can focus.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:clickable="true"
+    android:focusable="true">
+
+    <ImageView
+        android:id="@+id/avatar_cell_image"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop" />
+
+    <!--
+      The ring, as a view between the artwork and the badge - not the cell's foreground.
+      A foreground draws above every child, so the 76dp ring's arc, which crosses the
+      24dp badge right through the check's joint, painted over the check in the badge's
+      own colour and cut it in two. Figma draws the badge above the ring; so does this.
+    -->
+    <View
+        android:id="@+id/avatar_cell_ring"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_avatar_cell_ring"
+        android:importantForAccessibility="no" />
+
+    <ImageView
+        android:id="@+id/avatar_cell_badge"
+        android:layout_width="@dimen/avatar_badge_size"
+        android:layout_height="@dimen/avatar_badge_size"
+        android:layout_gravity="bottom|end"
+        android:background="@drawable/bg_avatar_badge"
+        android:importantForAccessibility="no"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_avatar_check"
+        android:visibility="gone" />
+</FrameLayout>

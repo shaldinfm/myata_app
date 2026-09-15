@@ -10,17 +10,20 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.musicplayerapp.R
+import com.example.musicplayerapp.data.supabase.AccountRefresh
 import com.example.musicplayerapp.data.supabase.EmailAuthBackend
 import com.example.musicplayerapp.data.supabase.EmailAuthRepository
 import com.example.musicplayerapp.data.supabase.IdentityReconciler
 import com.example.musicplayerapp.data.supabase.IdentityState
 import com.example.musicplayerapp.data.supabase.IdentityStore
+import com.example.musicplayerapp.data.supabase.KnownAccount
 import com.example.musicplayerapp.data.supabase.LastSyncStore
 import com.example.musicplayerapp.databinding.FragmentProfileAuthenticatedBinding
 import com.example.musicplayerapp.ui.auth.applyAuthInsets
 import com.example.musicplayerapp.ui.profile.AvatarInitial
 import com.example.musicplayerapp.ui.profile.DeleteAccountViewModel
 import com.example.musicplayerapp.ui.profile.ProfileAccount
+import com.example.musicplayerapp.ui.profile.ProfileAvatars
 import com.example.musicplayerapp.ui.profile.leavesTheAccountScreen
 import com.example.musicplayerapp.ui.profile.message
 import androidx.appcompat.app.AlertDialog
@@ -60,11 +63,11 @@ import kotlinx.coroutines.withContext
  * loads a session that already exists; and nothing here calls `ListenerSession
  * .identity`, which is the one function in the app that can.
  *
- * ## Three rows, one of which works
+ * ## Three rows, two of which work
  *
- * `Аватар` and `Сменить пароль` are drawn exactly as the frame draws them, chevrons
- * and all, and are inert: the screens behind them are not in this PR. `Выйти` is
- * wired, because it is the only way out of the authenticated state and a disabled
+ * `Сменить пароль` is drawn exactly as the frame draws it, chevron and all, and is
+ * inert: the screen behind it is not built. `Аватар` opens the picker (G6a). `Выйти`
+ * is wired, because it is the only way out of the authenticated state and a disabled
  * one would strand somebody here.
  */
 class ProfileAuthenticatedFragment : Fragment() {
@@ -106,6 +109,8 @@ class ProfileAuthenticatedFragment : Fragment() {
 
         binding.profileBack.setOnClickListener { findNavController().popBackStack() }
         binding.profileRowSignOut.setOnClickListener { signOut() }
+        binding.profileRowAvatar.setOnClickListener { openAvatarPicker() }
+        ProfileAvatarFragment.clipToCircle(binding.profileAccountAvatarImage)
         binding.profileRowDeleteAccount.setOnClickListener { confirmDeletion() }
 
         // The card is deliberately **not** painted here. ProfileRoute has already
@@ -114,7 +119,18 @@ class ProfileAuthenticatedFragment : Fragment() {
         // `Пользователь` and `Email недоступен` on screen for anyone whose session
         // turned out to be gone, which is rendering an account card for somebody who
         // is not authenticated.
-        binding.profileAccountCard.visibility = View.INVISIBLE
+        //
+        // The exception is an account this process has already verified for the same uid
+        // (KnownAccount): that is not a fallback, and hiding it for the frames the check
+        // takes is what made the name blink out and back on every open. The check below
+        // still runs, redraws from the session, and leaves if the answer is no.
+        val known = KnownAccount.of(IdentityStore.state(requireContext()))
+        if (known != null) {
+            render(known.displayName, known.email, known.avatarId)
+            binding.profileAccountCard.visibility = View.VISIBLE
+        } else {
+            binding.profileAccountCard.visibility = View.INVISIBLE
+        }
         renderLastSync()
 
         return binding.root
@@ -132,6 +148,7 @@ class ProfileAuthenticatedFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         verifySession()
         observeDeletion()
+        observeAvatarPicker()
     }
 
     // ------------------------------------------------- account deletion --
@@ -242,6 +259,7 @@ class ProfileAuthenticatedFragment : Fragment() {
                 if (state !is IdentityState.Registered) null else api.currentAccount()
             }
 
+            if (account != null) KnownAccount.remember(account) else KnownAccount.forget()
             if (_binding == null) return@launch
 
             if (account == null) {
@@ -254,12 +272,27 @@ class ProfileAuthenticatedFragment : Fragment() {
                 return@launch
             }
 
-            render(account.displayName, account.email)
+            render(account.displayName, account.email, account.avatarId)
             binding.profileAccountCard.visibility = View.VISIBLE
+
+            // G6a: the card was drawn from the session's stored copy of the account. Ask
+            // the server once, so an avatar or name saved on another device appears here -
+            // and is stored for HOME and Settings - without a new sign-in. Offline or any
+            // failure returns null and the card stays exactly as drawn; nobody is signed out.
+            //
+            // A Save handed back while this refresh is in flight is newer than whatever the
+            // refresh returns, so a refresh that started before it is not drawn over it.
+            val startedAt = pickerResultGeneration
+            val refreshed = withContext(Dispatchers.IO) {
+                runCatching { AccountRefresh.refresh(requireContext().applicationContext) }.getOrNull()
+            } ?: return@launch
+            if (_binding == null || refreshed.uid != account.uid) return@launch
+            if (pickerResultGeneration != startedAt) return@launch
+            render(refreshed.displayName, refreshed.email, refreshed.avatarId)
         }
     }
 
-    private fun render(name: String?, email: String?) {
+    private fun render(name: String?, email: String?, avatarId: String?) {
         val fallbackName = getString(R.string.profile_account_name_fallback)
         // Kept for the final confirmation, which names the account rather than asking
         // about it in the abstract.
@@ -272,6 +305,83 @@ class ProfileAuthenticatedFragment : Fragment() {
         // Centred by the glyph's own metrics, not by the line box - see AvatarInitial
         // for why the difference is visible and which way the frame gets it wrong.
         AvatarInitial.centre(binding.profileAccountAvatarInitial)
+
+        renderAvatar(avatarId)
+    }
+
+    /**
+     * The avatar in the card's 64dp circle, or the frame's initial when there is none.
+     *
+     * An unknown key is no avatar: the frame's initial, never a guess.
+     */
+    private fun renderAvatar(avatarId: String?) {
+        val avatar = ProfileAvatars.resolve(avatarId)
+        if (avatar != null) {
+            binding.profileAccountAvatarImage.setImageResource(avatar.drawable)
+            binding.profileAccountAvatarImage.visibility = View.VISIBLE
+            binding.profileAccountAvatarInitial.visibility = View.GONE
+            // Off, or the `primary` disc would show as a fringe round the artwork's
+            // anti-aliased edge.
+            binding.profileAccountAvatar.background = null
+            binding.profileAccountAvatar.contentDescription = getString(
+                R.string.profile_account_avatar_description,
+                getString(R.string.avatar_numbered, avatar.number, ProfileAvatars.all.size),
+            )
+        } else {
+            binding.profileAccountAvatarImage.setImageDrawable(null)
+            binding.profileAccountAvatarImage.visibility = View.GONE
+            binding.profileAccountAvatarInitial.visibility = View.VISIBLE
+            binding.profileAccountAvatar.setBackgroundResource(R.drawable.bg_profile_avatar_account)
+            binding.profileAccountAvatar.contentDescription = getString(
+                R.string.profile_account_avatar_description,
+                getString(R.string.avatar_none_description),
+            )
+        }
+    }
+
+    /**
+     * What the picker hands back when it closes.
+     *
+     * The card is otherwise drawn only when this view is created, and returning from the
+     * picker does not always create it: a Save that lands while the forward transition is
+     * still running pops straight back to the *same* view, which never re-reads the
+     * account. So the picker says what it saved, and whether the session needs checking
+     * again, and this applies it to whichever view is showing. Both are taken once.
+     */
+    /**
+     * Bumped whenever the picker hands back a saved avatar, so a refresh that started before
+     * it can tell its answer is older than what the card now shows.
+     */
+    private var pickerResultGeneration = 0
+
+    private fun observeAvatarPicker() {
+        val handle = findNavController().currentBackStackEntry?.savedStateHandle ?: return
+        handle.getLiveData<String?>(ProfileAvatarFragment.RESULT_SAVED_AVATAR, null)
+            .observe(viewLifecycleOwner) { saved ->
+                if (_binding == null || saved == null) return@observe
+                pickerResultGeneration++
+                renderAvatar(saved)
+                // Cleared rather than removed: removing drops the LiveData this view observes.
+                handle[ProfileAvatarFragment.RESULT_SAVED_AVATAR] = null
+            }
+        handle.getLiveData(ProfileAvatarFragment.RESULT_VERIFY_AGAIN, false)
+            .observe(viewLifecycleOwner) { again ->
+                if (_binding == null || !again) return@observe
+                handle[ProfileAvatarFragment.RESULT_VERIFY_AGAIN] = false
+                verifySession()
+            }
+    }
+
+    /**
+     * `Row / Аватар`. Only from this destination, so a second tap while the first
+     * navigation is under way finds the picker already current and does nothing - the
+     * action's `launchSingleTop` is the second line of the same defence.
+     */
+    private fun openAvatarPicker() {
+        if (_binding == null) return
+        val controller = findNavController()
+        if (controller.currentDestination?.id != R.id.profile_authenticated) return
+        controller.navigate(R.id.action_profile_authenticated_to_profile_avatar)
     }
 
     /**

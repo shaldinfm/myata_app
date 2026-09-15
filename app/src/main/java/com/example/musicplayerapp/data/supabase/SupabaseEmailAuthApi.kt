@@ -220,6 +220,38 @@ class SupabaseEmailAuthApi(
         )
     }
 
+    override suspend fun updateAvatar(avatarId: String): AvatarUpdateResult {
+        val auth = client?.auth ?: return AvatarUpdateResult.Failed(noClientFailure())
+        // Checked rather than left to the library's own exception: without a session
+        // there is no account to write to, and saying so is clearer in a log than a
+        // classified SessionRequiredException.
+        if (auth.currentUserOrNull() == null) {
+            return AvatarUpdateResult.Failed(AuthFailure.Unknown(detail = "no session"))
+        }
+
+        // `updateCurrentUser` defaults to true: the user GoTrue returns replaces the
+        // one the session holds, and the session is what `currentAccount` reads - so
+        // the profile agrees with the server without a second request.
+        return runCatching { auth.updateUser { data { put(AVATAR_ID, avatarId) } } }.fold(
+            onSuccess = { user ->
+                val stored = user.userMetadata?.get(AVATAR_ID)?.jsonPrimitive?.contentOrNull
+                if (stored == avatarId) {
+                    Log.d(TAG, "avatar updated")
+                    AvatarUpdateResult.Updated(avatarId)
+                } else {
+                    // A 200 that did not store the key is not a success worth
+                    // showing: the profile would read the old value back.
+                    AvatarUpdateResult.Failed(
+                        AuthFailure.Unknown(detail = "avatar_id not echoed by updateUser")
+                    )
+                }
+            },
+            onFailure = {
+                AvatarUpdateResult.Failed(classifyAuthFailure(it, AuthOperation.AVATAR_UPDATE))
+            },
+        )
+    }
+
     /**
      * `delete_my_account(p_request_id)`.
      *
@@ -437,6 +469,33 @@ class SupabaseEmailAuthApi(
     private fun JsonObject.count(name: String): Long =
         this[name]?.jsonPrimitive?.contentOrNull?.toLongOrNull() ?: 0L
 
+    override suspend fun refreshAccount(): AccountRefreshResult {
+        val auth = client?.auth ?: return AccountRefreshResult.Unavailable("no supabase client")
+        if (auth.currentUserOrNull() == null) return AccountRefreshResult.Unavailable("no session")
+
+        // updateSession = true: the returned user replaces the session's and is saved to
+        // storage (supabase-kt 3.2.6, read off the artifact), so a relaunch keeps it.
+        return runCatching { auth.retrieveUserForCurrentSession(updateSession = true) }.fold(
+            onSuccess = { user ->
+                AccountRefreshResult.Refreshed(
+                    AccountInfo(
+                        uid = user.id,
+                        displayName = user.userMetadata?.get(DISPLAY_NAME)?.jsonPrimitive?.contentOrNull,
+                        email = user.email,
+                        avatarId = user.userMetadata?.get(AVATAR_ID)?.jsonPrimitive?.contentOrNull,
+                    )
+                )
+            },
+            onFailure = {
+                // Deliberately not classified into a sign-out: offline, a token that is
+                // about to be refreshed by the plugin itself, or a server hiccup all leave
+                // the cached account standing.
+                Log.d(TAG, "account refresh unavailable: ${it.javaClass.simpleName}")
+                AccountRefreshResult.Unavailable(it.javaClass.simpleName)
+            },
+        )
+    }
+
     override suspend fun currentAccount(): AccountInfo? = runCatching {
         val user = client?.auth?.currentUserOrNull() ?: return null
         AccountInfo(
@@ -446,8 +505,28 @@ class SupabaseEmailAuthApi(
             // which would hand the screen a quoted JSON string to draw.
             displayName = user.userMetadata?.get(DISPLAY_NAME)?.jsonPrimitive?.contentOrNull,
             email = user.email,
+            // `runCatching` below already covers a non-primitive value written by
+            // something else; ProfileAvatars decides what an unknown key means.
+            avatarId = user.userMetadata?.get(AVATAR_ID)?.jsonPrimitive?.contentOrNull,
         )
     }.getOrNull()
+
+    /**
+     * `awaitInitialization`: suspends while the plugin's session status is `Initializing`,
+     * which `autoLoadFromStorage` leaves as soon as the stored session is imported or found
+     * missing (supabase-kt 3.2.6, read off the artifact). A failure propagates: "the restore
+     * failed" is not "there is no session", and the startup gate must be able to tell them
+     * apart. Callers that only draw treat it as unresolved.
+     */
+    /** Constructing the client installs Auth, whose `autoLoadFromStorage` starts the restore. */
+    override suspend fun prepareSession() {
+        client?.auth
+    }
+
+    override suspend fun awaitSessionRestored() {
+        val auth = client?.auth ?: return
+        auth.awaitInitialization()
+    }
 
     override suspend fun currentUid(): String? =
         runCatching { client?.auth?.currentUserOrNull()?.id }.getOrNull()
@@ -484,6 +563,13 @@ class SupabaseEmailAuthApi(
          * list, which is worth not drifting from.
          */
         const val DISPLAY_NAME = "display_name"
+
+        /**
+         * The `user_metadata` key the chosen avatar lands in (G6a). Its value is a
+         * `ProfileAvatars` key such as `myata-06`, not an index, so reordering the grid
+         * can never silently swap somebody's avatar.
+         */
+        const val AVATAR_ID = "avatar_id"
 
         /**
          * The OTP type a recovery code is verified as.

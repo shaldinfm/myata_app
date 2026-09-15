@@ -128,7 +128,11 @@ class ProfileAuthenticatedCaptureTest {
 
             val scenario = ActivityScenario.launch(MainActivity::class.java)
             try {
+                // HOME -> Settings -> Profile: since G4a the header control opens the
+                // settings shell, whose first row is the profile.
                 tap(R.id.profile_entry)
+                await("settings") { it.currentDestinationId() == R.id.settings }
+                tap(R.id.settings_row_profile)
                 await("the account card") {
                     it.currentDestinationId() == R.id.profile_authenticated &&
                         it.findViewById<android.widget.TextView>(R.id.profile_account_name)

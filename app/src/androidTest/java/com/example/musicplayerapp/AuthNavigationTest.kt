@@ -233,15 +233,27 @@ class AuthNavigationTest {
 
             scenario.onActivity { activity ->
                 assertEquals(R.id.profile, activity.currentDestinationId())
-                // profile-guest has no bottom bar either, so it stays hidden - and
-                // the entry that restores it is Back from the profile itself.
+                // profile-guest has no bottom bar either, so it stays hidden. As of
+                // G4a the route is HOME > Settings > profile, so the entry that
+                // restores the bar is Back from Settings, two Backs from here.
                 assertEquals(
                     View.GONE,
                     activity.findViewById<View>(R.id.bottomNavView).visibility,
                 )
             }
 
+            // G4a: Settings opened the profile, so that is where Back lands.
             scenario.tap(R.id.profile_back)
+            scenario.onActivity { activity ->
+                assertEquals(R.id.settings, activity.currentDestinationId())
+                assertEquals(
+                    "settings has no bottom bar",
+                    View.GONE,
+                    activity.findViewById<View>(R.id.bottomNavView).visibility,
+                )
+            }
+
+            scenario.tap(R.id.settings_back)
             scenario.onActivity { activity ->
                 assertEquals(R.id.home, activity.currentDestinationId())
                 assertEquals(

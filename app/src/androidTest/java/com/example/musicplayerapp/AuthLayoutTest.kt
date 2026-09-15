@@ -89,6 +89,7 @@ class AuthLayoutTest {
                 val theme = if (night) "dark" else "light"
                 sweepSignIn(inflaterFor(activity, night), theme, night)
                 sweepCreateAccount(inflaterFor(activity, night), theme, night)
+                sweepRecoveryPasswordToggle(inflaterFor(activity, night), theme)
             }
         }
 
@@ -160,6 +161,8 @@ class AuthLayoutTest {
             expect(where, "Забыли пароль? to Войти", gap(forgot, submit), dp(24))
             expect(where, "Войти to Создать аккаунт", gap(submit, create), dp(16))
             expect(where, "Создать аккаунт to Продолжить", gap(create, guest), dp(24))
+
+            passwordToggle(where, root, password, root.find(R.id.auth_password_toggle), dp)
 
             /* ---- the row boxes, which are what the gaps are measured between ---- */
             expect(where, "band to b0", gap(band, b0), dp(28))
@@ -269,6 +272,8 @@ class AuthLayoutTest {
 
             expect(where, "band to Label Имя", gap(band, nameLabel), dp(28))
 
+            passwordToggle(where, root, password, root.find(R.id.auth_password_toggle), dp)
+
             if (widthDp == designWidthDp) {
                 expect(where, "Label Имя y", topInRoot(nameLabel), dp(92))
 
@@ -310,7 +315,60 @@ class AuthLayoutTest {
         }
     }
 
+    // ==================== auth-recovery: the new-password toggle ====================
+
+    /**
+     * Only the new-password input and its toggle. The rest of auth-recovery is not
+     * measured here, and its code stage is GONE at rest, so it is shown before measuring.
+     */
+    private fun sweepRecoveryPasswordToggle(inflater: LayoutInflater, theme: String) {
+        val dm = inflater.context.resources.displayMetrics
+        val dp = { v: Number -> v.toFloat() * dm.density }
+
+        for (widthDp in widthsDp) {
+            val widthPx = dp(widthDp).roundToInt()
+            val root = inflater.inflate(R.layout.fragment_auth_recovery, null) as ViewGroup
+            root.find(R.id.auth_recovery_request_group).visibility = View.GONE
+            root.find(R.id.auth_recovery_code_group).visibility = View.VISIBLE
+            measure(root, widthPx)
+            val where = "recovery/$theme@${widthDp}dp"
+
+            val label = root.find(R.id.auth_recovery_password_label)
+            val password = root.find(R.id.auth_recovery_password)
+            expect(where, "new password input height", password.height, dp(56))
+            expect(where, "new password input x", leftInRoot(password), dp(16))
+            expect(where, "new password input width", password.width, dp(widthDp - 32))
+            expect(where, "new password label to its input", gap(label, password), dp(4))
+
+            passwordToggle(where, root, password, root.find(R.id.auth_recovery_password_toggle), dp)
+        }
+    }
+
     // ==================== helpers ====================
+
+    /**
+     * The show/hide control sits over the input's end: a 48dp target inset 4dp, centred
+     * on the input, with the input's end padding grown to 52dp so text stops short of
+     * it. The input's own box is asserted by each sweep and does not change.
+     */
+    private fun passwordToggle(where: String, root: ViewGroup, input: View, toggle: View, dp: (Number) -> Float) {
+        expect(where, "password toggle width", toggle.width, dp(48))
+        expect(where, "password toggle height", toggle.height, dp(48))
+        expect(where, "password toggle end inset",
+            (leftInRoot(input) + input.width) - (leftInRoot(toggle) + toggle.width), dp(4))
+        expect(where, "password toggle centred on the input",
+            (topInRoot(toggle) + toggle.height / 2) - (topInRoot(input) + input.height / 2), dp(0))
+        expect(where, "password input end padding", input.paddingEnd, dp(52))
+        expect(where, "password input start padding", input.paddingStart, dp(16))
+
+        val field = input as android.widget.EditText
+        if (field.transformationMethod !is android.text.method.PasswordTransformationMethod) {
+            findings += "$where: ${nameOf(input)} must be masked at rest"
+        }
+        if (toggle.contentDescription != root.context.getString(R.string.auth_password_show_description)) {
+            findings += "$where: ${nameOf(toggle)} must be named for showing the password at rest"
+        }
+    }
 
     private fun ViewGroup.find(id: Int): View = findViewById(id)
 
@@ -359,6 +417,11 @@ class AuthLayoutTest {
 
     private fun measured(inflater: LayoutInflater, layout: Int, widthPx: Int): ViewGroup {
         val root = inflater.inflate(layout, null) as ViewGroup
+        measure(root, widthPx)
+        return root
+    }
+
+    private fun measure(root: ViewGroup, widthPx: Int) {
         // A real viewport height. Measuring UNSPECIFIED would hand the ScrollView an
         // unbounded one and make every number fiction the moment a screen scrolls.
         root.measure(
@@ -366,7 +429,6 @@ class AuthLayoutTest {
             View.MeasureSpec.makeMeasureSpec(widthPx * 2, View.MeasureSpec.EXACTLY),
         )
         root.layout(0, 0, root.measuredWidth, root.measuredHeight)
-        return root
     }
 
     private fun inflaterFor(activity: MainActivity, night: Boolean): LayoutInflater {

@@ -15,6 +15,7 @@ import com.example.musicplayerapp.ui.auth.RecoveryFormState
 import com.example.musicplayerapp.ui.auth.RecoveryStage
 import com.example.musicplayerapp.ui.auth.RecoveryViewModel
 import com.example.musicplayerapp.ui.auth.applyAuthInsets
+import com.example.musicplayerapp.ui.auth.bindPasswordVisibilityToggle
 import com.example.musicplayerapp.ui.auth.setInlineError
 
 /**
@@ -84,6 +85,8 @@ class AuthRecoveryFragment : Fragment() {
         _binding = FragmentAuthRecoveryBinding.inflate(inflater, container, false)
 
         applyAuthInsets(binding.authRoot, binding.authScroll)
+
+        bindPasswordVisibilityToggle(binding.authRecoveryPassword, binding.authRecoveryPasswordToggle)
 
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressed)
 
@@ -226,6 +229,7 @@ class AuthRecoveryFragment : Fragment() {
         binding.authEmail.isEnabled = idle
         binding.authRecoveryCode.isEnabled = idle && !state.codeAccepted
         binding.authRecoveryPassword.isEnabled = idle
+        binding.authRecoveryPasswordToggle.isEnabled = idle
 
         // The band control is greyed while busy, so the screen never shows a way out it
         // will not honour. The dispatcher callback stays enabled throughout - it owns

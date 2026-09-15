@@ -13,6 +13,7 @@ import com.example.musicplayerapp.databinding.FragmentAuthSignInBinding
 import com.example.musicplayerapp.ui.auth.AuthFormState
 import com.example.musicplayerapp.ui.auth.AuthViewModel
 import com.example.musicplayerapp.ui.auth.applyAuthInsets
+import com.example.musicplayerapp.ui.auth.bindPasswordVisibilityToggle
 import com.example.musicplayerapp.ui.auth.setInlineError
 
 /**
@@ -58,6 +59,8 @@ class AuthSignInFragment : Fragment() {
         _binding = FragmentAuthSignInBinding.inflate(inflater, container, false)
 
         applyAuthInsets(binding.authRoot, binding.authScroll)
+
+        bindPasswordVisibilityToggle(binding.authPassword, binding.authPasswordToggle)
 
         binding.authBack.setOnClickListener { findNavController().popBackStack() }
 
@@ -135,6 +138,7 @@ class AuthSignInFragment : Fragment() {
         binding.authSubmit.isEnabled = idle
         binding.authEmail.isEnabled = idle
         binding.authPassword.isEnabled = idle
+        binding.authPasswordToggle.isEnabled = idle
 
         // Anything that could start a second request or leave mid-request is closed,
         // and `Назад` deliberately is not: an unresponsive screen with no way out is

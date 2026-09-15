@@ -220,23 +220,41 @@
                         android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
                         android:textColor="@color/text_secondary" />
 
-                    <EditText
-                        android:id="@+id/auth_recovery_password"
+                    <!-- Show/hide over the input's end: see fragment_auth_sign_in.xml. -->
+                    <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="@dimen/auth_input_height"
-                        android:layout_marginTop="@dimen/auth_label_gap"
-                        android:background="@drawable/bg_auth_input"
-                        android:gravity="center_vertical"
-                        android:hint="@string/auth_hint_password"
-                        android:imeOptions="actionDone"
-                        android:importantForAutofill="no"
-                        android:inputType="textPassword"
-                        android:maxLines="1"
-                        android:paddingStart="@dimen/auth_input_padding_horizontal"
-                        android:paddingEnd="@dimen/auth_input_padding_horizontal"
-                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.15_22"
-                        android:textColor="@color/text_primary"
-                        android:textColorHint="@color/text_secondary" />
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/auth_label_gap">
+
+                        <EditText
+                            android:id="@+id/auth_recovery_password"
+                            android:layout_width="match_parent"
+                            android:layout_height="@dimen/auth_input_height"
+                            android:background="@drawable/bg_auth_input"
+                            android:gravity="center_vertical"
+                            android:hint="@string/auth_hint_password"
+                            android:imeOptions="actionDone"
+                            android:importantForAutofill="no"
+                            android:inputType="textPassword"
+                            android:maxLines="1"
+                            android:paddingStart="@dimen/auth_input_padding_horizontal"
+                            android:paddingEnd="@dimen/auth_password_input_padding_end"
+                            android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.15_22"
+                            android:textColor="@color/text_primary"
+                            android:textColorHint="@color/text_secondary" />
+
+                        <ImageButton
+                            android:id="@+id/auth_recovery_password_toggle"
+                            android:layout_width="@dimen/auth_password_toggle_size"
+                            android:layout_height="@dimen/auth_password_toggle_size"
+                            android:layout_gravity="end|center_vertical"
+                            android:layout_marginEnd="@dimen/auth_password_toggle_margin_end"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="@string/auth_password_show_description"
+                            android:padding="0dp"
+                            android:scaleType="center"
+                            android:src="@drawable/ic_auth_password_visibility_off" />
+                    </FrameLayout>
 
                     <TextView
                         android:id="@+id/auth_recovery_password_error"

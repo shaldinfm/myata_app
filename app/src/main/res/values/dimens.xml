@@ -850,6 +850,16 @@
     <dimen name="auth_input_stroke">1dp</dimen>
     <!-- The focused input draws 2dp, as auth-create-account 2517:2638 shows. -->
     <dimen name="auth_input_stroke_focused">2dp</dimen>
+    <!--
+      Show/hide on a password input: an owner-approved addition, not in the frames.
+      A 48dp touch target inset 4dp from the input's end edge centres its 24dp glyph
+      16dp from that edge - the same inset the text keeps on the other side. The input
+      box does not change; only its end padding grows, so typed text stops short of
+      the control instead of running under it: 4 + 48 = 52.
+    -->
+    <dimen name="auth_password_toggle_size">48dp</dimen>
+    <dimen name="auth_password_toggle_margin_end">4dp</dimen>
+    <dimen name="auth_password_input_padding_end">52dp</dimen>
     <!-- Password input to `Забыли пароль?`: 344 - 332. -->
     <dimen name="auth_forgot_margin_top">12dp</dimen>
     <!-- `Забыли пароль?` to the primary button: 388 - 364. -->

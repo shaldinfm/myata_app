@@ -1,6 +1,7 @@
 package com.example.musicplayerapp
 
 import android.content.Context
+import android.text.method.PasswordTransformationMethod
 import android.view.View
 import android.widget.EditText
 import android.widget.TextView
@@ -314,6 +315,7 @@ class AuthFormTest {
                 assertFalse(activity.findViewById<View>(R.id.auth_submit).isEnabled)
                 assertFalse(activity.findViewById<View>(R.id.auth_email).isEnabled)
                 assertFalse(activity.findViewById<View>(R.id.auth_password).isEnabled)
+                assertFalse(activity.findViewById<View>(R.id.auth_password_toggle).isEnabled)
                 assertFalse(activity.findViewById<View>(R.id.auth_create_account).isEnabled)
                 assertFalse(activity.findViewById<View>(R.id.auth_continue_as_guest).isEnabled)
 
@@ -323,9 +325,12 @@ class AuthFormTest {
                 assertTrue(activity.findViewById<View>(R.id.auth_back).isEnabled)
             }
 
-            // And the disabled controls really do nothing.
+            // And the disabled controls really do nothing - performClick included, which
+            // is the path an accessibility action takes.
             scenario.tap(R.id.auth_create_account)
             on { assertEquals(R.id.auth_sign_in, it.currentDestinationId()) }
+            scenario.tap(R.id.auth_password_toggle)
+            on { assertTrue(it.isMasked(R.id.auth_password)) }
 
             auth.release()
             scenario.await("the request to settle") { it.currentDestinationId() == R.id.profile_authenticated }
@@ -345,6 +350,7 @@ class AuthFormTest {
                 assertEquals(View.VISIBLE, activity.visibilityOf(R.id.auth_submit_label))
                 assertTrue(activity.findViewById<View>(R.id.auth_submit).isEnabled)
                 assertTrue(activity.findViewById<View>(R.id.auth_email).isEnabled)
+                assertTrue(activity.findViewById<View>(R.id.auth_password_toggle).isEnabled)
             }
         }
     }
@@ -704,7 +710,114 @@ class AuthFormTest {
         }
     }
 
+    // ==================== show/hide password ====================
+
+    @Test
+    fun sign_in_password_toggle_reveals_and_masks_without_touching_value_or_caret() {
+        signIn { scenario ->
+            scenario.checkPasswordToggle(R.id.auth_password, R.id.auth_password_toggle)
+
+            // What is submitted is what was typed, whichever way the field was showing.
+            auth.gate = CompletableDeferred()
+            scenario.type(R.id.auth_email, "denis@example.com")
+            scenario.tap(R.id.auth_password_toggle)
+            scenario.tap(R.id.auth_submit)
+            scenario.await("the request to start") { auth.authCalls == 1 }
+            assertEquals(PASSWORD, auth.signIns.single().secret)
+
+            auth.release()
+            scenario.await("the request to settle") { it.currentDestinationId() == R.id.profile_authenticated }
+        }
+    }
+
+    @Test
+    fun create_account_password_toggle_reveals_and_masks_without_touching_value_or_caret() {
+        createAccount { scenario ->
+            scenario.checkPasswordToggle(R.id.auth_password, R.id.auth_password_toggle)
+        }
+    }
+
+    @Test
+    fun sign_in_password_toggle_leaves_the_validation_error_alone() {
+        signIn { scenario ->
+            scenario.type(R.id.auth_email, "denis@example.com")
+            scenario.tap(R.id.auth_submit)
+            val blank = context.getString(R.string.auth_error_password_blank)
+            on { assertEquals(blank, it.text(R.id.auth_password_error)) }
+
+            scenario.tap(R.id.auth_password_toggle)
+            on { activity ->
+                assertFalse(activity.isMasked(R.id.auth_password))
+                assertEquals(View.VISIBLE, activity.visibilityOf(R.id.auth_password_error))
+                assertEquals(blank, activity.text(R.id.auth_password_error))
+            }
+            assertEquals("a toggle is not a submit", 0, auth.authCalls)
+        }
+    }
+
+    @Test
+    fun create_account_password_toggle_leaves_the_validation_error_alone() {
+        createAccount { scenario ->
+            scenario.type(R.id.auth_name, "Денис")
+            scenario.type(R.id.auth_email, "denis@example.com")
+            scenario.type(R.id.auth_password, "short")
+            scenario.tap(R.id.auth_submit)
+            val short = context.getString(R.string.auth_error_password_short)
+            on { assertEquals(short, it.text(R.id.auth_password_error)) }
+
+            scenario.tap(R.id.auth_password_toggle)
+            on { activity ->
+                assertFalse(activity.isMasked(R.id.auth_password))
+                assertEquals("short", activity.text(R.id.auth_password))
+                assertEquals(short, activity.text(R.id.auth_password_error))
+                assertEquals(View.GONE, activity.visibilityOf(R.id.auth_password_rule))
+            }
+            assertEquals("a toggle is not a submit", 0, auth.authCalls)
+        }
+    }
+
     // ==================== helpers ====================
+
+    /**
+     * Hidden at rest; each tap flips the mask and the spoken name and changes neither
+     * the text nor where the caret or selection is.
+     */
+    private fun ActivityScenario<MainActivity>.checkPasswordToggle(fieldId: Int, toggleId: Int) {
+        val show = context.getString(R.string.auth_password_show_description)
+        val hide = context.getString(R.string.auth_password_hide_description)
+
+        on { activity ->
+            assertTrue("hidden by default", activity.isMasked(fieldId))
+            assertEquals(show, activity.findViewById<View>(toggleId).contentDescription)
+        }
+
+        type(fieldId, PASSWORD)
+        on { it.findViewById<EditText>(fieldId).setSelection(3) }
+
+        tap(toggleId)
+        on { activity ->
+            val field = activity.findViewById<EditText>(fieldId)
+            assertFalse(activity.isMasked(fieldId))
+            assertEquals(hide, activity.findViewById<View>(toggleId).contentDescription)
+            assertEquals(PASSWORD, field.text.toString())
+            assertEquals("caret start", 3, field.selectionStart)
+            assertEquals("caret end", 3, field.selectionEnd)
+            field.setSelection(2, 6)
+        }
+
+        tap(toggleId)
+        on { activity ->
+            val field = activity.findViewById<EditText>(fieldId)
+            assertTrue(activity.isMasked(fieldId))
+            assertEquals(show, activity.findViewById<View>(toggleId).contentDescription)
+            assertEquals(PASSWORD, field.text.toString())
+            assertEquals("selection start", 2, field.selectionStart)
+            assertEquals("selection end", 6, field.selectionEnd)
+        }
+    }
+
+    private fun MainActivity.isMasked(id: Int): Boolean =
+        findViewById<EditText>(id).transformationMethod is PasswordTransformationMethod
 
     private fun signIn(body: (ActivityScenario<MainActivity>) -> Unit) =
         openAuth(R.id.profile_sign_in, R.id.auth_sign_in, body)
@@ -886,5 +999,9 @@ class AuthFormTest {
         val host = supportFragmentManager.findFragmentById(R.id.navHostFragment)
             as androidx.navigation.fragment.NavHostFragment
         return host.navController.currentDestination?.id
+    }
+
+    private companion object {
+        const val PASSWORD = "s3cret!!"
     }
 }

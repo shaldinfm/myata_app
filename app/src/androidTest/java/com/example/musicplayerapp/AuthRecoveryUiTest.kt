@@ -1,6 +1,7 @@
 package com.example.musicplayerapp
 
 import android.content.Context
+import android.text.method.PasswordTransformationMethod
 import android.view.View
 import android.widget.EditText
 import android.widget.TextView
@@ -19,6 +20,7 @@ import com.example.musicplayerapp.data.supabase.ReactionSyncBackend
 import kotlinx.coroutines.CompletableDeferred
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -289,6 +291,60 @@ class AuthRecoveryUiTest {
         }
     }
 
+    /**
+     * The new-password toggle: hidden at rest, text and caret untouched either way, the
+     * validation error left where it was, and what is sent is what was typed.
+     */
+    @Test
+    fun the_new_password_toggle_reveals_and_masks_without_touching_value_caret_or_error() {
+        recovery { scenario ->
+            scenario.reachCodeStage()
+            val show = context.getString(R.string.auth_password_show_description)
+            val hide = context.getString(R.string.auth_password_hide_description)
+
+            on { activity ->
+                assertTrue("hidden by default", activity.isMasked(R.id.auth_recovery_password))
+                assertEquals(show, activity.findViewById<View>(R.id.auth_recovery_password_toggle).contentDescription)
+            }
+
+            scenario.type(R.id.auth_recovery_code, "123456")
+            scenario.type(R.id.auth_recovery_password, "short")
+            scenario.tap(R.id.auth_submit)
+            val error = context.getString(R.string.auth_error_password_short)
+            on { assertEquals(error, it.text(R.id.auth_recovery_password_error)) }
+
+            on { it.findViewById<EditText>(R.id.auth_recovery_password).setSelection(2) }
+            scenario.tap(R.id.auth_recovery_password_toggle)
+            on { activity ->
+                val field = activity.findViewById<EditText>(R.id.auth_recovery_password)
+                assertFalse(activity.isMasked(R.id.auth_recovery_password))
+                assertEquals(hide, activity.findViewById<View>(R.id.auth_recovery_password_toggle).contentDescription)
+                assertEquals("short", field.text.toString())
+                assertEquals(2, field.selectionStart)
+                assertEquals(2, field.selectionEnd)
+                assertEquals(error, activity.text(R.id.auth_recovery_password_error))
+            }
+            assertTrue("a toggle is not a submit", auth.verifications.isEmpty())
+
+            scenario.tap(R.id.auth_recovery_password_toggle)
+            on { activity ->
+                val field = activity.findViewById<EditText>(R.id.auth_recovery_password)
+                assertTrue(activity.isMasked(R.id.auth_recovery_password))
+                assertEquals(show, activity.findViewById<View>(R.id.auth_recovery_password_toggle).contentDescription)
+                assertEquals(2, field.selectionStart)
+            }
+
+            // Revealed at submit time, and the password sent is still the typed one.
+            scenario.type(R.id.auth_recovery_password, "n3wpassword")
+            scenario.tap(R.id.auth_recovery_password_toggle)
+            scenario.tap(R.id.auth_submit)
+            scenario.await("the password to be set") {
+                it.visibilityOf(R.id.auth_recovery_done_group) == View.VISIBLE
+            }
+            assertEquals(listOf("n3wpassword"), auth.passwordUpdates)
+        }
+    }
+
     /** A wrong code and an expired one are different problems and must read differently. */
     @Test
     fun a_wrong_code_and_an_expired_one_keep_their_own_words() {
@@ -400,7 +456,13 @@ class AuthRecoveryUiTest {
                     it.currentDestinationId(),
                 )
                 assertEquals(View.VISIBLE, it.visibilityOf(R.id.auth_submit_progress))
+                assertFalse(it.findViewById<View>(R.id.auth_recovery_password).isEnabled)
+                assertFalse(it.findViewById<View>(R.id.auth_recovery_password_toggle).isEnabled)
             }
+
+            // The disabled toggle does nothing, performClick included.
+            scenario.tap(R.id.auth_recovery_password_toggle)
+            on { assertTrue(it.isMasked(R.id.auth_recovery_password)) }
 
             auth.release()
             scenario.await("the password to be set") {
@@ -583,23 +645,6 @@ class AuthRecoveryUiTest {
         }
     }
 
-    private fun openProfileAndSettle() {
-        on { it.findViewById<View>(R.id.profile_entry).performClick() }
-        sync()
-        awaitDestination(R.id.profile)
-    }
-
-    private fun awaitDestination(id: Int, timeoutMs: Long = 10_000) {
-        val deadline = System.currentTimeMillis() + timeoutMs
-        while (System.currentTimeMillis() < deadline) {
-            var there = false
-            on { there = it.currentDestinationId() == id }
-            if (there) return
-            Thread.sleep(25)
-        }
-        fail("never reached destination $id")
-    }
-
     /** See `AuthFormTest.on`: `onActivity` deadlocks on API 24 against a live spinner. */
     private fun on(block: (MainActivity) -> Unit) {
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
@@ -676,6 +721,9 @@ class AuthRecoveryUiTest {
     }
 
     private fun MainActivity.text(id: Int): String = findViewById<TextView>(id).text.toString()
+
+    private fun MainActivity.isMasked(id: Int): Boolean =
+        findViewById<EditText>(id).transformationMethod is PasswordTransformationMethod
 
     private fun MainActivity.visibilityOf(id: Int): Int =
         findViewById<View>(id)?.visibility ?: View.GONE

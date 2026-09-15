@@ -279,6 +279,9 @@ enum class AuthOperation {
     RECOVERY_VERIFY,
     PASSWORD_UPDATE,
 
+    /** `updateUser` carrying `user_metadata.avatar_id`. */
+    AVATAR_UPDATE,
+
     /**
      * `delete_my_account`. A PostgREST call rather than a GoTrue one, so it produces
      * no `AuthRestException` and lands in the classifier's general case - which is

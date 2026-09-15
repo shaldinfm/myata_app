@@ -16,9 +16,18 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
+import android.widget.ImageView
+import com.example.musicplayerapp.data.supabase.AccountRefresh
 import com.example.musicplayerapp.data.supabase.EmailAuthBackend
+import com.example.musicplayerapp.data.supabase.IdentityState
 import com.example.musicplayerapp.data.supabase.IdentityStore
+import com.example.musicplayerapp.data.supabase.AccountInfo
+import com.example.musicplayerapp.data.supabase.KnownAccount
+import com.example.musicplayerapp.data.supabase.StartupAccountGate
 import com.example.musicplayerapp.ui.HomeGreeting
+import com.example.musicplayerapp.ui.profile.ProfileAccount
+import com.example.musicplayerapp.ui.profile.ProfileAvatar
+import com.example.musicplayerapp.ui.profile.ProfileAvatars
 import com.example.musicplayerapp.StreamsViewModel
 import com.example.musicplayerapp.adapters.PlaylistAdapter
 import com.example.musicplayerapp.data.MyataPlaylist
@@ -31,6 +40,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+
+/** HOME's profile control while the account is unresolved - see MainFragment.showNeutralHeader. */
+internal const val NEUTRAL_TAG = "account-unresolved"
 
 class MainFragment : Fragment() {
 
@@ -165,8 +177,14 @@ class MainFragment : Fragment() {
             findNavController().navigate(R.id.settings)
         }
 
+        StartupAccountGate.addListener(onStartupGateSettled)
 
         return binding.root
+    }
+
+    override fun onDestroyView() {
+        StartupAccountGate.removeListener(onStartupGateSettled)
+        super.onDestroyView()
     }
 
     override fun onResume() {
@@ -214,20 +232,137 @@ class MainFragment : Fragment() {
      * blank one, so the alternative would be flashing `Привет!` at a signed-in
      * listener on every single return to HOME to protect against a stale name that
      * survives at most the millisecond these two local reads take.
+     *
+     * ## Not before the session is restored
+     *
+     * On a cold start HOME is drawn before the Auth plugin has loaded the stored session,
+     * and reading the account then answers null for a signed-in install. Online, the
+     * refresh below used to paper over that a second later; offline nothing did, and HOME
+     * greeted a signed-in listener as a guest until it was next resumed (G6a production
+     * smoke). So a registered install waits for the restore - local, no request - before
+     * reading. The layout's own header is showing meanwhile, and a guest never waits.
      */
     private fun renderGreeting() {
+        // Whatever this process already knows, in the frame the view appears: the account it
+        // verified, a definitive guest, or - a registered install whose session is not known
+        // yet - a neutral header that claims neither. Never the layout's guest default for
+        // somebody who may be signed in. On a cold start StartupAccountGate has already filled
+        // this in before the splash let HOME be drawn.
+        paintKnownHeader()
+
         viewLifecycleOwner.lifecycleScope.launch {
             val context = requireContext()
-            val name = withContext(Dispatchers.IO) {
-                HomeGreeting.name(IdentityStore.state(context)) {
-                    EmailAuthBackend.api(context).currentAccount()
+            val state = withContext(Dispatchers.IO) { IdentityStore.state(context) }
+            // One session read for both halves of the header, and none for a guest.
+            val read: Result<AccountInfo?>? = if (state is IdentityState.Registered) {
+                withContext(Dispatchers.IO) {
+                    runCatching {
+                        val api = EmailAuthBackend.api(context)
+                        api.awaitSessionRestored()
+                        api.currentAccount()
+                    }
+                }
+            } else null
+
+            if (view == null || !::binding.isInitialized) return@launch
+            when {
+                state !is IdentityState.Registered -> {
+                    KnownAccount.forget()
+                    showHeader(null, null)
+                }
+                // The restore or the read failed: that says nothing about who this is, so the
+                // header keeps what it shows - the account, or neutral - until a read settles.
+                read == null || read.isFailure -> Unit
+                else -> {
+                    val account = read.getOrNull()
+                    if (account != null && account.uid == state.uid) KnownAccount.remember(account)
+                    else KnownAccount.markAbsent(state.uid)
+                    showHeader(HomeGreeting.name(state) { account }, HomeGreeting.avatar(state) { account })
                 }
             }
 
+            // G6a: at most once a minute, bring the session's copy of the account up to date
+            // with the server, so an avatar or name changed on another device reaches HOME
+            // without a new sign-in. Null - offline, a guest, nothing newer - keeps the header.
+            val refreshed = withContext(Dispatchers.IO) {
+                runCatching {
+                    AccountRefresh.refresh(context.applicationContext, AccountRefresh.HOME_MIN_INTERVAL_MS)
+                }.getOrNull()?.let { account ->
+                    val current = IdentityStore.state(context)
+                    HomeGreeting.name(current) { account } to HomeGreeting.avatar(current) { account }
+                }
+            } ?: return@launch
             if (view == null || !::binding.isInitialized) return@launch
-            binding.homeGreeting.text =
-                if (name == null) getString(R.string.home_greeting)
-                else getString(R.string.home_greeting_named, name)
+            showHeader(refreshed.first, refreshed.second)
+        }
+    }
+
+    /** The startup gate settled: repaint before the splash lets the first frame through. */
+    private val onStartupGateSettled: () -> Unit = {
+        if (view != null && ::binding.isInitialized) paintKnownHeader()
+    }
+
+    /**
+     * The header from what this process knows, synchronously. See [renderGreeting].
+     *
+     * One `SharedPreferences` read on the main thread, already loaded by the startup gate.
+     */
+    private fun paintKnownHeader() {
+        val state = IdentityStore.state(requireContext())
+        val known = KnownAccount.of(state)
+        when {
+            state !is IdentityState.Registered -> showHeader(null, null)
+            known != null ->
+                showHeader(ProfileAccount.displayName(known.displayName), ProfileAvatars.resolve(known.avatarId))
+            KnownAccount.isAbsent(state) -> showHeader(null, null)
+            else -> showNeutralHeader()
+        }
+    }
+
+    /**
+     * Neither `Привет!` nor a name, and neither the glyph nor an avatar: the account is not
+     * known yet. The greeting keeps its line so nothing moves when it arrives, and the control
+     * keeps its disc and its route to Settings.
+     */
+    private fun showNeutralHeader() {
+        binding.homeGreeting.visibility = View.INVISIBLE
+        val icon = binding.profileEntry.root as? ImageView ?: return
+        icon.setImageDrawable(null)
+        icon.scaleType = ImageView.ScaleType.FIT_CENTER
+        icon.setBackgroundResource(R.drawable.bg_profile_entry)
+        icon.clipToOutline = false
+        icon.tag = NEUTRAL_TAG
+    }
+
+    private fun showHeader(name: String?, avatar: ProfileAvatar?) {
+        binding.homeGreeting.visibility = View.VISIBLE
+        binding.homeGreeting.text =
+            if (name == null) getString(R.string.home_greeting)
+            else getString(R.string.home_greeting_named, name)
+        showProfileEntry(avatar)
+    }
+
+    /**
+     * HOME's 40x40 profile control: the account's avatar when it has one, the generic
+     * person glyph otherwise (owner decision, G6a). Only HOME changes - ABOUT US and the
+     * empty COLLECTION keep the glyph - and the control's size, hit target and routing to
+     * Settings are the include's, untouched.
+     */
+    private fun showProfileEntry(avatar: ProfileAvatar?) {
+        val icon = binding.profileEntry.root as? ImageView ?: return
+        if (avatar != null) {
+            icon.setImageResource(avatar.drawable)
+            icon.scaleType = ImageView.ScaleType.CENTER_CROP
+            // No disc behind the artwork: its anti-aliased rim would show as a fringe.
+            icon.background = null
+            ProfileAvatarFragment.clipToCircle(icon)
+            icon.tag = avatar.key
+        } else {
+            icon.setImageResource(R.drawable.ic_profile_entry)
+            icon.scaleType = ImageView.ScaleType.FIT_CENTER
+            icon.setBackgroundResource(R.drawable.bg_profile_entry)
+            icon.clipToOutline = false
+            icon.tag = null
         }
     }
 

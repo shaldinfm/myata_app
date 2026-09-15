@@ -83,6 +83,26 @@ interface EmailAuthApi {
     suspend fun currentUid(): String?
 
     /**
+     * Returns once the session this device stored has been restored - or found absent.
+     *
+     * On a cold start the Auth plugin loads its stored session in the background, and until
+     * it has, [currentUid] and [currentAccount] answer null for an install that is in fact
+     * signed in. A reader that must not mistake "not restored yet" for "no session" waits
+     * here first. Local: restoring reads storage and makes no request of its own. Returns
+     * at once after the first restore, and at once when there is no client.
+     *
+     * The default is for implementations that hold no stored session at all.
+     */
+    suspend fun awaitSessionRestored() {}
+
+    /**
+     * Builds whatever [awaitSessionRestored] will need - for Supabase, the client and its Auth
+     * plugin, which also starts the stored-session restore. CPU and local only, no request.
+     * Split out so the startup gate can bound the restore itself separately from it.
+     */
+    suspend fun prepareSession() {}
+
+    /**
      * Who the live session says this device is, or null when there is no session.
      *
      * The uid alone is not enough for the authenticated profile: it shows a name and
@@ -97,6 +117,40 @@ interface EmailAuthApi {
      * A session that exists with neither is still a session.
      */
     suspend fun currentAccount(): AccountInfo?
+
+    /**
+     * Stores the chosen avatar on the account this session authenticates as.
+     *
+     * `user_metadata.avatar_id`, through the same `updateUser` GoTrue call the password
+     * update uses. No table, no column, no endpoint: the key sits next to
+     * `display_name` in a field every account already has, and it goes when the auth
+     * row goes - which is the invariant `docs/ACCOUNT-DELETION.md` records for exactly
+     * this picker. GoTrue merges `data` into the existing metadata, so the name is not
+     * touched.
+     *
+     * [avatarId] is a key from `ProfileAvatars`, never a URL or an image: the artwork
+     * is bundled, and the account only remembers which one.
+     *
+     * Succeeds only with a live session. The updated user replaces the one the session
+     * holds, so [currentAccount] reports the new key straight away and after a restart.
+     */
+    suspend fun updateAvatar(avatarId: String): AvatarUpdateResult
+
+    /**
+     * Re-reads the signed-in user from the server and replaces the copy the session holds.
+     *
+     * [currentAccount] is local: it answers from the user stored with the session, which
+     * supabase-kt only replaces on a token refresh or a new sign-in. So a change made on
+     * another device - an avatar saved there - stayed invisible here, across relaunches,
+     * until the token next refreshed. This asks `GET /auth/v1/user` once and, on success,
+     * stores the answer in the session, so [currentAccount] and every surface reading it
+     * agree with the server from then on.
+     *
+     * Read-only on the server. Never signs anybody out: no network, an expired token or
+     * any other failure is [AccountRefreshResult.Unavailable], and the cached account
+     * stays exactly as it was.
+     */
+    suspend fun refreshAccount(): AccountRefreshResult
 
     /**
      * Permanently deletes the account this session authenticates as.
@@ -162,4 +216,27 @@ data class AccountInfo(
     val uid: String,
     val displayName: String?,
     val email: String?,
+    /**
+     * `user_metadata.avatar_id` as stored - unvalidated. An account that never chose
+     * one has none; `ProfileAvatars.resolve` decides what an unknown key means.
+     */
+    val avatarId: String? = null,
 )
+
+/** What [EmailAuthApi.refreshAccount] reports. */
+sealed interface AccountRefreshResult {
+    /** The server's account, now also the session's. */
+    data class Refreshed(val account: AccountInfo) : AccountRefreshResult
+
+    /** Nothing changed locally: offline, no session, or the server refused. */
+    data class Unavailable(val reason: String) : AccountRefreshResult
+}
+
+/** What [EmailAuthApi.updateAvatar] reports. */
+sealed interface AvatarUpdateResult {
+    /** The account now carries [avatarId]. */
+    data class Updated(val avatarId: String) : AvatarUpdateResult
+
+    /** Nothing was stored. The previous avatar, if any, still stands. */
+    data class Failed(val failure: AuthFailure) : AvatarUpdateResult
+}

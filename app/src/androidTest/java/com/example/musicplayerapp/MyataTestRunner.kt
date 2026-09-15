@@ -6,8 +6,10 @@ import androidx.test.runner.AndroidJUnitRunner
 import com.example.musicplayerapp.data.ReactionOutboxEntry
 import com.example.musicplayerapp.data.TrackReaction
 import com.example.musicplayerapp.data.supabase.AccountInfo
+import com.example.musicplayerapp.data.supabase.AccountRefreshResult
 import com.example.musicplayerapp.data.supabase.AuthFailure
 import com.example.musicplayerapp.data.supabase.AuthResult
+import com.example.musicplayerapp.data.supabase.AvatarUpdateResult
 import com.example.musicplayerapp.data.supabase.DeleteAccountOutcome
 import com.example.musicplayerapp.data.supabase.DeletionStatusOutcome
 import com.example.musicplayerapp.data.supabase.EmailAuthApi
@@ -163,6 +165,11 @@ private object OfflineEmailAuthApi : EmailAuthApi {
         RecoveryResult.Failed(AuthFailure.NetworkFailure(WHY))
 
     override suspend fun currentAccount(): AccountInfo? = null
+
+    override suspend fun updateAvatar(avatarId: String): AvatarUpdateResult =
+        AvatarUpdateResult.Failed(AuthFailure.NetworkFailure(WHY))
+
+    override suspend fun refreshAccount(): AccountRefreshResult = AccountRefreshResult.Unavailable(WHY)
 
     override suspend fun currentUid(): String? = null
 

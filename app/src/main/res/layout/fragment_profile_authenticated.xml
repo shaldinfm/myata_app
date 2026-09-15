@@ -40,13 +40,21 @@
   why it is a separate view from the letter: the correction translates the text,
   and a shared view would have carried the circle with it.
 
-  ## Three rows that lead nowhere yet
+  ## The avatar (G6a)
 
-  `Аватар` and `Сменить пароль` carry their exact icons and chevrons and are inert -
-  the screens behind them are not in this PR, and a chevron that acknowledges a tap
-  it did not act on is a worse lie than one that visibly waits. `Выйти` is the
-  exception and is fully wired: it is the only way out of the authenticated state,
-  and a disabled one would strand the listener on this screen.
+  With an avatar chosen, its artwork fills the same 64dp circle and the initial steps
+  aside; without one - or with a key this build does not know - the card is exactly
+  the frame's. The frames never draw the card holding an avatar, so nothing else about
+  the card changes: no ring, no badge, and the circle is not a control. The way in is
+  `Row / Аватар`, which is the row the frame gives a chevron.
+
+  ## One row that leads nowhere yet
+
+  `Сменить пароль` carries its exact icon and chevron and is inert - the screen behind
+  it is not built, and a chevron that acknowledges a tap it did not act on is a worse
+  lie than one that visibly waits. `Аватар` opens the picker since G6a, and `Выйти` is
+  fully wired: it is the only way out of the authenticated state, and a disabled one
+  would strand the listener on this screen.
 -->
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
@@ -140,6 +148,15 @@
                             android:textAppearance="@style/TextAppearance.Myata.Onest.Medium.24_32"
                             android:textColor="@color/on_primary"
                             tools:text="Д" />
+
+                        <!-- G6a. Gone until the account names a known avatar. -->
+                        <ImageView
+                            android:id="@+id/profile_account_avatar_image"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:scaleType="centerCrop"
+                            android:visibility="gone" />
                     </FrameLayout>
 
                     <LinearLayout
@@ -294,16 +311,15 @@
                     android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
                     android:textColor="@color/profile_section_label" />
 
-                <!-- `Row / Аватар` 2517:2695, 358x64. Inert: profile-avatar is not
-                     in this PR, so the chevron is drawn and does nothing. -->
+                <!-- `Row / Аватар` 2517:2695, 358x64. Opens profile-avatar (G6a). -->
                 <LinearLayout
                     android:id="@+id/profile_row_avatar"
                     android:layout_width="match_parent"
                     android:layout_height="@dimen/profile_row_height"
                     android:layout_marginTop="@dimen/profile_account_row_margin_top"
                     android:background="@drawable/bg_profile_row"
-                    android:clickable="false"
-                    android:focusable="false"
+                    android:clickable="true"
+                    android:focusable="true"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:paddingStart="@dimen/profile_row_icon_margin_start"

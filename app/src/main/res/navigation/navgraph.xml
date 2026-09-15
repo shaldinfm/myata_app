@@ -423,6 +423,31 @@
             app:exitAnim="@anim/fade_out"
             app:popEnterAnim="@anim/fade_in"
             app:popExitAnim="@anim/fade_out" />
+        <!--
+          G6a. `Row / Аватар` pushes the picker; Back and `Сохранить` both pop to this
+          screen. Single top, and the row also checks the current destination, so a
+          double tap cannot stack two pickers.
+        -->
+        <action
+            android:id="@+id/action_profile_authenticated_to_profile_avatar"
+            app:destination="@id/profile_avatar"
+            app:launchSingleTop="true"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
     </fragment>
+
+    <!--
+      profile-avatar 2523:137 / 2517:3678 (G6a). Pushed from the authenticated profile
+      only - the guest frames have no avatar row. No actions of its own: it pops.
+
+      No bottom bar, like every profile screen, and NavScreen classifies it as pushed,
+      so there is no Mini Player either.
+    -->
+    <fragment
+        android:id="@+id/profile_avatar"
+        android:name="com.example.musicplayerapp.fragments.ProfileAvatarFragment"
+        android:label="ProfileAvatarFragment" />
 
 </navigation>

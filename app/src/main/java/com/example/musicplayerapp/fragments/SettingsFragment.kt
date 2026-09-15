@@ -11,8 +11,10 @@ import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.data.ThemeStore
 import com.example.musicplayerapp.data.report.ReportConfig
+import com.example.musicplayerapp.data.supabase.AccountRefresh
 import com.example.musicplayerapp.data.supabase.EmailAuthBackend
 import com.example.musicplayerapp.data.supabase.IdentityStore
+import com.example.musicplayerapp.data.supabase.KnownAccount
 import com.example.musicplayerapp.databinding.FragmentSettingsBinding
 import com.example.musicplayerapp.ui.profile.ProfileRoute
 import com.example.musicplayerapp.ui.settings.SettingsProfileRow
@@ -194,6 +196,14 @@ class SettingsFragment : Fragment() {
      * neither of which needs a retry.
      */
     private fun renderProfileValue() {
+        // The account this process last verified, before the first frame - so the row never
+        // shows its layout default on the way in. The routed read below still decides.
+        if (!KnownAccount.isEmpty) {
+            KnownAccount.of(IdentityStore.state(requireContext()))?.let { known ->
+                showProfileValue(SettingsProfileRow.value(true, true, known.displayName))
+            }
+        }
+
         viewLifecycleOwner.lifecycleScope.launch {
             val value = withContext(Dispatchers.IO) {
                 val context = requireContext()
@@ -204,28 +214,48 @@ class SettingsFragment : Fragment() {
                 // changed. This is the uid the decision above was actually taken on.
                 val settledUid = IdentityStore.state(context).uid
 
-                val email = if (!signedIn) {
+                val account = if (!signedIn) {
                     null
                 } else {
                     runCatching { EmailAuthBackend.api(context).currentAccount() }
                         .getOrNull()
                         ?.takeIf { it.uid == settledUid }
-                        ?.email
                 }
-                SettingsProfileRow.value(signedIn, email)
+                if (account != null) KnownAccount.remember(account)
+                else if (!signedIn) KnownAccount.forget()
+                // Routed to the account but its name unreadable this instant: the name this
+                // process verified for the same uid is still the truer answer than `Вошли`.
+                val shown = account ?: if (signedIn) KnownAccount.of(IdentityStore.state(context)) else null
+                SettingsProfileRow.value(signedIn, shown != null, shown?.displayName)
             }
 
             if (_binding == null) return@launch
+            showProfileValue(value)
 
-            binding.settingsRowProfileValue.text = when (value) {
-                SettingsProfileRow.Value.SignedOut ->
-                    getString(R.string.settings_profile_signed_out)
+            // An account surface: bring the session's copy up to date with the server once,
+            // so a name changed elsewhere shows here - and on HOME and the card - without a
+            // new sign-in. Null means offline or nothing newer; the row stays as drawn.
+            if (value is SettingsProfileRow.Value.SignedOut) return@launch
+            val refreshed = withContext(Dispatchers.IO) {
+                runCatching { AccountRefresh.refresh(requireContext().applicationContext) }.getOrNull()
+            } ?: return@launch
+            if (_binding == null) return@launch
+            showProfileValue(SettingsProfileRow.value(true, true, refreshed.displayName))
+        }
+    }
 
-                SettingsProfileRow.Value.SignedIn ->
-                    getString(R.string.settings_profile_signed_in)
+    private fun showProfileValue(value: SettingsProfileRow.Value) {
+        binding.settingsRowProfileValue.text = when (value) {
+            SettingsProfileRow.Value.SignedOut ->
+                getString(R.string.settings_profile_signed_out)
 
-                is SettingsProfileRow.Value.Address -> value.email
-            }
+            SettingsProfileRow.Value.SignedIn ->
+                getString(R.string.settings_profile_signed_in)
+
+            SettingsProfileRow.Value.Unnamed ->
+                getString(R.string.profile_account_name_fallback)
+
+            is SettingsProfileRow.Value.Name -> value.name
         }
     }
 

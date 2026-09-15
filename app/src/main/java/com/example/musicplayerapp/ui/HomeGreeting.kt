@@ -3,6 +3,8 @@ package com.example.musicplayerapp.ui
 import com.example.musicplayerapp.data.supabase.AccountInfo
 import com.example.musicplayerapp.data.supabase.IdentityState
 import com.example.musicplayerapp.ui.profile.ProfileAccount
+import com.example.musicplayerapp.ui.profile.ProfileAvatar
+import com.example.musicplayerapp.ui.profile.ProfileAvatars
 
 /**
  * Whom HOME is greeting, decided without a Context, a View or a device.
@@ -67,5 +69,18 @@ object HomeGreeting {
         val info = account() ?: return null
         if (info.uid != state.uid) return null
         return ProfileAccount.displayName(info.displayName)
+    }
+
+    /**
+     * The avatar HOME's 40x40 profile control shows, under the same "who may be named"
+     * rule as [name]: only the registered account's own session, and only a key
+     * [ProfileAvatars] knows. Null keeps the generic person glyph - guest, no session,
+     * no avatar chosen, or an unknown key.
+     */
+    suspend fun avatar(state: IdentityState, account: suspend () -> AccountInfo?): ProfileAvatar? {
+        if (state !is IdentityState.Registered) return null
+        val info = account() ?: return null
+        if (info.uid != state.uid) return null
+        return ProfileAvatars.resolve(info.avatarId)
     }
 }

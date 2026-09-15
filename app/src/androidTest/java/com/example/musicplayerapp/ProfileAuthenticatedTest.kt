@@ -607,20 +607,24 @@ class ProfileAuthenticatedTest {
         assertEquals(null, LastSyncStore.lastUploadAt(context, account))
     }
 
-    // ==================== P-Q: the two rows that lead nowhere ====================
+    // ==================== P-Q: the row that leads nowhere ====================
 
+    /**
+     * `Сменить пароль` is still inert. `Аватар` was too until G6a; it now opens the
+     * picker, which `ProfileAvatarTest` covers, so here it is only asserted to be live.
+     */
     @Test
-    fun p_and_q_the_avatar_and_change_password_rows_cannot_navigate() {
+    fun p_and_q_the_change_password_row_cannot_navigate_and_the_avatar_row_can() {
         IdentityStore.markRegistered(context, account)
         auth.session = account
 
         openAccountCard { activity ->
-            for (id in listOf(R.id.profile_row_avatar, R.id.profile_row_change_password)) {
-                val row = activity.findViewById<View>(id)
-                assertEquals(View.VISIBLE, row.visibility)
-                assertFalse("${activity.resources.getResourceEntryName(id)} must be inert", row.isClickable)
-                row.performClick()
-            }
+            assertTrue(activity.findViewById<View>(R.id.profile_row_avatar).isClickable)
+
+            val row = activity.findViewById<View>(R.id.profile_row_change_password)
+            assertEquals(View.VISIBLE, row.visibility)
+            assertFalse("profile_row_change_password must be inert", row.isClickable)
+            row.performClick()
             // Both chevrons are drawn, because the frame draws them.
             assertEquals(View.VISIBLE, activity.visibilityOf(R.id.profile_row_avatar_chevron))
             assertEquals(View.VISIBLE, activity.visibilityOf(R.id.profile_row_change_password_chevron))

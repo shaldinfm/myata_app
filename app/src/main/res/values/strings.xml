@@ -610,4 +610,16 @@
     <string name="report_success_done">Готово</string>
 
     <string name="report_back_description">Назад</string>
+
+    <!-- profile-avatar (G6a). The title, caption and button are the frame's own. -->
+    <string name="avatar_title">Выбор аватара</string>
+    <string name="avatar_current_caption">Текущий аватар</string>
+    <string name="avatar_save">Сохранить</string>
+    <string name="avatar_numbered">Аватар %1$d из %2$d</string>
+    <string name="avatar_state_selected">Выбран</string>
+    <string name="avatar_state_not_selected">Не выбран</string>
+    <string name="avatar_current_description">Текущий аватар: %1$s</string>
+    <string name="avatar_none_description">аватар не выбран</string>
+    <string name="profile_account_avatar_description">Ваш аватар: %1$s</string>
+    <string name="avatar_save_failed">Не удалось сохранить аватар. Проверьте подключение и попробуйте ещё раз.</string>
 </resources>

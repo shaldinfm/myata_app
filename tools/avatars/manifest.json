@@ -1,0 +1,807 @@
+{
+  "about": "The owner-approved G6a avatar set (2026-09-14). Grid order, row by row: myata-01..04 is the top row of the 4x6 picker. Sources are owner-created candidates kept outside the repo; only the prepared 384px WebP exports ship.",
+  "provenance": "Owner-created with an image generator (each source PNG carries an OpenAI gpt-image C2PA manifest, which WebP export does not carry over). Cleared for use by Radio Myata. A similarity review against the Material 3 Design Kit renders is documented in docs/PROFILE-AVATAR-3.6.6.md as a known release consideration; it is not a selection criterion.",
+  "encoder": {
+    "format": "WebP",
+    "quality": 95,
+    "method": 6,
+    "alpha_quality": 100,
+    "pillow": "11.3.0",
+    "libwebp": "1.5.0"
+  },
+  "stored_ids": "user_metadata.avatar_id holds myata-01..myata-24. Unknown values, including the pre-release m3-NN keys, resolve to no avatar.",
+  "avatars": [
+    {
+      "id": "myata-01",
+      "source_file": "myata_06.png",
+      "source_sha256": "37d375e80db7b23307ae9fabb44fab38a77a98f3a218510c1cf81de58cd88099",
+      "source_bytes": 1388660,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 626.0,
+        "center_y": 622.0,
+        "radius": 595.68,
+        "diameter": 1191.36,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 251,
+        "pixels_made_opaque": 1114729,
+        "stray_pixels_removed": 65973
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_01.webp",
+      "output_sha256": "6de1604d2a0634d0c179043913529d267f1ca56df05e1cd453904714c8c1720d",
+      "output_bytes": 18392,
+      "output_px": 384,
+      "edge_luminance_step": -0.08,
+      "psnr_light_dark": [
+        39.8,
+        39.8
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-02",
+      "source_file": "myata_19.png",
+      "source_sha256": "099f060f4796eee4e8e4d2a79b3171440d32c9f8fc8207faf0384fc27d528632",
+      "source_bytes": 1520851,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 620.0,
+        "center_y": 616.0,
+        "radius": 599.45,
+        "diameter": 1198.91,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 250,
+        "pixels_made_opaque": 1128953,
+        "stray_pixels_removed": 63883
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_02.webp",
+      "output_sha256": "982f6ac373691a54a304c58de616240d7c0b5c2af2621ece6627499846ddeddc",
+      "output_bytes": 24068,
+      "output_px": 384,
+      "edge_luminance_step": 0.72,
+      "psnr_light_dark": [
+        39.1,
+        39.1
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-03",
+      "source_file": "myata_18v2.png",
+      "source_sha256": "66b479ce4df660ebbcb9f97e26a1e3a8b8a49915e2c83d13065795242f5cb1cd",
+      "source_bytes": 1504850,
+      "selected_version": "revised v2",
+      "fit": {
+        "center_x": 626.0,
+        "center_y": 622.0,
+        "radius": 597.38,
+        "diameter": 1194.75,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 250,
+        "pixels_made_opaque": 1121085,
+        "stray_pixels_removed": 54771
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_03.webp",
+      "output_sha256": "f9701f75f22ec253048ae353e1586f1ab995327b38e02168924528b5afd3af30",
+      "output_bytes": 24142,
+      "output_px": 384,
+      "edge_luminance_step": -0.63,
+      "psnr_light_dark": [
+        40.6,
+        40.6
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-04",
+      "source_file": "myata_16.png",
+      "source_sha256": "e22f150fe03c3de74813908c32f49eee4e6802678c5a9fb7e12f7fa5d060a91b",
+      "source_bytes": 1550289,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 620.0,
+        "center_y": 616.0,
+        "radius": 596.13,
+        "diameter": 1192.25,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 249,
+        "pixels_made_opaque": 1116405,
+        "stray_pixels_removed": 62632
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_04.webp",
+      "output_sha256": "d8860260d3d4bf0e29f909dd97c655a6c49f1806744b777eb1d2ba404a6f51ed",
+      "output_bytes": 27754,
+      "output_px": 384,
+      "edge_luminance_step": 1.15,
+      "psnr_light_dark": [
+        43.0,
+        43.0
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-05",
+      "source_file": "myata_08.png",
+      "source_sha256": "1896299b9ef023af935b57cdf28769014ccd25f1f05ddd35bba7145d965ca731",
+      "source_bytes": 1284540,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 626.0,
+        "center_y": 624.0,
+        "radius": 592.26,
+        "diameter": 1184.51,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 252,
+        "pixels_made_opaque": 1102017,
+        "stray_pixels_removed": 55441
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_05.webp",
+      "output_sha256": "d7d61659044d721a96e8a324043da97297b696bfa8633daf1267f809b439265e",
+      "output_bytes": 22714,
+      "output_px": 384,
+      "edge_luminance_step": 2.25,
+      "psnr_light_dark": [
+        38.6,
+        38.6
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-06",
+      "source_file": "myata_10.png",
+      "source_sha256": "584ad7fa657f27bb5159b368bf9c28e34ad9bcc9958be2361e81a996fbb07f54",
+      "source_bytes": 1437020,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 624.0,
+        "center_y": 622.0,
+        "radius": 612.2,
+        "diameter": 1224.39,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 251,
+        "pixels_made_opaque": 1177369,
+        "stray_pixels_removed": 58567
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_06.webp",
+      "output_sha256": "538af0a3b19c01ad4af91a272de612a6af6bcdfd8d9c802170fdbefa78c62c0c",
+      "output_bytes": 20002,
+      "output_px": 384,
+      "edge_luminance_step": -0.65,
+      "psnr_light_dark": [
+        40.7,
+        40.7
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-07",
+      "source_file": "myata_17.png",
+      "source_sha256": "3e76489bd9b49c405b74ef00f62bb4b850ed6856d2d3670564bfb62cb9e94d52",
+      "source_bytes": 1211367,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 626.0,
+        "center_y": 624.0,
+        "radius": 588.12,
+        "diameter": 1176.25,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 250,
+        "pixels_made_opaque": 1086661,
+        "stray_pixels_removed": 65749
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_07.webp",
+      "output_sha256": "27cd5cc4aed14ad15716371c01af2da835f7bd53913455d3bfb907cd06dd73a9",
+      "output_bytes": 18524,
+      "output_px": 384,
+      "edge_luminance_step": -0.59,
+      "psnr_light_dark": [
+        41.2,
+        41.2
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-08",
+      "source_file": "myata_04.png",
+      "source_sha256": "326ec5fc01f880ee6c130d945996ef54e057533917206957bfe416fe4d4cd86f",
+      "source_bytes": 1426423,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 626.0,
+        "center_y": 624.0,
+        "radius": 602.98,
+        "diameter": 1205.97,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 251,
+        "pixels_made_opaque": 1142169,
+        "stray_pixels_removed": 56731
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_08.webp",
+      "output_sha256": "54ec9cc5bd5fec6841d8d950ec0b3a7d92879eb6d735a74aace53e631574fddd",
+      "output_bytes": 29448,
+      "output_px": 384,
+      "edge_luminance_step": 2.12,
+      "psnr_light_dark": [
+        35.8,
+        35.8
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-09",
+      "source_file": "myata_15.png",
+      "source_sha256": "9b4b971091c68ad416a9314d9f9ed416e19f6ed96dd4e0f6e1096f1bd45f554b",
+      "source_bytes": 1321555,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 624.0,
+        "center_y": 612.0,
+        "radius": 592.17,
+        "diameter": 1184.33,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 250,
+        "pixels_made_opaque": 1101697,
+        "stray_pixels_removed": 72530
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_09.webp",
+      "output_sha256": "956cd2a9e314b2ff39fd69c2bfcda9672b1e8173048fa507b514a238ca126776",
+      "output_bytes": 24286,
+      "output_px": 384,
+      "edge_luminance_step": 0.91,
+      "psnr_light_dark": [
+        43.7,
+        43.7
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-10",
+      "source_file": "myata_03.png",
+      "source_sha256": "b7280ea0725d9fee4c2829064f3d7c4843e373e396bd73df3f0dfc1f86d9e2e3",
+      "source_bytes": 1597530,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 626.0,
+        "center_y": 620.0,
+        "radius": 604.02,
+        "diameter": 1208.03,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 250,
+        "pixels_made_opaque": 1146149,
+        "stray_pixels_removed": 58160
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_10.webp",
+      "output_sha256": "172784ae5c6272100975361b810d65a4823bae0e533afba3366a158b3e01c64a",
+      "output_bytes": 32312,
+      "output_px": 384,
+      "edge_luminance_step": 0.03,
+      "psnr_light_dark": [
+        39.2,
+        39.2
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-11",
+      "source_file": "myata_23.png",
+      "source_sha256": "5bcd51e65907d82a8aade62beb938a77ebbbbc460d9b4bc1b88cce490ebfb96f",
+      "source_bytes": 1467356,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 624.0,
+        "center_y": 616.0,
+        "radius": 598.27,
+        "diameter": 1196.53,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 251,
+        "pixels_made_opaque": 1124469,
+        "stray_pixels_removed": 68146
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_11.webp",
+      "output_sha256": "15c4a7487a6a8c2f30bc881b9ad214b586cb4b8ea6dd24b561c86df44b89362e",
+      "output_bytes": 29374,
+      "output_px": 384,
+      "edge_luminance_step": 1.34,
+      "psnr_light_dark": [
+        38.3,
+        38.3
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-12",
+      "source_file": "myata_11.png",
+      "source_sha256": "b4a246e1da3da7ac2d5f16db60f5b25e20a615dbcc3f5fb5743aa94e4d97cb34",
+      "source_bytes": 1410121,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 624.0,
+        "center_y": 624.0,
+        "radius": 600.03,
+        "diameter": 1200.07,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 251,
+        "pixels_made_opaque": 1131113,
+        "stray_pixels_removed": 60201
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_12.webp",
+      "output_sha256": "880b5af96569e539d3b85b5367aa98f1854b41d0aec57d8bd521717f2c13be8d",
+      "output_bytes": 24060,
+      "output_px": 384,
+      "edge_luminance_step": -0.2,
+      "psnr_light_dark": [
+        35.4,
+        35.4
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-13",
+      "source_file": "myata_12.png",
+      "source_sha256": "08b7609e65c78765ee508fc07b2e3ca849256c7e4f67cb09dd477ffd59a40d90",
+      "source_bytes": 1445820,
+      "selected_version": "original (v2 not selected)",
+      "fit": {
+        "center_x": 624.0,
+        "center_y": 616.0,
+        "radius": 607.56,
+        "diameter": 1215.13,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 251,
+        "pixels_made_opaque": 1159721,
+        "stray_pixels_removed": 65809
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_13.webp",
+      "output_sha256": "3243a3b1e2390e398ac916646899bba8f26bbfb3b3033a132fe7b1f912b672eb",
+      "output_bytes": 22252,
+      "output_px": 384,
+      "edge_luminance_step": -0.44,
+      "psnr_light_dark": [
+        38.5,
+        38.5
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-14",
+      "source_file": "myata_20.png",
+      "source_sha256": "842b75c607f467029382ac98c5b40b45edf908f7793f85b6e7d968f84196ee5f",
+      "source_bytes": 1604418,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 622.0,
+        "center_y": 622.0,
+        "radius": 610.5,
+        "diameter": 1221.0,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 250,
+        "pixels_made_opaque": 1170941,
+        "stray_pixels_removed": 61065
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_14.webp",
+      "output_sha256": "1a7f75ba0bacbd088dfb1e6bf512809b6129120cb4bc3e20a72651bcf71ce01d",
+      "output_bytes": 30532,
+      "output_px": 384,
+      "edge_luminance_step": 0.6,
+      "psnr_light_dark": [
+        40.0,
+        40.0
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-15",
+      "source_file": "myata_02v2.png",
+      "source_sha256": "78d4f13c40e7c1f04d53b740e43c04e2fd7aaf89b3da1d79f99e7bbd40777c47",
+      "source_bytes": 1498348,
+      "selected_version": "revised v2",
+      "fit": {
+        "center_x": 624.0,
+        "center_y": 616.0,
+        "radius": 601.11,
+        "diameter": 1202.22,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 250,
+        "pixels_made_opaque": 1135193,
+        "stray_pixels_removed": 60008
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_15.webp",
+      "output_sha256": "184ca9fe2aa9863441f9816ab0185ab17eed029883e20eadb5a5c398ce6852a7",
+      "output_bytes": 26624,
+      "output_px": 384,
+      "edge_luminance_step": -0.39,
+      "psnr_light_dark": [
+        40.6,
+        40.6
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-16",
+      "source_file": "myata_22.png",
+      "source_sha256": "38b1eb981f826ff43d154adf928bb8c6b4d0ede59166d76768527cb633f013da",
+      "source_bytes": 1509200,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 624.0,
+        "center_y": 622.0,
+        "radius": 597.58,
+        "diameter": 1195.15,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 251,
+        "pixels_made_opaque": 1121893,
+        "stray_pixels_removed": 67705
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_16.webp",
+      "output_sha256": "0d64a91f6995a3fde1b7437085bc088abbf0ec1df6bf93f824fc72d814810b94",
+      "output_bytes": 34172,
+      "output_px": 384,
+      "edge_luminance_step": 0.63,
+      "psnr_light_dark": [
+        34.8,
+        34.8
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-17",
+      "source_file": "myata_13.png",
+      "source_sha256": "a0a77174fb0cd524bbc17e41b8499a0f1be9d0185a6ea4abb01996d4a4582b72",
+      "source_bytes": 1448512,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 622.0,
+        "center_y": 612.0,
+        "radius": 600.95,
+        "diameter": 1201.9,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 248,
+        "pixels_made_opaque": 1134473,
+        "stray_pixels_removed": 72834
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_17.webp",
+      "output_sha256": "28c8aef4a8a3ad672b5fea373d7d039df32656b42d3edff54cc7ab489c568213",
+      "output_bytes": 21574,
+      "output_px": 384,
+      "edge_luminance_step": -0.83,
+      "psnr_light_dark": [
+        43.3,
+        43.3
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-18",
+      "source_file": "myata_21.png",
+      "source_sha256": "5ce95fc124b8c6614da0284f0aa2bee79ce53c970b0b6c369ca67850044fe459",
+      "source_bytes": 1462720,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 624.0,
+        "center_y": 618.0,
+        "radius": 609.17,
+        "diameter": 1218.34,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 251,
+        "pixels_made_opaque": 1165869,
+        "stray_pixels_removed": 62755
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_18.webp",
+      "output_sha256": "4082214907cc3be68640300a8c03932f988d2881fb19eb9d4a3a1f8e0c7104a7",
+      "output_bytes": 26378,
+      "output_px": 384,
+      "edge_luminance_step": -1.13,
+      "psnr_light_dark": [
+        39.2,
+        39.2
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-19",
+      "source_file": "myata_24.png",
+      "source_sha256": "9d8f75d15786ff43498727eeaa5e6926c5ef06acba12e872a5eb11d8a269feb3",
+      "source_bytes": 1441896,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 624.0,
+        "center_y": 622.0,
+        "radius": 601.37,
+        "diameter": 1202.74,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 252,
+        "pixels_made_opaque": 1136201,
+        "stray_pixels_removed": 58359
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_19.webp",
+      "output_sha256": "0f5728926a4f50cfe6e8ddd81ef6cac1962445f3e938d1a5525dd0d933d08b59",
+      "output_bytes": 24744,
+      "output_px": 384,
+      "edge_luminance_step": 0.1,
+      "psnr_light_dark": [
+        39.0,
+        39.0
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-20",
+      "source_file": "myata_09.png",
+      "source_sha256": "ddf74568085a54bbf4ef6aa02d40dbada1df05ac64329834d38369c80491c683",
+      "source_bytes": 1464934,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 624.0,
+        "center_y": 618.0,
+        "radius": 601.53,
+        "diameter": 1203.06,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 250,
+        "pixels_made_opaque": 1136793,
+        "stray_pixels_removed": 62984
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_20.webp",
+      "output_sha256": "21615a87a209989e8b053ace5afd3edd276ab1b14bdf1225be02edf500ae5114",
+      "output_bytes": 20520,
+      "output_px": 384,
+      "edge_luminance_step": -0.53,
+      "psnr_light_dark": [
+        41.4,
+        41.4
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-21",
+      "source_file": "myata_05.png",
+      "source_sha256": "47883f274e53d2477b4743f8ba0d3b4003acce4955aebdb43e07434efd3dad4b",
+      "source_bytes": 1489378,
+      "selected_version": "original (v2 not selected)",
+      "fit": {
+        "center_x": 616.0,
+        "center_y": 614.0,
+        "radius": 601.46,
+        "diameter": 1202.92,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 250,
+        "pixels_made_opaque": 1136449,
+        "stray_pixels_removed": 58854
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_21.webp",
+      "output_sha256": "5b071d5e4b4da1db74f2b476d5d7aba99c6eadbb0c36f10199489a214e6bcc8f",
+      "output_bytes": 26060,
+      "output_px": 384,
+      "edge_luminance_step": 2.46,
+      "psnr_light_dark": [
+        42.2,
+        42.2
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-22",
+      "source_file": "myata_14.png",
+      "source_sha256": "8753490e90f5beb5051f93274636c624f4dda08baa88c80e322a699ee370af63",
+      "source_bytes": 1598777,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 626.0,
+        "center_y": 622.0,
+        "radius": 592.0,
+        "diameter": 1184.0,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 243,
+        "pixels_made_opaque": 1100917,
+        "stray_pixels_removed": 64993
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_22.webp",
+      "output_sha256": "05e58f6c6dd0d9aa01a53528a29664f43a513a09b9d9b0b3c83ee96992a865b9",
+      "output_bytes": 31442,
+      "output_px": 384,
+      "edge_luminance_step": -1.54,
+      "psnr_light_dark": [
+        41.9,
+        41.9
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-23",
+      "source_file": "myata_07.png",
+      "source_sha256": "2698bc7a5d134f0fcfc256cc12fa266b5fc1732a51ebd24aa17e4ec0e1deeb14",
+      "source_bytes": 1453632,
+      "selected_version": "original",
+      "fit": {
+        "center_x": 622.0,
+        "center_y": 620.0,
+        "radius": 600.87,
+        "diameter": 1201.74,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 250,
+        "pixels_made_opaque": 1134225,
+        "stray_pixels_removed": 67459
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_23.webp",
+      "output_sha256": "52df151d7e2609e5583fd3a45d161d5e8cd16171b46fbc67520216d5048ceda1",
+      "output_bytes": 28142,
+      "output_px": 384,
+      "edge_luminance_step": 1.95,
+      "psnr_light_dark": [
+        39.4,
+        39.4
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    },
+    {
+      "id": "myata-24",
+      "source_file": "myata_01v2.png",
+      "source_sha256": "9ac47afe4877fe2cd21e33406ea8e660f2b71e73999b11cea199bb13ac7a2b85",
+      "source_bytes": 1408493,
+      "selected_version": "revised v2",
+      "fit": {
+        "center_x": 624.0,
+        "center_y": 620.0,
+        "radius": 588.4,
+        "diameter": 1176.79,
+        "source_px": [
+          1254,
+          1254
+        ],
+        "edge_inset_px": 4
+      },
+      "preparation": {
+        "alpha_min_inside_before": 251,
+        "pixels_made_opaque": 1087657,
+        "stray_pixels_removed": 59144
+      },
+      "output_file": "app/src/main/res/drawable-nodpi/avatar_myata_24.webp",
+      "output_sha256": "9d82d637c6e39717d298559b62ea335e35c0cc5528fd960d344db13a6c9342b5",
+      "output_bytes": 27730,
+      "output_px": 384,
+      "edge_luminance_step": 1.95,
+      "psnr_light_dark": [
+        38.2,
+        38.2
+      ],
+      "provenance": "owner-created, cleared for Radio Myata; C2PA manifest present in the source, not carried into WebP"
+    }
+  ]
+}

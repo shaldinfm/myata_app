@@ -36,6 +36,10 @@ object EmailAuthBackend {
      */
     fun overrideForInstrumentation(api: ((Context) -> EmailAuthApi)?) {
         override = api
+        // An account verified through the previous backend is not this one's, and the next
+        // launch is gated against the new one.
+        KnownAccount.forget()
+        StartupAccountGate.resetForTest()
     }
 
     /** Whether a replacement is installed. Lets a test assert its own isolation. */

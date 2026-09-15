@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  `Icon / check` 2523:153 / 2517:3701 inside the selected badge. The same 14x11 glyph
+  at x=5, y=6.5 as ic_settings_check and ic_report_check, stroked 1.8 with round caps
+  and joins - drawn opaque in `avatar_badge_check` (#F5F7FA light, #0F253E dark), the
+  owner-specified values.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M5,12.5L9.5,17.5L19,6.5"
+        android:strokeColor="@color/avatar_badge_check"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

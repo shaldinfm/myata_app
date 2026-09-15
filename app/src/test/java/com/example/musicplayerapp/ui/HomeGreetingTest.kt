@@ -135,4 +135,29 @@ class HomeGreetingTest {
             greet(IdentityState.Registered(other), Session(info(uid = other, name = "Анна"))),
         )
     }
+
+    // ==================== HOME's profile control avatar (G6a) ====================
+
+    private fun avatarOf(state: IdentityState, info: AccountInfo?) =
+        runBlocking { HomeGreeting.avatar(state) { info } }
+
+    @Test
+    fun `a registered account with a valid avatar shows it`() {
+        val shown = avatarOf(IdentityState.Registered(account), AccountInfo(account, "Денис", null, "myata-07"))
+        assertEquals("myata-07", shown?.key)
+    }
+
+    @Test
+    fun `no avatar, an unknown key or a pre-release m3 key keeps the generic control`() {
+        for (key in listOf(null, "", "myata-99", "m3-06")) {
+            assertNull("[$key]", avatarOf(IdentityState.Registered(account), AccountInfo(account, "Денис", null, key)))
+        }
+    }
+
+    @Test
+    fun `a guest, a missing session or another uid's session keeps the generic control`() {
+        assertNull(avatarOf(IdentityState.None, AccountInfo(account, "Денис", null, "myata-07")))
+        assertNull(avatarOf(IdentityState.Registered(account), null))
+        assertNull(avatarOf(IdentityState.Registered(account), AccountInfo(other, "Анна", null, "myata-07")))
+    }
 }

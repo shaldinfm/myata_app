@@ -1,0 +1,47 @@
+# Last.fm API credentials for scrobbling (G6b).
+#
+# Copy this file to `lastfm.properties` in the project root and fill both values
+# in. That file is untracked - see .gitignore - and this template must never
+# carry a real credential. The build fails if it does.
+#
+# Both values are issued together at https://www.last.fm/api/account/create
+# and are 32 lowercase hex characters each.
+#
+#   LASTFM_API_KEY     identifies this application. Public by design.
+#
+#   LASTFM_API_SECRET  the shared secret. It signs every authenticated call
+#                      (auth.getToken, auth.getSession, track.updateNowPlaying,
+#                      track.scrobble): there is no unsigned path, so it has to
+#                      be reachable from the device.
+#
+# ## The secret ships in the APK, and that is the accepted trade
+#
+# This is the model Last.fm's own desktop/mobile authentication assumes, and it
+# means the secret is EXTRACTABLE from a released build - `strings` on the APK
+# is enough, and R8 does not obscure string constants. The owner accepted this
+# for v1 (option A). What that exposure does and does not allow:
+#
+#   it does NOT expose any listener's account. Reading or writing a profile
+#   needs a per-user session key, which is obtained on the device through
+#   Last.fm's own web authorisation and never leaves it.
+#
+#   it DOES let someone make signed calls as this application. The realistic
+#   worst case is abuse leading Last.fm to suspend the key (API error 26),
+#   which disables scrobbling for every listener until a new key is issued.
+#
+# So this is an availability risk, not a user-data one. If that ever stops
+# being acceptable, the fix is already scaffolded: all signing goes through the
+# `LastfmSigner` seam, and a server-side signer is a second implementation of
+# it rather than a rewrite.
+#
+# ## Never put anything else in this file
+#
+# In particular never a listener's password or session key. A session key is
+# per-user runtime state that belongs in app storage on the device, not in a
+# build input. The build refuses a file that looks like it holds one.
+#
+# Absent or empty is a supported state, and it is the state CI and every fresh
+# clone build in: `LastfmConfig.isConfigured` is then false, and the app has no
+# Last.fm in it at all. See LastfmConfig.
+LASTFM_API_KEY=REPLACE_WITH_YOUR_LASTFM_API_KEY
+LASTFM_API_SECRET=REPLACE_WITH_YOUR_LASTFM_SHARED_SECRET

@@ -60,6 +60,69 @@ if (reportProps.stringPropertyNames().any { it.toLowerCase().contains('token') }
             'storage. Remove it and revoke that token now.')
 }
 
+// Last.fm API credentials (G6b). Untracked, like supabase.properties and
+// report.properties, and unlike either of those this file holds something that is
+// genuinely secret: LASTFM_API_SECRET signs every authenticated call, and there is
+// no unsigned path, so it ships in the APK and is extractable from it. The owner
+// accepted that for v1; lastfm.properties.example records what the exposure does
+// and does not allow, and all signing goes through the LastfmSigner seam so it can
+// move server-side later without touching anything else.
+//
+// Absent or empty is a supported state, and it is the state CI and every fresh
+// clone build in: the app then has no Last.fm at all. See LastfmConfig.
+def lastfmPropsFile = rootProject.file('lastfm.properties')
+def lastfmProps = new Properties()
+if (lastfmPropsFile.exists()) {
+    lastfmPropsFile.withInputStream { lastfmProps.load(it) }
+}
+def lastfmApiKey = (lastfmProps['LASTFM_API_KEY'] ?: '').trim()
+def lastfmApiSecret = (lastfmProps['LASTFM_API_SECRET'] ?: '').trim()
+
+// The shape Last.fm issues both values in. Used only to tell a real credential
+// apart from a placeholder - never to validate one for use.
+def looksLikeLastfmCredential = { String value -> value ==~ /(?i)^[0-9a-f]{32}$/ }
+
+// Guard 1, and the one that matters: lastfm.properties.example is TRACKED, so a
+// real credential pasted into it is a credential committed to git - the one
+// mistake here that cannot be walked back, exactly like a secret Supabase key.
+// Fail the build rather than let it be pushed.
+//
+// Names the key at fault and never its value (AGENTS.md).
+def lastfmExampleFile = rootProject.file('lastfm.properties.example')
+if (lastfmExampleFile.exists()) {
+    def exampleProps = new Properties()
+    lastfmExampleFile.withInputStream { exampleProps.load(it) }
+    def leaked = exampleProps.stringPropertyNames().findAll {
+        looksLikeLastfmCredential(((String) exampleProps[it]).trim())
+    }
+    if (!leaked.isEmpty()) {
+        throw new GradleException(
+                "lastfm.properties.example holds what looks like a REAL Last.fm " +
+                "credential in: ${leaked.sort().join(', ')}.\n" +
+                'That file is tracked by git. Put placeholders there and the real ' +
+                'values in the untracked lastfm.properties instead. If this value ' +
+                'was ever committed, revoke and reissue the key at ' +
+                'https://www.last.fm/api/accounts before doing anything else.')
+    }
+}
+
+// Guard 2: nothing but the two credentials belongs in lastfm.properties. A
+// listener's password or session key is per-user runtime state that lives in app
+// storage on the device; as a build input it would be compiled into the APK and
+// shared with every listener. Refuse the file rather than ship that.
+def lastfmForbidden = lastfmProps.stringPropertyNames().findAll {
+    def name = it.toLowerCase()
+    name.contains('password') || name.contains('session') ||
+            name.contains('token') || name == 'sk' || name.endsWith('_sk')
+}
+if (!lastfmForbidden.isEmpty()) {
+    throw new GradleException(
+            "lastfm.properties holds keys that must never be a build input: " +
+            "${lastfmForbidden.sort().join(', ')}.\n" +
+            'Only LASTFM_API_KEY and LASTFM_API_SECRET may live there. A session ' +
+            'key or password is per-listener state and belongs on the device.')
+}
+
 def keystorePropsFile = rootProject.file('keystore.properties')
 def keystoreProps = new Properties()
 if (keystorePropsFile.exists()) {
@@ -110,6 +173,11 @@ android {
         buildConfigField "String", "SUPABASE_URL", "\"${supabaseUrl}\""
         buildConfigField "String", "SUPABASE_PUBLISHABLE_KEY", "\"${supabaseKey}\""
         buildConfigField "String", "REPORT_ENDPOINT", "\"${reportEndpoint}\""
+
+        // G6b. The secret is read by exactly one class - the LastfmSigner that signs
+        // calls - and is never logged. See LastfmConfig.
+        buildConfigField "String", "LASTFM_API_KEY", "\"${lastfmApiKey}\""
+        buildConfigField "String", "LASTFM_API_SECRET", "\"${lastfmApiSecret}\""
     }
 
     buildFeatures{

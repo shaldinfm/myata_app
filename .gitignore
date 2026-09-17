@@ -38,3 +38,10 @@ signed_bundle_log*.txt
 # token, which lives in the Apps Script Script Properties. The template is
 # report.properties.example.
 report.properties
+
+# Last.fm API credentials (G6b). Holds the api key AND the shared secret, which
+# is the one credential in this project that is genuinely secret and still has
+# to ship in the APK - see lastfm.properties.example for why, and what that
+# does and does not expose. The template is lastfm.properties.example, which is
+# tracked and which the build refuses to let hold a real credential.
+lastfm.properties

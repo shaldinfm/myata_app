@@ -19,7 +19,7 @@ import org.junit.Test
 class LastfmConfigTest {
 
     private fun configured(key: String, secret: String): Boolean =
-        LastfmConfig.looksLikeCredential(key) && LastfmConfig.looksLikeCredential(secret)
+        LastfmConfig.isSupplied(key) && LastfmConfig.isSupplied(secret)
 
     @Test
     fun `a configured build needs both a key and a secret`() {
@@ -34,25 +34,57 @@ class LastfmConfigTest {
 
     @Test
     fun `the placeholders in the example template are not credentials`() {
-        // The reason the shape is checked at all. A lastfm.properties copied from the
+        // The one job this check exists for: a lastfm.properties copied from the
         // template but never filled in must leave the feature absent, not produce
         // error 10 on the listener's first tap at the one moment they are paying
         // attention to it.
-        assertFalse(LastfmConfig.looksLikeCredential("REPLACE_WITH_YOUR_LASTFM_API_KEY"))
-        assertFalse(LastfmConfig.looksLikeCredential("REPLACE_WITH_YOUR_LASTFM_SHARED_SECRET"))
+        assertFalse(LastfmConfig.isSupplied("REPLACE_WITH_YOUR_LASTFM_API_KEY"))
+        assertFalse(LastfmConfig.isSupplied("REPLACE_WITH_YOUR_LASTFM_SHARED_SECRET"))
+        // Matched on the marker, so rewording the template cannot turn a placeholder
+        // into something accepted as a credential.
+        assertFalse(LastfmConfig.isSupplied("replace_with_anything_at_all"))
+        assertFalse(LastfmConfig.isSupplied("  REPLACE ME  "))
     }
 
     @Test
-    fun `a credential is 32 hex characters in either case`() {
-        assertTrue(LastfmConfig.looksLikeCredential("0123456789abcdef0123456789abcdef"))
-        assertTrue("uppercase is still hex", LastfmConfig.looksLikeCredential("0123456789ABCDEF0123456789ABCDEF"))
-        assertTrue("mixed case", LastfmConfig.looksLikeCredential("0123456789aBcDeF0123456789AbCdEf"))
+    fun `blank and whitespace-only values are not credentials`() {
+        assertFalse("empty", LastfmConfig.isSupplied(""))
+        assertFalse("spaces", LastfmConfig.isSupplied("     "))
+        assertFalse("tab and newline", LastfmConfig.isSupplied("\t\n "))
+    }
 
-        assertFalse("31 characters", LastfmConfig.looksLikeCredential("0123456789abcdef0123456789abcde"))
-        assertFalse("33 characters", LastfmConfig.looksLikeCredential("0123456789abcdef0123456789abcdef0"))
-        assertFalse("not hex", LastfmConfig.looksLikeCredential("0123456789abcdefg123456789abcdef"))
-        assertFalse("whitespace", LastfmConfig.looksLikeCredential("0123456789abcdef 123456789abcdef"))
-        assertFalse("blank", LastfmConfig.looksLikeCredential("                                "))
+    @Test
+    fun `no shape is imposed, because Last fm documents none`() {
+        // Checked against the official specification rather than against examples or
+        // existing keys:
+        //
+        //  - /api/authspec documents the api key's LENGTH ("Your 32-character API
+        //    Key", §3.3, §4.1, §7) but never its character set;
+        //  - it documents NEITHER for the shared secret. §2 says only "Your account
+        //    page contains your secret", and §8's own worked example uses
+        //    'ilovecher'. The desktop, web and mobile how-tos use 'mysecret'.
+        //  - the "32-character hexadecimal" wording in the spec is about api_sig,
+        //    which is an md5 output and so 32 hex by construction. It says nothing
+        //    about the credentials fed into it.
+        //
+        // An earlier version of this file required 32 hex for both. It would have
+        // rejected Last.fm's own documented example secret, and the way it failed
+        // would have been silent - a build with genuine credentials in which the
+        // feature never appears and nothing explains why.
+        assertTrue(
+            "Last.fm's own example secret must be accepted",
+            LastfmConfig.isSupplied("ilovecher"),
+        )
+        assertTrue("the how-tos' example secret", LastfmConfig.isSupplied("mysecret"))
+        assertTrue("not hexadecimal", LastfmConfig.isSupplied("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"))
+        assertTrue("shorter than 32", LastfmConfig.isSupplied("short"))
+        assertTrue("longer than 32", LastfmConfig.isSupplied("x".repeat(64)))
+        assertTrue("punctuation", LastfmConfig.isSupplied("a-b_c.d~e"))
+
+        // Whether a credential is *valid* is Last.fm's answer to give, not ours: an
+        // accepted-but-wrong value produces error 10 or 13, which the error mapping
+        // already handles, and that is the honest failure mode.
+        assertTrue(LastfmConfig.isSupplied("0123456789abcdef0123456789abcdef"))
     }
 
     @Test

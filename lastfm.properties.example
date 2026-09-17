@@ -4,8 +4,15 @@
 # in. That file is untracked - see .gitignore - and this template must never
 # carry a real credential. The build fails if it does.
 #
-# Both values are issued together at https://www.last.fm/api/account/create
-# and are 32 lowercase hex characters each.
+# Both values are issued together at https://www.last.fm/api/account/create.
+#
+# Do NOT assume a format. Last.fm's specification documents the api key's length
+# ("Your 32-character API Key", /api/authspec §3.3, §4.1, §7) but not its
+# character set, and documents neither for the shared secret - §8's own worked
+# example uses a secret of 'ilovecher'. The "32-character hexadecimal" wording in
+# the spec describes api_sig, which is an md5 output. So nothing here validates
+# the shape of either value: an absent or unedited-placeholder value means the
+# feature is off, and anything else is passed to Last.fm to judge.
 #
 #   LASTFM_API_KEY     identifies this application. Public by design.
 #

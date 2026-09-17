@@ -64,28 +64,60 @@ object LastfmConfig {
     /**
      * Whether this build has both credentials.
      *
-     * The shape check is what separates a real credential from the placeholders in
-     * `lastfm.properties.example`, so a file copied but not filled in leaves the
-     * feature absent rather than producing
-     * [LastfmError.INVALID_API_KEY] on the listener's first tap.
-     *
-     * If Last.fm ever issues a credential in another shape, [looksLikeCredential]
-     * is the single place to relax - and the symptom will be a build with real
-     * credentials in which the feature simply does not appear.
+     * "Has", not "has well-formed" - see [isSupplied] for why no shape is checked.
      */
     val isConfigured: Boolean
-        get() = looksLikeCredential(apiKey) && looksLikeCredential(apiSecret)
+        get() = isSupplied(apiKey) && isSupplied(apiSecret)
 
     /**
-     * The shape Last.fm issues both the api key and the shared secret in: 32 hex
-     * characters. Case-insensitive, because nothing guarantees which case a value
-     * was pasted in.
+     * Whether [value] is a credential somebody actually supplied, as opposed to
+     * absent, blank, or a template placeholder.
      *
-     * This answers "is this a credential rather than a placeholder", and never
-     * "is this credential valid" - only Last.fm can say that.
+     * ## Why this checks presence and not shape
+     *
+     * An earlier version of this required both values to be exactly 32 hexadecimal
+     * characters. That was checked against Last.fm's official documentation and is
+     * **not** a format Last.fm guarantees:
+     *
+     *  - the **api key**'s length *is* documented - `/api/authspec` says "Your
+     *    32-character API Key" in §3.3, §4.1 and §7 - but its **character set is
+     *    not documented anywhere**;
+     *  - the **shared secret** has **neither** documented. `/api/authspec` §2 says
+     *    only "Your account page contains your secret", and §8's own worked example
+     *    uses a secret of `'ilovecher'` - nine characters, not hexadecimal. The
+     *    desktop, web and mobile how-tos all use `'mysecret'`, eight characters and
+     *    likewise not hexadecimal;
+     *  - the "32-character hexadecimal" wording that does appear in the
+     *    specification describes **api_sig**, which is an md5 output and therefore
+     *    32 hex by construction. It says nothing about the credentials that go into
+     *    it.
+     *
+     * So a 32-hex rule would have been an invented restriction, and the way it
+     * failed would have been silent: a build with genuine credentials in which the
+     * feature simply never appears, with no error anywhere to explain it. Last.fm's
+     * documented example secret would have been rejected by our own validator.
+     *
+     * The rule is therefore the narrowest one that still does the job it was added
+     * for - keeping a `lastfm.properties.example` that was copied but never filled
+     * in from producing [LastfmError.INVALID_API_KEY] on a listener's first tap.
+     * Whether a credential is *valid* is Last.fm's answer to give, not ours.
      */
-    fun looksLikeCredential(value: String): Boolean =
-        value.length == CREDENTIAL_LENGTH && value.all { it in HEX_DIGITS }
+    fun isSupplied(value: String): Boolean {
+        val trimmed = value.trim()
+        return trimmed.isNotEmpty() && !isPlaceholder(trimmed)
+    }
+
+    /**
+     * Whether [value] is one of the template's own placeholders.
+     *
+     * Matched on the `REPLACE` marker rather than the exact strings, so editing the
+     * wording in `lastfm.properties.example` cannot quietly turn a placeholder into
+     * something this accepts as a credential. The build applies the same marker to
+     * the tracked template from the other direction - it refuses any value there
+     * that is *not* a placeholder - so the two checks meet in the middle.
+     */
+    private fun isPlaceholder(value: String): Boolean =
+        value.contains(PLACEHOLDER_MARKER, ignoreCase = true)
 
     /**
      * Deliberately says nothing about the values.
@@ -96,8 +128,9 @@ object LastfmConfig {
      */
     override fun toString(): String = "LastfmConfig(isConfigured=$isConfigured)"
 
-    private const val CREDENTIAL_LENGTH = 32
-
-    private val HEX_DIGITS: Set<Char> =
-        ('0'..'9').toSet() + ('a'..'f').toSet() + ('A'..'F').toSet()
+    /**
+     * The marker every placeholder in `lastfm.properties.example` carries. Kept in
+     * step with the same marker in `app/build.gradle`'s template guard.
+     */
+    private const val PLACEHOLDER_MARKER = "REPLACE"
 }

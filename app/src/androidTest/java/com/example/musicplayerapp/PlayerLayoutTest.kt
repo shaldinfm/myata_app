@@ -193,6 +193,36 @@ class PlayerLayoutTest {
             // change that moved the box instead of the glyph fails here rather than
             // silently shrinking the target or dragging the popup with it.
             expect(where, "trailing action slot y", topIn(reserved, header), dp(4))
+            expect(where, "trailing action slot ends 16 from the right",
+                leftIn(reserved, shell) + reserved.width, dp(widthDp - 16))
+
+            // ## The pressed circle is centred on the glyph, not on the box
+            //
+            // The glyph is placed by padding, and padding does not move a
+            // background: `selectableItemBackgroundBorderless` centred its circle
+            // on the 32x39 box, 6 right of and 3.5 below the dots. The ripple is
+            // measured where it is actually drawn - its own bounds after a real
+            // draw pass - against where the glyph is drawn, on both axes.
+            val glyphCentreX = reserved.paddingLeft +
+                (reserved.width - reserved.paddingLeft - reserved.paddingRight) / 2f
+            val glyphCentreY = reserved.paddingTop +
+                (reserved.height - reserved.paddingTop - reserved.paddingBottom) / 2f
+            // The dots themselves stay where G4a put them: 38.02 from the right.
+            expect(where, "overflow glyph centre x",
+                leftIn(reserved, shell) + glyphCentreX, dp(widthDp - 38.02f))
+            val ripple = pressedCircle(reserved)
+            if (ripple == null) {
+                findings += "$where: the header overflow has no ripple to press"
+            } else {
+                expect(where, "pressed circle centre x", ripple.bounds.exactCenterX(), glyphCentreX, tolerance = 1f)
+                expect(where, "pressed circle centre y", ripple.bounds.exactCenterY(), glyphCentreY, tolerance = 1f)
+                expect(where, "pressed circle radius", ripple.radius, dp(20), tolerance = 1f)
+                // A borderless ripple the view cannot project is clipped to the
+                // 32-wide box, which would cut the 40 circle's sides off.
+                if (!reserved.background.isProjected) {
+                    findings += "$where: the pressed circle is not projected and is clipped to the 32dp box"
+                }
+            }
             if (!reserved.hasOnClickListeners()) {
                 findings += "$where: the header overflow draws a control that does nothing"
             }
@@ -410,6 +440,30 @@ class PlayerLayoutTest {
     }
 
     /** The bounding box of what a drawable actually paints, rendered at [size]. */
+    private class PressedCircle(val bounds: Rect, val radius: Int)
+
+    /**
+     * The ripple [view]'s background draws when pressed, with the bounds the view
+     * gives it. A view only sets its background's bounds while drawing, so it is
+     * drawn once first; the ripple may sit inside a layer, so layers are searched.
+     */
+    private fun pressedCircle(view: View): PressedCircle? {
+        val bitmap = android.graphics.Bitmap.createBitmap(
+            view.width, view.height, android.graphics.Bitmap.Config.ARGB_8888,
+        )
+        view.draw(android.graphics.Canvas(bitmap))
+        bitmap.recycle()
+
+        fun find(d: android.graphics.drawable.Drawable?): android.graphics.drawable.RippleDrawable? = when (d) {
+            is android.graphics.drawable.RippleDrawable -> d
+            is android.graphics.drawable.LayerDrawable ->
+                (0 until d.numberOfLayers).firstNotNullOfOrNull { find(d.getDrawable(it)) }
+            else -> null
+        }
+        val ripple = find(view.background) ?: return null
+        return PressedCircle(Rect(ripple.bounds), ripple.radius)
+    }
+
     private fun paintedInk(drawable: android.graphics.drawable.Drawable, size: Int): Rect {
         val bitmap = render(drawable, size)
         val pixels = IntArray(size * size)

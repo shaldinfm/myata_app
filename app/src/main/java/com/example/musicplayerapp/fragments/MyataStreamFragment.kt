@@ -51,7 +51,14 @@ class MyataStreamFragment() : Fragment() {
     lateinit var binding: FragmentMyataStreamBinding
     private lateinit var playerControl: PlayerControl
     var stream: String = "myata"
-    private var currentImageUrl: String? = null  // Track currently displayed image
+    private var currentImageUrl: String? = null  // The cover on the current view; cleared with the view
+
+    /**
+     * Which [renderBroadcastHistory] call is the latest. A populated render only
+     * shows its rows and "Показать ещё" once its list has been committed, and by
+     * then a newer render - or a new view - may have replaced it.
+     */
+    private var historyRenderGeneration = 0
 
     /** The frozen `Broadcast History Section`'s rows (Phase C). */
     private lateinit var historyAdapter: PlayerHistoryAdapter
@@ -342,10 +349,16 @@ class MyataStreamFragment() : Fragment() {
             revealed = historyRevealed,
         )
 
-        binding.historyList.isVisible = state.mode == BroadcastHistoryState.Mode.POPULATED
-        binding.historyEmpty.isVisible = state.mode == BroadcastHistoryState.Mode.EMPTY
-        binding.historyLoading.isVisible = state.mode == BroadcastHistoryState.Mode.LOADING
-        binding.historyShowMore.isVisible = state.isShowMoreVisible
+        val generation = ++historyRenderGeneration
+        val populated = state.mode == BroadcastHistoryState.Mode.POPULATED
+
+        // Loading and empty have no rows to wait for, so they apply now.
+        if (!populated) {
+            binding.historyList.isVisible = false
+            binding.historyEmpty.isVisible = state.mode == BroadcastHistoryState.Mode.EMPTY
+            binding.historyLoading.isVisible = state.mode == BroadcastHistoryState.Mode.LOADING
+            binding.historyShowMore.isVisible = false
+        }
 
         // The list is a ListAdapter over a stable identity, so a track change is
         // an insert at 0 and a drop off the tail, not a rebuild - the rows that
@@ -355,7 +368,21 @@ class MyataStreamFragment() : Fragment() {
         // anchor gives the page back the scroll the insert cost it.
         val anchor = captureHistoryAnchor()
         historyAdapter.submitList(tracks.take(state.visibleCount)) {
-            if (anchor != null && view != null) {
+            // A newer render, or a new view, has taken over: this one's rows are
+            // not the ones on screen and its visibility must not come back.
+            if (generation != historyRenderGeneration || view == null) return@submitList
+            if (populated) {
+                // Populated only shows once its rows are in the adapter. The diff
+                // runs off the main thread, and showing the list and "Показать ещё"
+                // before it lands drew the button under an empty section for most
+                // of a second on first load. Until then the section keeps whatever
+                // it was showing: the spinner, or the rows of an earlier commit.
+                binding.historyLoading.isVisible = false
+                binding.historyEmpty.isVisible = false
+                binding.historyList.isVisible = true
+                binding.historyShowMore.isVisible = state.isShowMoreVisible
+            }
+            if (anchor != null) {
                 binding.historyList.doOnPreDraw { restoreHistoryAnchor(anchor) }
             }
         }
@@ -492,6 +519,13 @@ class MyataStreamFragment() : Fragment() {
     override fun onDestroyView() {
         (activity as? MainActivity)?.binding?.bottomNavView
             ?.removeOnLayoutChangeListener(bottomChromeListener)
+        // What is on screen belongs to the view, not to the fragment. A push from
+        // the PLAYER (Report Problem, История эфира) destroys this view but keeps
+        // the instance, and the view that comes back inflates with the plate. Left
+        // set, the URL would tell CoverArt that cover is already up, and the plate
+        // would stand until the next track.
+        currentImageUrl = null
+        historyRenderGeneration++
         super.onDestroyView()
     }
 

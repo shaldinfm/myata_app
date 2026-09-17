@@ -2,8 +2,9 @@
 <!--
   Full-screen История эфира cover plate (G4b): `Album art` in history-content
   2523:23, 48x48 r8, #1C4771 on BOTH pages - so it is a fixed brand colour with
-  no night variant, as the PLAYER artwork backdrop is. What shows while a cover
-  is resolved, and what stays if none is found.
+  no night variant, as the PLAYER artwork backdrop is. The row's image covers
+  it: PlayerHistoryAdapter draws the branded zaglushka_logo plate while a cover
+  is resolved and keeps it if none is found.
 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">

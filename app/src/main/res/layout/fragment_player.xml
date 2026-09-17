@@ -78,7 +78,8 @@
               `paddingBottom` lifts the drawn glyph the 7.5dp onto 32 and moves
               nothing else: the 32x39 box keeps its position, so the touch target and
               the popup's anchor are exactly as they were. dimens.xml carries the
-              arithmetic.
+              arithmetic. Padding does not move a background, so the pressed
+              circle is inset by the same amounts in bg_player_header_action.
 
               It opens `Menu / Плеер` with **one** row, Таймер сна. The other
               three - Найти трек, Сообщить о проблеме, История эфира - do not
@@ -98,7 +99,7 @@
                 android:layout_width="@dimen/player_header_action_width"
                 android:layout_height="@dimen/player_header_action_height"
                 android:layout_gravity="end|center_vertical"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:background="@drawable/bg_player_header_action"
                 android:contentDescription="@string/player_overflow_description"
                 android:paddingBottom="@dimen/header_overflow_glyph_lift"
                 android:paddingEnd="@dimen/player_header_action_glyph_inset_end"

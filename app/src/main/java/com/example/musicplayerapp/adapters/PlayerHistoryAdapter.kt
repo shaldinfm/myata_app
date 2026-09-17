@@ -5,6 +5,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.annotation.LayoutRes
+import androidx.annotation.VisibleForTesting
+import androidx.recyclerview.widget.AsyncDifferConfig
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -14,6 +16,7 @@ import com.example.musicplayerapp.ui.RowActionTouchTarget
 import com.example.musicplayerapp.data.HistoryTrack
 import com.google.android.material.imageview.ShapeableImageView
 import com.squareup.picasso.Picasso
+import java.util.concurrent.Executor
 
 /**
  * The PLAYER's inline Broadcast History rows (Phase C).
@@ -46,7 +49,7 @@ import com.squareup.picasso.Picasso
  * [HistoryRowTypography.applyPlayer].
  *
  * @param artworkFor asks for a cover for one track. Called on bind, answered
- *   later on the main thread with a URL or null; a null leaves the frozen plate.
+ *   later on the main thread with a URL or null; a null leaves the branded plate.
  * @param cancelArtwork withdraws a request whose row has been recycled.
  * @param rowLayout the row to inflate. It must carry `tv_time`, `tv_title`,
  *   `tv_artist` and `artwork`; it may carry `btn_row_action`.
@@ -57,7 +60,21 @@ class PlayerHistoryAdapter(
     private val cancelArtwork: (HistoryTrack) -> Unit,
     @LayoutRes private val rowLayout: Int = R.layout.item_player_history_track,
     private val onFindTrack: ((HistoryTrack) -> Unit)? = null,
-) : ListAdapter<HistoryTrack, PlayerHistoryAdapter.ViewHolder>(DiffCallback()) {
+) : ListAdapter<HistoryTrack, PlayerHistoryAdapter.ViewHolder>(
+    AsyncDifferConfig.Builder(DiffCallback())
+        .apply { diffExecutorForTest?.let { setBackgroundThreadExecutor(it) } }
+        .build()
+) {
+
+    companion object {
+        /**
+         * Where list diffs run, for tests that need to hold one back. Null - always,
+         * outside tests - is ListAdapter's own shared background executor.
+         */
+        @VisibleForTesting
+        @Volatile
+        var diffExecutorForTest: Executor? = null
+    }
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvTime: TextView = itemView.findViewById(R.id.tv_time)
@@ -126,10 +143,10 @@ class PlayerHistoryAdapter(
         holder.tvArtist.text = track.artist
         holder.action?.setOnClickListener { onFindTrack?.invoke(track) }
 
-        // Back to the bare plate first: a recycled holder still carries the
-        // previous row's cover, and a lookup that finds nothing never paints.
-        Picasso.get().cancelRequest(holder.artwork)
-        holder.artwork.setImageDrawable(null)
+        // Back to the branded plate first: a recycled holder still carries the
+        // previous row's cover. The plate is also what stays when the lookup finds
+        // nothing, so a row never reads as a blank tile.
+        plate(holder)
 
         artworkFor(track) { url ->
             // The answer arrives after a round trip, by which time the holder may
@@ -137,6 +154,10 @@ class PlayerHistoryAdapter(
             if (holder.boundTo != track || url.isNullOrBlank()) return@artworkFor
             Picasso.get()
                 .load(url)
+                // Picasso's default placeholder is "nothing", which would take the
+                // plate down while the cover loads.
+                .noPlaceholder()
+                .error(R.drawable.zaglushka_logo)
                 .fit()
                 .centerCrop()
                 .into(holder.artwork)
@@ -147,8 +168,13 @@ class PlayerHistoryAdapter(
         super.onViewRecycled(holder)
         holder.boundTo?.let(cancelArtwork)
         holder.boundTo = null
+        plate(holder)
+    }
+
+    /** The designed fallback, the same plate the PLAYER's own cover falls back to. */
+    private fun plate(holder: ViewHolder) {
         Picasso.get().cancelRequest(holder.artwork)
-        holder.artwork.setImageDrawable(null)
+        holder.artwork.setImageResource(R.drawable.zaglushka_logo)
     }
 
     /**

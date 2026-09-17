@@ -382,6 +382,9 @@
     -->
     <dimen name="header_overflow_glyph_lift">7dp</dimen>
     <dimen name="player_header_action_glyph_inset_end">12.04dp</dimen>
+    <!-- The PLAYER overflow's pressed circle: 40 across, centred on the glyph
+         by bg_player_header_action rather than on the padded box. -->
+    <dimen name="player_header_action_ripple_radius">20dp</dimen>
     <dimen name="collection_overflow_glyph_inset_start">3.96dp</dimen>
     <!-- The swipe dots abut the header row: it ends at 63 and they start at 63.
          They end at 73 and the page starts at 79, so 6 between. -->

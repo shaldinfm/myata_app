@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PLAYER header overflow, pressed state: a borderless 20 ripple - a 40 circle -
+  centred on the drawn three-dot glyph.
+
+  The glyph is placed inside its 32x39 box by padding (see dimens.xml:
+  header_overflow_glyph_lift and player_header_action_glyph_inset_end), which
+  keeps the touch target and the popup anchor where they are. A plain
+  `selectableItemBackgroundBorderless` ignores padding and centres on the whole
+  box, which put the pressed circle 6 right of and 3.5 below the dots.
+
+  So the ripple's own bounds are inset by exactly the glyph's padding, and its
+  centre is the glyph's centre. A layer-list rather than an inset: LayerDrawable
+  reports a borderless child as projected (API 24+), so the 40 circle still draws
+  past the 32-wide box instead of being clipped to it.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:bottom="@dimen/header_overflow_glyph_lift"
+        android:right="@dimen/player_header_action_glyph_inset_end">
+        <ripple
+            android:color="?attr/colorControlHighlight"
+            android:radius="@dimen/player_header_action_ripple_radius" />
+    </item>
+</layer-list>

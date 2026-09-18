@@ -30,6 +30,7 @@ import com.example.musicplayerapp.data.lastfm.LastfmConfig
 import com.example.musicplayerapp.data.lastfm.LastfmLink
 import com.example.musicplayerapp.data.lastfm.PrefsLastfmSessionStore
 import com.example.musicplayerapp.scrobble.FeedObservation
+import com.example.musicplayerapp.scrobble.ScrobbleEmissions
 import com.example.musicplayerapp.scrobble.ScrobbleGate
 import com.example.musicplayerapp.scrobble.ScrobbleTracker
 import com.example.musicplayerapp.ui.sleeptimer.SleepTimerDuration
@@ -71,6 +72,9 @@ class MediaPlayerService(): MediaSessionService(){
             // Log-only in P4: the tracker has already written SCROBBLE_ELIGIBLE.
             // P5 replaces this with the queue.
             sink = { },
+            // Shared by every service instance this process creates, so a candidate
+            // already emitted stays emitted when the service is recreated.
+            emissions = ScrobbleEmissions.process,
             log = { name, fields -> PlaybackLog.event(name, *fields) },
         )
     }

@@ -43,15 +43,17 @@ package com.example.musicplayerapp.scrobble
  * something has. A new `started_at` is a new airing, even of the same track. An
  * older `started_at` than the one being tracked is out of order and ignored.
  *
- * ## At most one candidate per occurrence, for the life of the process
+ * ## At most one candidate per occurrence, for the lifetime of the app process
  *
- * `started_at` strictly increases on a stream, so the tracker keeps one number per
- * stream: the highest `started_at` it has emitted. A candidate is emitted only for
- * an occurrence *above* that mark, so no occurrence can ever be emitted twice -
- * however late or out of order old metadata reappears, and without an eviction
- * window that could forget one. The price is conservative: an older occurrence
- * that was never emitted cannot emit after a newer one has. The marks survive
- * station switches and unlinking; they do not survive process death, and nothing
+ * Whether an occurrence has been emitted is not this tracker's to keep: it lives
+ * in [emissions], which the service passes as the process-wide
+ * [ScrobbleEmissions.process], so it survives the service - and this tracker -
+ * being destroyed and recreated. A candidate is emitted only for an occurrence
+ * [ScrobbleEmissions.hasEmitted] does not know, however late or out of order old
+ * metadata reappears. The record also survives station switches and unlinking.
+ *
+ * Lifetimes: emitted dedupe - the process; partial listen - this tracker (one
+ * service instance); dedupe across process death - P5's persistent queue. Nothing
  * in P4 persists.
  *
  * ## Gating
@@ -70,6 +72,7 @@ package com.example.musicplayerapp.scrobble
 class ScrobbleTracker(
     private val isEnabled: () -> Boolean,
     private val sink: ScrobbleCandidateSink,
+    private val emissions: ScrobbleEmissions,
     private val log: ScrobbleLog = ScrobbleLog.NONE,
 ) {
 
@@ -97,9 +100,6 @@ class ScrobbleTracker(
     private var playingSinceMs: Long? = null
     private var occurrence: Occurrence? = null
     private val feedState = HashMap<String, String>()
-
-    // Process-lifetime dedupe: the highest started_at emitted, per stream.
-    private val emittedThrough = HashMap<String, Long>()
 
     /** `Player.isPlaying` changed, while [streamId] was the selected station. */
     fun onPlaying(isPlaying: Boolean, streamId: String, nowMs: Long): Long? {
@@ -232,7 +232,7 @@ class ScrobbleTracker(
             title = observation.title!!,
             durationSec = observation.durationSec!!,
             windowStartMs = windowStart,
-            emitted = startedAt <= (emittedThrough[streamId] ?: Long.MIN_VALUE),
+            emitted = emissions.hasEmitted(OccurrenceId(streamId, startedAt)),
         )
         occurrence = next
         log.event(
@@ -298,12 +298,12 @@ class ScrobbleTracker(
             return
         }
         val streamId = current.id.streamId
-        if (current.id.startedAt <= (emittedThrough[streamId] ?: Long.MIN_VALUE)) {
+        if (emissions.hasEmitted(current.id)) {
             current.emitted = true
             return
         }
         current.emitted = true
-        emittedThrough[streamId] = current.id.startedAt
+        emissions.markEmitted(current.id)
         log.event(
             "SCROBBLE_ELIGIBLE",
             "stream" to streamId,

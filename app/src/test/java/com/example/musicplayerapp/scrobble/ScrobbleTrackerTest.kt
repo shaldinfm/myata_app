@@ -31,6 +31,7 @@ class ScrobbleTrackerTest {
     private val tracker = ScrobbleTracker(
         isEnabled = { enabled },
         sink = { candidates += it },
+        emissions = ScrobbleEmissions(),
         log = { name, _ -> logged += name },
     )
     private var now = 0L
@@ -502,6 +503,7 @@ class ScrobbleTrackerTest {
         val gated = ScrobbleTracker(
             isEnabled = { reads++; reads < 4 },      // true for the event, false at emission
             sink = { candidates += it },
+            emissions = ScrobbleEmissions(),
         )
         gated.onPlaying(true, MYATA, 0)
         gated.onObservation(FeedObservation(MYATA, "A", "T", st(0), 60, st(60), S0), 0)

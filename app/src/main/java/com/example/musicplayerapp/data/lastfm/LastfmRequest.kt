@@ -157,6 +157,12 @@ class LastfmRequestFactory(
         return build("track.scrobble", LastfmHttpMethod.POST, params)
     }
 
+    /**
+     * The browser URL for [token], with this factory's own api key - so the key in
+     * the URL can never disagree with the key the token was requested with.
+     */
+    fun authorizationUrlFor(token: String): String = authorizationUrl(apiKey, token)
+
     private fun build(
         method: String,
         httpMethod: LastfmHttpMethod,

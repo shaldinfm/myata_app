@@ -87,9 +87,18 @@ class LastfmGateTest {
     }
 
     @Test
-    fun the_compiled_backup_rules_exclude_only_the_session_file() {
-        // The resources as the build packaged them, read on the device.
-        for (res in listOf(R.xml.lastfm_backup_rules, R.xml.lastfm_data_extraction_rules)) {
+    fun the_compiled_backup_rules_exclude_only_the_lastfm_files() {
+        // The Last.fm session (P3b) and the scrobble queue database with its WAL and
+        // SHM (P5) - nothing else, so the rest of the app is backed up as before.
+        val lastfmFiles = listOf(
+            "sharedpref:lastfm_session.xml",
+            "database:lastfm_queue",
+            "database:lastfm_queue-wal",
+            "database:lastfm_queue-shm",
+        )
+        // The resources as the build packaged them, read on the device. The API 31+
+        // file lists them twice: once for cloud backup, once for device transfer.
+        for ((res, times) in listOf(R.xml.lastfm_backup_rules to 1, R.xml.lastfm_data_extraction_rules to 2)) {
             val excludes = mutableListOf<String>()
             var includes = 0
             context.resources.getXml(res).use { p ->
@@ -104,7 +113,7 @@ class LastfmGateTest {
             }
             assertEquals("no <include> - it would stop the rest of the app being backed up", 0, includes)
             assertTrue("at least one exclude in $res", excludes.isNotEmpty())
-            excludes.forEach { assertEquals("sharedpref:lastfm_session.xml", it) }
+            assertEquals("exactly the Last.fm files in $res", List(times) { lastfmFiles }.flatten(), excludes)
         }
     }
 }

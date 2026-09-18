@@ -94,9 +94,12 @@ class SettingsLayoutTest {
             // that makes its row honest - and `Качество потока` and `О приложении`
             // stay absent even though their sections are now drawn, because nothing
             // behind either exists.
+            //
+            // `Интеграции` and `Last.fm` left this list at G6b P3a: the slice that
+            // makes that row honest has arrived, so the row is now in the list
+            // below. That is the rule working, not an exception to it.
             val absentStrings = listOf(
-                "Интеграции",
-                "Качество потока", "Last.fm",
+                "Качество потока",
                 "О приложении",
             )
             val present = collectText(root)
@@ -114,6 +117,10 @@ class SettingsLayoutTest {
             // report endpoint. ReportEntryPointsTest holds that half.
             val built = listOf(
                 "Воспроизведение", "Таймер сна",
+                // G6b P3a. Like the report row below, these are declared
+                // unconditionally and hidden by SettingsFragment when the build has
+                // no Last.fm credentials - LastfmEntryPointTest holds that half.
+                "Интеграции", "Last.fm", "Не подключён",
                 "Прочее", "Сообщить о проблеме",
             )
             val missing = built.filter { s -> present.none { it.contains(s) } }

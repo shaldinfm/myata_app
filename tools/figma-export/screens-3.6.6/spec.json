@@ -246,7 +246,7 @@
         48,
         48
       ],
-      "note": "No Last.fm mark exists anywhere in the Figma file. Not drawn, not downloaded. Needed by the Settings row and the Last.fm screen."
+      "note": "Decoded from the Figma source (G6b P3a): node 2523:135 in settings-lastfm, a VECTOR named 'Vector' whose fill geometry is 27 path commands with bounds 0..17.676 x 0..11. The same mark is 2523:115 on the Settings row and 2523:133 on the Connected card, in text_secondary and primary. It was reported missing because this manifest is built by matching node NAMES and the node is named 'Vector', and because the snapshot serializer does not emit vectorPaths - so no export ever carried the outline. Shipped as app/src/main/res/drawable/ic_lastfm.xml."
     },
     "control/find-track": {
       "status": "CANONICAL_NODE",

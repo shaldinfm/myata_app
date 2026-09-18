@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Last.fm mark.
+
+  Decoded from this project's own Figma source rather than fetched or redrawn:
+  design/RadioMyata.fig -> node 2523:135 (settings-lastfm > Not connected >
+  "Vector"), whose fill geometry is blob 50338 - 571 bytes, 27 path commands,
+  bounds exactly 0..17.676 x 0..11. The same mark appears at 2523:115 (the
+  Settings row) and 2523:133 (the Connected card); all three are one shape drawn
+  in two tints, so one drawable serves them.
+
+  ## Why the viewport is 24 and the mark is not
+
+  The mark's intrinsic size is 17.676 x 11 - a wide wordmark, not a square icon.
+  Centring it in a 24x24 viewport is a translate of (3.162, 6.5), which lands it
+  at (19.16, 24.50) inside the card and (19.16, 26.50) inside the Settings row.
+  The frozen frames put it at (19, 24) and (19, 26). So padding it to 24 lets it
+  drop into the same 24dp slot every other Settings row uses and reproduces both
+  frozen placements to within half a pixel, instead of needing its own geometry.
+
+  ## Tint
+
+  Deliberately no android:tint here. The mark is text_secondary when disconnected
+  and primary when connected, and that is a fact about the state, not about the
+  asset - so it is set at the call site.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@android:color/white"
+        android:fillType="nonZero"
+        android:pathData="M13.806,14.832 L13.61,14.38 L11.928,10.378 C11.373,8.962 9.988,8.005 8.428,8.005 C6.316,8.005 4.603,9.794 4.603,12.001 C4.603,14.206 6.316,15.996 8.428,15.996 C9.902,15.996 11.181,15.126 11.82,13.851 L12.5,15.488 C11.536,16.717 10.069,17.5 8.428,17.5 C5.519,17.5 3.162,15.04 3.162,12.001 C3.162,8.963 5.519,6.5 8.428,6.5 C10.622,6.5 12.395,7.723 13.296,9.893 C13.364,10.061 14.248,12.22 15.02,14.057 C15.497,15.193 15.903,15.948 17.226,15.995 C18.521,16.041 19.414,15.217 19.414,14.174 C19.414,13.155 18.732,12.91 17.587,12.512 C15.527,11.803 14.463,11.091 14.463,9.385 C14.463,7.72 15.546,6.61 17.309,6.61 C18.456,6.61 19.287,7.144 19.861,8.207 L18.732,8.808 C18.309,8.189 17.841,7.943 17.246,7.943 C16.418,7.943 15.83,8.545 15.83,9.343 C15.83,10.478 16.802,10.649 18.16,11.113 C19.988,11.735 20.838,12.446 20.838,14.22 C20.838,16.083 19.308,17.44 17.31,17.437 C15.468,17.429 14.486,16.489 13.806,14.832 Z" />
+</vector>

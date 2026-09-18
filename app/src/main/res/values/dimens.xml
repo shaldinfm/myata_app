@@ -1342,4 +1342,38 @@
       Player - hidden on this pushed screen - and would add 130dp of empty scroll.
     -->
     <dimen name="avatar_scroll_bottom_clearance">24dp</dimen>
+
+    <!--
+      settings-lastfm 2523:131 (light) / 2522:3992 (dark), 390x570 (G6b P3a).
+
+      Every value is the difference between two absolute Figma offsets, so the
+      card can be checked by adding up rather than trusted:
+
+          band                 0..64
+          card                92..264   (28 below the band, 358x172)
+            heading row       16..44    (card padding 16; logo 24dp centres to 18)
+            body line 1       56..78    (12 below the heading)
+            body line 2       78..100   (flush under it)
+            button           112..156   (12 below the body, 326x44)
+            card padding      156..172
+          note 1             +28 below the card
+
+      The one place an absolute y is NOT reproduced is the notes. The frozen frame
+      stacks BOTH card states for review - Not connected at 92..264 and Connected
+      at 288..460 - and puts the notes at 488, which is 28 below the *second* card.
+      The shipped screen draws one card, so the notes keep that 28 gap from the card
+      that actually precedes them instead of faking a y that only exists because two
+      cards were drawn at once.
+    -->
+    <dimen name="lastfm_card_margin_top">28dp</dimen>
+    <dimen name="lastfm_card_height">172dp</dimen>
+    <dimen name="lastfm_card_padding">16dp</dimen>
+    <dimen name="lastfm_heading_height">28dp</dimen>
+    <dimen name="lastfm_logo_label_margin_start">8dp</dimen>
+    <dimen name="lastfm_body_height">22dp</dimen>
+    <dimen name="lastfm_body_margin_top">12dp</dimen>
+    <dimen name="lastfm_button_height">44dp</dimen>
+    <dimen name="lastfm_button_margin_top">12dp</dimen>
+    <dimen name="lastfm_note_margin_top">28dp</dimen>
+    <dimen name="lastfm_note_height">20dp</dimen>
 </resources>

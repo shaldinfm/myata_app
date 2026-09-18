@@ -118,6 +118,26 @@ class LastfmConfigTest {
     }
 
     @Test
+    fun `the test override decides without touching the credentials`() {
+        // The seam P3a's instrumentation uses to reach the Settings row in a build
+        // with no credentials - which is every build today. It overrides the
+        // decision only, so no test can ever be handed something that signs.
+        try {
+            LastfmConfig.configuredOverrideForTest = true
+            assertTrue(LastfmConfig.isConfigured)
+            LastfmConfig.configuredOverrideForTest = false
+            assertFalse(LastfmConfig.isConfigured)
+        } finally {
+            LastfmConfig.configuredOverrideForTest = null
+        }
+        // Cleared, it falls back to the real rule again.
+        assertEquals(
+            configured(LastfmConfig.apiKey, LastfmConfig.apiSecret),
+            LastfmConfig.isConfigured,
+        )
+    }
+
+    @Test
     fun `a signer exists exactly when the build is configured`() {
         assertEquals(LastfmConfig.isConfigured, LastfmSigners.forThisBuild() != null)
         assertEquals(LastfmConfig.isConfigured, LastfmRequestFactory.forThisBuild() != null)

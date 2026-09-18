@@ -36,6 +36,9 @@ object LastfmCard {
             logoTintPrimary = false,
             showCheck = false,
             buttonPrimary = true,
+            // The way out of a half-finished authorisation: forget the token and
+            // go back to where the listener started.
+            secondaryLabelRes = R.string.lastfm_action_cancel,
         )
 
         is LastfmCardState.Connected -> LastfmCardContent(
@@ -61,6 +64,9 @@ object LastfmCard {
             logoTintPrimary = false,
             showCheck = false,
             buttonPrimary = true,
+            // The way out for a listener who does not want to reconnect: clear
+            // everything, the retained username included.
+            secondaryLabelRes = R.string.lastfm_action_disconnect,
         )
     }
 }

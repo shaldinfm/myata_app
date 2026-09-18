@@ -1,5 +1,6 @@
 package com.example.musicplayerapp.fragments
 
+import android.content.ActivityNotFoundException
 import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -8,39 +9,42 @@ import android.view.ViewGroup
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.ContextCompat
 import androidx.core.widget.ImageViewCompat
+import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.databinding.FragmentSettingsLastfmBinding
 import com.example.musicplayerapp.ui.lastfm.LastfmCard
 import com.example.musicplayerapp.ui.lastfm.LastfmCardState
+import com.example.musicplayerapp.ui.lastfm.LastfmAuthLauncher
 import com.example.musicplayerapp.ui.lastfm.LastfmCountText
+import com.example.musicplayerapp.ui.lastfm.LastfmEvent
+import com.example.musicplayerapp.ui.lastfm.LastfmViewModel
 
 /**
  * settings-lastfm 2523:131 / 2522:3992 - the screen the `Интеграции` row opens.
  *
- * ## P3a draws the states; it does not produce them
+ * ## What drives it (G6b P3b)
  *
- * There is no session store, no network and no browser launch in this slice, so
- * the only state this fragment can be in is [LastfmCardState.Disconnected], and
- * the `Подключить` button is deliberately inert. The other three states are fully
- * rendered and fully tested through [render] - what is missing is the auth flow
- * that decides which one is true, and that arrives in P3b.
+ * [LastfmViewModel], which derives every card from `lastfm_session` - so the right
+ * card comes back after recreation, process death or a trip to the browser without
+ * anything saved here. This fragment only forwards three things: the two buttons,
+ * and [onResume], which is the **only** trigger for exchanging a pending token. No
+ * deep link, no callback: the listener returns from the browser on their own.
  *
- * That split is the point: the fidelity work can be reviewed against the frozen
- * frames without a state machine, a token or a network request in the same diff.
+ * ## Why rendering is a function of a state
  *
- * ## Why the state is a parameter and not a field
- *
- * [render] takes the state rather than reading one, so the instrumentation tests
- * can draw all four states against a real inflated layout with no fake account
- * reaching a shipped build. Nothing in `src/main` ever calls it with anything but
- * [LastfmCardState.Disconnected].
+ * [render] takes the state rather than reading one, so the layout tests can draw
+ * all four cards against a real inflated layout with no fake account reaching a
+ * shipped build.
  */
 class SettingsLastfmFragment : Fragment() {
 
     private var _binding: FragmentSettingsLastfmBinding? = null
     private val binding get() = _binding!!
+
+    private val viewModel: LastfmViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -75,9 +79,33 @@ class SettingsLastfmFragment : Fragment() {
         // Back returns to Settings, which is the only thing that opens this.
         binding.lastfmBack.setOnClickListener { findNavController().popBackStack() }
 
-        render(binding, LastfmCardState.Disconnected)
+        binding.lastfmAction.setOnClickListener { viewModel.onPrimaryAction() }
+        binding.lastfmActionSecondary.setOnClickListener { viewModel.onSecondaryAction() }
+
+        viewModel.state.observe(viewLifecycleOwner) { state -> _binding?.let { render(it, state) } }
+        viewModel.event.observe(viewLifecycleOwner) { event ->
+            event ?: return@observe
+            // Consumed before it is handled: handling a browser that will not open
+            // raises the next event, which must not be the one this line clears.
+            viewModel.consumeEvent()
+            when (event) {
+                is LastfmEvent.OpenBrowser -> try {
+                    LastfmAuthLauncher.launch(requireContext(), event.url)
+                } catch (e: ActivityNotFoundException) {
+                    viewModel.onBrowserUnavailable()
+                }
+                is LastfmEvent.Message ->
+                    Toast.makeText(requireContext(), event.text, Toast.LENGTH_LONG).show()
+            }
+        }
 
         return binding.root
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // The one trigger for finishing an authorisation: the listener coming back.
+        viewModel.onResume()
     }
 
     override fun onDestroyView() {
@@ -169,6 +197,16 @@ class SettingsLastfmFragment : Fragment() {
                     else R.color.text_heading,
                 )
             )
+
+            // The second, outlined button - pending and re-auth only. GONE otherwise,
+            // which is what keeps the other two cards at exactly 172.
+            val secondary = content.secondaryLabelRes
+            if (secondary == null) {
+                binding.lastfmActionSecondary.visibility = View.GONE
+            } else {
+                binding.lastfmActionSecondary.setText(secondary)
+                binding.lastfmActionSecondary.visibility = View.VISIBLE
+            }
         }
     }
 }

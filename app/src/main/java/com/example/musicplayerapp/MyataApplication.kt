@@ -1,6 +1,7 @@
 package com.example.musicplayerapp
 
 import android.app.Application
+import com.example.musicplayerapp.data.lastfm.LastfmBackend
 import com.example.musicplayerapp.data.ArtworkModule
 import com.example.musicplayerapp.data.supabase.IdentityReconciler
 import com.example.musicplayerapp.data.supabase.ReactionSyncScheduler
@@ -10,6 +11,12 @@ import com.squareup.picasso.Picasso
 class MyataApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+
+        // Allows the Last.fm transport to send, and nothing more: no request is made
+        // at startup. First, so nothing that runs below could ever find it unarmed -
+        // and here rather than lazily, because a JVM test never runs an Application,
+        // which is what keeps the real transport inert there. See LastfmBackend.
+        LastfmBackend.armForProduction()
 
         // Restores a Supabase session this install already has, creates none, and
         // then repairs the persisted identity around whatever came back.

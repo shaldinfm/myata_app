@@ -72,6 +72,15 @@ data class LastfmSession(
 }
 
 /**
+ * A Last.fm account as `user.getInfo` describes it.
+ *
+ * @property playcount the account's **lifetime** scrobble total across every client
+ *   it has ever used - not this app's contribution, which is why the card labels it
+ *   `Всего в Last.fm`. Null when the response carried none.
+ */
+data class LastfmAccount(val username: String, val playcount: Long?)
+
+/**
  * What Last.fm did with a batch of scrobbles.
  *
  * @property accepted how many it recorded, from the response's own `@attr`.
@@ -149,6 +158,20 @@ object LastfmResponses {
                 subscriber = (session.intOf("subscriber") ?: 0) != 0,
             )
         )
+    }
+
+    /**
+     * `user.getInfo` -> the account's name and lifetime playcount.
+     *
+     * A response without a playcount is still an account: the count is an
+     * enrichment, and its absence is shown as absence rather than as a failure.
+     */
+    fun userInfo(body: String): LastfmResult<LastfmAccount> = parse(body) { root ->
+        val user = root.objectOrNull("user")
+            ?: return@parse LastfmResult.Malformed("no user in user.getInfo response")
+        val name = user.stringOrNull("name")
+            ?: return@parse LastfmResult.Malformed("user without a name")
+        LastfmResult.Ok(LastfmAccount(username = name, playcount = user.longOf("playcount")))
     }
 
     /**

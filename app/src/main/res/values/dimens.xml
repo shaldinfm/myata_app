@@ -1356,6 +1356,9 @@
             body line 2       78..100   (flush under it)
             button           112..156   (12 below the body, 326x44)
             card padding      156..172
+          (P3b, pending and re-auth only)
+            second button    164..208   (8 below the first, 326x44, outlined)
+            card padding      208..224
           note 1             +28 below the card
 
       The one place an absolute y is NOT reproduced is the notes. The frozen frame
@@ -1366,7 +1369,6 @@
       cards were drawn at once.
     -->
     <dimen name="lastfm_card_margin_top">28dp</dimen>
-    <dimen name="lastfm_card_height">172dp</dimen>
     <dimen name="lastfm_card_padding">16dp</dimen>
     <dimen name="lastfm_heading_height">28dp</dimen>
     <dimen name="lastfm_logo_label_margin_start">8dp</dimen>
@@ -1374,6 +1376,10 @@
     <dimen name="lastfm_body_margin_top">12dp</dimen>
     <dimen name="lastfm_button_height">44dp</dimen>
     <dimen name="lastfm_button_margin_top">12dp</dimen>
+    <!-- G6b P3b: the second button on the pending and re-auth cards - the same 8 as
+         the gap between two Settings rows, and the same 326x44 outlined button the
+         connected card already draws. -->
+    <dimen name="lastfm_secondary_button_margin_top">8dp</dimen>
     <dimen name="lastfm_note_margin_top">28dp</dimen>
     <dimen name="lastfm_note_height">20dp</dimen>
 </resources>

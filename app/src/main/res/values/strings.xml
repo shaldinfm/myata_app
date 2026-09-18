@@ -641,6 +641,10 @@
     <string name="settings_section_integrations">Интеграции</string>
     <string name="settings_row_lastfm">Last.fm</string>
     <string name="settings_lastfm_not_connected">Не подключён</string>
+    <!-- G6b P3b owner decision: the row's value for the three states the frozen
+         file does not draw. The linked state shows the username itself. -->
+    <string name="settings_lastfm_pending">Подключение не завершено</string>
+    <string name="settings_lastfm_reauth">Требуется вход</string>
 
     <string name="lastfm_title">Last.fm</string>
     <string name="lastfm_back_description">Назад</string>
@@ -653,6 +657,8 @@
     <string name="lastfm_card_pending_heading">Подключение не завершено</string>
     <string name="lastfm_card_pending_body">Завершите авторизацию в Last.fm.</string>
     <string name="lastfm_action_open_lastfm">Открыть Last.fm</string>
+    <!-- The pending card's way out (G6b P3b): forget the token, go back. -->
+    <string name="lastfm_action_cancel">Отменить</string>
 
     <string name="lastfm_card_connected_heading">Подключён</string>
     <string name="lastfm_action_disconnect">Отключить</string>
@@ -673,6 +679,12 @@
     <string name="lastfm_scrobbles_one">скроббл</string>
     <string name="lastfm_scrobbles_few">скроббла</string>
     <string name="lastfm_scrobbles_many">скробблов</string>
+
+    <!-- Transient messages (G6b P3b owner decision); no frozen frame draws an error.
+         The network one covers "no answer" and "Last.fm refused" alike: the second is
+         rare and the listener's next step is the same. -->
+    <string name="lastfm_error_network">Не удалось связаться с Last.fm. Проверьте подключение и попробуйте ещё раз.</string>
+    <string name="lastfm_error_no_browser">Не удалось открыть браузер.</string>
 
     <string name="lastfm_note_1">Пароль Last.fm не хранится в приложении:</string>
     <string name="lastfm_note_2">используется веб-авторизация.</string>

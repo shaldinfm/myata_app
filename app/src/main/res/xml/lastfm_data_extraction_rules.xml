@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  android:dataExtractionRules - backup and device transfer on API 31+ (G6b P3b).
+
+  The API 31+ counterpart of lastfm_backup_rules.xml, which those releases ignore.
+  The same single exclusion in both places data can leave the device: cloud
+  backup, and device-to-device transfer. Everything else keeps its default, so
+  nothing but the Last.fm session changes.
+
+  Keep the path in step with PrefsLastfmSessionStore.FILE and with
+  lastfm_backup_rules.xml.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="lastfm_session.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="lastfm_session.xml" />
+    </device-transfer>
+</data-extraction-rules>

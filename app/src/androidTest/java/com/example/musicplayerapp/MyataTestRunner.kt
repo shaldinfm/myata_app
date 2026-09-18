@@ -1,6 +1,8 @@
 package com.example.musicplayerapp
 
 import android.app.Application
+import android.content.Context
+import com.example.musicplayerapp.data.lastfm.LastfmBackend
 import android.os.Bundle
 import androidx.test.runner.AndroidJUnitRunner
 import com.example.musicplayerapp.data.ReactionOutboxEntry
@@ -44,7 +46,19 @@ class MyataTestRunner : AndroidJUnitRunner() {
     /** What [onCreate] decided. The runner's own `arguments` field is private. */
     private var optedIn = false
 
+    /** The Last.fm half of the same decision - see [LiveLastfm]. Independent of Supabase's. */
+    private var lastfmOptedIn = false
+
     override fun onCreate(arguments: Bundle) {
+        // Last.fm first, and unconditionally: its gate does not depend on anything
+        // Supabase decides. Without the opt-in the transport is replaced before the
+        // Application exists, so nothing the app does on its own - and no test that
+        // forgets a fake - can reach Last.fm. See LiveLastfm and LastfmBackend.
+        lastfmOptedIn = LiveLastfm.optedIn(arguments)
+        LastfmBackend.overrideForInstrumentation(
+            if (lastfmOptedIn) null else { _: Context -> OfflineLastfmApi }
+        )
+
         optedIn = LiveSupabase.optedIn(arguments)
         if (optedIn) {
             // Explicitly asked for. The real backend stays in place and the live
@@ -90,6 +104,9 @@ class MyataTestRunner : AndroidJUnitRunner() {
         // is the hook that is genuinely last.
         check(optedIn || (ReactionSyncBackend.isOverridden && EmailAuthBackend.isOverridden)) {
             "the live Supabase gate was not installed before the Application started"
+        }
+        check(lastfmOptedIn || LastfmBackend.isOverridden) {
+            "the live Last.fm gate was not installed before the Application started"
         }
         super.callApplicationOnCreate(app)
     }

@@ -18,11 +18,19 @@
   rather than inventing any of their own: same 358x172 plate, same heading, same
   two body lines, same button box.
 
-  The card's height is therefore **fixed at 172**, not wrap_content. A state with
-  one body line instead of two must not make the card - and the button inside it -
-  a different size from the state before it, and `lastfm_body_2` is hidden with
-  INVISIBLE rather than GONE for the same reason: the button stays at 112 in every
-  state, which is where the file puts it.
+  What never moves is the **first button, at 112** - where the file puts it - in
+  every state. A state with one body line hides `lastfm_body_2` with INVISIBLE
+  rather than GONE for exactly that reason.
+
+  ## A second button, on two states only (G6b P3b)
+
+  The pending and re-auth cards each need a way out that is not "finish what you
+  started" - `Отменить` and `Отключить` - and the file draws neither state. The
+  smallest consistent extension is the connected card's own outlined button,
+  stacked 8 under the first: two 326dp buttons do not fit side by side, since
+  `Подключить заново` at 21sp is wider than half the card. So the card wraps its
+  content - 172 with one action, 224 with two - instead of being fixed at 172, and
+  the first button, the heading and both body lines stay exactly where P3a put them.
 
   ## Components, not copies
 
@@ -104,7 +112,7 @@
                 <LinearLayout
                     android:id="@+id/lastfm_card"
                     android:layout_width="match_parent"
-                    android:layout_height="@dimen/lastfm_card_height"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/lastfm_card_margin_top"
                     android:background="@drawable/bg_profile_card"
                     android:orientation="vertical"
@@ -199,6 +207,27 @@
                         android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.21_28"
                         android:textColor="@color/profile_primary_button_label"
                         tools:text="Подключить" />
+
+                    <!--
+                      The second action (G6b P3b): the connected card's own outlined
+                      button, 8 under the first. Present only on the pending and
+                      re-auth cards; GONE everywhere else, which is what keeps the
+                      other two states at exactly 172.
+                    -->
+                    <TextView
+                        android:id="@+id/lastfm_action_secondary"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/lastfm_button_height"
+                        android:layout_marginTop="@dimen/lastfm_secondary_button_margin_top"
+                        android:background="@drawable/bg_profile_button_secondary"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.21_28"
+                        android:textColor="@color/text_heading"
+                        android:visibility="gone"
+                        tools:text="Отменить"
+                        tools:visibility="visible" />
                 </LinearLayout>
 
                 <!--

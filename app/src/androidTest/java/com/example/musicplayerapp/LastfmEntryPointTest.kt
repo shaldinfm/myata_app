@@ -5,6 +5,8 @@ import android.widget.TextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.musicplayerapp.data.lastfm.LastfmConfig
+import com.example.musicplayerapp.data.lastfm.LastfmStoredSession
+import com.example.musicplayerapp.data.lastfm.PrefsLastfmSessionStore
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -30,6 +32,10 @@ class LastfmEntryPointTest {
     @Before
     fun clearOverrideAndGrantNotifications() {
         LastfmConfig.configuredOverrideForTest = null
+        // The screen now reads its card from lastfm_session; another suite's leftovers
+        // would put it in a state this test does not expect.
+        PrefsLastfmSessionStore(InstrumentationRegistry.getInstrumentation().targetContext)
+            .write(LastfmStoredSession.EMPTY)
         // A fresh install re-arms the API 33+ notification prompt, which pauses
         // MainActivity and turns every wait below into a bare timeout. Granted the
         // way ReportEntryPointsTest does it.
@@ -47,6 +53,9 @@ class LastfmEntryPointTest {
         // Left set, this would leak into every later suite in the run and make the
         // row appear in tests that assert it does not.
         LastfmConfig.configuredOverrideForTest = null
+        LiveLastfm.restoreOffline()
+        PrefsLastfmSessionStore(InstrumentationRegistry.getInstrumentation().targetContext)
+            .write(LastfmStoredSession.EMPTY)
     }
 
     @Test

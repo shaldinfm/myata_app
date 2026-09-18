@@ -176,6 +176,24 @@ class LastfmAuth(
         write(LastfmStoredSession.EMPTY)
     }
 
+    /**
+     * The lifetime playcount for [username], or null if it could not be read.
+     *
+     * Enrichment only. Every failure - no answer, an error, a response without a
+     * count - is null, and **none of them changes the link**: the account stays
+     * linked and the card simply shows no count. In particular this never leads to
+     * the re-auth state, because `user.getInfo` is unauthenticated and says nothing
+     * about whether the session is still valid.
+     *
+     * Not under the lock: it reads and writes nothing.
+     */
+    suspend fun fetchPlaycount(username: String): Long? {
+        val request = requests?.userGetInfo(username) ?: return null
+        val sent = api.send(request) as? LastfmTransportResult.Body ?: return null
+        val parsed = LastfmResponses.userInfo(sent.text) as? LastfmResult.Ok ?: return null
+        return parsed.value.playcount
+    }
+
     private suspend fun beginLocked(): Begin {
         val requests = requests ?: return Begin.NotConfigured
         val request = requests.authGetToken() ?: return Begin.NotConfigured

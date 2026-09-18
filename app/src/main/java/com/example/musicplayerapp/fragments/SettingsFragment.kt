@@ -11,6 +11,9 @@ import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.data.ThemeStore
 import com.example.musicplayerapp.data.lastfm.LastfmConfig
+import com.example.musicplayerapp.data.lastfm.LastfmLink
+import com.example.musicplayerapp.data.lastfm.PrefsLastfmSessionStore
+import com.example.musicplayerapp.ui.lastfm.LastfmScreenState
 import com.example.musicplayerapp.data.report.ReportConfig
 import com.example.musicplayerapp.data.supabase.AccountRefresh
 import com.example.musicplayerapp.data.supabase.EmailAuthBackend
@@ -175,6 +178,26 @@ class SettingsFragment : Fragment() {
         }
 
         renderProfileValue()
+        renderLastfmValue()
+    }
+
+    /**
+     * The Last.fm row's value, from `lastfm_session` (G6b P3b).
+     *
+     * A read of local preferences and the clock - never a request. The same mapping
+     * the Last.fm card uses, so the row and the card cannot disagree, and recomputed
+     * on every resume, so coming back from linking shows the account at once.
+     */
+    private fun renderLastfmValue() {
+        if (!LastfmConfig.isConfigured) return
+        val link = LastfmLink.of(
+            PrefsLastfmSessionStore(requireContext()).read(),
+            System.currentTimeMillis(),
+        )
+        binding.settingsRowLastfmValue.text = when (val value = LastfmScreenState.rowValueFor(link)) {
+            is LastfmScreenState.RowValue.Res -> getString(value.id)
+            is LastfmScreenState.RowValue.Text -> value.text
+        }
     }
 
     /**

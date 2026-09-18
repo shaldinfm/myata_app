@@ -56,21 +56,22 @@ class LastfmScreenLayoutTest {
                     val where = "lastfm/$theme/$name"
                     val card = binding.lastfmCard
 
-                    // 358x172 - the card is the one box that must not move between
-                    // states, because the button inside it is at a frozen y.
+                    // 358 wide in every state. Its height follows its content since
+                    // P3b: 172 with one action, 224 with the second - see the layout.
                     check(findings, "$where card width", dp(358), card.width.toFloat(), dm.density)
-                    check(findings, "$where card height", dp(172), card.height.toFloat(), dm.density)
 
                     // The chain inside the card, box by box and gap by gap - not the
                     // button's absolute y. Android rounds every dp to a whole pixel
                     // independently, and at 420dpi 28/12/22dp land on 74/32/58px, so
                     // an absolute offset under six rounded boundaries drifts by 2px
                     // while every link in the chain is exact. The chain is what the
-                    // frame specifies: 16 / 28 / 12 / 22 / 22 / 12 / 44 / 16 = 172.
+                    // frame specifies: 16 / 28 / 12 / 22 / 22 / 12 / 44 [ / 8 / 44 ] / 16.
                     val heading = binding.lastfmCardHeading.parent as View
                     val b1 = binding.lastfmBody1
                     val b2 = binding.lastfmBody2
                     val btn = binding.lastfmAction
+                    val second = binding.lastfmActionSecondary
+                    val hasSecond = second.visibility == View.VISIBLE
                     check(findings, "$where top padding", dp(16), heading.top.toFloat(), dm.density)
                     check(findings, "$where heading row", dp(28), heading.height.toFloat(), dm.density)
                     check(findings, "$where heading->body", dp(12), (b1.top - heading.bottom).toFloat(), dm.density)
@@ -79,24 +80,30 @@ class LastfmScreenLayoutTest {
                     check(findings, "$where body 2", dp(22), b2.height.toFloat(), dm.density)
                     check(findings, "$where body->button", dp(12), (btn.top - b2.bottom).toFloat(), dm.density)
                     check(findings, "$where button height", dp(44), btn.height.toFloat(), dm.density)
-                    // The bottom padding is not an independent box: the card is a
-                    // fixed 172dp so the button never moves between states, and what
-                    // is left under the button is the residue of that fixed height
-                    // minus seven independently rounded links. So it is asserted
-                    // against the same arithmetic the platform does - which proves the
-                    // layout is exactly the frozen chain, and that the only deviation
-                    // from 16dp is pixel rounding (at 420dpi: 452 - 412 = 40px).
+
+                    val last = if (hasSecond) {
+                        check(findings, "$where button->second", dp(8), (second.top - btn.bottom).toFloat(), dm.density)
+                        check(findings, "$where second height", dp(44), second.height.toFloat(), dm.density)
+                        check(findings, "$where second width", btn.width.toFloat(), second.width.toFloat(), dm.density)
+                        second
+                    } else {
+                        btn
+                    }
+                    check(findings, "$where bottom padding", dp(16), (card.height - last.bottom).toFloat(), dm.density)
+
+                    // The whole card is exactly its rounded links - nothing else in it
+                    // takes space - and within half a pixel per link of the design
+                    // total: 172 for one action, 224 for two.
                     val rpx = { v: Int -> (v * dm.density + 0.5f).toInt() }
-                    val residuePx = rpx(172) -
-                        listOf(16, 28, 12, 22, 22, 12, 44).sumOf { rpx(it) }
-                    check(
-                        findings, "$where bottom padding (rounding residue)",
-                        residuePx.toFloat(), (card.height - btn.bottom).toFloat(), dm.density,
-                    )
-                    assertTrue(
-                        "$where the residue stays within a pixel per link of 16dp",
-                        abs(residuePx - dp(16)) <= 7f,
-                    )
+                    val links = listOf(16, 28, 12, 22, 22, 12, 44) +
+                        (if (hasSecond) listOf(8, 44) else emptyList()) + listOf(16)
+                    if (card.height != links.sumOf { rpx(it) }) {
+                        findings += "$where card is ${card.height}px, its links sum to ${links.sumOf { rpx(it) }}px"
+                    }
+                    val designDp = if (hasSecond) 224 else 172
+                    if (abs(card.height - dp(designDp)) > links.size * 0.5f + 0.5f) {
+                        findings += "$where card ${card.height / dm.density}dp is not ~${designDp}dp"
+                    }
 
                     // The mark is a 24dp slot whatever the state.
                     check(
@@ -131,6 +138,7 @@ class LastfmScreenLayoutTest {
             )
             assertEquals(View.GONE, disconnected.lastfmCheck.visibility)
             assertEquals(View.VISIBLE, disconnected.lastfmBody2.visibility)
+            assertEquals("one action only", View.GONE, disconnected.lastfmActionSecondary.visibility)
 
             val pending = render(inflater, LastfmCardState.AuthorizationPending)
             assertEquals(
@@ -146,6 +154,11 @@ class LastfmScreenLayoutTest {
             assertEquals(
                 "the second body line holds its space",
                 View.INVISIBLE, pending.lastfmBody2.visibility,
+            )
+            assertEquals("pending has a way out", View.VISIBLE, pending.lastfmActionSecondary.visibility)
+            assertEquals(
+                ctx.getString(R.string.lastfm_action_cancel),
+                pending.lastfmActionSecondary.text.toString(),
             )
 
             val connected = render(inflater, LastfmCardState.Connected("f0ul482", 1_248))
@@ -164,6 +177,7 @@ class LastfmScreenLayoutTest {
                 connected.lastfmAction.text.toString(),
             )
             assertEquals("the check is the connected card's", View.VISIBLE, connected.lastfmCheck.visibility)
+            assertEquals("connected keeps its one button", View.GONE, connected.lastfmActionSecondary.visibility)
 
             val reauth = render(inflater, LastfmCardState.ReauthRequired("f0ul482"))
             assertEquals(
@@ -179,6 +193,11 @@ class LastfmScreenLayoutTest {
                 reauth.lastfmAction.text.toString(),
             )
             assertEquals("a dead session is not a connected one", View.GONE, reauth.lastfmCheck.visibility)
+            assertEquals("re-auth has a way out", View.VISIBLE, reauth.lastfmActionSecondary.visibility)
+            assertEquals(
+                ctx.getString(R.string.lastfm_action_disconnect),
+                reauth.lastfmActionSecondary.text.toString(),
+            )
         }
     }
 

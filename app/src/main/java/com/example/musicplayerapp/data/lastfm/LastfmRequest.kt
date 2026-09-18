@@ -158,6 +158,28 @@ class LastfmRequestFactory(
     }
 
     /**
+     * `user.getInfo` for [username] - the account's lifetime playcount.
+     *
+     * **Unsigned, with the username explicit** (owner decision). The method does not
+     * require authentication, and the documentation does not promise that sending a
+     * session key would make it a reliable check that the session is still valid - so
+     * it is used for exactly one thing, the count on the connected card, and never to
+     * decide that a listener has to sign in again. No `sk`, no `api_sig`.
+     *
+     * Never null: it needs only the public api key, which this factory always has.
+     */
+    fun userGetInfo(username: String): LastfmRequest = LastfmRequest(
+        method = "user.getInfo",
+        httpMethod = LastfmHttpMethod.GET,
+        params = mapOf(
+            "method" to "user.getInfo",
+            "user" to username,
+            "api_key" to apiKey,
+            "format" to "json",
+        ),
+    )
+
+    /**
      * The browser URL for [token], with this factory's own api key - so the key in
      * the URL can never disagree with the key the token was requested with.
      */

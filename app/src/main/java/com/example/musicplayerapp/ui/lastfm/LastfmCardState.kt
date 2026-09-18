@@ -82,6 +82,10 @@ sealed class LastfmCardState {
  * @property showCheck whether the 24dp check sits at (318, 18). Connected only.
  * @property buttonPrimary whether the button is the filled primary or the outlined
  *   secondary. Disconnect is the only outlined one.
+ * @property secondaryLabelRes the second, outlined button under the first, or null
+ *   for none. Only the two states the frozen file does not draw have one - each
+ *   needs a way out that is not "finish what you started" (G6b P3b owner decision):
+ *   pending gets `Отменить`, re-auth gets `Отключить`.
  */
 data class LastfmCardContent(
     val headingRes: Int,
@@ -91,4 +95,5 @@ data class LastfmCardContent(
     val logoTintPrimary: Boolean,
     val showCheck: Boolean,
     val buttonPrimary: Boolean,
+    val secondaryLabelRes: Int? = null,
 )

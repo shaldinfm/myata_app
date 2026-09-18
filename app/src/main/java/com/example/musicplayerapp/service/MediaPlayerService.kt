@@ -26,6 +26,12 @@ import com.example.musicplayerapp.SecureNetModule
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.data.BootIdentity
 import com.example.musicplayerapp.data.SleepTimerStore
+import com.example.musicplayerapp.data.lastfm.LastfmConfig
+import com.example.musicplayerapp.data.lastfm.LastfmLink
+import com.example.musicplayerapp.data.lastfm.PrefsLastfmSessionStore
+import com.example.musicplayerapp.scrobble.FeedObservation
+import com.example.musicplayerapp.scrobble.ScrobbleGate
+import com.example.musicplayerapp.scrobble.ScrobbleTracker
 import com.example.musicplayerapp.ui.sleeptimer.SleepTimerDuration
 import com.example.musicplayerapp.ui.sleeptimer.SleepTimerState
 import com.google.gson.Gson
@@ -54,6 +60,24 @@ class MediaPlayerService(): MediaSessionService(){
     // Coroutine scope for background metadata polling
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var metadataJob: Job? = null
+
+    // G6b P4: decides when the track on air has been heard long enough to become a
+    // Last.fm scrobble candidate. Fed only by the poller below and by
+    // onIsPlayingChanged; it sends, queues and stores nothing. Main thread only.
+    private val lastfmSessions by lazy { PrefsLastfmSessionStore(this) }
+    private val scrobbleTracker by lazy {
+        ScrobbleTracker(
+            isEnabled = ::isScrobbleTrackingActive,
+            // Log-only in P4: the tracker has already written SCROBBLE_ELIGIBLE.
+            // P5 replaces this with the queue.
+            sink = { },
+            log = { name, fields -> PlaybackLog.event(name, *fields) },
+        )
+    }
+    private val scrobbleHandler by lazy { android.os.Handler(android.os.Looper.getMainLooper()) }
+    private val scrobbleCheck = Runnable {
+        scheduleScrobbleCheck(scrobbleTracker.onTick(android.os.SystemClock.elapsedRealtime()))
+    }
     
     // WakeLock to prevent sleep on Android TV
     private var wakeLock: PowerManager.WakeLock? = null
@@ -311,6 +335,10 @@ class MediaPlayerService(): MediaSessionService(){
                     if (isStreamChange) {
                         // DIFFERENT stream - need to set up new media item
                         stream = intentStream
+                        // A different station discards the partial listen (G6b P4, D1).
+                        scheduleScrobbleCheck(
+                            scrobbleTracker.onStreamSelected(stream, android.os.SystemClock.elapsedRealtime())
+                        )
                         onUserWantsPlayback("stream_switch")
                         ensureValidStream("switch_streamChange")
                         
@@ -509,6 +537,12 @@ class MediaPlayerService(): MediaSessionService(){
                     val action = if(isPlaying) "play" else "pause"
                     LocalBroadcastManager.getInstance(this@MediaPlayerService)
                         .sendBroadcast(Intent(action))
+
+                    // Only actual playing time counts toward a scrobble: buffering,
+                    // pause, reconnect and focus suppression all arrive here as false.
+                    scheduleScrobbleCheck(
+                        scrobbleTracker.onPlaying(isPlaying, stream, android.os.SystemClock.elapsedRealtime())
+                    )
                     
                     // Update MediaSession playback state
                     updatePlaybackState(isPlaying)
@@ -1009,6 +1043,10 @@ class MediaPlayerService(): MediaSessionService(){
         metadataJob?.cancel()
         serviceScope.cancel()
 
+        // A partial listen dies with the service; P4 persists nothing.
+        scrobbleHandler.removeCallbacks(scrobbleCheck)
+        scrobbleTracker.release()
+
         mediaSession?.release()
         mediaSession = null
         
@@ -1306,6 +1344,26 @@ class MediaPlayerService(): MediaSessionService(){
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
 
+    // ============== SCROBBLE ELIGIBILITY (G6b P4) ==============
+
+    /**
+     * Tracking runs only in a build with Last.fm credentials, with an account
+     * linked right now, and never on TV (owner decisions D2/D3). Read by the
+     * tracker at every event and again just before it emits, so an unlink is seen
+     * at the next poll, playback change or check - no observer needed.
+     */
+    private fun isScrobbleTrackingActive(): Boolean = ScrobbleGate.isActive(
+        isTv = isTv,
+        isConfigured = LastfmConfig.isConfigured,
+        isLinked = LastfmLink.of(lastfmSessions.read(), System.currentTimeMillis()) is LastfmLink.Linked,
+    )
+
+    /** One pending eligibility check at most; [delayMs] null cancels it. */
+    private fun scheduleScrobbleCheck(delayMs: Long?) {
+        scrobbleHandler.removeCallbacks(scrobbleCheck)
+        if (delayMs != null) scrobbleHandler.postDelayed(scrobbleCheck, delayMs)
+    }
+
     // ============== SMART POLLING FOR METADATA ==============
     
     private fun startMetadataPolling() {
@@ -1349,7 +1407,17 @@ class MediaPlayerService(): MediaSessionService(){
                 val serverTime = (apiResponse["server_time"] as? Double)?.toLong() ?: System.currentTimeMillis() / 1000
                 
                 // Get current stream data
-                val streamData = data[stream] as? Map<String, Any> ?: return@use 15000L
+                val polledStream = stream
+                val streamData = data[polledStream] as? Map<String, Any> ?: return@use 15000L
+
+                // The scrobble tracker reads its own copy of the timing - exactly as
+                // sent, never the device-clock fallbacks used below to pace polling.
+                val observation = FeedObservation.from(polledStream, streamData, apiResponse["server_time"])
+                withContext(Dispatchers.Main) {
+                    scheduleScrobbleCheck(
+                        scrobbleTracker.onObservation(observation, android.os.SystemClock.elapsedRealtime())
+                    )
+                }
                 
                 // Check STATUS if available (to ignore updates when stopped/off-air)
                 val status = streamData["status"] as? String ?: "playing" // Default to playing if missing

@@ -43,7 +43,7 @@ approximation is drawn.
 | `logo/yandex-music` | in the file | ABOUT US › Section 3 › ЯМузыка › Vector |
 | `logo/youtube-music` | **needs confirmation** | ABOUT US › Section 3 › YouTube — this is the YouTube mark, not the YouTube Music mark |
 | `logo/apple-music` | **needs an asset** | nothing in the file |
-| `logo/lastfm` | **needs an asset** | nothing in the file |
+| `logo/lastfm` | **decoded from the file** | node `2523:135`, 17.676x11 (G6b P3a) |
 | `avatar/m3-01 … -16` | **needs assets** | intended to be the Material 3 Design Kit avatars |
 | `control/find-track` | in the file | COLLECTION › Track Item 1 › Container › Button |
 

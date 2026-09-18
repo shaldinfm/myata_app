@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  settings-lastfm 2523:131 (light) / 2522:3992 (dark), 390x570 (G6b P3a).
+
+  A pushed destination like the appearance screen: the band carries a back button
+  and the frame has no bottom bar. Two different mechanisms enforce that, and only
+  one of them is automatic: NavScreen resolves an unlisted destination to PUSHED,
+  which hides the Mini Player on its own, but the bottom bar is hidden by an
+  explicit opt-in list in MainActivity that this destination had to join.
+
+  ## One card, four states
+
+  The frozen frame stacks two cards - `Not connected` 2523:134 at y=92 and
+  `Connected` 2523:132 at y=288 - so both could be reviewed on one board. The
+  shipped screen draws exactly one, at 92, and swaps its contents. The two states
+  the file does not draw, `Подключение не завершено` and `Требуется повторный
+  вход`, are owner decisions taken in this slice and reuse this same geometry
+  rather than inventing any of their own: same 358x172 plate, same heading, same
+  two body lines, same button box.
+
+  The card's height is therefore **fixed at 172**, not wrap_content. A state with
+  one body line instead of two must not make the card - and the button inside it -
+  a different size from the state before it, and `lastfm_body_2` is hidden with
+  INVISIBLE rather than GONE for the same reason: the button stays at 112 in every
+  state, which is where the file puts it.
+
+  ## Components, not copies
+
+  The plate is `bg_profile_card` and the buttons are `bg_profile_button_primary` /
+  `bg_profile_button_secondary` - the profile screens' own components. Their
+  tokens already match this frame exactly in both themes (container #FFFFFF /
+  #142D47, outline #E1E3E4 / #466D8F, r24; primary #1C4771 / #5FD9B4 on r12), so
+  nothing here defines a colour or a shape of its own.
+
+  ## The mark
+
+  `ic_lastfm` is the vector decoded from this project's Figma source, node
+  2523:135 - see the drawable. It is padded to 24x24 so it sits in the ordinary
+  24dp icon slot, and it is tinted at this call site: `text_secondary` in every
+  state but connected, `primary` when connected. That tint is the file's own state
+  indicator, which is why it is not baked into the asset.
+-->
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <LinearLayout
+        android:id="@+id/lastfm_root"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/background"
+        android:orientation="vertical"
+        tools:context=".fragments.SettingsLastfmFragment">
+
+        <!-- `Header - TopAppBar` 2523:141, identical to the settings band. -->
+        <LinearLayout
+            android:id="@+id/lastfm_header"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/profile_header_height"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/profile_back_margin_start"
+            android:paddingEnd="@dimen/profile_margin">
+
+            <ImageView
+                android:id="@+id/lastfm_back"
+                android:layout_width="@dimen/profile_back_size"
+                android:layout_height="@dimen/profile_back_size"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/lastfm_back_description"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_profile_back" />
+
+            <TextView
+                android:id="@+id/lastfm_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/profile_title_margin_start"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/lastfm_title"
+                android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.24_32"
+                android:textColor="@color/text_heading" />
+        </LinearLayout>
+
+        <ScrollView
+            android:id="@+id/lastfm_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:fillViewport="true"
+            android:paddingBottom="@dimen/content_bottom_clearance"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/profile_margin"
+                android:paddingEnd="@dimen/profile_margin">
+
+                <!-- The card. 358x172 at y=92; the band ends at 64. -->
+                <LinearLayout
+                    android:id="@+id/lastfm_card"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/lastfm_card_height"
+                    android:layout_marginTop="@dimen/lastfm_card_margin_top"
+                    android:background="@drawable/bg_profile_card"
+                    android:orientation="vertical"
+                    android:padding="@dimen/lastfm_card_padding">
+
+                    <!--
+                      Heading row: the mark, the state, and the check.
+
+                      The row is 28 tall - the heading's own box - and everything in
+                      it is centred vertically, which is what puts the 24dp mark and
+                      the 24dp check at y=18 against a heading at y=16. Both icon
+                      slots are always present; only their visibility and tint move,
+                      so the heading never reflows between states.
+                    -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/lastfm_heading_height"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:id="@+id/lastfm_logo"
+                            android:layout_width="@dimen/profile_row_icon_size"
+                            android:layout_height="@dimen/profile_row_icon_size"
+                            android:contentDescription="@null"
+                            android:scaleType="fitCenter"
+                            android:src="@drawable/ic_lastfm"
+                            android:tint="@color/text_secondary"
+                            tools:ignore="UseAppTint" />
+
+                        <TextView
+                            android:id="@+id/lastfm_card_heading"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/lastfm_logo_label_margin_start"
+                            android:layout_weight="1"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="@string/lastfm_card_disconnected_heading"
+                            android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.17_28"
+                            android:textColor="@color/text_primary"
+                            tools:text="Подключён" />
+
+                        <ImageView
+                            android:id="@+id/lastfm_check"
+                            android:layout_width="@dimen/profile_row_icon_size"
+                            android:layout_height="@dimen/profile_row_icon_size"
+                            android:contentDescription="@null"
+                            android:scaleType="fitCenter"
+                            android:src="@drawable/ic_settings_check"
+                            android:visibility="gone"
+                            tools:visibility="visible" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/lastfm_body_1"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/lastfm_body_height"
+                        android:layout_marginTop="@dimen/lastfm_body_margin_top"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/lastfm_card_disconnected_body_1"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.15_22"
+                        android:textColor="@color/text_secondary"
+                        tools:text="f0ul482" />
+
+                    <!--
+                      INVISIBLE, never GONE, when a state has only one body line -
+                      see the header. The button's y is part of the frozen design.
+                    -->
+                    <TextView
+                        android:id="@+id/lastfm_body_2"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/lastfm_body_height"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/lastfm_card_disconnected_body_2"
+                        android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.15_22"
+                        android:textColor="@color/text_secondary"
+                        tools:text="Всего в Last.fm: 1 248 скробблов" />
+
+                    <TextView
+                        android:id="@+id/lastfm_action"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/lastfm_button_height"
+                        android:layout_marginTop="@dimen/lastfm_button_margin_top"
+                        android:background="@drawable/bg_profile_button_primary"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:text="@string/lastfm_action_connect"
+                        android:textAppearance="@style/TextAppearance.Myata.Montserrat.Medium.21_28"
+                        android:textColor="@color/profile_primary_button_label"
+                        tools:text="Подключить" />
+                </LinearLayout>
+
+                <!--
+                  `note0` 2523:129 and `note1` 2523:130. Two lines rather than one
+                  wrapped paragraph, because the file draws two fixed 20dp boxes and
+                  breaks them where it breaks them.
+                -->
+                <TextView
+                    android:id="@+id/lastfm_note_1"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/lastfm_note_height"
+                    android:layout_marginTop="@dimen/lastfm_note_margin_top"
+                    android:text="@string/lastfm_note_1"
+                    android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                    android:textColor="@color/text_secondary" />
+
+                <TextView
+                    android:id="@+id/lastfm_note_2"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/lastfm_note_height"
+                    android:text="@string/lastfm_note_2"
+                    android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.14_20"
+                    android:textColor="@color/text_secondary" />
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+</layout>

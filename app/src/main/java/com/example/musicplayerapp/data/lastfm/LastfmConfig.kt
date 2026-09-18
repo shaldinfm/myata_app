@@ -1,5 +1,6 @@
 package com.example.musicplayerapp.data.lastfm
 
+import androidx.annotation.VisibleForTesting
 import com.example.musicplayerapp.BuildConfig
 
 /**
@@ -49,6 +50,27 @@ import com.example.musicplayerapp.BuildConfig
  */
 object LastfmConfig {
 
+    /**
+     * Test-only answer for [isConfigured], and the only way instrumentation can
+     * reach the Last.fm screen.
+     *
+     * G6b ships before its credentials exist, so every build in existence - CI, a
+     * fresh clone, this developer's - is currently the unconfigured one, and the
+     * Settings row and its screen would be untestable on a device without this.
+     * The suites set it both ways round: to true, to reach the row at all, and to
+     * false, to prove the row and its section then disappear.
+     *
+     * Deliberately an override of the *decision* rather than of the credentials.
+     * A test that supplied a fake key and secret would be a test that could sign
+     * something, and nothing in this slice should be able to.
+     *
+     * It changes nothing in a shipped app: nothing in `src/main` writes it, and a
+     * release build has no code that can.
+     */
+    @VisibleForTesting
+    @Volatile
+    var configuredOverrideForTest: Boolean? = null
+
     /** Identifies this application to Last.fm. Public by design. */
     val apiKey: String = BuildConfig.LASTFM_API_KEY
 
@@ -67,7 +89,7 @@ object LastfmConfig {
      * "Has", not "has well-formed" - see [isSupplied] for why no shape is checked.
      */
     val isConfigured: Boolean
-        get() = isSupplied(apiKey) && isSupplied(apiSecret)
+        get() = configuredOverrideForTest ?: (isSupplied(apiKey) && isSupplied(apiSecret))
 
     /**
      * Whether [value] is a credential somebody actually supplied, as opposed to

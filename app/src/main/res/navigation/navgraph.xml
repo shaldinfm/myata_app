@@ -180,7 +180,27 @@
             app:exitAnim="@anim/fade_out"
             app:popEnterAnim="@anim/fade_in"
             app:popExitAnim="@anim/fade_out" />
+        <action
+            android:id="@+id/action_settings_to_settings_lastfm"
+            app:destination="@id/settings_lastfm"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
     </fragment>
+
+    <!--
+      Last.fm (G6b P3a). settings-lastfm 2523:131 / 2522:3992.
+
+      One destination, one way in - the `Интеграции` row on Settings - and no
+      actions of its own: P3a draws the four card states and nothing on the screen
+      navigates anywhere. Back is popBackStack, which returns to Settings, the only
+      thing that opens it.
+    -->
+    <fragment
+        android:id="@+id/settings_lastfm"
+        android:name="com.example.musicplayerapp.fragments.SettingsLastfmFragment"
+        android:label="SettingsLastfmFragment" />
 
     <!--
       The appearance choice. It has no actions of its own: choosing a row writes

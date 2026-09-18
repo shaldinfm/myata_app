@@ -10,6 +10,7 @@ import androidx.navigation.fragment.findNavController
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.data.ThemeStore
+import com.example.musicplayerapp.data.lastfm.LastfmConfig
 import com.example.musicplayerapp.data.report.ReportConfig
 import com.example.musicplayerapp.data.supabase.AccountRefresh
 import com.example.musicplayerapp.data.supabase.EmailAuthBackend
@@ -37,12 +38,19 @@ import kotlinx.coroutines.withContext
  * is a destination inside settings rather than a sibling of it. G1 follows that:
  * one control, pointing at the parent, and the profile one tap further in.
  *
- * ## Two rows, and both of them do something
+ * ## Every row here does something
  *
- * The frozen frame has five sections. This draws the two whose features exist.
- * See `fragment_settings.xml` for why the other three are absent rather than
- * inert - the short version is that an inert row here would have to state a fact
- * about a feature with no implementation to make the fact true.
+ * The frozen frame has five sections, and this now draws all five - Аккаунт,
+ * Внешний вид, Воспроизведение, Интеграции (G6b P3a) and Прочее. What is still
+ * absent is individual rows inside them, `Качество потока` and `О приложении`.
+ * See `fragment_settings.xml` for why those are absent rather than inert - the
+ * short version is that an inert row here would have to state a fact about a
+ * feature with no implementation to make the fact true.
+ *
+ * Two of the rows are conditional on this build having something behind them:
+ * `Сообщить о проблеме` needs a report endpoint and `Last.fm` needs Last.fm
+ * credentials. Neither is present on CI or in a fresh clone, and in that state
+ * both the row and its section heading are gone rather than dead.
  *
  * ## What it reads, and when
  *
@@ -125,6 +133,22 @@ class SettingsFragment : Fragment() {
         binding.settingsSectionOther.visibility = binding.settingsRowReportProblem.visibility
         binding.settingsRowReportProblem.setOnClickListener {
             findNavController().navigate(R.id.action_settings_to_report_problem)
+        }
+
+        // `Интеграции > Last.fm` (G6b P3a). Same rule as the report row one step
+        // above: the section and its row are drawn only when this build has Last.fm
+        // credentials, because a build without them has no Last.fm in it at all and
+        // the row would be describing a screen the listener cannot use.
+        //
+        // `LastfmConfig.isConfigured` is the whole gate - it is false on CI and on
+        // every fresh clone, which is the state this repo builds in by default.
+        // `SettingsLayoutTest` holds the layout half of the claim and
+        // `LastfmEntryPointTest` this runtime half.
+        binding.settingsRowLastfm.visibility =
+            if (LastfmConfig.isConfigured) View.VISIBLE else View.GONE
+        binding.settingsSectionIntegrations.visibility = binding.settingsRowLastfm.visibility
+        binding.settingsRowLastfm.setOnClickListener {
+            findNavController().navigate(R.id.action_settings_to_settings_lastfm)
         }
 
         // The value follows the service's own state, so a timer that expires or is

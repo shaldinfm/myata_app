@@ -625,4 +625,55 @@
     <string name="avatar_none_description">аватар не выбран</string>
     <string name="profile_account_avatar_description">Ваш аватар: %1$s</string>
     <string name="avatar_save_failed">Не удалось сохранить аватар. Проверьте подключение и попробуйте ещё раз.</string>
+
+    <!--
+      Last.fm (G6b P3a). settings 2517:2758 / 2517:3725 for the row, and
+      settings-lastfm 2523:131 / 2522:3992 for the screen.
+
+      The frozen frames supply every string in the disconnected and connected
+      cards, the two notes and the section label. The pending and re-auth cards
+      are owner decisions taken in this slice - the file draws neither - and their
+      wording is deliberately factual: `Сессия Last.fm больше не действует` says
+      the session ended, never that Last.fm revoked anything, because the app
+      cannot tell why it ended and must not guess out loud about somebody's
+      account.
+    -->
+    <string name="settings_section_integrations">Интеграции</string>
+    <string name="settings_row_lastfm">Last.fm</string>
+    <string name="settings_lastfm_not_connected">Не подключён</string>
+
+    <string name="lastfm_title">Last.fm</string>
+    <string name="lastfm_back_description">Назад</string>
+
+    <string name="lastfm_card_disconnected_heading">Не подключён</string>
+    <string name="lastfm_card_disconnected_body_1">Подключите Last.fm, чтобы отмечать</string>
+    <string name="lastfm_card_disconnected_body_2">прослушанные треки.</string>
+    <string name="lastfm_action_connect">Подключить</string>
+
+    <string name="lastfm_card_pending_heading">Подключение не завершено</string>
+    <string name="lastfm_card_pending_body">Завершите авторизацию в Last.fm.</string>
+    <string name="lastfm_action_open_lastfm">Открыть Last.fm</string>
+
+    <string name="lastfm_card_connected_heading">Подключён</string>
+    <string name="lastfm_action_disconnect">Отключить</string>
+
+    <string name="lastfm_card_reauth_heading">Требуется повторный вход</string>
+    <string name="lastfm_card_reauth_body_1">Сессия Last.fm больше не действует.</string>
+    <string name="lastfm_card_reauth_body_2">Подключите аккаунт заново.</string>
+    <string name="lastfm_action_reconnect">Подключить заново</string>
+
+    <!--
+      The count is the account's LIFETIME Last.fm total from user.getInfo, not this
+      app's contribution - which is why the label names whose number it is. The
+      three noun forms are chosen in Kotlin by LastfmCountText, not by <plurals>,
+      which would follow the device locale and print Russian words under English
+      rules. See LastfmCountText.
+    -->
+    <string name="lastfm_total_scrobbles">Всего в Last.fm: %1$s</string>
+    <string name="lastfm_scrobbles_one">скроббл</string>
+    <string name="lastfm_scrobbles_few">скроббла</string>
+    <string name="lastfm_scrobbles_many">скробблов</string>
+
+    <string name="lastfm_note_1">Пароль Last.fm не хранится в приложении:</string>
+    <string name="lastfm_note_2">используется веб-авторизация.</string>
 </resources>

@@ -352,7 +352,14 @@ class MainActivity : AppCompatActivity() {
                 destination.id == R.id.report_problem ||
                 // broadcast_history joined them at G4b. The four frozen history
                 // frames have a back band and no bottom bar, like report's.
-                destination.id == R.id.broadcast_history
+                destination.id == R.id.broadcast_history ||
+                // settings_lastfm joined them at G6b P3a. Its frozen frame has a
+                // back band and no bottom bar, like settings_appearance beside it.
+                // Note this list is opt-in, unlike the Mini Player: NavScreen's
+                // PUSHED default hides the pill for a new destination on its own,
+                // but the bar needs a line here - LastfmEntryPointTest caught the
+                // screen shipping with four destinations under it.
+                destination.id == R.id.settings_lastfm
 
             binding.bottomNavView.visibility =
                 if (hidesBottomBar) android.view.View.GONE

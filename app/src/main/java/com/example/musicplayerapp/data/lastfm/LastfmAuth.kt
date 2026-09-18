@@ -1,6 +1,8 @@
 package com.example.musicplayerapp.data.lastfm
 
 import android.content.Context
+import com.example.musicplayerapp.data.lastfm.queue.ScrobbleQueue
+import com.example.musicplayerapp.data.lastfm.queue.ScrobbleQueuePurger
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -46,6 +48,7 @@ class LastfmAuth(
     private val store: LastfmSessionStore,
     private val clock: () -> Long = System::currentTimeMillis,
     private val io: CoroutineDispatcher = Dispatchers.IO,
+    private val queue: ScrobbleQueuePurger = ScrobbleQueuePurger.NONE,
 ) {
 
     /** What starting (or reopening) authorisation produced. */
@@ -173,7 +176,15 @@ class LastfmAuth(
      * here tells Last.fm anything, and no UI may suggest otherwise.
      */
     suspend fun disconnect() = lock.withLock {
+        // G6b P5: an explicit disconnect also drops that account's queued scrobbles,
+        // so they can never be sent if the account is linked again. Re-auth is not
+        // a disconnect and never comes through here: its rows wait for the same
+        // account. Purged before the session goes, and again after, so nothing
+        // queued in between survives; another account's rows are never touched.
+        val username = read().username
+        if (!username.isNullOrEmpty()) queue.purge(username)
         write(LastfmStoredSession.EMPTY)
+        if (!username.isNullOrEmpty()) queue.purge(username)
     }
 
     /**
@@ -240,6 +251,7 @@ class LastfmAuth(
             api = LastfmBackend.api(context),
             requests = LastfmBackend.requests(),
             store = PrefsLastfmSessionStore(context),
+            queue = ScrobbleQueue.forContext(context),
         )
     }
 }

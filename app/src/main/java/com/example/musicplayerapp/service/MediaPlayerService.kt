@@ -29,6 +29,7 @@ import com.example.musicplayerapp.data.SleepTimerStore
 import com.example.musicplayerapp.data.lastfm.LastfmConfig
 import com.example.musicplayerapp.data.lastfm.LastfmLink
 import com.example.musicplayerapp.data.lastfm.PrefsLastfmSessionStore
+import com.example.musicplayerapp.data.lastfm.queue.ScrobbleQueue
 import com.example.musicplayerapp.scrobble.FeedObservation
 import com.example.musicplayerapp.scrobble.ScrobbleEmissions
 import com.example.musicplayerapp.scrobble.ScrobbleGate
@@ -69,9 +70,10 @@ class MediaPlayerService(): MediaSessionService(){
     private val scrobbleTracker by lazy {
         ScrobbleTracker(
             isEnabled = ::isScrobbleTrackingActive,
-            // Log-only in P4: the tracker has already written SCROBBLE_ELIGIBLE.
-            // P5 replaces this with the queue.
-            sink = { },
+            // G6b P5: eligible candidates become durable rows, bound to the account
+            // linked at emission. Written off the main thread on the queue's own
+            // process-lifetime scope, so this service's destruction cannot cancel it.
+            sink = ScrobbleQueue.forContext(this).sink(),
             // Shared by every service instance this process creates, so a candidate
             // already emitted stays emitted when the service is recreated.
             emissions = ScrobbleEmissions.process,

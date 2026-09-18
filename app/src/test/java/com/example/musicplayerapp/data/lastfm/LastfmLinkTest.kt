@@ -1,5 +1,6 @@
 package com.example.musicplayerapp.data.lastfm
 
+import com.example.musicplayerapp.data.lastfm.queue.LastfmQueueDatabase
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 import org.junit.Assert.assertEquals
@@ -102,33 +103,56 @@ class LastfmLinkTest {
         assertTrue(manifest.contains("android:dataExtractionRules=\"@xml/lastfm_data_extraction_rules\""))
     }
 
+    /**
+     * Exactly the Last.fm files, and nothing else: the session (P3b), and the P5
+     * scrobble queue database with its write-ahead log and shared-memory files.
+     */
+    private val lastfmExcludes = listOf(
+        "sharedpref:${PrefsLastfmSessionStore.FILE}.xml",
+        "database:${LastfmQueueDatabase.FILE}",
+        "database:${LastfmQueueDatabase.FILE}-wal",
+        "database:${LastfmQueueDatabase.FILE}-shm",
+    )
+
     @Test
-    fun `the API 24-30 rules exclude the Last fm session and only it`() {
-        val excludes = excludes("src/main/res/xml/lastfm_backup_rules.xml")
-        assertEquals(listOf("sharedpref:lastfm_session.xml"), excludes)
+    fun `the API 24-30 rules exclude the Last fm session and queue, and only them`() {
+        assertEquals(lastfmExcludes, excludes("src/main/res/xml/lastfm_backup_rules.xml"))
         assertIncludesNothing("src/main/res/xml/lastfm_backup_rules.xml")
     }
 
     @Test
-    fun `the API 31+ rules exclude it from cloud backup and device transfer, and only it`() {
+    fun `the API 31+ rules exclude them from cloud backup and device transfer, and only them`() {
         val doc = parse("src/main/res/xml/lastfm_data_extraction_rules.xml")
         for (section in listOf("cloud-backup", "device-transfer")) {
             val nodes = doc.getElementsByTagName(section)
             assertEquals("one <$section>", 1, nodes.length)
             val ex = (nodes.item(0) as Element).getElementsByTagName("exclude")
-            assertEquals("$section excludes one file", 1, ex.length)
-            val e = ex.item(0) as Element
-            assertEquals("sharedpref", e.getAttribute("domain"))
-            assertEquals("lastfm_session.xml", e.getAttribute("path"))
+            val found = (0 until ex.length).map {
+                val e = ex.item(it) as Element
+                "${e.getAttribute("domain")}:${e.getAttribute("path")}"
+            }
+            assertEquals("$section excludes exactly the Last.fm files", lastfmExcludes, found)
         }
         assertIncludesNothing("src/main/res/xml/lastfm_data_extraction_rules.xml")
     }
 
     @Test
-    fun `the excluded path is the file the store actually writes`() {
+    fun `the excluded paths are the files the app actually writes`() {
         assertEquals("lastfm_session", PrefsLastfmSessionStore.FILE)
-        assertEquals(listOf("sharedpref:${PrefsLastfmSessionStore.FILE}.xml"),
-            excludes("src/main/res/xml/lastfm_backup_rules.xml"))
+        assertEquals("lastfm_queue", LastfmQueueDatabase.FILE)
+        assertEquals(lastfmExcludes, excludes("src/main/res/xml/lastfm_backup_rules.xml"))
+    }
+
+    @Test
+    fun `no other file is excluded - the rest of the app, myata_database included, is backed up as before`() {
+        for (path in listOf(
+            "src/main/res/xml/lastfm_backup_rules.xml",
+            "src/main/res/xml/lastfm_data_extraction_rules.xml",
+        )) {
+            val all = excludes(path)
+            assertTrue("$path excludes only Last.fm files: $all", all.all { it in lastfmExcludes })
+            assertTrue("$path must not exclude the Collections database", all.none { it.contains("myata_database") })
+        }
     }
 
     private fun excludes(path: String): List<String> {

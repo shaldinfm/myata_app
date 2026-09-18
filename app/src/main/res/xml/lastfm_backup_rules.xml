@@ -1,20 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  android:fullBackupContent - Auto Backup on API 24-30 (G6b P3b).
+  android:fullBackupContent - Auto Backup on API 24-30 (G6b P3b, P5).
 
-  Excludes the Last.fm session file and nothing else. A rule file with only
-  <exclude> elements keeps the default of backing up everything not excluded, so
-  every other file - the Supabase session included - is backed up exactly as it
-  was before this file existed. Widening this is a separate decision.
+  Excludes the Last.fm files and nothing else. A rule file with only <exclude>
+  elements keeps the default of backing up everything not excluded, so every other
+  file - the Supabase session and myata_database included - is backed up exactly
+  as it was before this file existed. Widening this is a separate decision.
 
-  Why exclude it: `lastfm_session` holds the listener's Last.fm session key, which
-  lives until they revoke it. Restored onto another device, or out of a cloud
-  backup, it would scrobble as them from a phone they never linked. It also holds
-  the pending request token, which is useless anywhere but the device that asked.
+  Why exclude them:
+   - `lastfm_session` holds the listener's Last.fm session key, which lives until
+     they revoke it. Restored onto another device, or out of a cloud backup, it
+     would scrobble as them from a phone they never linked. It also holds the
+     pending request token, which is useless anywhere but the device that asked.
+   - `lastfm_queue` (P5) holds scrobbles waiting to be sent. Restored elsewhere they
+     would be sent from there too, duplicating what this device already sent. It is
+     a Room database, so its write-ahead log and shared-memory files go with it.
 
-  Keep the path in step with PrefsLastfmSessionStore.FILE and with
-  lastfm_data_extraction_rules.xml.
+  Keep the paths in step with PrefsLastfmSessionStore.FILE,
+  LastfmQueueDatabase.FILE and lastfm_data_extraction_rules.xml.
 -->
 <full-backup-content>
     <exclude domain="sharedpref" path="lastfm_session.xml" />
+    <exclude domain="database" path="lastfm_queue" />
+    <exclude domain="database" path="lastfm_queue-wal" />
+    <exclude domain="database" path="lastfm_queue-shm" />
 </full-backup-content>

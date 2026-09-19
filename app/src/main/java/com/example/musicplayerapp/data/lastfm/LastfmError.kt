@@ -251,10 +251,8 @@ enum class IgnoredScrobble(val code: Int) {
     TRACK_IGNORED(2),
 
     /**
-     * 3 - the timestamp is too far in the past.
-     *
-     * The reason the queue drops rows past a maximum age rather than carrying them
-     * forever: past that point this is the only answer they can get.
+     * 3 - the timestamp is too far in the past. Terminal for that scrobble; Last.fm
+     * documents no exact age, so the app applies none of its own.
      */
     TIMESTAMP_TOO_OLD(3),
 
@@ -270,9 +268,17 @@ enum class IgnoredScrobble(val code: Int) {
      * Deliberately a member rather than a null: the server has plainly declined the
      * scrobble, and the one outcome that must be impossible is reading "declined
      * for a reason we have no name for" as "recorded". It carries no real code, so
-     * [from] never returns it by lookup.
+     * [from] never returns it by lookup. The sender quarantines it: kept, not sent.
      */
     UNKNOWN(-1),
+
+    /**
+     * The response gave no `ignoredMessage` code for this scrobble at all (G6b P6a).
+     *
+     * Not "code 0": what happened to it is simply not known, so it is never taken
+     * as recorded and its row is never deleted on the strength of it.
+     */
+    MISSING(-2),
     ;
 
     /** Whether Last.fm recorded this scrobble. */
@@ -281,10 +287,10 @@ enum class IgnoredScrobble(val code: Int) {
     companion object {
 
         /**
-         * The verdict for [code]. Total: an unrecognised non-zero code is [UNKNOWN],
-         * which is ignored like any other, and therefore dropped rather than retried.
+         * The verdict for [code]. Total: an unrecognised code is [UNKNOWN]. Neither
+         * sentinel is ever returned by lookup.
          */
         fun from(code: Int): IgnoredScrobble =
-            entries.firstOrNull { it.code == code && it != UNKNOWN } ?: UNKNOWN
+            entries.firstOrNull { it.code == code && it.code >= 0 } ?: UNKNOWN
     }
 }

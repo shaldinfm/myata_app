@@ -135,14 +135,23 @@ class LastfmAuth(
             is LastfmTransportResult.Unreachable -> Resume.Unreachable
             is LastfmTransportResult.Body -> when (val parsed = LastfmResponses.session(sent.text)) {
                 is LastfmResult.Ok -> {
-                    // One write: the session in, the token out. There is no state in
-                    // which the token is spent and the session not yet stored.
-                    write(
-                        LastfmStoredSession(
-                            sessionKey = parsed.value.sessionKey,
-                            username = parsed.value.username,
-                        )
-                    )
+                    val retained = stored.username
+                    val linkedAs = parsed.value.username
+                    withContext(NonCancellable) {
+                        // G6b P6a: re-authenticating as a *different* account replaces
+                        // the one that needed it. Its queued scrobbles could never be
+                        // sent again - never as the new account, and it is no longer
+                        // linked to be sent as itself - so they go, before the new
+                        // session is stored. Only on that mismatch: the same account
+                        // coming back keeps its queue, and a first link has nothing
+                        // retained to replace. Not `disconnect()`, which would clear
+                        // the session being installed.
+                        if (!retained.isNullOrEmpty() && retained != linkedAs) queue.purge(retained)
+
+                        // One write: the session in, the token out. There is no state in
+                        // which the token is spent and the session not yet stored.
+                        write(LastfmStoredSession(sessionKey = parsed.value.sessionKey, username = linkedAs))
+                    }
                     Resume.Linked
                 }
                 is LastfmResult.Malformed -> Resume.Unreachable
@@ -192,6 +201,33 @@ class LastfmAuth(
             if (!username.isNullOrEmpty()) queue.purge(username)
             write(LastfmStoredSession.EMPTY)
             if (!username.isNullOrEmpty()) queue.purge(username)
+        }
+    }
+
+    /**
+     * Error 9 on an authenticated write: the session [sessionKeyUsed] of [username]
+     * is no longer valid (G6b P6a).
+     *
+     * Clears that session key and nothing else. The username stays, which is what
+     * makes the link [LastfmLink.ReauthRequired] - the existing `Требуется вход`
+     * state - and keeps every queued scrobble of that account waiting for it. Not a
+     * disconnect: the queue is never purged here.
+     *
+     * Compare-and-clear: only if the stored session is still exactly the one that
+     * failed. A late answer about an old key must not throw out a session the
+     * listener has since re-established.
+     *
+     * @return whether the stored session was cleared.
+     */
+    suspend fun invalidateSession(username: String, sessionKeyUsed: String): Boolean = lock.withLock {
+        withContext(NonCancellable) {
+            val stored = read()
+            if (stored.username != username || stored.sessionKey != sessionKeyUsed) {
+                false
+            } else {
+                write(stored.copy(sessionKey = null))
+                true
+            }
         }
     }
 

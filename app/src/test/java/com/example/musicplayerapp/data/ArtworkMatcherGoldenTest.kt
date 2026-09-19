@@ -346,6 +346,92 @@ class ArtworkMatcherGoldenTest {
         )
     }
 
+    // ============== promotional and market editions ==============
+
+    /**
+     * Gold, owner-reported: the Sprint Music Series single is a promotional
+     * package around the track, and because iTunes calls it "- Single" it counted
+     * as the track's own release and outranked Loose. Candidates are the live
+     * Stage-1 answer for `NELLY FURTADO ALL GOOD THINGS` (2026-09-20), trimmed to
+     * the releases that decide.
+     */
+    @Test
+    fun `a promotional single loses to the studio album it promotes`() {
+        val choice = choose(
+            "NELLY FURTADO",
+            "ALL GOOD THINGS",
+            listOf(
+                candidate(
+                    "Nelly Furtado", "All Good Things (Come to an End)", "Loose",
+                    releaseDate = "2006-06-07",
+                ).copy(trackCount = 17),
+                candidate(
+                    "Nelly Furtado", "All Good Things (Sprint Music Series)",
+                    "All Good Things - Single (Sprint Music Series) - Single",
+                    releaseDate = "2006-06-20",
+                ).copy(trackCount = 1),
+                candidate(
+                    "Nelly Furtado", "All Good Things (Come To An End)", "Loose (Expanded Edition)",
+                    releaseDate = "2006-01-01",
+                ).copy(trackCount = 32),
+                candidate(
+                    "Nelly Furtado", "All Good Things", "Live Session (iTunes Exclusive) - EP",
+                    releaseDate = "2006-01-01",
+                ).copy(trackCount = 4),
+                candidate(
+                    "Nelly Furtado", "All Good Things (Come to an End)", "The Best of Nelly Furtado",
+                    releaseDate = "2006-01-01",
+                ).copy(trackCount = 17),
+                candidate(
+                    "Nelly Furtado", "All Good Things (Come to an End) [Live]", "Loose - The Concert (Live)",
+                    releaseDate = "2007-01-01",
+                ).copy(trackCount = 11),
+            ),
+        )
+
+        assertEquals("Loose", choice?.candidate?.collectionName)
+        assertEquals("All Good Things (Come to an End)", choice?.candidate?.trackName)
+    }
+
+    /**
+     * The demotion is a demotion, not a blanket "the album wins": an ordinary
+     * single is still the track's own release, a promotional one is below both it
+     * and the album, and it is still shown when it is all the provider offers.
+     */
+    @Test
+    fun `a promotional edition ranks below the normal single and the album`() {
+        val promo = candidate("Some Act", "Song", "Song - Single (Promo) - Single", releaseDate = "2019-06-01")
+            .copy(trackCount = 1)
+        val exclusive = candidate("Some Act", "Song", "Song (iTunes Exclusive) - Single", releaseDate = "2019-06-01")
+            .copy(trackCount = 1)
+        val single = candidate("Some Act", "Song", "Song - Single", releaseDate = "2020-01-01")
+            .copy(trackCount = 1)
+        val album = candidate("Some Act", "Song", "The Studio Album", releaseDate = "2020-02-01")
+            .copy(trackCount = 12)
+
+        fun pick(vararg c: ArtworkCandidate) = choose("SOME ACT", "SONG", c.toList())?.candidate?.collectionName
+
+        assertEquals("Song - Single", pick(promo, exclusive, single, album))
+        assertEquals("The Studio Album", pick(promo, exclusive, album))
+        assertEquals("Song - Single (Promo) - Single", pick(promo))
+    }
+
+    /**
+     * A session is a package too, and it loses the rung even when the station
+     * named a version: what the station asked for is a live take, and a live
+     * release of the record is still the record's own release where an iTunes
+     * session single is not.
+     */
+    @Test
+    fun `a session single ranks below the live release the station asked for`() {
+        val session = candidate("Some Act", "Song (Live Session)", "Song (Live Session) - Single", releaseDate = "2020-01-01")
+            .copy(trackCount = 2)
+        val live = candidate("Some Act", "Song (Live)", "Song - Live", releaseDate = "2020-01-01")
+            .copy(trackCount = 12)
+
+        assertEquals("Song - Live", choose("SOME ACT", "SONG (LIVE)", listOf(session, live))?.candidate?.collectionName)
+    }
+
     // ============== never the canonical cover ==============
 
     @Test

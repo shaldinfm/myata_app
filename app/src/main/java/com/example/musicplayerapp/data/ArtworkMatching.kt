@@ -239,6 +239,22 @@ object ArtworkMatcher {
         "special edition", "legacy edition", "bonus edition",
     )
 
+    /**
+     * Qualifiers that name a *package* around the record rather than the record's
+     * own release: a promo, an exclusive, a session, a branded market series.
+     *
+     * Deliberately short, and each entry is here because something in the
+     * catalogue actually says it - `Sprint Music Series` is the owner-reported
+     * Nelly Furtado case - rather than because it sounded plausible. A release
+     * carrying one of these is demoted to [Level.OTHER_RELEASE], the rung for a
+     * legitimate release that is not the record's own: it ranks below both the
+     * ordinary single and the album that carry the track, and it is never
+     * refused, so it is still the answer when nothing better is offered.
+     */
+    private val PROMOTIONAL_EDITIONS = listOf(
+        "promo", "exclusive", "session", "sprint music series",
+    )
+
     /** Words that introduce a credit rather than another act. */
     private val CREDIT_MARKERS = setOf("feat", "ft", "featuring", "with", "pres", "presents", "presenting")
 
@@ -263,7 +279,10 @@ object ArtworkMatcher {
         /** The studio album it belongs to. */
         STUDIO_ALBUM,
 
-        /** Another legitimate release carrying it: a label EP, a sampler, a set. */
+        /**
+         * Another legitimate release carrying it: a label EP, a sampler, a set, or
+         * an edition packaged as a promotion (see [PROMOTIONAL_EDITIONS]).
+         */
         OTHER_RELEASE,
 
         /** The same record again: remaster, deluxe, anniversary, expanded. */
@@ -375,6 +394,9 @@ object ArtworkMatcher {
         // same name, because only the newer one carried the label.
         val ownRelease = ownTier == 0 || (singleOrEp && ownTier <= 1)
 
+        // Packaged as a promotion rather than released as the record itself.
+        val promotional = PROMOTIONAL_EDITIONS.any { collection.contains(it) }
+
         val classified = when {
             compilation -> Level.COMPILATION
             otherVersion -> Level.ALTERNATE
@@ -390,7 +412,14 @@ object ArtworkMatcher {
         // new pairing. It can still be the right artwork, so it is demoted rather
         // than refused - which is what keeps a 2017 re-release from outranking the
         // artist's own original just because the re-release is a "- Single".
-        val level = if (artistTier >= 2 && classified < Level.OTHER_RELEASE) {
+        //
+        // A promotional, exclusive, session or market-branded edition is demoted
+        // for the same reason: it is a package around the record, and being the
+        // record's own single made it outrank the album the listener is hearing
+        // (NELLY FURTADO, ALL GOOD THINGS, where the Sprint Music Series single
+        // beat Loose). The demotion only ever moves a release down, never up, so a
+        // package that is already the weakest thing offered stays where it is.
+        val level = if (classified < Level.OTHER_RELEASE && (artistTier >= 2 || promotional)) {
             Level.OTHER_RELEASE
         } else {
             classified

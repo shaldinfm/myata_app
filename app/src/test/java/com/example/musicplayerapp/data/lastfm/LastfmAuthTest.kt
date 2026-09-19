@@ -35,7 +35,11 @@ class LastfmAuthTest {
         LastfmAuth(
             api, requests, store, clock = { now }, io = Dispatchers.Unconfined,
             queue = { username -> purges += username to store.session },
+            onLinked = { linkedDrains += store.session },
         )
+
+    /** Every drain request after a link, with the session as it stood at that moment. */
+    private val linkedDrains = mutableListOf<LastfmStoredSession>()
 
     private val hour = LastfmLink.PENDING_TOKEN_LIFETIME_MS
 
@@ -383,6 +387,44 @@ class LastfmAuthTest {
         api.reply("auth.getSession", SESSION_OK)
         auth().resume()
         assertTrue(purges.isEmpty())
+    }
+
+    // ---- a drain after a link (G6b P6b) ---------------------------------------------
+
+    @Test
+    fun `a first link asks for a drain, after the session is stored`() = runBlocking {
+        pending("tok-1")
+        api.reply("auth.getSession", SESSION_OK)
+        auth().resume()
+        assertEquals(listOf(LastfmStoredSession(sessionKey = "sk-1", username = "f0ul482")), linkedDrains)
+    }
+
+    @Test
+    fun `re-auth as the same account, and replacement by another, each ask once - after the purge`() = runBlocking {
+        reauthPending("f0ul482")
+        api.reply("auth.getSession", SESSION_OK)
+        auth().resume()
+        reauthPending("listener-x")
+        api.reply("auth.getSession", SESSION_OK)
+        auth().resume()
+        assertEquals(2, linkedDrains.size)
+        assertEquals("the new account is stored when the drain is asked for", "f0ul482", linkedDrains.last().username)
+        assertEquals(listOf("listener-x"), purges.map { it.first })
+    }
+
+    @Test
+    fun `pending, refused, expired, cancelled and disconnected ask for nothing`() = runBlocking {
+        pending("tok-1")
+        api.reply("auth.getSession", """{"error":14,"message":"not yet"}""")
+        auth().resume()                                      // still pending
+        api.reply("auth.getSession", """{"error":15,"message":"expired"}""")
+        auth().resume()                                      // restart
+        pending("tok-2")
+        auth().cancelPending()
+        store.session = LastfmStoredSession(sessionKey = "sk-1", username = "f0ul482")
+        auth().disconnect()
+        auth().link()
+        assertTrue(linkedDrains.isEmpty())
     }
 
     // ---- the lock ---------------------------------------------------------------

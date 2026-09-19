@@ -1,6 +1,7 @@
 package com.example.musicplayerapp.data.lastfm
 
 import android.content.Context
+import com.example.musicplayerapp.data.lastfm.queue.LastfmScrobbleScheduler
 import com.example.musicplayerapp.data.lastfm.queue.ScrobbleQueue
 import com.example.musicplayerapp.data.lastfm.queue.ScrobbleQueuePurger
 import kotlinx.coroutines.CoroutineDispatcher
@@ -50,6 +51,12 @@ class LastfmAuth(
     private val clock: () -> Long = System::currentTimeMillis,
     private val io: CoroutineDispatcher = Dispatchers.IO,
     private val queue: ScrobbleQueuePurger = ScrobbleQueuePurger.NONE,
+    /**
+     * Called once a new session is **stored** (G6b P6b): production asks for a
+     * scrobble drain for the account now linked. Never for a pending, failed or
+     * cancelled authorisation, and never on disconnect. Only schedules.
+     */
+    private val onLinked: () -> Unit = {},
 ) {
 
     /** What starting (or reopening) authorisation produced. */
@@ -151,6 +158,13 @@ class LastfmAuth(
                         // One write: the session in, the token out. There is no state in
                         // which the token is spent and the session not yet stored.
                         write(LastfmStoredSession(sessionKey = parsed.value.sessionKey, username = linkedAs))
+
+                        // After the commit: whatever the linked account has queued can go.
+                        try {
+                            onLinked()
+                        } catch (e: Exception) {
+                            // Linking succeeded; the next trigger or app start will ask again.
+                        }
                     }
                     Resume.Linked
                 }
@@ -296,6 +310,7 @@ class LastfmAuth(
             requests = LastfmBackend.requests(),
             store = PrefsLastfmSessionStore(context),
             queue = ScrobbleQueue.forContext(context),
+            onLinked = { LastfmScrobbleScheduler.requestDrain(context.applicationContext) },
         )
     }
 }

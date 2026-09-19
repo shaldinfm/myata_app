@@ -41,7 +41,10 @@ fun interface ScrobbleQueuePurger {
  * the commit can lose one, and that window is accepted.
  *
  * Every row is bound to that username. A duplicate occurrence is rejected by the
- * database's primary key, not by a check here. A database error is logged by
+ * database's primary key, not by a check here - and an occurrence this account has
+ * already **finalized** (Last.fm answered it terminally, P6b) is refused by
+ * [ScrobbleQueueDao.enqueue] in the same transaction as the insert, so a process
+ * restarted mid-airing cannot queue it a second time. A database error is logged by
  * exception class and the candidate dropped; there is no local retry.
  *
  * ## Disconnect
@@ -59,10 +62,12 @@ fun interface ScrobbleQueuePurger {
  *
  * `LastfmAuth.disconnect` purges before and after clearing the session, as one
  * sequence its caller cannot cancel, so nothing queued in between survives either.
+ * A purge removes pending rows only; finalized marks stay, so nothing Last.fm has
+ * already answered becomes sendable again by disconnecting and reconnecting.
  *
  * ## Logging
  *
- * `SCROBBLE_QUEUED`, `_QUEUE_DUPLICATE`, `_QUEUE_SKIPPED`, `_QUEUE_FAILED`,
+ * `SCROBBLE_QUEUED`, `_QUEUE_DUPLICATE`, `_QUEUE_FINALIZED`, `_QUEUE_SKIPPED`, `_QUEUE_FAILED`,
  * `_QUEUE_PURGED` and `_QUEUE_PURGE_FAILED`: stream ids, unix seconds, an
  * 8-character TrackKey prefix, counts and exception class names only - never
  * artist, title, the username or anything from the session.
@@ -73,11 +78,18 @@ class ScrobbleQueue(
     private val scope: CoroutineScope,
     private val clock: () -> Long = System::currentTimeMillis,
     private val log: ScrobbleLog = ScrobbleLog.NONE,
+    /**
+     * Called after a row is **first** inserted, and only then (G6b P6b): production
+     * asks for a drain. Never for a duplicate, a skip or a failure. It only schedules;
+     * this queue never sends anything.
+     */
+    private val onQueued: () -> Unit = {},
 ) : ScrobbleQueuePurger {
 
     sealed class Outcome {
         data object Queued : Outcome()
         data object Duplicate : Outcome()
+        data object AlreadyFinalized : Outcome()
         data class Skipped(val reason: String) : Outcome()
         data class Failed(val kind: String) : Outcome()
     }
@@ -125,10 +137,12 @@ class ScrobbleQueue(
             } else if (generationOf(username) != generation) {
                 // Disconnected since emission - possibly linked again already.
                 Outcome.Skipped("disconnected")
-            } else if (dao().insert(entryFor(candidate, username)) == -1L) {
-                Outcome.Duplicate
             } else {
-                Outcome.Queued
+                when (dao().enqueue(entryFor(candidate, username))) {
+                    ScrobbleQueueDao.Enqueued.QUEUED -> Outcome.Queued
+                    ScrobbleQueueDao.Enqueued.DUPLICATE -> Outcome.Duplicate
+                    ScrobbleQueueDao.Enqueued.ALREADY_FINALIZED -> Outcome.AlreadyFinalized
+                }
             }
         } catch (e: CancellationException) {
             throw e
@@ -136,8 +150,18 @@ class ScrobbleQueue(
             Outcome.Failed(e.javaClass.simpleName)
         }
         when (outcome) {
-            Outcome.Queued -> log.event("SCROBBLE_QUEUED", *fields(candidate))
+            Outcome.Queued -> {
+                log.event("SCROBBLE_QUEUED", *fields(candidate))
+                // The row is committed. Asking for a drain cannot undo that; if the
+                // ask fails, the next trigger or app start asks again.
+                try {
+                    onQueued()
+                } catch (e: Exception) {
+                    log.event("SCROBBLE_DRAIN_REQUEST_FAILED", "error" to e.javaClass.simpleName)
+                }
+            }
             Outcome.Duplicate -> log.event("SCROBBLE_QUEUE_DUPLICATE", *fields(candidate))
+            Outcome.AlreadyFinalized -> log.event("SCROBBLE_QUEUE_FINALIZED", *fields(candidate))
             is Outcome.Skipped -> log.event("SCROBBLE_QUEUE_SKIPPED", *fields(candidate), "reason" to outcome.reason)
             is Outcome.Failed -> log.event("SCROBBLE_QUEUE_FAILED", *fields(candidate), "error" to outcome.kind)
         }
@@ -200,6 +224,7 @@ class ScrobbleQueue(
                     },
                     scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
                     log = { name, fields -> PlaybackLog.event(name, *fields) },
+                    onQueued = { LastfmScrobbleScheduler.requestDrain(app) },
                 ).also { process = it }
             }
         }

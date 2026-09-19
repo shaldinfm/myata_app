@@ -29,6 +29,7 @@ import com.example.musicplayerapp.data.SleepTimerStore
 import com.example.musicplayerapp.data.lastfm.LastfmConfig
 import com.example.musicplayerapp.data.lastfm.LastfmLink
 import com.example.musicplayerapp.data.lastfm.PrefsLastfmSessionStore
+import com.example.musicplayerapp.data.lastfm.nowplaying.NowPlayingSender
 import com.example.musicplayerapp.data.lastfm.queue.ScrobbleQueue
 import com.example.musicplayerapp.scrobble.FeedObservation
 import com.example.musicplayerapp.scrobble.ScrobbleEmissions
@@ -78,6 +79,9 @@ class MediaPlayerService(): MediaSessionService(){
             // already emitted stays emitted when the service is recreated.
             emissions = ScrobbleEmissions.process,
             log = { name, fields -> PlaybackLog.event(name, *fields) },
+            // G6b P6b: Now Playing when a new airing opens while really playing.
+            // The sender dedupes per account and airing, and is behind the write gate.
+            onOccurrenceOpened = { NowPlayingSender.forContext(this).onOccurrenceOpened(it) },
         )
     }
     private val scrobbleHandler by lazy { android.os.Handler(android.os.Looper.getMainLooper()) }

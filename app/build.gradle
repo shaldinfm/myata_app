@@ -76,6 +76,13 @@ if (lastfmPropsFile.exists()) {
     lastfmPropsFile.withInputStream { lastfmProps.load(it) }
 }
 def lastfmApiKey = (lastfmProps['LASTFM_API_KEY'] ?: '').trim()
+// G6b P6b write gate source. Read ONLY from the Gradle command line: the -P project
+// properties in gradle.startParameter, i.e. exactly `-PlastfmLiveWrites=true`. Unlike
+// project.findProperty, that map does not include gradle.properties (project or
+// GRADLE_USER_HOME), ORG_GRADLE_PROJECT_* environment variables or
+// -Dorg.gradle.project.* system properties - none of those can turn writes on. Only
+// the exact value `true` counts; absent, `false` or anything else is false.
+def lastfmLiveWrites = gradle.startParameter.projectProperties['lastfmLiveWrites'] == 'true'
 def lastfmApiSecret = (lastfmProps['LASTFM_API_SECRET'] ?: '').trim()
 
 // Whether a value in the tracked template is still a placeholder. Same marker
@@ -188,6 +195,14 @@ android {
         // calls - and is never logged. See LastfmConfig.
         buildConfigField "String", "LASTFM_API_KEY", "\"${lastfmApiKey}\""
         buildConfigField "String", "LASTFM_API_SECRET", "\"${lastfmApiSecret}\""
+
+        // G6b P6b write gate. Whether this build may send Last.fm WRITES at all -
+        // track.scrobble and track.updateNowPlaying. Off here, so for debug: a
+        // debug build cannot write to anybody's Last.fm unless it was built with
+        // exactly `-PlastfmLiveWrites=true` on the command line. Release turns it
+        // on unconditionally (buildTypes.release below), since live writes were
+        // validated. Reads and auth are unaffected. See LastfmBackend.writesEnabled.
+        buildConfigField "boolean", "LASTFM_LIVE_WRITES", "${lastfmLiveWrites}"
     }
 
     buildFeatures{
@@ -225,6 +240,11 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            // G6b P6b: the shipped app scrobbles. Live writes were validated on a
+            // real account (one online, one offline-queued scrobble), so release
+            // overrides defaultConfig's command-line-only gate with true.
+            buildConfigField "boolean", "LASTFM_LIVE_WRITES", "true"
         }
     }
     compileOptions {

@@ -44,6 +44,13 @@ import okhttp3.Request
 internal class HttpLastfmApi(private val client: OkHttpClient) : LastfmApi {
 
     override suspend fun send(request: LastfmRequest): LastfmTransportResult {
+        // G6b P6b, defence in depth: a write never leaves the app while the write
+        // gate is closed, whoever built the request. Before anything else, and before
+        // any socket: an answer of "unreachable" that no retry policy may read as
+        // transient - the senders check the gate themselves and never get here.
+        if (request.method in LastfmBackend.WRITE_METHODS && !LastfmBackend.writesEnabled) {
+            return LastfmTransportResult.Unreachable(WRITES_DISABLED)
+        }
         check(LastfmBackend.isArmed) {
             // Deliberately says nothing about the request.
             "Last.fm transport used before MyataApplication armed it"
@@ -86,5 +93,10 @@ internal class HttpLastfmApi(private val client: OkHttpClient) : LastfmApi {
                 Request.Builder().url(endpoint).post(form).build()
             }
         }
+    }
+
+    companion object {
+        /** The kind reported when the write gate refused a write. Says nothing about the request. */
+        const val WRITES_DISABLED = "WritesDisabled"
     }
 }

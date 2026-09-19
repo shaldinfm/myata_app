@@ -778,6 +778,12 @@
     <dimen name="profile_card_heading_margin_top">24dp</dimen>
     <!-- b0 y=168, heading ends at 128+32=160. b1 y=190 is contiguous with b0. -->
     <dimen name="profile_card_body_margin_top">8dp</dimen>
+    <!-- The deletion states reuse the guest card with their own copy, so it wraps that
+         copy instead of keeping the frozen 226: the avatar's 32 repeated below the
+         last line, and a side inset so a long line wraps inside the outline rather
+         than running into it. -->
+    <dimen name="profile_deletion_card_padding_bottom">@dimen/profile_avatar_margin_top</dimen>
+    <dimen name="profile_deletion_card_padding_horizontal">24dp</dimen>
 
     <!-- Buttons 358x52 at y=346 and y=414; the card ends at 96+226=322. -->
     <dimen name="profile_button_height">52dp</dimen>

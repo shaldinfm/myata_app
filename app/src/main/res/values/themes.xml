@@ -583,5 +583,64 @@
         <item name="android:maxLines">1</item>
         <item name="android:textAppearance">@style/TextAppearance.Myata.Montserrat.Medium.22_28</item>
     </style>
+    <!--
+      The delete-account confirmations (ProfileAuthenticatedFragment). Still the
+      stock MaterialAlertDialog - same structure, buttons and behaviour - dressed in
+      the profile's own tokens: the card's container and 24 radius, the screen's
+      Montserrat heading over Onest body copy, sentence-case Onest actions in the
+      primary role. The Destructive variant only recolours the positive action (and
+      its ripple) to the `error` role the `Удалить аккаунт` row already uses.
+    -->
+    <style name="ThemeOverlay.Myata.ConfirmDialog" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="colorPrimary">@color/primary</item>
+        <!-- The card's own container in both themes; without this, dark mode lifts
+             the surface with the elevation overlay and the dialog reads grey. -->
+        <item name="colorSurface">@color/profile_card_container</item>
+        <item name="elevationOverlayEnabled">false</item>
+        <item name="alertDialogStyle">@style/MaterialAlertDialog.Myata.ConfirmDialog</item>
+        <item name="materialAlertDialogTitleTextStyle">@style/MaterialAlertDialog.Myata.ConfirmDialog.Title</item>
+        <item name="materialAlertDialogBodyTextStyle">@style/MaterialAlertDialog.Myata.ConfirmDialog.Body</item>
+        <item name="buttonBarPositiveButtonStyle">@style/Widget.Myata.ConfirmDialog.Button</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Widget.Myata.ConfirmDialog.Button</item>
+    </style>
+
+    <style name="ThemeOverlay.Myata.ConfirmDialog.Destructive">
+        <item name="buttonBarPositiveButtonStyle">@style/Widget.Myata.ConfirmDialog.Button.Destructive</item>
+    </style>
+
+    <style name="MaterialAlertDialog.Myata.ConfirmDialog" parent="MaterialAlertDialog.MaterialComponents">
+        <item name="shapeAppearance">@style/ShapeAppearance.Myata.ConfirmDialog</item>
+        <item name="shapeAppearanceOverlay">@null</item>
+        <item name="backgroundTint">@color/profile_card_container</item>
+    </style>
+
+    <style name="ShapeAppearance.Myata.ConfirmDialog" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/profile_card_radius</item>
+    </style>
+
+    <style name="MaterialAlertDialog.Myata.ConfirmDialog.Title" parent="MaterialAlertDialog.MaterialComponents.Title.Text" tools:ignore="NewApi">
+        <item name="android:textAppearance">@style/TextAppearance.Myata.Montserrat.Medium.21_28</item>
+        <item name="android:textColor">@color/text_heading</item>
+        <item name="android:lineHeight">@dimen/line_height_montserrat_medium_21_28</item>
+    </style>
+
+    <style name="MaterialAlertDialog.Myata.ConfirmDialog.Body" parent="MaterialAlertDialog.MaterialComponents.Body.Text" tools:ignore="NewApi">
+        <item name="android:textAppearance">@style/TextAppearance.Myata.Onest.Regular.15_22</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:lineHeight">@dimen/line_height_onest_regular_15_22</item>
+    </style>
+
+    <style name="Widget.Myata.ConfirmDialog.Button" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+        <item name="android:textAppearance">@style/TextAppearance.Myata.Onest.Medium.15_20</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:textColor">@color/primary</item>
+    </style>
+
+    <style name="Widget.Myata.ConfirmDialog.Button.Destructive">
+        <item name="android:textColor">@color/error</item>
+        <item name="rippleColor">@color/confirm_dialog_destructive_ripple</item>
+    </style>
 
 </resources>

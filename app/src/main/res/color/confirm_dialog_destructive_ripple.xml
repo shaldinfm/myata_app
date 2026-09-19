@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The pressed ink of the confirmation's destructive action: `error` at the
+     Material text-button ripple strength, as the primary actions get from colorPrimary. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:alpha="0.12" android:color="@color/error" />
+</selector>

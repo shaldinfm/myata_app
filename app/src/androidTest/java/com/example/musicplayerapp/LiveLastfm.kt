@@ -59,6 +59,9 @@ object LiveLastfm {
     fun restoreOffline() {
         LastfmBackend.overrideForInstrumentation(if (isOptedIn) null else { _: Context -> OfflineLastfmApi })
         LastfmBackend.overrideRequestsForInstrumentation(null)
+        // G6b P6b: a test that opened the write gate for a scripted fake must not
+        // leave it open for the next one.
+        LastfmBackend.overrideWritesForTest(null)
     }
 
     /**
@@ -84,4 +87,15 @@ object LiveLastfm {
 object OfflineLastfmApi : LastfmApi {
     override suspend fun send(request: LastfmRequest): LastfmTransportResult =
         LastfmTransportResult.Unreachable("Offline")
+}
+
+/**
+ * For a test in which **no** Last.fm request of any kind may happen (G6b P6b).
+ * Reaching it fails the test outright - a write that got this far in a test is a
+ * bug, and the offline transport would only have hidden it. Names the method,
+ * nothing else about the request.
+ */
+object FailingLastfmApi : LastfmApi {
+    override suspend fun send(request: LastfmRequest): LastfmTransportResult =
+        throw AssertionError("no Last.fm request was expected, but ${request.method} was sent")
 }

@@ -39,7 +39,7 @@ import kotlinx.coroutines.sync.withLock
  * immediately before each request. A disconnect never waits for this lock (it takes
  * the queue's own, not this one): a request already in flight may finish after it,
  * but no new one starts, and nothing done with its answer can bring a row back - it
- * only ever deletes or updates rows by key, which are no-ops on purged rows.
+ * only ever finalizes or updates rows by key, which leave purged rows purged.
  *
  * ## Answers
  *
@@ -49,6 +49,12 @@ import kotlinx.coroutines.sync.withLock
  * restarts, keeping every row. A batch's answer is used per scrobble only when its
  * shape matches the request position by position, timestamps included - never by
  * artist or title, which Last.fm may have corrected.
+ *
+ * A scrobble Last.fm answered terminally - accepted, or ignored 1/2/3 - is
+ * **finalized**: its row deleted and its account's mark raised in one transaction
+ * ([ScrobbleQueueDao.finalizeOccurrence]), so it can never be queued again. Only an
+ * accepted answer that is lost with the process before that commit can still be sent
+ * twice: Last.fm offers no idempotency key to close that window.
  *
  * ## Logging
  *
@@ -63,6 +69,8 @@ class ScrobbleSender(
     private val requests: () -> LastfmRequestFactory?,
     private val api: () -> LastfmApi,
     private val invalidateSession: suspend (username: String, sessionKeyUsed: String) -> Unit,
+    /** The write gate (G6b P6b): [LastfmBackend.writesEnabled] in production. Required, never defaulted. */
+    private val writesEnabled: () -> Boolean,
     private val clock: () -> Long = System::currentTimeMillis,
     private val jitter: () -> Double = { Random.nextDouble(-1.0, 1.0) },
     private val log: ScrobbleLog = ScrobbleLog.NONE,
@@ -86,6 +94,12 @@ class ScrobbleSender(
 
         /** A non-retryable error earlier in this process; nothing is sent until restart. */
         data object Blocked : Result()
+
+        /**
+         * The write gate is closed (G6b P6b). Nothing is read, sent or changed, and no
+         * retry is scheduled: the rows simply wait, untouched, for a build that may write.
+         */
+        data object WritesDisabled : Result()
     }
 
     private val lock = Mutex()
@@ -109,6 +123,7 @@ class ScrobbleSender(
     /** One request. Null means "sent a batch, look again"; anything else ends the drain. */
     private suspend fun step(): Result? {
         if (blockedUntilProcessRestart) return Result.Blocked
+        if (!writesEnabled()) return Result.WritesDisabled
 
         val linked = linkedNow() ?: return Result.NotLinked
         val factory = requests() ?: return Result.NotConfigured
@@ -198,7 +213,7 @@ class ScrobbleSender(
             val verdict = outcome.verdicts[i].ignored
             codes.merge(verdict.code, 1, Int::plus)
             when (val action = ScrobblePolicy.forItem(verdict, row.attempts, now)) {
-                ScrobblePolicy.Item.Delete -> dao.deleteOccurrence(row.streamId, row.startedAt)
+                ScrobblePolicy.Item.Delete -> dao.finalizeOccurrence(row.lastfmUsername, row.streamId, row.startedAt)
                 is ScrobblePolicy.Item.Defer -> dao.recordAttempt(row.streamId, row.startedAt, action.untilMs)
                 ScrobblePolicy.Item.Quarantine ->
                     dao.recordAttempt(row.streamId, row.startedAt, ScrobblePolicy.QUARANTINE)
@@ -251,6 +266,7 @@ class ScrobbleSender(
                     requests = { LastfmBackend.requests() },
                     api = { LastfmBackend.api(app) },
                     invalidateSession = { username, key -> LastfmAuth.forContext(app).invalidateSession(username, key) },
+                    writesEnabled = { LastfmBackend.writesEnabled },
                     log = { name, fields -> PlaybackLog.event(name, *fields) },
                 ).also { process = it }
             }

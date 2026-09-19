@@ -309,6 +309,37 @@ class LastfmAuthTest {
         assertTrue("only an explicit disconnect purges", purges.isEmpty())
     }
 
+    // ---- error 9 on a write (G6b P6a) ---------------------------------------------
+
+    @Test
+    fun `error 9 clears exactly the failing session key and keeps the username`() = runBlocking {
+        store.session = LastfmStoredSession(sessionKey = "sk-1", username = "f0ul482")
+
+        assertTrue(auth().invalidateSession("f0ul482", "sk-1"))
+
+        assertEquals(LastfmStoredSession(username = "f0ul482"), store.session)
+        assertEquals(LastfmLink.ReauthRequired("f0ul482"), auth().link())
+        assertTrue("re-auth is not a disconnect: the queue is untouched", purges.isEmpty())
+        assertEquals("nothing sent", 0, api.calls.size)
+    }
+
+    @Test
+    fun `a late error 9 about an old key cannot clear a newer session`() = runBlocking {
+        store.session = LastfmStoredSession(sessionKey = "sk-2", username = "f0ul482")
+
+        assertFalse(auth().invalidateSession("f0ul482", "sk-1"))
+
+        assertEquals(LastfmStoredSession(sessionKey = "sk-2", username = "f0ul482"), store.session)
+    }
+
+    @Test
+    fun `error 9 for another account changes nothing`() = runBlocking {
+        store.session = LastfmStoredSession(sessionKey = "sk-1", username = "someone-else")
+        assertFalse(auth().invalidateSession("f0ul482", "sk-1"))
+        assertEquals("someone-else", store.session.username)
+        assertEquals("sk-1", store.session.sessionKey)
+    }
+
     // ---- the lock ---------------------------------------------------------------
 
     @Test

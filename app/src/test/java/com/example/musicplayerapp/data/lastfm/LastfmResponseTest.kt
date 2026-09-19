@@ -255,13 +255,26 @@ class LastfmResponseTest {
     }
 
     @Test
-    fun `a scrobble without an ignoredMessage counts as accepted`() {
+    fun `a scrobble without an ignoredMessage is not taken as accepted - its verdict is missing`() {
+        // G6b P6a: silence is not "code 0". The sender never deletes a row on a
+        // verdict Last.fm did not actually give.
         val result = LastfmResponses.scrobbles(
             """{"scrobbles":{"@attr":{"accepted":1,"ignored":0},
                "scrobble":{"artist":{"#text":"A"},"track":{"#text":"T"},"timestamp":1}}}"""
         )
 
-        assertTrue((result as LastfmResult.Ok).value.verdicts.single().ignored.accepted)
+        val verdict = (result as LastfmResult.Ok).value.verdicts.single().ignored
+        assertEquals(IgnoredScrobble.MISSING, verdict)
+        assertTrue(!verdict.accepted)
+    }
+
+    @Test
+    fun `an ignoredMessage without a readable code is missing too`() {
+        val result = LastfmResponses.scrobbles(
+            """{"scrobbles":{"scrobble":{"artist":{"#text":"A"},"track":{"#text":"T"},
+                 "timestamp":1,"ignoredMessage":{"#text":"?"}}}}"""
+        )
+        assertEquals(IgnoredScrobble.MISSING, (result as LastfmResult.Ok).value.verdicts.single().ignored)
     }
 
     @Test

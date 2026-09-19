@@ -352,5 +352,14 @@ class ScrobbleQueueTest {
                 before - rows.size
             }
         }
+
+        // The sender's operations (G6b P6a); these tests do not exercise them.
+        override suspend fun activeHead(username: String, quarantined: Long, limit: Int) =
+            pendingFor(username, limit).filter { it.nextAttemptAt != quarantined }
+
+        override suspend fun deleteOccurrence(streamId: String, startedAt: Long) =
+            synchronized(rows) { if (rows.removeAll { it.streamId == streamId && it.startedAt == startedAt }) 1 else 0 }
+
+        override suspend fun recordAttempt(streamId: String, startedAt: Long, nextAttemptAt: Long) = 0
     }
 }

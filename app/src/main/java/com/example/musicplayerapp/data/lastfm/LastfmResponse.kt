@@ -96,9 +96,9 @@ data class LastfmScrobbleOutcome(
 /**
  * Last.fm's judgement on one scrobble in a batch.
  *
- * Note that [ignored] not being [IgnoredScrobble.ACCEPTED] is **not** a failure to
- * retry: the server received the scrobble and decided. Either way the row is done
- * and is deleted.
+ * What the sender does with each [ignored] value is `ScrobblePolicy`'s decision -
+ * some are terminal for the row, some defer it, an unknown one quarantines it, and
+ * [IgnoredScrobble.MISSING] means the disposition is not known at all.
  *
  * @property artist and [track] as Last.fm recorded them, which may differ from what
  *   was sent - it corrects spellings against its own catalogue. Kept because a
@@ -249,9 +249,11 @@ object LastfmResponses {
         // one in 2038. Nothing else in this app would notice, and a truncated
         // timestamp is the kind of thing that is only ever found in production.
         timestamp = longOf("timestamp") ?: 0L,
-        ignored = IgnoredScrobble.from(
-            objectOrNull("ignoredMessage")?.intOf("code") ?: 0
-        ),
+        // No code is not "code 0". A verdict Last.fm did not give is unknown, and the
+        // sender never deletes a row on an unknown verdict (G6b P6a).
+        ignored = objectOrNull("ignoredMessage")?.intOf("code")
+            ?.let { IgnoredScrobble.from(it) }
+            ?: IgnoredScrobble.MISSING,
     )
 
     /**

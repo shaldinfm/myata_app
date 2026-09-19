@@ -196,6 +196,33 @@ class LastfmAuth(
     }
 
     /**
+     * Error 9 on an authenticated write: the session [sessionKeyUsed] of [username]
+     * is no longer valid (G6b P6a).
+     *
+     * Clears that session key and nothing else. The username stays, which is what
+     * makes the link [LastfmLink.ReauthRequired] - the existing `Требуется вход`
+     * state - and keeps every queued scrobble of that account waiting for it. Not a
+     * disconnect: the queue is never purged here.
+     *
+     * Compare-and-clear: only if the stored session is still exactly the one that
+     * failed. A late answer about an old key must not throw out a session the
+     * listener has since re-established.
+     *
+     * @return whether the stored session was cleared.
+     */
+    suspend fun invalidateSession(username: String, sessionKeyUsed: String): Boolean = lock.withLock {
+        withContext(NonCancellable) {
+            val stored = read()
+            if (stored.username != username || stored.sessionKey != sessionKeyUsed) {
+                false
+            } else {
+                write(stored.copy(sessionKey = null))
+                true
+            }
+        }
+    }
+
+    /**
      * The lifetime playcount for [username], or null if it could not be read.
      *
      * Enrichment only. Every failure - no answer, an error, a response without a

@@ -163,12 +163,14 @@ class ProfileAuthenticatedFragment : Fragment() {
      *
      * `MaterialAlertDialogBuilder` rather than a custom layout: the app's dialog idiom
      * is a themed bottom sheet for *choices*, and this is a confirmation, which is
-     * exactly what the Material dialog is for. Nothing here needs a bespoke surface.
+     * exactly what the Material dialog is for. Nothing here needs a bespoke surface -
+     * only the app's own card, type and colour, which `ThemeOverlay.Myata.ConfirmDialog`
+     * lays over the stock one.
      */
     private fun confirmDeletion() {
         if (deletion.isBusy) return
 
-        confirmation = MaterialAlertDialogBuilder(requireContext())
+        confirmation = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_Myata_ConfirmDialog)
             .setTitle(R.string.delete_account_confirm_title)
             .setMessage(R.string.delete_account_confirm_body)
             .setNegativeButton(R.string.delete_account_cancel, null)
@@ -192,7 +194,7 @@ class ProfileAuthenticatedFragment : Fragment() {
         val email = accountEmail
             ?: getString(R.string.profile_account_email_unavailable)
 
-        confirmation = MaterialAlertDialogBuilder(requireContext())
+        confirmation = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_Myata_ConfirmDialog_Destructive)
             .setTitle(R.string.delete_account_final_title)
             .setMessage(getString(R.string.delete_account_final_body, email))
             .setNegativeButton(R.string.delete_account_cancel, null)

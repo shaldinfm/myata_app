@@ -1,9 +1,12 @@
 package com.example.musicplayerapp.fragments
 
+import android.annotation.SuppressLint
 import android.os.Bundle
+import android.text.Layout
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.musicplayerapp.R
@@ -182,6 +185,19 @@ class ProfileGuestFragment : Fragment() {
         // has nothing to say.
         binding.profileGuestBodySecond.visibility = View.GONE
 
+        // The card is sized for the frozen guest copy. This copy is longer and wraps,
+        // so the card follows it - the avatar's top inset repeated under the last line,
+        // and a side inset so no line runs into the outline - and balanced breaks keep
+        // a short last line from dangling.
+        val side = resources.getDimensionPixelSize(R.dimen.profile_deletion_card_padding_horizontal)
+        binding.profileGuestCard.setPadding(
+            side, 0, side, resources.getDimensionPixelSize(R.dimen.profile_deletion_card_padding_bottom),
+        )
+        binding.profileGuestCard.layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
+        binding.profileGuestCard.requestLayout()
+        binding.profileGuestHeading.breaks(Layout.BREAK_STRATEGY_BALANCED)
+        binding.profileGuestBodyFirst.breaks(Layout.BREAK_STRATEGY_BALANCED)
+
         // Every way in is closed while this is unresolved. Not merely disabled: a
         // greyed-out `Войти` invites a tap that cannot work, and the reason it cannot
         // is not something this screen can explain.
@@ -196,6 +212,15 @@ class ProfileGuestFragment : Fragment() {
     }
 
     /**
+     * `Layout`'s break strategies are API 23 and have the same values as the API 29
+     * `LineBreaker` ones that `setBreakStrategy` is now annotated with.
+     */
+    @SuppressLint("WrongConstant")
+    private fun TextView.breaks(strategy: Int) {
+        breakStrategy = strategy
+    }
+
+    /**
      * Puts the screen back to the frozen guest presentation.
      *
      * Every property [renderDeletion] changes is set back explicitly rather than by
@@ -207,6 +232,13 @@ class ProfileGuestFragment : Fragment() {
         binding.profileGuestBodyFirst.setText(R.string.profile_guest_body_first)
         binding.profileGuestBodySecond.setText(R.string.profile_guest_body_second)
         binding.profileGuestBodySecond.visibility = View.VISIBLE
+
+        binding.profileGuestCard.setPadding(0, 0, 0, 0)
+        binding.profileGuestCard.layoutParams.height =
+            resources.getDimensionPixelSize(R.dimen.profile_card_height)
+        binding.profileGuestCard.requestLayout()
+        binding.profileGuestHeading.breaks(Layout.BREAK_STRATEGY_HIGH_QUALITY)
+        binding.profileGuestBodyFirst.breaks(Layout.BREAK_STRATEGY_HIGH_QUALITY)
 
         binding.profileSignIn.visibility = View.VISIBLE
         binding.profileCreateAccount.visibility = View.VISIBLE

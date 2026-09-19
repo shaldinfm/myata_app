@@ -338,7 +338,7 @@ class ScrobbleQueueTest {
 
     // ---- fake ------------------------------------------------------------------------
 
-    private class FakeDao : ScrobbleQueueDao {
+    private class FakeDao : ScrobbleQueueDao() {
         val rows = mutableListOf<ScrobbleQueueEntry>()
         @Volatile var failWith: Exception? = null
         @Volatile var holdInsertsUntil: CompletableDeferred<Unit>? = null
@@ -390,5 +390,24 @@ class ScrobbleQueueTest {
             synchronized(rows) { if (rows.removeAll { it.streamId == streamId && it.startedAt == startedAt }) 1 else 0 }
 
         override suspend fun recordAttempt(streamId: String, startedAt: Long, nextAttemptAt: Long) = 0
+
+        // Finalization (G6b P6b): the real transactional bodies run over these.
+        val finalized = HashMap<Pair<String, String>, Long>()
+
+        override suspend fun finalizedThrough(username: String, streamId: String) =
+            synchronized(rows) { finalized[username to streamId] }
+
+        override suspend fun insertFinalizedIfAbsent(username: String, streamId: String, startedAt: Long) {
+            synchronized(rows) { finalized.putIfAbsent(username to streamId, startedAt) }
+        }
+
+        override suspend fun raiseFinalized(username: String, streamId: String, startedAt: Long) = synchronized(rows) {
+            val current = finalized[username to streamId]
+            if (current != null && current < startedAt) { finalized[username to streamId] = startedAt; 1 } else 0
+        }
+
+        override suspend fun deleteOccurrenceOf(username: String, streamId: String, startedAt: Long) = synchronized(rows) {
+            if (rows.removeAll { it.lastfmUsername == username && it.streamId == streamId && it.startedAt == startedAt }) 1 else 0
+        }
     }
 }

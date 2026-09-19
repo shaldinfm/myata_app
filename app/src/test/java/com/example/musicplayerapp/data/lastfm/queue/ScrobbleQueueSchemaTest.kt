@@ -18,16 +18,46 @@ class ScrobbleQueueSchemaTest {
     /** Unit tests run with the module directory as the working directory. */
     private val dir = File("schemas/com.example.musicplayerapp.data.lastfm.queue.LastfmQueueDatabase")
 
-    private fun schema(): String {
-        val file = File(dir, "1.json")
+    private fun schema(version: Int = 1): String {
+        val file = File(dir, "$version.json")
         assertTrue("no exported schema at ${file.absolutePath}", file.isFile)
         return file.readText()
     }
 
     @Test
-    fun `version 1 is the only version`() {
-        assertEquals(listOf("1.json"), dir.list()!!.sorted())
-        assertTrue(schema().contains("\"version\": 1"))
+    fun `versions 1 and 2, and nothing else`() {
+        assertEquals(listOf("1.json", "2.json"), dir.list()!!.sorted())
+        assertTrue(schema(1).contains("\"version\": 1"))
+        assertTrue(schema(2).contains("\"version\": 2"))
+    }
+
+    @Test
+    fun `version 2 leaves the queue exactly as version 1 had it`() {
+        fun queueSql(json: String) = Regex("\"createSql\": \"([^\"]*)\"").findAll(json)
+            .map { it.groupValues[1] }
+            .filter { "`track_key`" in it || "index_scrobble_queue" in it }
+            .toList()
+        assertEquals(2, queueSql(schema(1)).size)
+        assertEquals(queueSql(schema(1)), queueSql(schema(2)))
+    }
+
+    @Test
+    fun `scrobble_finalized is one mark per account and stream - and the migration creates exactly it`() {
+        val expected = "CREATE TABLE IF NOT EXISTS `\${TABLE_NAME}` (" +
+            "`lastfm_username` TEXT NOT NULL, `stream_id` TEXT NOT NULL, `started_at` INTEGER NOT NULL, " +
+            "PRIMARY KEY(`lastfm_username`, `stream_id`))"
+        assertTrue("createSql changed:\n${schema(2)}", schema(2).contains(expected))
+        assertEquals(
+            expected.replace("\${TABLE_NAME}", "scrobble_finalized"),
+            LastfmQueueDatabase.CREATE_SCROBBLE_FINALIZED,
+        )
+    }
+
+    @Test
+    fun `scrobble_finalized holds no track, no history and nothing secret`() {
+        val finalized = schema(2).substringAfter("\"tableName\": \"scrobble_finalized\"")
+        val columns = Regex("\"columnName\": \"([^\"]+)\"").findAll(finalized).map { it.groupValues[1] }.toList()
+        assertEquals(listOf("lastfm_username", "stream_id", "started_at"), columns)
     }
 
     @Test

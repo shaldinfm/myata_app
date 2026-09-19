@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
  * The durable Last.fm scrobble queue (G6b P5) - a database of its own, file
@@ -19,13 +21,18 @@ import androidx.room.RoomDatabase
  *  - **Independence.** Deleting the Myata account clears Myata data; it does not
  *    touch this database, just as it does not touch the Last.fm session.
  *
- * Version 1. No `fallbackToDestructiveMigration`, for the reason `AppDatabase` gives:
- * a missing migration must be a crash in a test, not silently lost scrobbles.
- * `exportSchema` is on; the schema is checked into `app/schemas`.
+ * No `fallbackToDestructiveMigration`, for the reason `AppDatabase` gives: a missing
+ * migration must be a crash in a test, not silently lost scrobbles. `exportSchema`
+ * is on; the schemas are checked into `app/schemas`.
+ *
+ *  - **Version 1** (P5): `scrobble_queue`.
+ *  - **Version 2** (P6b): adds `scrobble_finalized` ([ScrobbleFinalized]), created
+ *    empty by [MIGRATION_1_2] - a v1 row is pending, not finalized, and its own
+ *    primary key already dedupes it while it waits.
  */
 @Database(
-    entities = [ScrobbleQueueEntry::class],
-    version = 1,
+    entities = [ScrobbleQueueEntry::class, ScrobbleFinalized::class],
+    version = 2,
     exportSchema = true,
 )
 abstract class LastfmQueueDatabase : RoomDatabase() {
@@ -61,6 +68,24 @@ abstract class LastfmQueueDatabase : RoomDatabase() {
 
         /** The production builder, also used by tests that need a real file. */
         fun build(context: Context, name: String): LastfmQueueDatabase =
-            Room.databaseBuilder(context, LastfmQueueDatabase::class.java, name).build()
+            Room.databaseBuilder(context, LastfmQueueDatabase::class.java, name)
+                .addMigrations(MIGRATION_1_2)
+                .build()
+
+        /** Exactly what Room exports for [ScrobbleFinalized] in `2.json`. */
+        const val CREATE_SCROBBLE_FINALIZED =
+            "CREATE TABLE IF NOT EXISTS `scrobble_finalized` (`lastfm_username` TEXT NOT NULL, " +
+                "`stream_id` TEXT NOT NULL, `started_at` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`lastfm_username`, `stream_id`))"
+
+        /**
+         * 1 -> 2: creates `scrobble_finalized`, empty. Reads no row and deliberately
+         * back-fills nothing - every v1 row is still pending.
+         */
+        val MIGRATION_1_2: Migration = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(CREATE_SCROBBLE_FINALIZED)
+            }
+        }
     }
 }

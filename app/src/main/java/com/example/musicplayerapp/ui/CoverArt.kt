@@ -1,6 +1,8 @@
 package com.example.musicplayerapp.ui
 
 import androidx.core.net.toUri
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
 import android.widget.ImageView
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.data.NowPlayingArtwork
@@ -32,6 +34,14 @@ object CoverArt {
      *
      * @param img the current track's [com.example.musicplayerapp.data.PlayerState.img].
      * @param loaded what this view is showing now - the previous return value.
+     * @param onLoaded the decoded cover, for a caller that needs the pixels as
+     *   well as the picture - the TV player takes its ambient background colour
+     *   from exactly this bitmap, so it is handed the one the view is already
+     *   showing rather than being allowed to start a second load of its own. It
+     *   is the image at the view's own size (the call below is `fit()`), not the
+     *   full-resolution file. Optional, and null for every caller that only
+     *   wanted the picture: the phone's player and the Mini Player pass nothing
+     *   here and do no extra work.
      * @param onLoadFailed run when the load fails, so the caller can forget the
      *   URL and let a later state try it again.
      * @return the URL now on screen, or null when the plate is up.
@@ -40,6 +50,7 @@ object CoverArt {
         view: ImageView,
         img: String?,
         loaded: String?,
+        onLoaded: ((Bitmap) -> Unit)? = null,
         onLoadFailed: () -> Unit = {},
     ): String? {
         val url = NowPlayingArtwork.coverUrl(img)
@@ -72,7 +83,13 @@ object CoverArt {
             .fit()
             .centerCrop()
             .into(view, object : Callback {
-                override fun onSuccess() = Unit
+                override fun onSuccess() {
+                    // Picasso's success drawable is a BitmapDrawable carrying the
+                    // decoded, `fit()`-sized image - the same pixels now on screen.
+                    if (onLoaded != null) {
+                        (view.drawable as? BitmapDrawable)?.bitmap?.let(onLoaded)
+                    }
+                }
 
                 override fun onError(e: Exception?) {
                     // The plate is already up; this only lets the caller drop the

@@ -33,12 +33,22 @@
         android:background="@drawable/gradient_scrim_bottom" />
 
     <!-- Back Button -->
+    <!--
+        19x19 focus target on a 1080p TV (38px at density 320) is far below the
+        48dp minimum a D-pad needs, and the focused state only scales it 10%.
+        The button is now 48x48 with the padding carrying the extra 29dp, so the
+        arrow keeps its exact size and its exact screen position: the content box
+        stays 19x19 at 14dp/15dp from the button's edges, which is where the
+        margins used to put it.
+    -->
     <ImageButton
         android:id="@+id/btn_back"
-        android:layout_width="19dp"
-        android:layout_height="19dp"
-        android:layout_marginStart="14dp"
-        android:layout_marginTop="15dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="15dp"
+        android:paddingTop="15dp"
+        android:paddingBottom="14dp"
         android:background="@null"
         android:stateListAnimator="@null"
         android:src="@drawable/btn_back_tv"

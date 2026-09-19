@@ -28,8 +28,14 @@ class LastfmAuthTest {
         SharedSecretSigner("fedcba9876543210fedcba9876543210"),
     )
 
+    /** Every purge of the scrobble queue, with the session as it stood at that moment. */
+    private val purges = mutableListOf<Pair<String, LastfmStoredSession>>()
+
     private fun auth(requests: LastfmRequestFactory? = this.requests) =
-        LastfmAuth(api, requests, store, clock = { now }, io = Dispatchers.Unconfined)
+        LastfmAuth(
+            api, requests, store, clock = { now }, io = Dispatchers.Unconfined,
+            queue = { username -> purges += username to store.session },
+        )
 
     private val hour = LastfmLink.PENDING_TOKEN_LIFETIME_MS
 
@@ -252,6 +258,55 @@ class LastfmAuthTest {
         auth().disconnect()
 
         assertEquals(LastfmStoredSession.EMPTY, store.session)
+    }
+
+    // ---- the scrobble queue (G6b P5) --------------------------------------------
+
+    @Test
+    fun `explicit disconnect purges that account's queue before and after the session goes`() = runBlocking {
+        val linked = LastfmStoredSession(sessionKey = "sk-1", username = "f0ul482")
+        store.session = linked
+
+        auth().disconnect()
+
+        assertEquals(
+            "once while still linked, once after - so nothing queued in between survives",
+            listOf("f0ul482" to linked, "f0ul482" to LastfmStoredSession.EMPTY),
+            purges,
+        )
+        assertEquals(LastfmStoredSession.EMPTY, store.session)
+    }
+
+    @Test
+    fun `disconnect from the re-auth state is still explicit, and purges that account`() = runBlocking {
+        store.session = LastfmStoredSession(username = "f0ul482")
+
+        auth().disconnect()
+
+        assertEquals(listOf("f0ul482", "f0ul482"), purges.map { it.first })
+    }
+
+    @Test
+    fun `disconnect with no account purges nothing`() = runBlocking {
+        pending("tok-1")
+        auth().disconnect()
+        store.session = LastfmStoredSession.EMPTY
+        auth().disconnect()
+        assertTrue(purges.isEmpty())
+    }
+
+    @Test
+    fun `re-auth, cancel, connect and resume never touch the queue`() = runBlocking {
+        store.session = LastfmStoredSession(username = "f0ul482")        // re-auth required
+        auth().link()
+        auth().resume()
+        pending("tok-1")
+        auth().cancelPending()
+        api.reply("auth.getToken", """{"token":"tok-2"}""")
+        auth().begin()
+        api.reply("auth.getSession", SESSION_OK)
+        auth().resume()
+        assertTrue("only an explicit disconnect purges", purges.isEmpty())
     }
 
     // ---- the lock ---------------------------------------------------------------

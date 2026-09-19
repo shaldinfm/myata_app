@@ -64,9 +64,9 @@
     <!-- Album Art -->
     <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/iv_album_art"
-        android:layout_width="280dp"
-        android:layout_height="280dp"
-        android:layout_marginBottom="32dp"
+        android:layout_width="@dimen/tv_player_artwork_size"
+        android:layout_height="@dimen/tv_player_artwork_size"
+        android:layout_marginBottom="@dimen/tv_player_artwork_gap"
         android:scaleType="centerCrop"
         android:src="@drawable/zaglushka_logo"
         app:shapeAppearanceOverlay="@style/RoundedCornerImage"
@@ -141,7 +141,7 @@
         android:id="@+id/layout_streams"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="60dp"
+        android:layout_marginBottom="@dimen/tv_player_bottom_inset"
         android:orientation="horizontal"
         android:clipChildren="false"
         android:clipToPadding="false"

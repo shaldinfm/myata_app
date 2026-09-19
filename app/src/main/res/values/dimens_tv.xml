@@ -23,4 +23,31 @@
       to the corner can be clipped or half off-screen entirely.
     -->
     <dimen name="tv_player_back_inset">32dp</dimen>
+
+    <!--
+      Player vertical metrics, and the reason they are dimens at all.
+
+      The player's column is a chain whose every part but the artwork is a fixed
+      height: artwork + 32 gap + 24 track line + 16 + 42 play/pause + 16 + 50 pill
+      row + 60 bottom inset = 520dp. The bottom inset is never given up and the
+      artwork is the only element the chain can move, so on any viewport shorter
+      than 520dp the deficit came out of the artwork's top edge: measured clipped
+      by 31dp at 1280x720@240 (480dp) and by 128dp at 1920x1080@480 (360dp), with
+      the whole group riding up out of centre by the same amount.
+
+      These values reproduce today's geometry exactly on every viewport that is
+      520dp or taller, and give the artwork less room below that. The buckets are
+      the Android way round for `-hNNNdp`: a device matches every bucket at or
+      below its height and the largest one wins, so values-h520dp has to exist and
+      has to repeat these numbers - without it, values-h480dp would win at 540dp
+      and quietly shrink the artwork on a 1080p television.
+
+      Below 360dp the qualifiers stop matching and this file's values apply, which
+      is the one height range where the chain is still longer than the viewport.
+      No television reports a viewport that short (the shortest measured is 360dp,
+      an xxhdpi panel).
+    -->
+    <dimen name="tv_player_artwork_size">280dp</dimen>
+    <dimen name="tv_player_artwork_gap">32dp</dimen>
+    <dimen name="tv_player_bottom_inset">60dp</dimen>
 </resources>

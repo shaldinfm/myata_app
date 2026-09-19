@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  TV player metrics below 480dp of height - the constrained case the audit
+  reproduced as 640x360dp (a 1080p panel reported at xxhdpi), where the artwork
+  was pushed 128dp above the screen.
+
+  168 artwork + 12 gap + 24 track line + 16 + 42 + 16 + 50 + 24 = 352dp, which
+  fits the shortest height in this bucket with 8dp to spare.
+-->
+<resources>
+    <dimen name="tv_player_artwork_size">168dp</dimen>
+    <dimen name="tv_player_artwork_gap">12dp</dimen>
+    <dimen name="tv_player_bottom_inset">24dp</dimen>
+</resources>

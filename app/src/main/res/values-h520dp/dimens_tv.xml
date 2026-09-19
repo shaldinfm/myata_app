@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  TV player metrics at 520dp of height and above: today's numbers, so a 1080p
+  television (960x540dp) and a standard 720p one (961x541dp) measure exactly as
+  they did before the layout became height-aware.
+
+  This file exists to outrank values-h480dp, not to differ from it: a device
+  matches every -hNNNdp bucket at or below its height and the largest wins.
+-->
+<resources>
+    <dimen name="tv_player_artwork_size">280dp</dimen>
+    <dimen name="tv_player_artwork_gap">32dp</dimen>
+    <dimen name="tv_player_bottom_inset">60dp</dimen>
+</resources>

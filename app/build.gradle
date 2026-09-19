@@ -76,9 +76,13 @@ if (lastfmPropsFile.exists()) {
     lastfmPropsFile.withInputStream { lastfmProps.load(it) }
 }
 def lastfmApiKey = (lastfmProps['LASTFM_API_KEY'] ?: '').trim()
-// G6b P6b: false unless the build is run with -PlastfmLiveWrites=true. Never read
-// from a file, so a checkout cannot silently carry it.
-def lastfmLiveWrites = (project.findProperty('lastfmLiveWrites') ?: 'false').toString().trim() == 'true'
+// G6b P6b write gate source. Read ONLY from the Gradle command line: the -P project
+// properties in gradle.startParameter, i.e. exactly `-PlastfmLiveWrites=true`. Unlike
+// project.findProperty, that map does not include gradle.properties (project or
+// GRADLE_USER_HOME), ORG_GRADLE_PROJECT_* environment variables or
+// -Dorg.gradle.project.* system properties - none of those can turn writes on. Only
+// the exact value `true` counts; absent, `false` or anything else is false.
+def lastfmLiveWrites = gradle.startParameter.projectProperties['lastfmLiveWrites'] == 'true'
 def lastfmApiSecret = (lastfmProps['LASTFM_API_SECRET'] ?: '').trim()
 
 // Whether a value in the tracked template is still a placeholder. Same marker

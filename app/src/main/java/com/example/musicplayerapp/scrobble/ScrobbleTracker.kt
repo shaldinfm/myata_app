@@ -68,12 +68,25 @@ package com.example.musicplayerapp.scrobble
  * Switching station discards the partial listen (owner decision D1). Coming back
  * to the same airing starts a new partial listen from zero; the emitted mark still
  * forbids a second candidate if the first was already emitted.
+ *
+ * ## An occurrence opening (G6b P6b)
+ *
+ * [onOccurrenceOpened] is told when tracking starts following a new airing - the
+ * moment Now Playing is for. Only from inside the existing open: so only for a
+ * valid, fresh observation with a real TrackKey, only while tracking is active,
+ * and additionally only while the player is really playing and the airing's
+ * authoritative window has not already ended. Repeated polls, pause and resume,
+ * buffering and reconnects never reopen an airing, so never call it again. A
+ * station switch back to the same airing does reopen it - suppressing that repeat
+ * is the Now Playing sender's job, which dedupes by account and occurrence. The
+ * callback observes; nothing it does feeds back into listening or eligibility.
  */
 class ScrobbleTracker(
     private val isEnabled: () -> Boolean,
     private val sink: ScrobbleCandidateSink,
     private val emissions: ScrobbleEmissions,
     private val log: ScrobbleLog = ScrobbleLog.NONE,
+    private val onOccurrenceOpened: (OpenedOccurrence) -> Unit = {},
 ) {
 
     private class Occurrence(
@@ -244,6 +257,18 @@ class ScrobbleTracker(
             "firstSeenAfterSec" to (serverTime - startedAt),
             "alreadyEmitted" to next.emitted,
         )
+
+        // Now Playing: really playing, and the airing not already over.
+        if (playerPlaying && nowMs < next.windowEndMs) {
+            val opened = OpenedOccurrence(next.id, next.trackKey, next.artist, next.title, next.durationSec)
+            try {
+                onOccurrenceOpened(opened)
+            } catch (e: Exception) {
+                // Whatever the listener does, the tracker's own state is already
+                // settled and must stay so.
+                log.event("SCROBBLE_OPEN_HOOK_FAILED", "error" to e.javaClass.simpleName)
+            }
+        }
     }
 
     private fun correct(current: Occurrence, observation: FeedObservation) {

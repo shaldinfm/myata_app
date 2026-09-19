@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-11T11:32:56.973Z",
+  "generatedAt": "2026-09-19T20:31:48.058Z",
   "note": "Reproduce with: node tools/fonts/build-android-fonts.mjs <out-dir>",
   "sources": {
     "Onest": {
@@ -156,6 +156,13 @@
       "bytesSubset": 128516
     },
     {
+      "file": "onest_extrabold.ttf",
+      "family": "Onest",
+      "weight": 800,
+      "bytesUpstream": 152668,
+      "bytesSubset": 131024
+    },
+    {
       "file": "onest_black.ttf",
       "family": "Onest",
       "weight": 900,
@@ -200,9 +207,9 @@
     ]
   },
   "totals": {
-    "upstreamBytes": 2544220,
-    "subsetBytes": 1434284,
+    "upstreamBytes": 2696888,
+    "subsetBytes": 1565308,
     "mullerRemovedBytes": 824180,
-    "netBytes": 610104
+    "netBytes": 741128
   }
 }

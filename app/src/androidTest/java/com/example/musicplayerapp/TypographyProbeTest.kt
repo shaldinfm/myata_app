@@ -161,7 +161,7 @@ class TypographyProbeTest {
         R.font.montserrat_regular, R.font.montserrat_medium,
         R.font.montserrat_bold, R.font.montserrat_black,
         R.font.onest_light, R.font.onest_regular, R.font.onest_medium,
-        R.font.onest_bold, R.font.onest_black,
+        R.font.onest_bold, R.font.onest_extrabold, R.font.onest_black,
     )
 
     /* -------------------------------------------------------------- report -- */
@@ -619,8 +619,10 @@ class TypographyProbeTest {
             // main_author Regular 18/18, which is what fragment_myata_stream.xml
             // says. Corrected here because the suite has to pass to be evidence;
             // nothing on PLAYER is touched.
-            Triple(R.layout.fragment_myata_stream, R.id.main_song, R.dimen.line_height_montserrat_black_24_24),
-            Triple(R.layout.fragment_myata_stream, R.id.main_author, R.dimen.line_height_montserrat_regular_18_18),
+            // Later the faces moved to Onest ExtraBold 24/24 and Onest Regular
+            // 18/18 - same sizes and line heights, different family.
+            Triple(R.layout.fragment_myata_stream, R.id.main_song, R.dimen.line_height_onest_extrabold_24_24),
+            Triple(R.layout.fragment_myata_stream, R.id.main_author, R.dimen.line_height_onest_regular_18_18),
             Triple(R.layout.item_history_track, R.id.tv_time, R.dimen.line_height_onest_regular_14_20),
             Triple(R.layout.item_history_track, R.id.tv_artist, R.dimen.line_height_onest_regular_14_20),
             Triple(R.layout.item_history_track, R.id.tv_title, R.dimen.line_height_onest_regular_17_28),

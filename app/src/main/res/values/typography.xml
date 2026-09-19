@@ -303,6 +303,28 @@
         <item name="android:includeFontPadding">false</item>
     </style>
 
+    <!--
+      Post-freeze additions, not from the Figma export: the PLAYER now-playing
+      title and artist moved from Montserrat Black 24/24 and Regular 18/18 to
+      Onest ExtraBold and Regular. Size and line height are unchanged, so the
+      only difference is the face.
+    -->
+    <style name="TextAppearance.Myata.Onest.Regular.18_18" parent="" tools:ignore="NewApi">
+        <item name="android:fontFamily">@font/onest_regular</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:lineHeight">@dimen/line_height_onest_regular_18_18</item>
+        <item name="myataLineHeight">@dimen/line_height_onest_regular_18_18</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="TextAppearance.Myata.Onest.ExtraBold.24_24" parent="" tools:ignore="NewApi">
+        <item name="android:fontFamily">@font/onest_extrabold</item>
+        <item name="android:textSize">24sp</item>
+        <item name="android:lineHeight">@dimen/line_height_onest_extrabold_24_24</item>
+        <item name="myataLineHeight">@dimen/line_height_onest_extrabold_24_24</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
     <!-- 2 node(s); line height @dimen/line_height_onest_medium_24_30 -->
     <style name="TextAppearance.Myata.Onest.Medium.24_30" parent="" tools:ignore="NewApi">
         <item name="android:fontFamily">@font/onest_medium</item>

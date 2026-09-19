@@ -44,7 +44,7 @@ const SOURCES = {
     licence: "SIL Open Font License 1.1",
     inZip: (w) => `onest-2.001/fonts/ttf/Onest-${w}.ttf`,
     oflInZip: "onest-2.001/OFL.txt",
-    weights: { Light: 300, Regular: 400, Medium: 500, Bold: 700, Black: 900 },
+    weights: { Light: 300, Regular: 400, Medium: 500, Bold: 700, ExtraBold: 800, Black: 900 },
   },
   Montserrat: {
     repo: "https://github.com/JulietaUla/Montserrat",

@@ -253,6 +253,185 @@ class ArtworkMatcherGoldenTest {
         assertEquals("I Will Follow You", choose("UNA MAS", "I WILL FOLLOW YOU", listOf(edit, plain))?.candidate?.trackName)
     }
 
+    // ============== the station's anonymous (RMX) ==============
+
+    /**
+     * The live `CURTIS MAYFIELD MOVE ON UP` answer (Stage-1 query, 2026-09-20),
+     * trimmed to the releases that decide: the 1970 single, the 2024 remix single
+     * that used to win on the marker alone, the album the track is from, a
+     * Various Artists collection that carries it and a live release.
+     */
+    private fun moveOnUpCandidates() = listOf(
+        candidate(
+            "Curtis Mayfield", "Move On Up (Single Edit)", "Move On Up (Single Edit) - Single",
+            releaseDate = "1970-09-01",
+        ).copy(trackCount = 1),
+        candidate(
+            "Curtis Mayfield", "Move On Up (Mark Knight Remix)", "Move On Up (Mark Knight Remix) - Single",
+            releaseDate = "2024-06-14",
+        ).copy(trackCount = 1),
+        candidate(
+            "Curtis Mayfield", "Move On Up (Extended Version)", "Curtis (Expanded Edition)",
+            releaseDate = "1970-09-01",
+        ).copy(trackCount = 17),
+        candidate(
+            "Curtis Mayfield", "Move On Up", "70s Soul Essentials",
+            collectionArtist = "Various Artists", releaseDate = "1970-09-01",
+        ).copy(trackCount = 25),
+        candidate("Curtis Mayfield", "Move On Up", "Live In Europe", releaseDate = "1987-07-01")
+            .copy(trackCount = 13),
+    )
+
+    /**
+     * Gold, owner-reported: `(RMX)` names no remixer, so there is no remix for the
+     * lookup to want - and wanting one made the only candidate that satisfied the
+     * marker (`Move On Up (Mark Knight Remix) - Single`, 2024) beat every 1970
+     * release of the record the listener was hearing.
+     */
+    @Test
+    fun `a bare RMX is looked up as the plain track`() {
+        val choice = choose("CURTIS MAYFIELD", "MOVE ON UP (RMX)", moveOnUpCandidates())
+
+        assertNotNull(choice)
+        assertEquals("Move On Up (Single Edit) - Single", choice!!.candidate.collectionName)
+    }
+
+    /** Casing and spacing do not change what the shorthand is. */
+    @Test
+    fun `RMX casing and spacing variants are the same shorthand`() {
+        for (title in listOf("MOVE ON UP (rmx)", "Move On Up ( Rmx )", "MOVE ON UP (RMX)   ")) {
+            assertEquals(
+                title,
+                "Move On Up (Single Edit) - Single",
+                choose("CURTIS MAYFIELD", title, moveOnUpCandidates())?.candidate?.collectionName,
+            )
+        }
+    }
+
+    /**
+     * The whole of the normalisation, stated: the anonymous trailing `(RMX)`
+     * leaves the lookup title, and nothing else does - not a named remix, not an
+     * edit, not an acoustic version, not a title that merely mentions RMX.
+     */
+    @Test
+    fun `only an anonymous trailing RMX leaves the lookup title`() {
+        assertEquals("Move On Up", ArtworkMatcher.lookupTitle("Move On Up (RMX)"))
+        assertEquals("Move On Up", ArtworkMatcher.lookupTitle("Move On Up ( rmx )"))
+        assertEquals("Move On Up", ArtworkMatcher.lookupTitle("Move On Up (RMX)  "))
+        assertEquals("Move On Up (Tiesto Remix)", ArtworkMatcher.lookupTitle("Move On Up (Tiesto Remix)"))
+        assertEquals("Move On Up (Radio Edit)", ArtworkMatcher.lookupTitle("Move On Up (Radio Edit)"))
+        assertEquals("Move On Up (Acoustic Version)", ArtworkMatcher.lookupTitle("Move On Up (Acoustic Version)"))
+        assertEquals("Move On Up (RMX) Live", ArtworkMatcher.lookupTitle("Move On Up (RMX) Live"))
+        assertEquals("Move On Up RMX", ArtworkMatcher.lookupTitle("Move On Up RMX"))
+        assertEquals("RMX", ArtworkMatcher.lookupTitle("RMX"))
+    }
+
+    /** A remix the station actually names is still the remix it gets. */
+    @Test
+    fun `a named remix keeps its marker`() {
+        val choice = choose("CURTIS MAYFIELD", "MOVE ON UP (MARK KNIGHT REMIX)", moveOnUpCandidates())
+
+        assertEquals("Move On Up (Mark Knight Remix) - Single", choice?.candidate?.collectionName)
+    }
+
+    /** And an edit keeps its own, so it still beats the plain title it is an edit of. */
+    @Test
+    fun `a radio edit keeps its marker`() {
+        val edit = candidate("Some Act", "Song (Radio Edit)", "Song - Single")
+        val plain = candidate("Some Act", "Song", "Song - Single")
+
+        assertEquals(
+            "Song (Radio Edit)",
+            choose("SOME ACT", "SONG (RADIO EDIT)", listOf(plain, edit))?.candidate?.trackName,
+        )
+    }
+
+    // ============== promotional and market editions ==============
+
+    /**
+     * Gold, owner-reported: the Sprint Music Series single is a promotional
+     * package around the track, and because iTunes calls it "- Single" it counted
+     * as the track's own release and outranked Loose. Candidates are the live
+     * Stage-1 answer for `NELLY FURTADO ALL GOOD THINGS` (2026-09-20), trimmed to
+     * the releases that decide.
+     */
+    @Test
+    fun `a promotional single loses to the studio album it promotes`() {
+        val choice = choose(
+            "NELLY FURTADO",
+            "ALL GOOD THINGS",
+            listOf(
+                candidate(
+                    "Nelly Furtado", "All Good Things (Come to an End)", "Loose",
+                    releaseDate = "2006-06-07",
+                ).copy(trackCount = 17),
+                candidate(
+                    "Nelly Furtado", "All Good Things (Sprint Music Series)",
+                    "All Good Things - Single (Sprint Music Series) - Single",
+                    releaseDate = "2006-06-20",
+                ).copy(trackCount = 1),
+                candidate(
+                    "Nelly Furtado", "All Good Things (Come To An End)", "Loose (Expanded Edition)",
+                    releaseDate = "2006-01-01",
+                ).copy(trackCount = 32),
+                candidate(
+                    "Nelly Furtado", "All Good Things", "Live Session (iTunes Exclusive) - EP",
+                    releaseDate = "2006-01-01",
+                ).copy(trackCount = 4),
+                candidate(
+                    "Nelly Furtado", "All Good Things (Come to an End)", "The Best of Nelly Furtado",
+                    releaseDate = "2006-01-01",
+                ).copy(trackCount = 17),
+                candidate(
+                    "Nelly Furtado", "All Good Things (Come to an End) [Live]", "Loose - The Concert (Live)",
+                    releaseDate = "2007-01-01",
+                ).copy(trackCount = 11),
+            ),
+        )
+
+        assertEquals("Loose", choice?.candidate?.collectionName)
+        assertEquals("All Good Things (Come to an End)", choice?.candidate?.trackName)
+    }
+
+    /**
+     * The demotion is a demotion, not a blanket "the album wins": an ordinary
+     * single is still the track's own release, a promotional one is below both it
+     * and the album, and it is still shown when it is all the provider offers.
+     */
+    @Test
+    fun `a promotional edition ranks below the normal single and the album`() {
+        val promo = candidate("Some Act", "Song", "Song - Single (Promo) - Single", releaseDate = "2019-06-01")
+            .copy(trackCount = 1)
+        val exclusive = candidate("Some Act", "Song", "Song (iTunes Exclusive) - Single", releaseDate = "2019-06-01")
+            .copy(trackCount = 1)
+        val single = candidate("Some Act", "Song", "Song - Single", releaseDate = "2020-01-01")
+            .copy(trackCount = 1)
+        val album = candidate("Some Act", "Song", "The Studio Album", releaseDate = "2020-02-01")
+            .copy(trackCount = 12)
+
+        fun pick(vararg c: ArtworkCandidate) = choose("SOME ACT", "SONG", c.toList())?.candidate?.collectionName
+
+        assertEquals("Song - Single", pick(promo, exclusive, single, album))
+        assertEquals("The Studio Album", pick(promo, exclusive, album))
+        assertEquals("Song - Single (Promo) - Single", pick(promo))
+    }
+
+    /**
+     * A session is a package too, and it loses the rung even when the station
+     * named a version: what the station asked for is a live take, and a live
+     * release of the record is still the record's own release where an iTunes
+     * session single is not.
+     */
+    @Test
+    fun `a session single ranks below the live release the station asked for`() {
+        val session = candidate("Some Act", "Song (Live Session)", "Song (Live Session) - Single", releaseDate = "2020-01-01")
+            .copy(trackCount = 2)
+        val live = candidate("Some Act", "Song (Live)", "Song - Live", releaseDate = "2020-01-01")
+            .copy(trackCount = 12)
+
+        assertEquals("Song - Live", choose("SOME ACT", "SONG (LIVE)", listOf(session, live))?.candidate?.collectionName)
+    }
+
     // ============== never the canonical cover ==============
 
     @Test
@@ -363,6 +542,114 @@ class ArtworkMatcherGoldenTest {
         val candidates = listOf(candidate("Supafly", "Let's Get Down", "Let's Get Down - Single"))
 
         assertNotNull(choose("SUPAFLY INC", "LET'S GET DOWN", candidates))
+    }
+
+    // ============== a pairing credited to its lead act ==============
+
+    /**
+     * The station bills a pairing with `&`; the provider credits the lead act
+     * alone and names the guest in the title. Before this the candidate was
+     * refused on the artist, and with nothing else offered the track got the
+     * plate. It is accepted at the guest-billing tier, 2.
+     */
+    @Test
+    fun `a pairing credited to its lead act, with the guest in the title, is accepted`() {
+        val candidates = listOf(candidate("Some Act", "Song (feat. Guest Singer)", "Song (feat. Guest Singer) - Single"))
+
+        val choice = choose("SOME ACT & GUEST SINGER", "SONG", candidates)
+
+        assertNotNull(choice)
+        assertTrue(choice!!.reason, choice.reason.contains("artist=2"))
+    }
+
+    /** Gold, from the audit: every candidate was refused and the listener got the plate. */
+    @Test
+    fun `KID CREME & MC SHURAKANO matches Kid Creme feat MC Shurakano`() {
+        val candidates = listOf(
+            candidate("Kid Creme", "Doing My Own Thing (Dub) [feat. MC Shurakano]", "Doing My Own Thing - Single (feat. MC Shurakano) - EP"),
+            candidate("Kid Creme", "Doing My Own Thing (Vocal Mix) [feat. MC Shurakano]", "Doing My Own Thing - Single (feat. MC Shurakano) - EP"),
+            candidate("Kid Creme", "Doing My Own Thing (Dub) [feat. MC Shurakano]", "Jalapeno House, Vol. 3"),
+            // Same title, unrelated act: still refused.
+            candidate("Johnnie Taylor", "Doing My Own Thing (Part 2)", "Taylored In Silk"),
+        )
+
+        val choice = choose("KID CREME & MC SHURAKANO", "DOING MY OWN THING", candidates)
+
+        assertEquals("Doing My Own Thing - Single (feat. MC Shurakano) - EP", choice?.candidate?.collectionName)
+        assertTrue(choice!!.reason, choice.reason.contains("artist=2"))
+    }
+
+    /** Gold, from the audit: same shape, with a punctuated guest name. */
+    @Test
+    fun `FEDDE LE GRAND & MR V matches Fedde Le Grand feat Mr V`() {
+        val candidates = listOf(
+            candidate("Fedde Le Grand", "Back & Forth (feat. Mr. V)", "Output", releaseDate = "2009-01-01"),
+            candidate(
+                "Fedde Le Grand",
+                "Back & Forth (feat. Mr. V) [Tony Romera 2025 Rework]",
+                "Back & Forth (feat. Mr. V) [Tony Romera 2025 Rework] - Single",
+                releaseDate = "2025-01-01",
+            ),
+            candidate("Aaliyah", "Back & Forth", "Age Ain't Nothing But a Number"),
+        )
+
+        val choice = choose("FEDDE LE GRAND & MR V", "BACK & FORTH", candidates)
+
+        assertEquals("Output", choice?.candidate?.collectionName)
+        assertTrue(choice!!.reason, choice.reason.contains("artist=2"))
+    }
+
+    /** The lead act alone, with no sign of the guest, is some other record of A's. */
+    @Test
+    fun `a pairing does not match the lead act when the guest is absent`() {
+        val candidates = listOf(
+            candidate("Some Act", "Song", "Song - Single"),
+            candidate("Some Act", "Song (Club Mix)", "Club Hits"),
+        )
+
+        assertNull(choose("SOME ACT & GUEST SINGER", "SONG", candidates))
+    }
+
+    @Test
+    fun `every act the station names has to be evidenced, not just one`() {
+        val candidates = listOf(candidate("Some Act", "Song (feat. Guest Singer)", "Song - Single"))
+
+        assertNull(choose("SOME ACT & GUEST SINGER & THIRD ONE", "SONG", candidates))
+    }
+
+    /** Whole names and whole tokens only - never a prefix or a substring. */
+    @Test
+    fun `the lead act and the guest must match whole, not by prefix`() {
+        val prefixLead = listOf(candidate("Kid", "Doing My Own Thing (feat. MC Shurakano)", "Doing My Own Thing - Single"))
+        val longerLead = listOf(candidate("Kid Creme Orchestra", "Doing My Own Thing (feat. MC Shurakano)", "Doing My Own Thing - Single"))
+        val otherPairing = listOf(candidate("Kid Creme & Somebody", "Doing My Own Thing (feat. MC Shurakano)", "Doing My Own Thing - Single"))
+        val longerGuest = listOf(candidate("Fedde Le Grand", "Back & Forth (feat. Mr. Vegas)", "Back & Forth - Single"))
+
+        assertNull(choose("KID CREME & MC SHURAKANO", "DOING MY OWN THING", prefixLead))
+        assertNull(choose("KID CREME & MC SHURAKANO", "DOING MY OWN THING", longerLead))
+        assertNull(choose("KID CREME & MC SHURAKANO", "DOING MY OWN THING", otherPairing))
+        assertNull(choose("FEDDE LE GRAND & MR V", "BACK & FORTH", longerGuest))
+    }
+
+    /** The rule adds matches only; what matched before matches at the same tier. */
+    @Test
+    fun `ft credits and exact pairings keep their tiers`() {
+        val ft = choose("BREAKBOT FT. RUCKAZOID", "FANTASY", listOf(candidate("Breakbot", "Fantasy", "Fantasy - EP")))
+        val exact = choose(
+            "MARTIN SOLVEIG & DRAGONETTE",
+            "HELLO",
+            listOf(candidate("Martin Solveig & Dragonette", "Hello", "Hello - Single")),
+        )
+
+        assertTrue(ft!!.reason, ft.reason.contains("artist=1"))
+        assertTrue(exact!!.reason, exact.reason.contains("artist=0"))
+    }
+
+    /** The artist-photo fallback has no title to find the guest in, so it is unchanged. */
+    @Test
+    fun `sameArtist still refuses the lead act alone for a pairing`() {
+        assertTrue(!ArtworkMatcher.sameArtist("KID CREME & MC SHURAKANO", "Kid Creme"))
+        assertTrue(ArtworkMatcher.sameArtist("BREAKBOT FT. RUCKAZOID", "Breakbot"))
     }
 
     // ============== nothing rather than something wrong ==============

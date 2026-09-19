@@ -111,7 +111,9 @@ data class ArtworkChoice(
  *     candidate that does is a different recording and sorts below the plain
  *     release, but it is still offered when there is no plain release. If the
  *     station *does* name a version, candidates of that family sort first - the
- *     marker is honoured, never stripped away.
+ *     marker is honoured, never stripped away. The one exception is the
+ *     anonymous `(RMX)`, which names nothing for the lookup to look for: see
+ *     [BARE_RMX].
  *  3. **Hard rejection** is kept for what is not this record at all: another
  *     artist's cover, tributes, karaoke, "made famous by", and instrument covers
  *     nobody asked for.
@@ -176,6 +178,39 @@ object ArtworkMatcher {
         "remastered", "remaster", "explicit", "clean", "bonus track", "mono", "stereo",
     )
 
+    /**
+     * The station's anonymous remix shorthand: a trailing `(RMX)` naming no
+     * remixer and no other version identity.
+     *
+     * It says that what is playing is *some* remix - which is not something a
+     * lookup can act on, because there is no particular remix to find. Read as a
+     * version request it did the opposite of what it meant: the only candidate
+     * satisfying the marker was `Move On Up (Mark Knight Remix) - Single`, so a
+     * 2024 remix outranked every 1970 release of the record the listener was
+     * hearing (owner-reported, Curtis Mayfield `MOVE ON UP (RMX)`). The artwork
+     * lookup therefore reads such a title as the plain track.
+     *
+     * This is deliberately the narrowest possible shape: the brackets have to
+     * hold `rmx` and nothing else, and they have to end the title. A named remix
+     * (`(Tiesto Remix)`), an edit (`(Radio Edit)`), a live take and an acoustic
+     * version all keep the marker they arrived with, and a title that merely
+     * mentions RMX elsewhere is not touched.
+     */
+    private val BARE_RMX = Regex("\\(\\s*rmx\\s*\\)\\s*$", RegexOption.IGNORE_CASE)
+
+    /**
+     * The station's title as the artwork lookup reads it.
+     *
+     * Only [BARE_RMX] is dropped. The station's own strings - the player, the
+     * history, the playback metadata and the track key they are cached under -
+     * keep whatever they arrived with, because the shorthand is a statement about
+     * playback rather than a version the artwork can be looked up by.
+     */
+    internal fun lookupTitle(title: String): String {
+        val stripped = BARE_RMX.replace(title, "").trim()
+        return stripped.ifEmpty { title.trim() }
+    }
+
     /** Never the canonical cover, whoever released it. */
     private val NEVER = listOf(
         "tribute", "karaoke", "made famous", "in the style of", "originally performed",
@@ -204,6 +239,22 @@ object ArtworkMatcher {
         "special edition", "legacy edition", "bonus edition",
     )
 
+    /**
+     * Qualifiers that name a *package* around the record rather than the record's
+     * own release: a promo, an exclusive, a session, a branded market series.
+     *
+     * Deliberately short, and each entry is here because something in the
+     * catalogue actually says it - `Sprint Music Series` is the owner-reported
+     * Nelly Furtado case - rather than because it sounded plausible. A release
+     * carrying one of these is demoted to [Level.OTHER_RELEASE], the rung for a
+     * legitimate release that is not the record's own: it ranks below both the
+     * ordinary single and the album that carry the track, and it is never
+     * refused, so it is still the answer when nothing better is offered.
+     */
+    private val PROMOTIONAL_EDITIONS = listOf(
+        "promo", "exclusive", "session", "sprint music series",
+    )
+
     /** Words that introduce a credit rather than another act. */
     private val CREDIT_MARKERS = setOf("feat", "ft", "featuring", "with", "pres", "presents", "presenting")
 
@@ -228,7 +279,10 @@ object ArtworkMatcher {
         /** The studio album it belongs to. */
         STUDIO_ALBUM,
 
-        /** Another legitimate release carrying it: a label EP, a sampler, a set. */
+        /**
+         * Another legitimate release carrying it: a label EP, a sampler, a set, or
+         * an edition packaged as a promotion (see [PROMOTIONAL_EDITIONS]).
+         */
         OTHER_RELEASE,
 
         /** The same record again: remaster, deluxe, anniversary, expanded. */
@@ -254,7 +308,7 @@ object ArtworkMatcher {
     fun choose(artist: String, title: String, candidates: List<ArtworkCandidate>): ArtworkChoice? {
         if (candidates.isEmpty()) return null
 
-        val wanted = TitleParts.of(title)
+        val wanted = TitleParts.of(lookupTitle(title))
         val stationArtist = ArtistIdentity.of(artist)
 
         val scored = candidates.mapNotNull { score(stationArtist, wanted, it) }
@@ -296,7 +350,11 @@ object ArtworkMatcher {
             return null
         }
 
-        val artistTier = ArtistIdentity.tier(stationArtist, candidate.artistName) ?: return null
+        val artistTier = ArtistIdentity.tier(
+            stationArtist,
+            candidate.artistName,
+            evidence = "${candidate.artistName} ${candidate.trackName}",
+        ) ?: return null
 
         // Only a title that is not this track at all is refused here.
         val titleTier = titleTier(wanted, candidateTitle) ?: return null
@@ -336,6 +394,9 @@ object ArtworkMatcher {
         // same name, because only the newer one carried the label.
         val ownRelease = ownTier == 0 || (singleOrEp && ownTier <= 1)
 
+        // Packaged as a promotion rather than released as the record itself.
+        val promotional = PROMOTIONAL_EDITIONS.any { collection.contains(it) }
+
         val classified = when {
             compilation -> Level.COMPILATION
             otherVersion -> Level.ALTERNATE
@@ -351,7 +412,14 @@ object ArtworkMatcher {
         // new pairing. It can still be the right artwork, so it is demoted rather
         // than refused - which is what keeps a 2017 re-release from outranking the
         // artist's own original just because the re-release is a "- Single".
-        val level = if (artistTier >= 2 && classified < Level.OTHER_RELEASE) {
+        //
+        // A promotional, exclusive, session or market-branded edition is demoted
+        // for the same reason: it is a package around the record, and being the
+        // record's own single made it outrank the album the listener is hearing
+        // (NELLY FURTADO, ALL GOOD THINGS, where the Sprint Music Series single
+        // beat Loose). The demotion only ever moves a release down, never up, so a
+        // package that is already the weakest thing offered stays where it is.
+        val level = if (classified < Level.OTHER_RELEASE && (artistTier >= 2 || promotional)) {
             Level.OTHER_RELEASE
         } else {
             classified
@@ -584,8 +652,13 @@ object ArtworkMatcher {
              * a three-letter artist match an unrelated band, and none of them
              * splits a name on punctuation, which is what used to turn `AC/DC`
              * into `AC` and `Earth, Wind & Fire` into `Earth`.
+             *
+             * [evidence] is the rest of what the candidate says about who is on the
+             * record - its credit and its song title - and it is what lets a pairing
+             * the provider credits to its lead act alone still match. Without it
+             * that rule is off, which is how [sameArtist] asks.
              */
-            fun tier(station: ArtistIdentity, candidateArtist: String): Int? {
+            fun tier(station: ArtistIdentity, candidateArtist: String, evidence: String? = null): Int? {
                 val candidate = Norm.text(candidateArtist)
                 if (candidate.isEmpty() || station.normalised.isEmpty()) return null
 
@@ -624,7 +697,34 @@ object ArtworkMatcher {
                     if (stationTokens.isNotEmpty() && candidateTokens.containsAll(stationTokens)) return 4
                 }
 
+                // The station bills a pairing, `A & B`, and the provider credits the
+                // lead act alone and names the guest in the title: `A` / `Song (feat.
+                // B)`. That is the same record. It is accepted only when the whole
+                // credit is exactly the station's first act and every other act the
+                // station names is there too, as whole words, in the candidate's own
+                // credit or title - so `A & B` never matches a record of A's alone.
+                if (evidence != null && stationParts.size > 1) {
+                    val lead = withoutArticle(stationParts.first())
+                    if (lead.isNotEmpty() && Norm.same(withoutArticle(candidateCredited), lead)) {
+                        val said = Norm.tokens(evidence).map(Norm::translit)
+                        val guestsNamed = stationParts.drop(1).all { guest ->
+                            containsRun(said, Norm.tokens(guest).map(Norm::translit))
+                        }
+                        // Guest billing: the act leads, but the release is not the
+                        // pairing's own - the same tier as a member of a billed pair.
+                        if (guestsNamed) return 2
+                    }
+                }
+
                 return null
+            }
+
+            /** Whether [run] appears in [tokens] as consecutive whole tokens. */
+            private fun containsRun(tokens: List<String>, run: List<String>): Boolean {
+                if (run.isEmpty() || run.size > tokens.size) return false
+                return (0..tokens.size - run.size).any { start ->
+                    run.indices.all { i -> tokens[start + i] == run[i] }
+                }
             }
         }
     }

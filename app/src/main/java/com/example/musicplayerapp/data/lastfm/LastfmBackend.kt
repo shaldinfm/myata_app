@@ -100,9 +100,10 @@ object LastfmBackend {
     private var writesOverride: Boolean? = null
 
     /**
-     * Whether Last.fm writes may be sent at all: [BuildConfig.LASTFM_LIVE_WRITES],
-     * which is false in every build type until the owner has validated live writes
-     * and only a `-PlastfmLiveWrites=true` build turns on - or a test's override.
+     * Whether Last.fm writes may be sent at all: [BuildConfig.LASTFM_LIVE_WRITES] -
+     * or a test's override. Release builds: always on. Debug builds: off, unless
+     * built with exactly `-PlastfmLiveWrites=true` on the Gradle command line; no
+     * other property source (environment, `-D`, `gradle.properties`) can turn it on.
      *
      * Checked three times over: `ScrobbleSender` and `NowPlayingSender` before
      * building a request, and [HttpLastfmApi] refuses a write method regardless.

@@ -111,7 +111,9 @@ data class ArtworkChoice(
  *     candidate that does is a different recording and sorts below the plain
  *     release, but it is still offered when there is no plain release. If the
  *     station *does* name a version, candidates of that family sort first - the
- *     marker is honoured, never stripped away.
+ *     marker is honoured, never stripped away. The one exception is the
+ *     anonymous `(RMX)`, which names nothing for the lookup to look for: see
+ *     [BARE_RMX].
  *  3. **Hard rejection** is kept for what is not this record at all: another
  *     artist's cover, tributes, karaoke, "made famous by", and instrument covers
  *     nobody asked for.
@@ -175,6 +177,39 @@ object ArtworkMatcher {
         "original mix", "original version", "album version", "single version",
         "remastered", "remaster", "explicit", "clean", "bonus track", "mono", "stereo",
     )
+
+    /**
+     * The station's anonymous remix shorthand: a trailing `(RMX)` naming no
+     * remixer and no other version identity.
+     *
+     * It says that what is playing is *some* remix - which is not something a
+     * lookup can act on, because there is no particular remix to find. Read as a
+     * version request it did the opposite of what it meant: the only candidate
+     * satisfying the marker was `Move On Up (Mark Knight Remix) - Single`, so a
+     * 2024 remix outranked every 1970 release of the record the listener was
+     * hearing (owner-reported, Curtis Mayfield `MOVE ON UP (RMX)`). The artwork
+     * lookup therefore reads such a title as the plain track.
+     *
+     * This is deliberately the narrowest possible shape: the brackets have to
+     * hold `rmx` and nothing else, and they have to end the title. A named remix
+     * (`(Tiesto Remix)`), an edit (`(Radio Edit)`), a live take and an acoustic
+     * version all keep the marker they arrived with, and a title that merely
+     * mentions RMX elsewhere is not touched.
+     */
+    private val BARE_RMX = Regex("\\(\\s*rmx\\s*\\)\\s*$", RegexOption.IGNORE_CASE)
+
+    /**
+     * The station's title as the artwork lookup reads it.
+     *
+     * Only [BARE_RMX] is dropped. The station's own strings - the player, the
+     * history, the playback metadata and the track key they are cached under -
+     * keep whatever they arrived with, because the shorthand is a statement about
+     * playback rather than a version the artwork can be looked up by.
+     */
+    internal fun lookupTitle(title: String): String {
+        val stripped = BARE_RMX.replace(title, "").trim()
+        return stripped.ifEmpty { title.trim() }
+    }
 
     /** Never the canonical cover, whoever released it. */
     private val NEVER = listOf(
@@ -254,7 +289,7 @@ object ArtworkMatcher {
     fun choose(artist: String, title: String, candidates: List<ArtworkCandidate>): ArtworkChoice? {
         if (candidates.isEmpty()) return null
 
-        val wanted = TitleParts.of(title)
+        val wanted = TitleParts.of(lookupTitle(title))
         val stationArtist = ArtistIdentity.of(artist)
 
         val scored = candidates.mapNotNull { score(stationArtist, wanted, it) }

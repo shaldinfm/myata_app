@@ -253,6 +253,99 @@ class ArtworkMatcherGoldenTest {
         assertEquals("I Will Follow You", choose("UNA MAS", "I WILL FOLLOW YOU", listOf(edit, plain))?.candidate?.trackName)
     }
 
+    // ============== the station's anonymous (RMX) ==============
+
+    /**
+     * The live `CURTIS MAYFIELD MOVE ON UP` answer (Stage-1 query, 2026-09-20),
+     * trimmed to the releases that decide: the 1970 single, the 2024 remix single
+     * that used to win on the marker alone, the album the track is from, a
+     * Various Artists collection that carries it and a live release.
+     */
+    private fun moveOnUpCandidates() = listOf(
+        candidate(
+            "Curtis Mayfield", "Move On Up (Single Edit)", "Move On Up (Single Edit) - Single",
+            releaseDate = "1970-09-01",
+        ).copy(trackCount = 1),
+        candidate(
+            "Curtis Mayfield", "Move On Up (Mark Knight Remix)", "Move On Up (Mark Knight Remix) - Single",
+            releaseDate = "2024-06-14",
+        ).copy(trackCount = 1),
+        candidate(
+            "Curtis Mayfield", "Move On Up (Extended Version)", "Curtis (Expanded Edition)",
+            releaseDate = "1970-09-01",
+        ).copy(trackCount = 17),
+        candidate(
+            "Curtis Mayfield", "Move On Up", "70s Soul Essentials",
+            collectionArtist = "Various Artists", releaseDate = "1970-09-01",
+        ).copy(trackCount = 25),
+        candidate("Curtis Mayfield", "Move On Up", "Live In Europe", releaseDate = "1987-07-01")
+            .copy(trackCount = 13),
+    )
+
+    /**
+     * Gold, owner-reported: `(RMX)` names no remixer, so there is no remix for the
+     * lookup to want - and wanting one made the only candidate that satisfied the
+     * marker (`Move On Up (Mark Knight Remix) - Single`, 2024) beat every 1970
+     * release of the record the listener was hearing.
+     */
+    @Test
+    fun `a bare RMX is looked up as the plain track`() {
+        val choice = choose("CURTIS MAYFIELD", "MOVE ON UP (RMX)", moveOnUpCandidates())
+
+        assertNotNull(choice)
+        assertEquals("Move On Up (Single Edit) - Single", choice!!.candidate.collectionName)
+    }
+
+    /** Casing and spacing do not change what the shorthand is. */
+    @Test
+    fun `RMX casing and spacing variants are the same shorthand`() {
+        for (title in listOf("MOVE ON UP (rmx)", "Move On Up ( Rmx )", "MOVE ON UP (RMX)   ")) {
+            assertEquals(
+                title,
+                "Move On Up (Single Edit) - Single",
+                choose("CURTIS MAYFIELD", title, moveOnUpCandidates())?.candidate?.collectionName,
+            )
+        }
+    }
+
+    /**
+     * The whole of the normalisation, stated: the anonymous trailing `(RMX)`
+     * leaves the lookup title, and nothing else does - not a named remix, not an
+     * edit, not an acoustic version, not a title that merely mentions RMX.
+     */
+    @Test
+    fun `only an anonymous trailing RMX leaves the lookup title`() {
+        assertEquals("Move On Up", ArtworkMatcher.lookupTitle("Move On Up (RMX)"))
+        assertEquals("Move On Up", ArtworkMatcher.lookupTitle("Move On Up ( rmx )"))
+        assertEquals("Move On Up", ArtworkMatcher.lookupTitle("Move On Up (RMX)  "))
+        assertEquals("Move On Up (Tiesto Remix)", ArtworkMatcher.lookupTitle("Move On Up (Tiesto Remix)"))
+        assertEquals("Move On Up (Radio Edit)", ArtworkMatcher.lookupTitle("Move On Up (Radio Edit)"))
+        assertEquals("Move On Up (Acoustic Version)", ArtworkMatcher.lookupTitle("Move On Up (Acoustic Version)"))
+        assertEquals("Move On Up (RMX) Live", ArtworkMatcher.lookupTitle("Move On Up (RMX) Live"))
+        assertEquals("Move On Up RMX", ArtworkMatcher.lookupTitle("Move On Up RMX"))
+        assertEquals("RMX", ArtworkMatcher.lookupTitle("RMX"))
+    }
+
+    /** A remix the station actually names is still the remix it gets. */
+    @Test
+    fun `a named remix keeps its marker`() {
+        val choice = choose("CURTIS MAYFIELD", "MOVE ON UP (MARK KNIGHT REMIX)", moveOnUpCandidates())
+
+        assertEquals("Move On Up (Mark Knight Remix) - Single", choice?.candidate?.collectionName)
+    }
+
+    /** And an edit keeps its own, so it still beats the plain title it is an edit of. */
+    @Test
+    fun `a radio edit keeps its marker`() {
+        val edit = candidate("Some Act", "Song (Radio Edit)", "Song - Single")
+        val plain = candidate("Some Act", "Song", "Song - Single")
+
+        assertEquals(
+            "Song (Radio Edit)",
+            choose("SOME ACT", "SONG (RADIO EDIT)", listOf(plain, edit))?.candidate?.trackName,
+        )
+    }
+
     // ============== never the canonical cover ==============
 
     @Test

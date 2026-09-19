@@ -33,12 +33,25 @@
         android:background="@drawable/gradient_scrim_bottom" />
 
     <!-- Back Button -->
+    <!--
+        19x19 focus target on a 1080p TV (38px at density 320) is far below the
+        48dp minimum a D-pad needs, and the focused state only scales it 10%.
+        The target is 48x48 with the padding carrying the whole 29dp difference,
+        so the arrow itself is still drawn at its original 19x19 - the padding is
+        what was made bigger, not the glyph.
+
+        The padding is symmetric, which centres the arrow in the target, and the
+        target is inset from the frame by tv_player_back_inset rather than pinned
+        to the corner: it is the focus target that has to stay inside a TV's
+        cropped edges, so it is the target that moves.
+    -->
     <ImageButton
         android:id="@+id/btn_back"
-        android:layout_width="19dp"
-        android:layout_height="19dp"
-        android:layout_marginStart="14dp"
-        android:layout_marginTop="15dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="@dimen/tv_player_back_inset"
+        android:layout_marginTop="@dimen/tv_player_back_inset"
+        android:padding="14.5dp"
         android:background="@null"
         android:stateListAnimator="@null"
         android:src="@drawable/btn_back_tv"
@@ -51,9 +64,9 @@
     <!-- Album Art -->
     <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/iv_album_art"
-        android:layout_width="280dp"
-        android:layout_height="280dp"
-        android:layout_marginBottom="32dp"
+        android:layout_width="@dimen/tv_player_artwork_size"
+        android:layout_height="@dimen/tv_player_artwork_size"
+        android:layout_marginBottom="@dimen/tv_player_artwork_gap"
         android:scaleType="centerCrop"
         android:src="@drawable/zaglushka_logo"
         app:shapeAppearanceOverlay="@style/RoundedCornerImage"
@@ -128,7 +141,7 @@
         android:id="@+id/layout_streams"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="60dp"
+        android:layout_marginBottom="@dimen/tv_player_bottom_inset"
         android:orientation="horizontal"
         android:clipChildren="false"
         android:clipToPadding="false"

@@ -149,7 +149,13 @@ class TvMainActivity : AppCompatActivity() {
             .setNegativeButton("Отмена") { _, _ ->
                 isExitDialogShowing = false
             }
-            .setCancelable(false)
+            // Remote BACK must dismiss this the way it dismisses any dialog on
+            // Android TV: it is the only way out that needs no explanation and
+            // no D-pad travel. The dialog used to refuse cancellation, so BACK
+            // did nothing at all and the viewer was stuck on it until they
+            // navigated to "Отмена" by hand. Cancelling runs the same dismiss
+            // path, which resets isExitDialogShowing below.
+            .setCancelable(true)
             .create()
         
         dialog.setOnDismissListener {

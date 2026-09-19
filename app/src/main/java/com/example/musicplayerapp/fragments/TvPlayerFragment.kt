@@ -13,7 +13,9 @@ import com.example.musicplayerapp.R
 import com.example.musicplayerapp.StreamsViewModel
 import com.example.musicplayerapp.databinding.FragmentTvPlayerBinding
 import android.util.Log
+import com.example.musicplayerapp.data.NowPlayingArtwork
 import com.example.musicplayerapp.service.MediaPlayerService
+import com.example.musicplayerapp.ui.CoverArt
 import com.squareup.picasso.Picasso
 
 class TvPlayerFragment : Fragment() {
@@ -28,7 +30,6 @@ class TvPlayerFragment : Fragment() {
     // Track previous track info to avoid re-animating unchanged content
     private var previousTrackInfo: String = ""
     private var currentImageUrl: String? = null
-    private var currentTarget: com.squareup.picasso.Target? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -281,68 +282,45 @@ class TvPlayerFragment : Fragment() {
         }
 
         // Handle Album Art
-        if (state.img != null && state.img != "NO_IMAGE") {
-            // Track URL change to force color extraction even from cache
-            val imageUrlChanged = currentImageUrl != state.img
-            
-            // CRITICAL: Only load if URL changed to prevent duplicate loads
-            if (imageUrlChanged) {
-                // Cancel previous request to avoid race conditions and clearing wrong image
-                currentTarget?.let { Picasso.get().cancelRequest(it) }
-                
-                currentImageUrl = state.img
-                
-                // CRITICAL: Create and store Target to prevent garbage collection
-                val target = object : com.squareup.picasso.Target {
-                    override fun onBitmapLoaded(bitmap: android.graphics.Bitmap?, from: Picasso.LoadedFrom?) {
-                        if (_binding == null) return
-                        
-                        // NEW behavior: No alpha = 0f reset. 
-                        // Crossfade directly on top of the old image if possible or just update
-                        binding.ivAlbumArt.setImageBitmap(bitmap)
-                        binding.ivAlbumArt.animate()
-                            .alpha(1f)
-                            .setDuration(500)
-                            .start()
-                        
-                        // Always extract colors
-                        bitmap?.let { extractColorsAndApply(it) }
-                    }
-                    override fun onBitmapFailed(e: Exception?, errorDrawable: android.graphics.drawable.Drawable?) {
-                        if (_binding == null) return
-                        // If it fails, only then show logo if nothing is already there
-                        if (binding.ivAlbumArt.drawable == null) {
-                            binding.ivAlbumArt.setImageResource(R.drawable.zaglushka_logo)
-                            binding.ivAlbumArt.alpha = 1f
-                        }
-                    }
-                    override fun onPrepareLoad(placeHolderDrawable: android.graphics.drawable.Drawable?) {
-                        // REMOVED: Do NOT set placeholder logo here, it causes the flicker
-                    }
-                }
-                
-                // Store reference to prevent GC
-                currentTarget = target
-                
-                Picasso.get()
-                    .load(state.img)
-                    .noPlaceholder() // Avoid reset
-                    .error(R.drawable.zaglushka_logo)
-                    .into(target)
-            }
-        } else if (state.img == "NO_IMAGE") {
-            // Explicitly no image found - only then fall back to logo
+        //
+        // Rendering is the phone's rule, not a TV one: CoverArt takes the previous
+        // track's cover down as soon as the artwork answer changes and stands the
+        // plate up until the new cover has decoded, so a finished track's artwork
+        // can never sit under the new title while its lookup runs. This fragment
+        // used to keep whatever bitmap was on the view and only replace it when
+        // Picasso delivered the next one, which is the one way TV could show a
+        // cover for a track that is no longer playing - same resolver, same URL,
+        // different paint rule.
+        //
+        // What stays TV-only is what happens *with* the bitmap: the ambient
+        // background colour is still extracted from it, and now from the image the
+        // view is actually showing rather than from a second full-resolution copy.
+        val hadNoCover = NowPlayingArtwork.coverUrl(state.img) == null
+
+        currentImageUrl = CoverArt.render(
+            view = binding.ivAlbumArt,
+            img = state.img,
+            loaded = currentImageUrl,
+            onLoaded = { bitmap ->
+                if (_binding != null) extractColorsAndApply(bitmap)
+            },
+        ) {
+            // The plate is already up; dropping the URL is what lets a later state
+            // try the same cover again instead of treating it as already on screen.
             currentImageUrl = null
-            currentTarget?.let { Picasso.get().cancelRequest(it) }
-            currentTarget = null
-            binding.ivAlbumArt.setImageResource(R.drawable.zaglushka_logo)
-            binding.ivAlbumArt.alpha = 1f
+        }
+
+        if (state.img == NowPlayingArtwork.NO_IMAGE) {
+            // The resolver looked and found nothing: the plate is up, so the
+            // background returns to its neutral colour rather than keeping the
+            // previous track's extraction.
             animateBackgroundColor(Color.parseColor("#2A2A2A"))
-        } else {
-            // state.img is null (initial state or poll pending)
-            // KEEP current image and background to avoid flicker!
-            // Transition will happen when real data arrives.
-            Log.d("TvPlayerFragment", "Waiting for metadata poll - keeping current artwork")
+        } else if (hadNoCover) {
+            // Pending artwork on a just-announced track. The cover is already down
+            // (CoverArt did that); the background deliberately stays as it is until
+            // the new cover's own colours arrive, which is what stops it flickering
+            // once per poll.
+            Log.d("TvPlayerFragment", "Waiting for the artwork lookup - plate is up")
         }
     }
 
@@ -391,7 +369,8 @@ class TvPlayerFragment : Fragment() {
         // Cancel any running animations to prevent callbacks after binding is null
         binding.tvTrackInfo.animate().cancel()
         binding.ivAlbumArt.animate().cancel()
-        currentTarget?.let { Picasso.get().cancelRequest(it) }
+        // The load itself belongs to the shared renderer, which cancels on the view.
+        Picasso.get().cancelRequest(binding.ivAlbumArt)
         currentImageUrl = null
         previousTrackInfo = ""
         super.onDestroyView()

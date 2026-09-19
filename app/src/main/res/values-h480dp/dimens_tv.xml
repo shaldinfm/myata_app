@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  TV player metrics from 480dp of height up to 519dp - the viewport an hdpi
+  1280x720 panel or box reports (853x480dp), where the audit measured the
+  artwork clipped by 31dp off the top of the screen.
+
+  240 artwork + 20 gap + 24 track line + 16 + 42 + 16 + 50 + 40 = 448dp, so the
+  chain fits with 32dp of slack at the shortest height in this bucket and is
+  still free to sit slightly high rather than off the screen.
+-->
+<resources>
+    <dimen name="tv_player_artwork_size">240dp</dimen>
+    <dimen name="tv_player_artwork_gap">20dp</dimen>
+    <dimen name="tv_player_bottom_inset">40dp</dimen>
+</resources>

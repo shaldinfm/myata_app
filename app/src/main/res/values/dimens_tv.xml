@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android TV dimens, pinned.
+
+  Same rule as colors_tv.xml: TV stops sharing measurements with the mobile tree,
+  so a later edit to dimens.xml cannot move a TV control. Nothing here is used by
+  a mobile layout, and nothing mobile may start using them.
+-->
+<resources>
+    <!--
+      Player back button inset, measured from the top and start edges of the
+      1920x1080 frame to the *outer edge of the focus target*.
+
+      The target itself is 48x48 and its focused state scales it 10%, so the
+      inset has to clear the scaled box, not the resting one: 32 - 4.8 = 27.2dp,
+      i.e. 54px, is the closest any edge of the scaled target comes to the frame.
+
+      It used to be flush with the corner (the button was placed by a 14dp/15dp
+      margin that only had to position the 19dp glyph). A TV crops a few percent
+      off each edge - the design guidance is 5%, 96px here - so a control pinned
+      to the corner can be clipped or half off-screen entirely.
+    -->
+    <dimen name="tv_player_back_inset">32dp</dimen>
+</resources>

@@ -36,19 +36,22 @@
     <!--
         19x19 focus target on a 1080p TV (38px at density 320) is far below the
         48dp minimum a D-pad needs, and the focused state only scales it 10%.
-        The button is now 48x48 with the padding carrying the extra 29dp, so the
-        arrow keeps its exact size and its exact screen position: the content box
-        stays 19x19 at 14dp/15dp from the button's edges, which is where the
-        margins used to put it.
+        The target is 48x48 with the padding carrying the whole 29dp difference,
+        so the arrow itself is still drawn at its original 19x19 - the padding is
+        what was made bigger, not the glyph.
+
+        The padding is symmetric, which centres the arrow in the target, and the
+        target is inset from the frame by tv_player_back_inset rather than pinned
+        to the corner: it is the focus target that has to stay inside a TV's
+        cropped edges, so it is the target that moves.
     -->
     <ImageButton
         android:id="@+id/btn_back"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:paddingStart="14dp"
-        android:paddingEnd="15dp"
-        android:paddingTop="15dp"
-        android:paddingBottom="14dp"
+        android:layout_marginStart="@dimen/tv_player_back_inset"
+        android:layout_marginTop="@dimen/tv_player_back_inset"
+        android:padding="14.5dp"
         android:background="@null"
         android:stateListAnimator="@null"
         android:src="@drawable/btn_back_tv"

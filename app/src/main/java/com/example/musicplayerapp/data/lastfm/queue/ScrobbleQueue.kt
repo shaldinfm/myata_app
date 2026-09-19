@@ -16,7 +16,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-/** Removes an account's queued scrobbles. What explicit `Отключить` calls. */
+/**
+ * Removes an account's queued scrobbles - and invalidates every candidate of that
+ * account still on its way to the queue. What explicit `Отключить` calls.
+ */
 fun interface ScrobbleQueuePurger {
     suspend fun purge(username: String)
 
@@ -43,11 +46,19 @@ fun interface ScrobbleQueuePurger {
  *
  * ## Disconnect
  *
- * [purge] removes one account's rows. Writes and purges share one [Mutex], and a
- * write re-reads the linked account inside it: a candidate emitted just before an
- * explicit disconnect is either inserted before the purge runs - and purged by it -
- * or finds the account gone and is skipped. `LastfmAuth.disconnect` purges before
- * and after clearing the session, so nothing queued in between survives either.
+ * Each account has a **generation**, in process memory only: a number the sink
+ * records with every candidate it emits, and that [purge] advances. Writes and
+ * purges share one [Mutex], and a write, inside it, inserts only if the linked
+ * account is still the candidate's **and** that account's generation is still the
+ * one recorded at emission. So a candidate emitted before an explicit disconnect
+ * is either inserted before the purge runs - and deleted by it - or finds its
+ * generation gone and is skipped, even if it runs only after the same account has
+ * been linked again. A candidate emitted under the new link records the new
+ * generation and is queued normally. Generations are per username: disconnecting
+ * one account never invalidates another's work.
+ *
+ * `LastfmAuth.disconnect` purges before and after clearing the session, as one
+ * sequence its caller cannot cancel, so nothing queued in between survives either.
  *
  * ## Logging
  *
@@ -73,6 +84,16 @@ class ScrobbleQueue(
 
     private val lock = Mutex()
 
+    /**
+     * Per-account generation, advanced by [purge] while holding [lock]. Read without
+     * the lock at emission - a read racing an advance simply sees the old value, and
+     * that candidate is then skipped, which is right: it was emitted before the purge.
+     */
+    private val generations = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** [username]'s current generation. */
+    fun generationOf(username: String): Long = generations[username] ?: 0L
+
     /** The sink the playback service hands P4's tracker. */
     fun sink(): ScrobbleCandidateSink = ScrobbleCandidateSink { candidate ->
         val username = linkedUsername()
@@ -81,19 +102,29 @@ class ScrobbleQueue(
             // which reads the same session; kept so a gap can only drop, never misfile.
             log.event("SCROBBLE_QUEUE_SKIPPED", *fields(candidate), "reason" to "not_linked")
         } else {
-            enqueue(candidate, username)
+            enqueue(candidate, username, generationOf(username))
         }
     }
 
-    /** Queues [candidate] for [username] off the caller's thread; returns at once. */
-    fun enqueue(candidate: ScrobbleCandidate, username: String): Job =
-        scope.launch { write(candidate, username) }
+    /**
+     * Queues [candidate] for [username] off the caller's thread; returns at once.
+     * [generation] is [username]'s generation when the candidate became eligible.
+     */
+    fun enqueue(candidate: ScrobbleCandidate, username: String, generation: Long): Job =
+        scope.launch { write(candidate, username, generation) }
 
     /** The insert itself. Exposed for tests; production goes through [enqueue]. */
-    suspend fun write(candidate: ScrobbleCandidate, username: String): Outcome = lock.withLock {
+    suspend fun write(
+        candidate: ScrobbleCandidate,
+        username: String,
+        generation: Long = generationOf(username),
+    ): Outcome = lock.withLock {
         val outcome = try {
             if (linkedUsername() != username) {
                 Outcome.Skipped("account_changed")
+            } else if (generationOf(username) != generation) {
+                // Disconnected since emission - possibly linked again already.
+                Outcome.Skipped("disconnected")
             } else if (dao().insert(entryFor(candidate, username)) == -1L) {
                 Outcome.Duplicate
             } else {
@@ -113,9 +144,14 @@ class ScrobbleQueue(
         outcome
     }
 
-    /** Explicit disconnect: [username]'s rows, nobody else's. Never throws but for cancellation. */
+    /**
+     * Explicit disconnect: advances [username]'s generation, so nothing it emitted
+     * earlier can still be written, then deletes its rows - nobody else's. Never
+     * throws but for cancellation.
+     */
     override suspend fun purge(username: String) {
         lock.withLock {
+            generations.merge(username, 1L, Long::plus)
             try {
                 val removed = dao().deleteForUsername(username)
                 log.event("SCROBBLE_QUEUE_PURGED", "rows" to removed)

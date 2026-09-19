@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -182,7 +183,7 @@ class ScrobbleQueueTest {
     fun `a write in flight when the purge starts is purged too`() = runBlocking {
         val gate = CompletableDeferred<Unit>()
         dao.holdInsertsUntil = gate
-        queue.enqueue(candidate(), "listener-x")
+        queue.enqueue(candidate(), "listener-x", queue.generationOf("listener-x"))
         dao.insertStarted.await()                            // the write holds the lock
         val purge = launch(Dispatchers.Default) { queue.purge("listener-x") }
         kotlinx.coroutines.delay(100)
@@ -200,6 +201,112 @@ class ScrobbleQueueTest {
         assertNull(logged.single().second["rows"])
     }
 
+    // ---- disconnect races (the generation, and a disconnect nobody can cancel) --------
+
+    /**
+     * A dispatcher that runs nothing until [drain] - so a write can be launched and
+     * then held, deterministically, for as long as a test needs.
+     */
+    private class HeldDispatcher : java.util.concurrent.Executor {
+        private val pending = java.util.ArrayDeque<Runnable>()
+        override fun execute(command: Runnable) { synchronized(pending) { pending.add(command) } }
+        fun drain() {
+            while (true) {
+                val next = synchronized(pending) { pending.poll() } ?: return
+                next.run()
+            }
+        }
+    }
+
+    /** The real LastfmAuth, over a session store the queue also reads. */
+    private class Sessions : com.example.musicplayerapp.data.lastfm.LastfmSessionStore {
+        @Volatile var session = com.example.musicplayerapp.data.lastfm.LastfmStoredSession.EMPTY
+        override fun read() = session
+        override fun write(session: com.example.musicplayerapp.data.lastfm.LastfmStoredSession) {
+            this.session = session
+        }
+        fun link(username: String) {
+            session = com.example.musicplayerapp.data.lastfm.LastfmStoredSession(sessionKey = "sk-fake", username = username)
+        }
+        val username: String? get() = session.sessionKey?.let { session.username }
+    }
+
+    private object NoNetwork : com.example.musicplayerapp.data.lastfm.LastfmApi {
+        override suspend fun send(request: com.example.musicplayerapp.data.lastfm.LastfmRequest) =
+            com.example.musicplayerapp.data.lastfm.LastfmTransportResult.Unreachable("Offline")
+    }
+
+    private fun authOver(sessions: Sessions, purger: ScrobbleQueuePurger) =
+        com.example.musicplayerapp.data.lastfm.LastfmAuth(
+            api = NoNetwork, requests = null, store = sessions,
+            io = Dispatchers.Unconfined, queue = purger,
+        )
+
+    @Test
+    fun `a candidate held past a disconnect and a relink of the same account is never queued`() = runBlocking {
+        val sessions = Sessions().apply { link("listener-x") }
+        val held = HeldDispatcher()
+        val q = ScrobbleQueue(
+            dao = { dao }, linkedUsername = { sessions.username },
+            scope = CoroutineScope(SupervisorJob() + held.asCoroutineDispatcher()),
+        )
+        val auth = authOver(sessions, q)
+
+        q.sink().onEligible(candidate(startedAt = t0))      // emitted under X, write held
+        auth.disconnect()                                   // X disconnects...
+        sessions.link("listener-x")                         // ...and the same X links again
+        held.drain()                                        // only now does the old write run
+
+        assertTrue("the pre-disconnect listen never lands", dao.rows.isEmpty())
+
+        q.sink().onEligible(candidate(startedAt = t0 + 400)) // a genuinely new candidate
+        held.drain()
+        assertEquals(listOf(t0 + 400), dao.rows.map { it.startedAt })
+    }
+
+    @Test
+    fun `disconnecting one account never invalidates another's candidates`() = runBlocking {
+        val linkedNow: String? = "listener-y"
+        val held = HeldDispatcher()
+        val q = ScrobbleQueue(
+            dao = { dao }, linkedUsername = { linkedNow },
+            scope = CoroutineScope(SupervisorJob() + held.asCoroutineDispatcher()),
+        )
+        q.sink().onEligible(candidate(startedAt = t0))      // Y's candidate, held
+        q.purge("listener-x")                               // X is disconnected elsewhere
+        assertEquals(0L, q.generationOf("listener-y"))
+        assertEquals(1L, q.generationOf("listener-x"))
+        held.drain()
+        assertEquals(listOf("listener-y"), dao.rows.map { it.lastfmUsername })
+    }
+
+    @Test
+    fun `a disconnect whose caller is cancelled midway still clears the session and purges`() = runBlocking {
+        val sessions = Sessions().apply { link("listener-x") }
+        dao.rows += ScrobbleQueueEntry("myata", t0, "k", "A", "T", 200, "listener-x", 1L)
+        val q = ScrobbleQueue(dao = { dao }, linkedUsername = { sessions.username }, scope = this)
+        val auth = authOver(sessions, q)
+
+        // The first purge's delete is held open; while it is, a candidate that passed
+        // its checks before the purge lands a row - the case the final purge exists for.
+        val gate = CompletableDeferred<Unit>()
+        dao.onFirstDelete = {
+            gate.await()
+            dao.rows += ScrobbleQueueEntry("gold", t0 + 1, "k", "A", "T", 200, "listener-x", 1L)
+        }
+        val screen = CoroutineScope(Job() + Dispatchers.Default)   // the ViewModel's scope
+        val disconnect = screen.launch { auth.disconnect() }
+        dao.firstDeleteStarted.await()
+        screen.cancel()                                     // the screen is destroyed
+        gate.complete(Unit)
+        withTimeout(5_000) { disconnect.join() }
+
+        assertEquals("the session is cleared", null, sessions.username)
+        assertEquals(com.example.musicplayerapp.data.lastfm.LastfmStoredSession.EMPTY, sessions.session)
+        assertEquals("both purges ran", 2, dao.deleteCalls)
+        assertTrue("no row of the disconnected account survives", dao.rows.none { it.lastfmUsername == "listener-x" })
+    }
+
     // ---- fake ------------------------------------------------------------------------
 
     private class FakeDao : ScrobbleQueueDao {
@@ -207,6 +314,9 @@ class ScrobbleQueueTest {
         @Volatile var failWith: Exception? = null
         @Volatile var holdInsertsUntil: CompletableDeferred<Unit>? = null
         val insertStarted = CompletableDeferred<Unit>()
+        @Volatile var onFirstDelete: (suspend () -> Unit)? = null
+        val firstDeleteStarted = CompletableDeferred<Unit>()
+        @Volatile var deleteCalls = 0
 
         override suspend fun insert(entry: ScrobbleQueueEntry): Long {
             failWith?.let { throw it }
@@ -231,6 +341,11 @@ class ScrobbleQueueTest {
 
         override suspend fun deleteForUsername(username: String): Int {
             failWith?.let { throw it }
+            deleteCalls++
+            if (deleteCalls == 1) {
+                firstDeleteStarted.complete(Unit)
+                onFirstDelete?.invoke()
+            }
             return synchronized(rows) {
                 val before = rows.size
                 rows.removeAll { it.lastfmUsername == username }

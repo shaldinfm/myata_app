@@ -5,6 +5,7 @@ import com.example.musicplayerapp.data.lastfm.queue.ScrobbleQueue
 import com.example.musicplayerapp.data.lastfm.queue.ScrobbleQueuePurger
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -181,10 +182,17 @@ class LastfmAuth(
         // a disconnect and never comes through here: its rows wait for the same
         // account. Purged before the session goes, and again after, so nothing
         // queued in between survives; another account's rows are never touched.
-        val username = read().username
-        if (!username.isNullOrEmpty()) queue.purge(username)
-        write(LastfmStoredSession.EMPTY)
-        if (!username.isNullOrEmpty()) queue.purge(username)
+        //
+        // The sequence cannot be cancelled once begun: the screen that asked for it may
+        // be destroyed at any point, and stopping between the session going and the
+        // final purge would leave a row the listener was promised was gone. It is a
+        // few milliseconds of suspend work - nothing here blocks a thread.
+        withContext(NonCancellable) {
+            val username = read().username
+            if (!username.isNullOrEmpty()) queue.purge(username)
+            write(LastfmStoredSession.EMPTY)
+            if (!username.isNullOrEmpty()) queue.purge(username)
+        }
     }
 
     /**

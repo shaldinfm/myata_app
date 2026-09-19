@@ -2,6 +2,7 @@ package com.example.musicplayerapp
 
 import android.app.Application
 import com.example.musicplayerapp.data.lastfm.LastfmBackend
+import com.example.musicplayerapp.data.lastfm.queue.LastfmScrobbleScheduler
 import com.example.musicplayerapp.data.ArtworkModule
 import com.example.musicplayerapp.data.supabase.IdentityReconciler
 import com.example.musicplayerapp.data.supabase.ReactionSyncScheduler
@@ -17,6 +18,12 @@ class MyataApplication : Application() {
         // and here rather than lazily, because a JVM test never runs an Application,
         // which is what keeps the real transport inert there. See LastfmBackend.
         LastfmBackend.armForProduction()
+
+        // G6b P6b: send whatever the Last.fm queue holds, if an account is linked.
+        // Only schedules WorkManager work, off the main thread; the write gate still
+        // decides whether anything is actually sent. After arming, and - under
+        // instrumentation - after MyataTestRunner installed its offline transport.
+        LastfmScrobbleScheduler.onAppStart(this)
 
         // Restores a Supabase session this install already has, creates none, and
         // then repairs the persisted identity around whatever came back.

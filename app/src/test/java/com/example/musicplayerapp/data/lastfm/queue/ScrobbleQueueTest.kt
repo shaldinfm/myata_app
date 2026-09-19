@@ -307,6 +307,35 @@ class ScrobbleQueueTest {
         assertTrue("no row of the disconnected account survives", dao.rows.none { it.lastfmUsername == "listener-x" })
     }
 
+    // ---- a drain after a first insert (G6b P6b) ---------------------------------------
+
+    @Test
+    fun `a drain is asked for after a first insert, and for nothing else`() = runBlocking {
+        var asked = 0
+        val q = ScrobbleQueue(dao = { dao }, linkedUsername = { linked }, scope = CoroutineScope(queueJob), onQueued = { asked++ })
+        q.write(candidate(startedAt = t0), "listener-x")
+        assertEquals(1, asked)
+        q.write(candidate(startedAt = t0), "listener-x")                            // duplicate
+        linked = "listener-y"
+        q.write(candidate(startedAt = t0 + 100), "listener-x")                     // skipped
+        linked = "listener-x"
+        dao.failWith = IllegalStateException("x")
+        q.write(candidate(startedAt = t0 + 200), "listener-x")                     // failed
+        assertEquals("only the first insert asked", 1, asked)
+    }
+
+    @Test
+    fun `a failed drain request loses nothing - the row is already committed`() = runBlocking {
+        val q = ScrobbleQueue(
+            dao = { dao }, linkedUsername = { linked }, scope = CoroutineScope(queueJob),
+            log = { name, fields -> logged += name to fields.toMap() },
+            onQueued = { throw IllegalStateException("WorkManager unavailable") },
+        )
+        assertEquals(ScrobbleQueue.Outcome.Queued, q.write(candidate(), "listener-x"))
+        assertEquals(1, dao.rows.size)
+        assertTrue(names().contains("SCROBBLE_DRAIN_REQUEST_FAILED"))
+    }
+
     // ---- fake ------------------------------------------------------------------------
 
     private class FakeDao : ScrobbleQueueDao {

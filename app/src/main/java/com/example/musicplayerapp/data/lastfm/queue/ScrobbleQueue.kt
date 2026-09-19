@@ -73,6 +73,12 @@ class ScrobbleQueue(
     private val scope: CoroutineScope,
     private val clock: () -> Long = System::currentTimeMillis,
     private val log: ScrobbleLog = ScrobbleLog.NONE,
+    /**
+     * Called after a row is **first** inserted, and only then (G6b P6b): production
+     * asks for a drain. Never for a duplicate, a skip or a failure. It only schedules;
+     * this queue never sends anything.
+     */
+    private val onQueued: () -> Unit = {},
 ) : ScrobbleQueuePurger {
 
     sealed class Outcome {
@@ -136,7 +142,16 @@ class ScrobbleQueue(
             Outcome.Failed(e.javaClass.simpleName)
         }
         when (outcome) {
-            Outcome.Queued -> log.event("SCROBBLE_QUEUED", *fields(candidate))
+            Outcome.Queued -> {
+                log.event("SCROBBLE_QUEUED", *fields(candidate))
+                // The row is committed. Asking for a drain cannot undo that; if the
+                // ask fails, the next trigger or app start asks again.
+                try {
+                    onQueued()
+                } catch (e: Exception) {
+                    log.event("SCROBBLE_DRAIN_REQUEST_FAILED", "error" to e.javaClass.simpleName)
+                }
+            }
             Outcome.Duplicate -> log.event("SCROBBLE_QUEUE_DUPLICATE", *fields(candidate))
             is Outcome.Skipped -> log.event("SCROBBLE_QUEUE_SKIPPED", *fields(candidate), "reason" to outcome.reason)
             is Outcome.Failed -> log.event("SCROBBLE_QUEUE_FAILED", *fields(candidate), "error" to outcome.kind)
@@ -200,6 +215,7 @@ class ScrobbleQueue(
                     },
                     scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
                     log = { name, fields -> PlaybackLog.event(name, *fields) },
+                    onQueued = { LastfmScrobbleScheduler.requestDrain(app) },
                 ).also { process = it }
             }
         }

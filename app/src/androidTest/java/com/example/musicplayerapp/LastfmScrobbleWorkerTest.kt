@@ -56,6 +56,9 @@ class LastfmScrobbleWorkerTest {
         LastfmBackend.overrideForInstrumentation { api }
         LastfmBackend.overrideRequestsForInstrumentation { LiveLastfm.fakeRequests() }
         PrefsLastfmSessionStore(context).write(LastfmStoredSession(sessionKey = "sk-fabricated", username = "p6a-listener"))
+        // G6b P6b: the build is write-disabled; these tests expect the scripted fake to
+        // receive writes, so they open the gate for it. restoreOffline closes it again.
+        LastfmBackend.overrideWritesForTest(true)
     }
 
     @After
@@ -116,7 +119,9 @@ class LastfmScrobbleWorkerTest {
         seed(t0)
         api.acceptAll = true
 
-        LastfmScrobbleScheduler.requestDrain(context)
+        // requestDrain is asynchronous since P6b (its coalescing check runs off the
+        // caller's thread); requestDrainNow is its body.
+        LastfmScrobbleScheduler.requestDrainNow(context)
         val info = workManager.getWorkInfosForUniqueWork(LastfmScrobbleScheduler.DRAIN_WORK).get().single()
         assertEquals(NetworkType.CONNECTED, info.constraints.requiredNetworkType)
         assertEquals("waits for a network", WorkInfo.State.ENQUEUED, info.state)

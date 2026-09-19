@@ -12,8 +12,10 @@
       1920x1080 frame to the *outer edge of the focus target*.
 
       The target itself is 48x48 and its focused state scales it 10%, so the
-      inset has to clear the scaled box, not the resting one: 32 - 4.8 = 27.2dp,
-      i.e. 54px, is the closest any edge of the scaled target comes to the frame.
+      inset has to clear the scaled box, not the resting one: 52.8dp grows 4.8dp
+      in total, 2.4dp on each side, so 32 - 2.4 = 29.6dp (59px) is the closest
+      any edge of the focused target comes to the frame. Measured on the TV AVD:
+      focused bounds [59,59][165,165], resting box [64,64][160,160].
 
       It used to be flush with the corner (the button was placed by a 14dp/15dp
       margin that only had to position the 19dp glyph). A TV crops a few percent

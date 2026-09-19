@@ -28,6 +28,7 @@ class ScrobbleSenderTest {
     private var stored = LastfmStoredSession(sessionKey = "sk-x-1", username = "listener-x")
     private val invalidated = mutableListOf<Pair<String, String>>()
     private val logged = mutableListOf<String>()
+    private var writes = true
 
     private fun sender() = ScrobbleSender(
         dao = { dao },
@@ -35,6 +36,7 @@ class ScrobbleSenderTest {
         requests = { LastfmRequestFactory("0123456789abcdef0123456789abcdef", SharedSecretSigner("fedcba9876543210fedcba9876543210")) },
         api = { api },
         invalidateSession = { u, k -> invalidated += u to k; stored = stored.copy(sessionKey = null) },
+        writesEnabled = { writes },
         clock = { now },
         jitter = { 0.0 },
         log = { name, fields -> logged += name + fields.toList() },
@@ -69,6 +71,25 @@ class ScrobbleSenderTest {
 
     private fun sentTimestamps(request: LastfmRequest): List<Long> =
         (0 until 50).mapNotNull { request.params["timestamp[$it]"]?.toLong() }
+
+    // ---- the write gate (G6b P6b) ----------------------------------------------------
+
+    @Test
+    fun `a closed write gate sends nothing, changes nothing and schedules nothing`() = runBlocking {
+        seed(row(t0), row(t0 + 300, next = now + 60_000))
+        writes = false
+        val s = sender()
+        repeat(3) {
+            assertEquals("not WaitUntil, so no retry timer", ScrobbleSender.Result.WritesDisabled, s.drain())
+        }
+        assertTrue("no request", api.requests.isEmpty())
+        assertEquals("rows untouched", listOf(row(t0), row(t0 + 300, next = now + 60_000)), dao.rows.toList())
+        assertTrue(!s.blockedUntilProcessRestart)
+        writes = true
+        api.always { answer(it) }
+        s.drain()
+        assertEquals("opening the gate lets them go", 1, api.requests.size)
+    }
 
     // ---- requests ------------------------------------------------------------------
 

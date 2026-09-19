@@ -63,6 +63,8 @@ class ScrobbleSender(
     private val requests: () -> LastfmRequestFactory?,
     private val api: () -> LastfmApi,
     private val invalidateSession: suspend (username: String, sessionKeyUsed: String) -> Unit,
+    /** The write gate (G6b P6b): [LastfmBackend.writesEnabled] in production. Required, never defaulted. */
+    private val writesEnabled: () -> Boolean,
     private val clock: () -> Long = System::currentTimeMillis,
     private val jitter: () -> Double = { Random.nextDouble(-1.0, 1.0) },
     private val log: ScrobbleLog = ScrobbleLog.NONE,
@@ -86,6 +88,12 @@ class ScrobbleSender(
 
         /** A non-retryable error earlier in this process; nothing is sent until restart. */
         data object Blocked : Result()
+
+        /**
+         * The write gate is closed (G6b P6b). Nothing is read, sent or changed, and no
+         * retry is scheduled: the rows simply wait, untouched, for a build that may write.
+         */
+        data object WritesDisabled : Result()
     }
 
     private val lock = Mutex()
@@ -109,6 +117,7 @@ class ScrobbleSender(
     /** One request. Null means "sent a batch, look again"; anything else ends the drain. */
     private suspend fun step(): Result? {
         if (blockedUntilProcessRestart) return Result.Blocked
+        if (!writesEnabled()) return Result.WritesDisabled
 
         val linked = linkedNow() ?: return Result.NotLinked
         val factory = requests() ?: return Result.NotConfigured
@@ -251,6 +260,7 @@ class ScrobbleSender(
                     requests = { LastfmBackend.requests() },
                     api = { LastfmBackend.api(app) },
                     invalidateSession = { username, key -> LastfmAuth.forContext(app).invalidateSession(username, key) },
+                    writesEnabled = { LastfmBackend.writesEnabled },
                     log = { name, fields -> PlaybackLog.event(name, *fields) },
                 ).also { process = it }
             }

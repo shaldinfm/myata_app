@@ -1,6 +1,8 @@
 package com.example.musicplayerapp.data.lastfm
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
+import com.example.musicplayerapp.BuildConfig
 import com.example.musicplayerapp.SecureNetModule
 
 /**
@@ -88,4 +90,40 @@ object LastfmBackend {
     /** Whether the transport is currently replaced. `MyataTestRunner` asserts this. */
     val isOverridden: Boolean
         get() = apiOverride != null
+
+    // ---- the write gate (G6b P6b) -------------------------------------------------
+
+    /** The Last.fm methods that write to a listener's profile. */
+    val WRITE_METHODS: Set<String> = setOf("track.scrobble", "track.updateNowPlaying")
+
+    @Volatile
+    private var writesOverride: Boolean? = null
+
+    /**
+     * Whether Last.fm writes may be sent at all: [BuildConfig.LASTFM_LIVE_WRITES],
+     * which is false in every build type until the owner has validated live writes
+     * and only a `-PlastfmLiveWrites=true` build turns on - or a test's override.
+     *
+     * Checked three times over: `ScrobbleSender` and `NowPlayingSender` before
+     * building a request, and [HttpLastfmApi] refuses a write method regardless.
+     * Reads and authentication never consult it.
+     */
+    val writesEnabled: Boolean
+        get() = writesOverride ?: BuildConfig.LASTFM_LIVE_WRITES
+
+    /**
+     * Tests only: let scripted fake transports exercise the whole write path while
+     * the build itself stays write-disabled; `null` restores the build's value.
+     * Nothing in `src/main` calls this.
+     */
+    @VisibleForTesting
+    fun overrideWritesForTest(enabled: Boolean?) {
+        writesOverride = enabled
+    }
+
+    /** Tests only: undo [armForProduction] so a JVM test cannot leave the transport armed. */
+    @VisibleForTesting
+    fun disarmForTest() {
+        armed = false
+    }
 }

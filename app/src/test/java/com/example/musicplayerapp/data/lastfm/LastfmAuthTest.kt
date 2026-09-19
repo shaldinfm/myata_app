@@ -340,6 +340,51 @@ class LastfmAuthTest {
         assertEquals("sk-1", store.session.sessionKey)
     }
 
+    // ---- re-authenticating as another account (G6b P6a) ----------------------------
+
+    /** Re-auth required for [retained], with a live token from the browser flow. */
+    private fun reauthPending(retained: String) {
+        store.session = LastfmStoredSession(
+            username = retained, pendingToken = "tok-re", pendingTokenIssuedAt = now - 1_000,
+        )
+        assertTrue(auth().link() is LastfmLink.Pending)
+    }
+
+    @Test
+    fun `re-auth that comes back as a different account purges the replaced account's queue`() = runBlocking {
+        reauthPending("listener-x")
+        api.reply("auth.getSession", SESSION_OK)                 // Last.fm answers: f0ul482
+
+        assertEquals(LastfmAuth.Resume.Linked, auth().resume())
+
+        assertEquals("the replaced account's rows go", listOf("listener-x"), purges.map { it.first })
+        assertEquals(
+            "purged before the new session is stored",
+            LastfmStoredSession(username = "listener-x", pendingToken = "tok-re", pendingTokenIssuedAt = now - 1_000),
+            purges.single().second,
+        )
+        assertEquals(LastfmLink.Linked("sk-1", "f0ul482"), auth().link())
+    }
+
+    @Test
+    fun `re-auth as the same account keeps its queue`() = runBlocking {
+        reauthPending("f0ul482")
+        api.reply("auth.getSession", SESSION_OK)
+
+        assertEquals(LastfmAuth.Resume.Linked, auth().resume())
+
+        assertTrue("same account: nothing purged", purges.isEmpty())
+        assertEquals(LastfmLink.Linked("sk-1", "f0ul482"), auth().link())
+    }
+
+    @Test
+    fun `a first link has no retained account and purges nothing`() = runBlocking {
+        pending("tok-1")
+        api.reply("auth.getSession", SESSION_OK)
+        auth().resume()
+        assertTrue(purges.isEmpty())
+    }
+
     // ---- the lock ---------------------------------------------------------------
 
     @Test

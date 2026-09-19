@@ -135,14 +135,23 @@ class LastfmAuth(
             is LastfmTransportResult.Unreachable -> Resume.Unreachable
             is LastfmTransportResult.Body -> when (val parsed = LastfmResponses.session(sent.text)) {
                 is LastfmResult.Ok -> {
-                    // One write: the session in, the token out. There is no state in
-                    // which the token is spent and the session not yet stored.
-                    write(
-                        LastfmStoredSession(
-                            sessionKey = parsed.value.sessionKey,
-                            username = parsed.value.username,
-                        )
-                    )
+                    val retained = stored.username
+                    val linkedAs = parsed.value.username
+                    withContext(NonCancellable) {
+                        // G6b P6a: re-authenticating as a *different* account replaces
+                        // the one that needed it. Its queued scrobbles could never be
+                        // sent again - never as the new account, and it is no longer
+                        // linked to be sent as itself - so they go, before the new
+                        // session is stored. Only on that mismatch: the same account
+                        // coming back keeps its queue, and a first link has nothing
+                        // retained to replace. Not `disconnect()`, which would clear
+                        // the session being installed.
+                        if (!retained.isNullOrEmpty() && retained != linkedAs) queue.purge(retained)
+
+                        // One write: the session in, the token out. There is no state in
+                        // which the token is spent and the session not yet stored.
+                        write(LastfmStoredSession(sessionKey = parsed.value.sessionKey, username = linkedAs))
+                    }
                     Resume.Linked
                 }
                 is LastfmResult.Malformed -> Resume.Unreachable

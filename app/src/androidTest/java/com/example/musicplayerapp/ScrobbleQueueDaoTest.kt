@@ -144,4 +144,56 @@ class ScrobbleQueueDaoTest {
         assertEquals(1, dao.pendingFor("listener-y", 50).size)
         assertNull(dao.find("myata", t0))
     }
+
+    // ---- the sender's operations (G6b P6a) -----------------------------------------
+
+    private val quarantine = com.example.musicplayerapp.data.lastfm.queue.ScrobblePolicy.QUARANTINE
+
+    @Test
+    fun activeHeadIsOldestFirstAndLeavesOutQuarantinedRows() = runBlocking {
+        dao.insert(entry(streamId = "myata", startedAt = t0 + 200))
+        dao.insert(entry(streamId = "gold", startedAt = t0 + 200))
+        dao.insert(entry(streamId = "myata", startedAt = t0))
+        dao.insert(entry(streamId = "myata", startedAt = t0 + 100, username = "listener-y"))
+        dao.insert(entry(streamId = "myata", startedAt = t0 + 50))
+        dao.recordAttempt("myata", t0 + 50, quarantine)            // Long.MAX_VALUE in SQLite
+
+        val head = dao.activeHead("listener-x", quarantine, 50)
+        assertEquals(
+            listOf("myata" to t0, "gold" to t0 + 200, "myata" to t0 + 200),
+            head.map { it.streamId to it.startedAt },
+        )
+        assertEquals("a row in backoff stays in the active head", 2, dao.activeHead("listener-x", quarantine, 2).size)
+        assertEquals(quarantine, dao.find("myata", t0 + 50)!!.nextAttemptAt)
+    }
+
+    @Test
+    fun recordAttemptIncrementsAndReschedulesOnlyThatOccurrence() = runBlocking {
+        dao.insert(entry(streamId = "myata", startedAt = t0))
+        dao.insert(entry(streamId = "gold", startedAt = t0))
+        assertEquals(1, dao.recordAttempt("myata", t0, 1_789_000_030_000L))
+        assertEquals(1, dao.recordAttempt("myata", t0, 1_789_000_090_000L))
+        val row = dao.find("myata", t0)!!
+        assertEquals(2, row.attempts)
+        assertEquals(1_789_000_090_000L, row.nextAttemptAt)
+        assertEquals(0, dao.find("gold", t0)!!.attempts)
+    }
+
+    @Test
+    fun deletingOrUpdatingAPurgedOccurrenceIsANoOpAndRecreatesNothing() = runBlocking {
+        dao.insert(entry(startedAt = t0))
+        dao.deleteForUsername("listener-x")                       // explicit disconnect
+        assertEquals(0, dao.recordAttempt("myata", t0, 1L))
+        assertEquals(0, dao.deleteOccurrence("myata", t0))
+        assertEquals(0, dao.count())
+    }
+
+    @Test
+    fun deleteOccurrenceRemovesExactlyThatKey() = runBlocking {
+        dao.insert(entry(streamId = "myata", startedAt = t0))
+        dao.insert(entry(streamId = "gold", startedAt = t0))
+        assertEquals(1, dao.deleteOccurrence("myata", t0))
+        assertNull(dao.find("myata", t0))
+        assertEquals(1, dao.count())
+    }
 }

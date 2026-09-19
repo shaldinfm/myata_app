@@ -365,6 +365,114 @@ class ArtworkMatcherGoldenTest {
         assertNotNull(choose("SUPAFLY INC", "LET'S GET DOWN", candidates))
     }
 
+    // ============== a pairing credited to its lead act ==============
+
+    /**
+     * The station bills a pairing with `&`; the provider credits the lead act
+     * alone and names the guest in the title. Before this the candidate was
+     * refused on the artist, and with nothing else offered the track got the
+     * plate. It is accepted at the guest-billing tier, 2.
+     */
+    @Test
+    fun `a pairing credited to its lead act, with the guest in the title, is accepted`() {
+        val candidates = listOf(candidate("Some Act", "Song (feat. Guest Singer)", "Song (feat. Guest Singer) - Single"))
+
+        val choice = choose("SOME ACT & GUEST SINGER", "SONG", candidates)
+
+        assertNotNull(choice)
+        assertTrue(choice!!.reason, choice.reason.contains("artist=2"))
+    }
+
+    /** Gold, from the audit: every candidate was refused and the listener got the plate. */
+    @Test
+    fun `KID CREME & MC SHURAKANO matches Kid Creme feat MC Shurakano`() {
+        val candidates = listOf(
+            candidate("Kid Creme", "Doing My Own Thing (Dub) [feat. MC Shurakano]", "Doing My Own Thing - Single (feat. MC Shurakano) - EP"),
+            candidate("Kid Creme", "Doing My Own Thing (Vocal Mix) [feat. MC Shurakano]", "Doing My Own Thing - Single (feat. MC Shurakano) - EP"),
+            candidate("Kid Creme", "Doing My Own Thing (Dub) [feat. MC Shurakano]", "Jalapeno House, Vol. 3"),
+            // Same title, unrelated act: still refused.
+            candidate("Johnnie Taylor", "Doing My Own Thing (Part 2)", "Taylored In Silk"),
+        )
+
+        val choice = choose("KID CREME & MC SHURAKANO", "DOING MY OWN THING", candidates)
+
+        assertEquals("Doing My Own Thing - Single (feat. MC Shurakano) - EP", choice?.candidate?.collectionName)
+        assertTrue(choice!!.reason, choice.reason.contains("artist=2"))
+    }
+
+    /** Gold, from the audit: same shape, with a punctuated guest name. */
+    @Test
+    fun `FEDDE LE GRAND & MR V matches Fedde Le Grand feat Mr V`() {
+        val candidates = listOf(
+            candidate("Fedde Le Grand", "Back & Forth (feat. Mr. V)", "Output", releaseDate = "2009-01-01"),
+            candidate(
+                "Fedde Le Grand",
+                "Back & Forth (feat. Mr. V) [Tony Romera 2025 Rework]",
+                "Back & Forth (feat. Mr. V) [Tony Romera 2025 Rework] - Single",
+                releaseDate = "2025-01-01",
+            ),
+            candidate("Aaliyah", "Back & Forth", "Age Ain't Nothing But a Number"),
+        )
+
+        val choice = choose("FEDDE LE GRAND & MR V", "BACK & FORTH", candidates)
+
+        assertEquals("Output", choice?.candidate?.collectionName)
+        assertTrue(choice!!.reason, choice.reason.contains("artist=2"))
+    }
+
+    /** The lead act alone, with no sign of the guest, is some other record of A's. */
+    @Test
+    fun `a pairing does not match the lead act when the guest is absent`() {
+        val candidates = listOf(
+            candidate("Some Act", "Song", "Song - Single"),
+            candidate("Some Act", "Song (Club Mix)", "Club Hits"),
+        )
+
+        assertNull(choose("SOME ACT & GUEST SINGER", "SONG", candidates))
+    }
+
+    @Test
+    fun `every act the station names has to be evidenced, not just one`() {
+        val candidates = listOf(candidate("Some Act", "Song (feat. Guest Singer)", "Song - Single"))
+
+        assertNull(choose("SOME ACT & GUEST SINGER & THIRD ONE", "SONG", candidates))
+    }
+
+    /** Whole names and whole tokens only - never a prefix or a substring. */
+    @Test
+    fun `the lead act and the guest must match whole, not by prefix`() {
+        val prefixLead = listOf(candidate("Kid", "Doing My Own Thing (feat. MC Shurakano)", "Doing My Own Thing - Single"))
+        val longerLead = listOf(candidate("Kid Creme Orchestra", "Doing My Own Thing (feat. MC Shurakano)", "Doing My Own Thing - Single"))
+        val otherPairing = listOf(candidate("Kid Creme & Somebody", "Doing My Own Thing (feat. MC Shurakano)", "Doing My Own Thing - Single"))
+        val longerGuest = listOf(candidate("Fedde Le Grand", "Back & Forth (feat. Mr. Vegas)", "Back & Forth - Single"))
+
+        assertNull(choose("KID CREME & MC SHURAKANO", "DOING MY OWN THING", prefixLead))
+        assertNull(choose("KID CREME & MC SHURAKANO", "DOING MY OWN THING", longerLead))
+        assertNull(choose("KID CREME & MC SHURAKANO", "DOING MY OWN THING", otherPairing))
+        assertNull(choose("FEDDE LE GRAND & MR V", "BACK & FORTH", longerGuest))
+    }
+
+    /** The rule adds matches only; what matched before matches at the same tier. */
+    @Test
+    fun `ft credits and exact pairings keep their tiers`() {
+        val ft = choose("BREAKBOT FT. RUCKAZOID", "FANTASY", listOf(candidate("Breakbot", "Fantasy", "Fantasy - EP")))
+        val exact = choose(
+            "MARTIN SOLVEIG & DRAGONETTE",
+            "HELLO",
+            listOf(candidate("Martin Solveig & Dragonette", "Hello", "Hello - Single")),
+        )
+
+        assertTrue(ft!!.reason, ft.reason.contains("artist=1"))
+        assertTrue(exact!!.reason, exact.reason.contains("artist=0"))
+    }
+
+    /** The artist-photo fallback has no title to find the guest in, so it is unchanged. */
+    @Test
+    fun `sameArtist still refuses the lead act alone for a pairing`() {
+        assertTrue(!ArtworkMatcher.sameArtist("KID CREME & MC SHURAKANO", "Kid Creme"))
+        assertTrue(ArtworkMatcher.sameArtist("BREAKBOT FT. RUCKAZOID", "Breakbot"))
+    }
+
     // ============== nothing rather than something wrong ==============
 
     @Test

@@ -296,7 +296,11 @@ object ArtworkMatcher {
             return null
         }
 
-        val artistTier = ArtistIdentity.tier(stationArtist, candidate.artistName) ?: return null
+        val artistTier = ArtistIdentity.tier(
+            stationArtist,
+            candidate.artistName,
+            evidence = "${candidate.artistName} ${candidate.trackName}",
+        ) ?: return null
 
         // Only a title that is not this track at all is refused here.
         val titleTier = titleTier(wanted, candidateTitle) ?: return null
@@ -584,8 +588,13 @@ object ArtworkMatcher {
              * a three-letter artist match an unrelated band, and none of them
              * splits a name on punctuation, which is what used to turn `AC/DC`
              * into `AC` and `Earth, Wind & Fire` into `Earth`.
+             *
+             * [evidence] is the rest of what the candidate says about who is on the
+             * record - its credit and its song title - and it is what lets a pairing
+             * the provider credits to its lead act alone still match. Without it
+             * that rule is off, which is how [sameArtist] asks.
              */
-            fun tier(station: ArtistIdentity, candidateArtist: String): Int? {
+            fun tier(station: ArtistIdentity, candidateArtist: String, evidence: String? = null): Int? {
                 val candidate = Norm.text(candidateArtist)
                 if (candidate.isEmpty() || station.normalised.isEmpty()) return null
 
@@ -624,7 +633,34 @@ object ArtworkMatcher {
                     if (stationTokens.isNotEmpty() && candidateTokens.containsAll(stationTokens)) return 4
                 }
 
+                // The station bills a pairing, `A & B`, and the provider credits the
+                // lead act alone and names the guest in the title: `A` / `Song (feat.
+                // B)`. That is the same record. It is accepted only when the whole
+                // credit is exactly the station's first act and every other act the
+                // station names is there too, as whole words, in the candidate's own
+                // credit or title - so `A & B` never matches a record of A's alone.
+                if (evidence != null && stationParts.size > 1) {
+                    val lead = withoutArticle(stationParts.first())
+                    if (lead.isNotEmpty() && Norm.same(withoutArticle(candidateCredited), lead)) {
+                        val said = Norm.tokens(evidence).map(Norm::translit)
+                        val guestsNamed = stationParts.drop(1).all { guest ->
+                            containsRun(said, Norm.tokens(guest).map(Norm::translit))
+                        }
+                        // Guest billing: the act leads, but the release is not the
+                        // pairing's own - the same tier as a member of a billed pair.
+                        if (guestsNamed) return 2
+                    }
+                }
+
                 return null
+            }
+
+            /** Whether [run] appears in [tokens] as consecutive whole tokens. */
+            private fun containsRun(tokens: List<String>, run: List<String>): Boolean {
+                if (run.isEmpty() || run.size > tokens.size) return false
+                return (0..tokens.size - run.size).any { start ->
+                    run.indices.all { i -> tokens[start + i] == run[i] }
+                }
             }
         }
     }

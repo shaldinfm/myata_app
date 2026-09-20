@@ -557,6 +557,12 @@ class MediaPlayerService(): MediaSessionService(){
         val dataSourceFactory = androidx.media3.datasource.DefaultDataSource.Factory(this, httpDataSourceFactory)
 
         exoPlayer = ExoPlayer.Builder(this)
+            // The stock renderers, plus a pass-through tap that publishes the
+            // audio's loudness for the TV player's ambient field. It is the same
+            // audio sink Media3 would have built, with one extra processor in
+            // front of the chain; see AudioLevelRenderersFactory for why that is
+            // safe and how it was checked against the pinned library.
+            .setRenderersFactory(AudioLevelRenderersFactory(this))
             .setMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(this)
                 .setDataSourceFactory(dataSourceFactory))
             .setLoadControl(loadControl)

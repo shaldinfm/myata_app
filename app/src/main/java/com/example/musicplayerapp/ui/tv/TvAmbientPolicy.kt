@@ -12,25 +12,30 @@ import kotlin.math.roundToInt
  * over a constant dark base - and the constraint that mattered before still
  * matters, so the colours are not handed straight from the palette:
  *
- *   - **Dark.** Saturation is clamped to at most [MAX_SATURATION] and lightness
- *     into [MIN_VALUE]..[MAX_VALUE] before anything is drawn, so a cover that is
- *     white, neon or photographic cannot take the screen to a brightness where
- *     the track line and the stream pills stop being legible. The dim and the
- *     scrim are unchanged and still sit on top of this.
- *   - **Several, not one.** Up to [BLOB_COUNT] colours, deduplicated by hue, so a
- *     red cover with a second, slightly different red does not produce the same
- *     single wash the ambient field exists to replace.
+ *   - **Dark.** Saturation is clamped down to at most [MAX_SATURATION] and
+ *     lightness is mapped into [MIN_LIGHTNESS]..[MAX_LIGHTNESS] before anything is
+ *     drawn, so a cover that is white, neon or photographic cannot take the screen
+ *     to a brightness where the track line and the stream pills stop being
+ *     legible. The dim and the scrim still sit on top of this.
+ *   - **Several, not one.** Up to [BLOB_COUNT] colours, and two colours are only
+ *     the same area when they are close in hue *and* in lightness, so a blue
+ *     cover can still be a field - a deep blue area and a bright one are two
+ *     areas, and collapsing them was what turned the first version of this policy
+ *     back into the single wash it exists to replace.
  *   - **Only what the artwork is made of.** A swatch under [MIN_USABLE_SHARE] of
  *     the cover is a highlight, not an area.
- *   - **Fallback, not blank.** Fewer than two usable colours - a monochrome
- *     sleeve, an extraction that failed, or the resolver's no-cover marker -
- *     falls back to the MYATA palette in [FALLBACK] rather than to grey.
+ *   - **Fallback, not blank.** A monochrome sleeve, an extraction that failed or
+ *     the resolver's no-cover marker falls back to the MYATA palette in [FALLBACK]
+ *     rather than to grey. A cover that offers *one* usable colour is not that
+ *     case: it gets a field built from its own colour at two lightnesses (see
+ *     [siblingOf]), because answering a red sleeve with the brand pink is a
+ *     background that visibly does not belong to the track.
  *
  * Everything here is integer and float maths with no `android.graphics` and no
  * `androidx.palette`, which is what lets the whole rule be pinned by JVM unit
- * tests: the clamps, the fallback and the "same cover, same field" property are
- * all checked there. Whether the result *looks* right is not a unit test, and
- * that is what the TV emulator pass is for.
+ * tests: the clamps, the lightness window, the fallback and the "same cover, same
+ * field" property are all checked there. Whether the result *looks* right is not
+ * a unit test, and that is what the TV emulator pass is for.
  */
 object TvAmbientPolicy {
 
@@ -49,24 +54,54 @@ object TvAmbientPolicy {
     /** No ambient colour may be more saturated than this. */
     const val MAX_SATURATION = 0.55f
 
-    /** No ambient colour may be darker than this, or brighter than [MAX_VALUE]. */
-    const val MIN_VALUE = 0.16f
-    const val MAX_VALUE = 0.34f
+    /**
+     * The window every ambient colour's lightness ends up in.
+     *
+     * A swatch is *mapped* into this window rather than clamped to it, because
+     * clamping destroys exactly what a field is made of: a blue cover offers four
+     * blues, and clamping them to a ceiling leaves four identical colours that the
+     * "is this a new area" rule below then throws away - which is what turned the
+     * first version of this policy back into the flat wash it replaces. Mapped,
+     * they keep the order the artwork had: a deep blue area and a bright one.
+     *
+     * The design's starting window was 0.14..0.34, and at 0.34 the field measured
+     * *too dark to be a field at all* on the TV AVD: the brightest pixel of four
+     * fully saturated swatches - the worst case this policy allows - came out at
+     * luma 39 of 255, and the player's own dim then took it to 23, which is a black
+     * screen with a rumour of colour on it. The window is 0.20..0.50 here, and the
+     * bright end of it is what makes a photographic sleeve's own muted colours
+     * visible instead of merely present.
+     */
+    const val MIN_LIGHTNESS = 0.20f
+    const val MAX_LIGHTNESS = 0.50f
 
-    /** A swatch below this share of the cover is a highlight, not an area of it. */
-    private const val MIN_USABLE_SHARE = 0.05f
+    /**
+     * A swatch below this share of the cover is a highlight, not an area of it.
+     *
+     * Measured against real covers on the TV AVD rather than guessed: the palette
+     * hands back five named swatches that together are about three quarters of the
+     * artwork (the rest is in the unnamed buckets), so a 5% floor of the *cover*
+     * was throwing away the vivid swatch on ordinary photographic sleeves - 526 of
+     * 8776 pixels, 6%, on the first one measured - and leaving too little to build
+     * a field from. 3% keeps that one and still drops a logo's highlight.
+     */
+    private const val MIN_USABLE_SHARE = 0.03f
 
     /** Below this saturation a colour is a grey, and greys do not make a field. */
     private const val MIN_USABLE_SATURATION = 0.12f
 
-    /** Two colours closer than this in hue are one area of the field, not two. */
+    /** Two colours this close in hue *and* in lightness are one area, not two. */
     private const val MIN_HUE_GAP = 18f
+    private const val MIN_LIGHTNESS_GAP = 0.05f
+
+    /** How far [siblingOf] moves a single-colour cover's second area. */
+    private const val SIBLING_LIGHTNESS_STEP = 0.10f
 
     // MYATA's own colours, as the app already uses them: the pink of the station
     // cards, the navy of `primary`, and the cyan of the play glyph. A dark purple
-    // stands in for the navy because after clamping - which pulls the navy and the
-    // cyan towards each other in lightness - the two brand blues land 21 degrees
-    // apart in hue and would be collapsed into one area by MIN_HUE_GAP.
+    // stands in for the navy because inside the lightness window the navy and the
+    // cyan land 21 degrees apart in hue and a step apart in lightness, so the
+    // "is this a new area" rule would collapse them into one.
     private const val BRAND_PINK = 0xFFFF3F7B.toInt()
     private const val BRAND_PURPLE = 0xFF3B2A6B.toInt()
     private const val BRAND_CYAN = 0xFF00E5FF.toInt()
@@ -97,35 +132,72 @@ object TvAmbientPolicy {
     ): TvAmbientPalette {
         if (totalPopulation <= 0) return FALLBACK
 
-        // Largest first: the colour the cover is mostly made of is the one that
-        // leads the field, and it is the one that survives a hue collision with a
-        // smaller swatch of nearly the same colour.
+        // Most vivid first, not largest: on a photographic sleeve the biggest area
+        // is often the muted one - grey sky, worn paper, a dark stage - and leading
+        // the field with it is how the cover's own colour gets dropped in favour of
+        // the colour it is printed on. Population is kept as the tie-break, so the
+        // same cover still reduces to the same field every time.
+        val candidates = swatches
+            .filter { it.population > 0 }
+            .filter { it.population.toFloat() / totalPopulation >= MIN_USABLE_SHARE }
+            .filter { saturationOf(it.argb) >= MIN_USABLE_SATURATION }
+            .sortedWith(
+                compareByDescending<TvAmbientSwatch> { vividnessOf(it.argb) }
+                    .thenByDescending { it.population },
+            )
+
         val picked = ArrayList<Int>(BLOB_COUNT)
-        for (swatch in swatches.sortedByDescending { it.population }) {
-            if (swatch.population <= 0) continue
-            if (swatch.population.toFloat() / totalPopulation < MIN_USABLE_SHARE) continue
-
-            val colour = normalize(swatch.argb)
-            if (saturationOf(colour) < MIN_USABLE_SATURATION) continue
-            if (picked.any { hueGap(hueOf(it), hueOf(colour)) < MIN_HUE_GAP }) continue
-
+        for (candidate in candidates) {
+            val colour = normalize(candidate.argb)
+            if (picked.any { !readsAsItsOwnArea(it, colour) }) continue
             picked += colour
             if (picked.size == BLOB_COUNT) break
         }
 
-        // One colour is the flat wash this replaces; none is a cover we could not
-        // read. Both are the brand field's job, not a dimmer version of the cover.
-        return if (picked.size < 2) FALLBACK else spread(picked, isFallback = false)
+        return when (picked.size) {
+            // Several areas: the cover's own colours.
+            2, 3, 4 -> spread(picked, isFallback = false)
+            // One colour is most of a photographic sleeve - a red one, a blue one -
+            // and answering it with the brand field is a background that visibly
+            // does not belong to the track. Its own colour at a second lightness
+            // is still its colour, and two tones are a field where one is a fill.
+            1 -> spread(listOf(picked[0], siblingOf(picked[0])), isFallback = false)
+            // Nothing usable at all: a monochrome or unreadable cover. That is the
+            // brand field's job, not a grey version of the cover.
+            else -> FALLBACK
+        }
     }
 
     /**
-     * [argb] with its saturation clamped down to [MAX_SATURATION] and its
-     * lightness clamped into [MIN_VALUE]..[MAX_VALUE], and its alpha forced
-     * opaque.
+     * The second area for a cover that offered only one colour.
      *
-     * Hue is never touched: it is the one thing that says which cover this is.
-     * The clamps are idempotent, which is what makes normalising an already
-     * normalised colour - as [FALLBACK] and [spread] do - a no-op.
+     * Same hue and saturation, a neighbouring lightness - which is what the
+     * artwork would have shown if a little more or less light had fallen on it.
+     * The step is twice the gap at which two colours stop reading as one area, so
+     * the result is a field rather than the same colour twice.
+     */
+    private fun siblingOf(colour: Int): Int {
+        val middle = (MIN_LIGHTNESS + MAX_LIGHTNESS) / 2f
+        val shifted = if (valueOf(colour) >= middle) {
+            valueOf(colour) - SIBLING_LIGHTNESS_STEP
+        } else {
+            valueOf(colour) + SIBLING_LIGHTNESS_STEP
+        }
+        return hsvToArgb(
+            hue = hueOf(colour),
+            saturation = saturationOf(colour),
+            value = shifted.coerceIn(MIN_LIGHTNESS, MAX_LIGHTNESS),
+        )
+    }
+
+    /**
+     * [argb] as an ambient colour: saturation clamped down to [MAX_SATURATION],
+     * lightness mapped into [MIN_LIGHTNESS]..[MAX_LIGHTNESS], alpha forced opaque.
+     *
+     * Hue is never touched - it is the one thing that says which cover this is -
+     * and lightness keeps its order, so two swatches the artwork drew as different
+     * stay different here. Every caller passes a colour in exactly once: this is a
+     * mapping, not a clamp, so applying it twice would squeeze the lightness again.
      */
     fun normalize(argb: Int): Int {
         val r = (argb shr 16) and 0xFF
@@ -137,7 +209,7 @@ object TvAmbientPolicy {
         return hsvToArgb(
             hue = hueOf(r, g, b, max, min),
             saturation = min(if (max == 0) 0f else (max - min) / max.toFloat(), MAX_SATURATION),
-            value = (max / 255f).coerceIn(MIN_VALUE, MAX_VALUE),
+            value = MIN_LIGHTNESS + (max / 255f) * (MAX_LIGHTNESS - MIN_LIGHTNESS),
         )
     }
 
@@ -174,6 +246,23 @@ object TvAmbientPolicy {
         val straight = abs(a - b) % 360f
         return min(straight, 360f - straight)
     }
+
+    /**
+     * Whether [candidate] is an area of the field in its own right next to [kept].
+     *
+     * Different enough in hue, or different enough in lightness. Both matter: a
+     * cover built from one hue at three lightnesses - which is most photographic
+     * sleeves - is a field of three areas, while the same colour twice is not.
+     */
+    private fun readsAsItsOwnArea(kept: Int, candidate: Int): Boolean =
+        hueGap(hueOf(kept), hueOf(candidate)) >= MIN_HUE_GAP ||
+            abs(valueOf(kept) - valueOf(candidate)) >= MIN_LIGHTNESS_GAP
+
+    /** How much colour a swatch brings, before any clamping. */
+    private fun vividnessOf(argb: Int): Float = saturationOf(argb) * valueOf(argb)
+
+    private fun valueOf(argb: Int): Float =
+        maxOf((argb shr 16) and 0xFF, (argb shr 8) and 0xFF, argb and 0xFF) / 255f
 
     private fun hsvToArgb(hue: Float, saturation: Float, value: Float): Int {
         val chroma = value * saturation

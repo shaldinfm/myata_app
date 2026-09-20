@@ -24,12 +24,23 @@
         android:layout_height="match_parent"
         android:importantForAccessibility="no" />
 
-    <!-- Global Dim Overlay -->
+    <!--
+        Global Dim Overlay
+
+        Kept, but at 30% rather than the 40% it was: that scrim existed to tame a
+        flat background made from the cover's most vibrant colour, and the ambient
+        field is dark by construction (see TvAmbientPolicy). Measured on the TV AVD,
+        at 40% the brightest part of the new field went from luma 39 - already
+        nearly invisible - to 23, which is a black screen. At 30%, with the field at
+        its brightest (luma 67), the composited background behind the title
+        measures p99 20 of 255 against the 110 at which white text would drop below
+        4.5:1. `TvAmbientBackgroundTest` is where those two numbers come from.
+    -->
     <View
         android:id="@+id/view_dim"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#66000000" />
+        android:background="#4D000000" />
 
     <!-- Gradient Overlay (Scrim) -->
     <View

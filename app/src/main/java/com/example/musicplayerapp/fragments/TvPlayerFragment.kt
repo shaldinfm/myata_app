@@ -355,12 +355,19 @@ class TvPlayerFragment : Fragment() {
 
             // The shares are taken against every swatch the palette found, not
             // just these five, so "5% of the cover" means the cover.
-            animateAmbient(
-                TvAmbientPolicy.fromSwatches(
-                    swatches = swatches,
-                    totalPopulation = palette.swatches.sumOf { it.population },
-                ),
+            val ambient = TvAmbientPolicy.fromSwatches(
+                swatches = swatches,
+                totalPopulation = palette.swatches.sumOf { it.population },
             )
+
+            // Which field this cover produced, for the next person to look at a
+            // screenshot and wonder why it came out pink.
+            Log.d(
+                "TvPlayerFragment",
+                "Ambient field: ${if (ambient.isFallback) "MYATA fallback" else "artwork"} " +
+                    ambient.colors.joinToString(" ") { "#%06X".format(java.util.Locale.ROOT, it and 0xFFFFFF) },
+            )
+            animateAmbient(ambient)
         }
     }
 

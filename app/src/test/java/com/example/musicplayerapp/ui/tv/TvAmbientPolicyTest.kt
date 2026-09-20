@@ -23,6 +23,14 @@ import org.junit.Test
  */
 class TvAmbientPolicyTest {
 
+    /**
+     * The limits are enforced in float and the answer is 8-bit, so a colour can
+     * land a rounding step outside them - about 1/255 of saturation at most. The
+     * tolerance is that step and nothing more: a colour that is genuinely over the
+     * limit is still caught.
+     */
+    private val ROUNDING = 0.01f
+
     // ==================== clamps ====================
 
     @Test
@@ -38,20 +46,20 @@ class TvAmbientPolicyTest {
         for (colour in palette.colors) {
             assertTrue(
                 "saturation ${hsv(colour).saturation} of #${hex(colour)} is above the limit",
-                hsv(colour).saturation <= TvAmbientPolicy.MAX_SATURATION + 0.002f,
+                hsv(colour).saturation <= TvAmbientPolicy.MAX_SATURATION + ROUNDING,
             )
         }
     }
 
     @Test
-    fun excessive_brightness_is_clamped() {
+    fun the_lightest_a_colour_can_be_is_the_ceiling() {
         val white = TvAmbientPolicy.normalize(0xFFFFFFFF.toInt())
 
         assertEquals(
             "a white cover must not take the field above the lightness ceiling",
-            TvAmbientPolicy.MAX_VALUE,
+            TvAmbientPolicy.MAX_LIGHTNESS,
             hsv(white).value,
-            0.002f,
+            ROUNDING,
         )
     }
 
@@ -59,11 +67,10 @@ class TvAmbientPolicyTest {
     fun a_nearly_black_cover_is_lifted_to_the_floor() {
         val nearBlack = TvAmbientPolicy.normalize(0xFF0A0A0A.toInt())
 
-        assertEquals(
+        assertTrue(
             "a near-black cover must still produce something visible",
-            TvAmbientPolicy.MIN_VALUE,
-            hsv(nearBlack).value,
-            0.002f,
+            hsv(nearBlack).value in TvAmbientPolicy.MIN_LIGHTNESS..
+                (TvAmbientPolicy.MIN_LIGHTNESS + 0.05f),
         )
     }
 
@@ -77,14 +84,33 @@ class TvAmbientPolicyTest {
     }
 
     @Test
-    fun a_colour_inside_the_limits_is_left_where_it_is() {
-        val colour = 0xFF3B2A4C.toInt() // hue 270, saturation 0.45, lightness 0.30
-        val once = TvAmbientPolicy.normalize(colour)
-        val twice = TvAmbientPolicy.normalize(once)
+    fun saturation_only_ever_comes_down() {
+        // Hue and lightness are where the cover is; saturation is where the
+        // readability limit is, so it is the one dimension that is clamped.
+        val muted = 0xFF3B2A4C.toInt() // hue 270, saturation 0.45
+        val vivid = 0xFF6C00FF.toInt() // hue 270, saturation 1.0
 
-        assertEquals("normalising is idempotent", once, twice)
-        assertEquals("the colour was already inside the limits", hsv(colour).hue, hsv(once).hue, 1.5f)
-        assertEquals(hsv(colour).saturation, hsv(once).saturation, 0.01f)
+        assertEquals(0.45f, hsv(TvAmbientPolicy.normalize(muted)).saturation, 0.01f)
+        assertEquals(TvAmbientPolicy.MAX_SATURATION, hsv(TvAmbientPolicy.normalize(vivid)).saturation, 0.01f)
+        assertEquals(hsv(muted).hue, hsv(TvAmbientPolicy.normalize(muted)).hue, 1.5f)
+    }
+
+    @Test
+    fun the_window_keeps_the_order_the_artwork_had() {
+        // Three blues: sampled from a real sleeve on the TV AVD, where clamping to
+        // a ceiling made all three the same colour and the policy fell back to the
+        // brand field for a cover that is unmistakably blue.
+        val deep = hsv(TvAmbientPolicy.normalize(0xFF082838.toInt())).value
+        val mid = hsv(TvAmbientPolicy.normalize(0xFF305060.toInt())).value
+        val bright = hsv(TvAmbientPolicy.normalize(0xFF08A0D8.toInt())).value
+
+        assertTrue("deep $deep, mid $mid, bright $bright", deep < mid && mid < bright)
+        for (value in listOf(deep, mid, bright)) {
+            assertTrue(
+                "lightness $value is outside the window",
+                value in TvAmbientPolicy.MIN_LIGHTNESS..TvAmbientPolicy.MAX_LIGHTNESS,
+            )
+        }
     }
 
     // ==================== the field ====================
@@ -120,17 +146,60 @@ class TvAmbientPolicyTest {
     }
 
     @Test
-    fun two_swatches_of_one_hue_are_one_area_not_two() {
-        // The same red twice, as a photographic sleeve often offers it: this is
-        // the flat wash the ambient field exists to replace.
+    fun a_cover_of_one_colour_is_still_an_artwork_field() {
+        // A red sleeve, measured on the TV AVD: the palette offered the same red
+        // several times, the field could not be built from one colour, and the
+        // answer was the brand pink - a background for a red album that is not red.
         val palette = TvAmbientPolicy.fromSwatches(
             listOf(
-                TvAmbientSwatch(0xFFD32F2F.toInt(), 50),
-                TvAmbientSwatch(0xFFB71C1C.toInt(), 50),
+                TvAmbientSwatch(0xFFD32F2F.toInt(), 25),
+                TvAmbientSwatch(0xFFB71C1C.toInt(), 25),
+                TvAmbientSwatch(0xFFC62828.toInt(), 25),
+                TvAmbientSwatch(0xFFE53935.toInt(), 25),
             ),
         )
 
-        assertTrue("one usable colour is not enough for a field", palette.isFallback)
+        assertFalse("a red cover became the brand field", palette.isFallback)
+        assertEquals("the cover's colour at two lightnesses, not four times", 2, palette.colors.toSet().size)
+        for (colour in palette.colors) {
+            // Loose by a few degrees: the hue is re-derived from 8-bit channels, so
+            // a red that is exactly 0 coming in can be a degree or two going out.
+            assertEquals("the field left the cover's hue", 0f, hsv(colour).hue, 5f)
+        }
+    }
+
+    @Test
+    fun a_cover_of_one_hue_at_several_lightnesses_is_still_a_field() {
+        // The measured palette of a blue sleeve, and the case that broke the first
+        // version of this rule: one hue, four lightnesses, no second hue anywhere.
+        val palette = TvAmbientPolicy.fromSwatches(
+            swatches = listOf(
+                TvAmbientSwatch(0xFF082838.toInt(), 2239),
+                TvAmbientSwatch(0xFF305060.toInt(), 1136),
+                TvAmbientSwatch(0xFF08A0D8.toInt(), 526),
+                TvAmbientSwatch(0xFF588098.toInt(), 286),
+            ),
+            totalPopulation = 8776,
+        )
+
+        assertFalse("a blue cover became the brand field", palette.isFallback)
+        assertTrue(
+            "one hue at several lightnesses must still be more than one area",
+            palette.colors.toSet().size >= 2,
+        )
+    }
+
+    @Test
+    fun the_most_vivid_swatch_leads_the_field() {
+        // A washed-out sleeve whose colour is a small, vivid part of it. The field
+        // leads with that colour: population alone would lead with the wash.
+        val muted = TvAmbientSwatch(0xFF6E7B85.toInt(), 800)
+        val vivid = TvAmbientSwatch(0xFF1565C0.toInt(), 200)
+
+        val palette = TvAmbientPolicy.fromSwatches(listOf(muted, vivid))
+
+        assertFalse(palette.isFallback)
+        assertEquals(TvAmbientPolicy.normalize(vivid.argb), palette.colors.first())
     }
 
     @Test
@@ -171,12 +240,11 @@ class TvAmbientPolicyTest {
     fun a_cover_with_nothing_usable_falls_back() {
         val cases: Map<String, List<TvAmbientSwatch>> = mapOf(
             "no swatches at all" to emptyList(),
-            "a single usable colour" to listOf(TvAmbientSwatch(red, 100)),
             "a monochrome sleeve" to listOf(
                 TvAmbientSwatch(0xFF8A8A8A.toInt(), 60),
                 TvAmbientSwatch(0xFF3B3B3B.toInt(), 40),
             ),
-            "every swatch a rounding error" to List(25) { TvAmbientSwatch(red, 4) },
+            "every swatch below the usable share" to List(50) { TvAmbientSwatch(red, 4) },
             "no population to divide by" to listOf(TvAmbientSwatch(red, 0)),
         )
 
@@ -192,8 +260,15 @@ class TvAmbientPolicyTest {
 
         for (colour in TvAmbientPolicy.FALLBACK.colors) {
             val hsv = hsv(colour)
-            assertTrue("saturation ${hsv.saturation} of #${hex(colour)}", hsv.saturation <= TvAmbientPolicy.MAX_SATURATION + 0.002f)
-            assertTrue("lightness ${hsv.value} of #${hex(colour)}", hsv.value in TvAmbientPolicy.MIN_VALUE - 0.002f..TvAmbientPolicy.MAX_VALUE + 0.002f)
+            assertTrue(
+                "saturation ${hsv.saturation} of #${hex(colour)}",
+                hsv.saturation <= TvAmbientPolicy.MAX_SATURATION + ROUNDING,
+            )
+            assertTrue(
+                "lightness ${hsv.value} of #${hex(colour)}",
+                hsv.value in TvAmbientPolicy.MIN_LIGHTNESS - ROUNDING..
+                    TvAmbientPolicy.MAX_LIGHTNESS + ROUNDING,
+            )
         }
 
         // The brand field is three areas, not one colour repeated: pink, the

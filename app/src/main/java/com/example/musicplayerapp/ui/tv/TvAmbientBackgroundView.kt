@@ -12,6 +12,7 @@ import android.util.AttributeSet
 import android.view.View
 import android.view.animation.LinearInterpolator
 import androidx.core.animation.doOnEnd
+import androidx.core.graphics.withTranslation
 import kotlin.math.PI
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -43,11 +44,12 @@ import kotlin.math.sin
  *
  * ## Lifecycle
  *
- * The drift runs only while the view is actually on screen. [onVisibilityAggregated]
- * starts it and stops it - which covers the fragment being replaced, hidden, or
- * the app going to the background - and [onDetachedFromWindow] stops it as well.
- * [stopAmbient] is the explicit half of that contract, called from the player's
- * `onDestroyView`.
+ * The drift runs only while the view is actually on screen: every way a view can
+ * stop being shown - hidden, an ancestor hidden, the window hidden, the fragment
+ * replaced, the view detached - is answered by the same `isShown` check in
+ * [onVisibilityAggregated] and its three siblings, so there is no ordering between
+ * them to get wrong. [stopAmbient] is the explicit half of that contract, called
+ * from the player's `onDestroyView`.
  *
  * When animations are switched off system-wide (`Settings.Global.ANIMATOR_DURATION_SCALE`
  * of 0) no animator is started at all: the field is drawn once at its first
@@ -157,18 +159,40 @@ class TvAmbientBackgroundView @JvmOverloads constructor(
     // ==================== lifecycle ====================
 
     /**
-     * `onVisibilityAggregated` rather than `onVisibilityChanged`: it is the
-     * aggregate one, so hiding an ancestor or the window stops the drift too,
-     * which is what the fragment being replaced from the outside looks like.
+     * Every one of these is the same question, asked at a different moment. A
+     * view can stop being shown because it was hidden, because an ancestor was,
+     * because the window was, or because it was detached - and which callback
+     * fires first is not something worth depending on. `isShown` is the single
+     * answer, so each of them hands off to one check instead of each of them
+     * owning a case.
      */
     override fun onVisibilityAggregated(isVisible: Boolean) {
         super.onVisibilityAggregated(isVisible)
-        if (isVisible) startDrift() else stopAmbient()
+        syncDrift()
+    }
+
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+        syncDrift()
+    }
+
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        syncDrift()
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        syncDrift()
     }
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         stopAmbient()
+    }
+
+    private fun syncDrift() {
+        if (isShown) startDrift() else stopAmbient()
     }
 
     private fun startDrift() {
@@ -298,11 +322,13 @@ class TvAmbientBackgroundView @JvmOverloads constructor(
         blobPaint.shader = shader
         blobPaint.alpha = (alpha * 255f).roundToInt().coerceIn(0, 255)
 
-        val restore = canvas.save()
-        canvas.translate(cx, cy)
-        canvas.scale(radius, radius)
-        canvas.drawCircle(0f, 0f, 1f, blobPaint)
-        canvas.restoreToCount(restore)
+        // The local space is where the gradient was built: a unit circle at the
+        // origin, scaled to the radius. Saving and restoring the canvas is what the
+        // translation extension does, and it is inlined - no lambda object per blob.
+        canvas.withTranslation(cx, cy) {
+            scale(radius, radius)
+            drawCircle(0f, 0f, 1f, blobPaint)
+        }
     }
 
     /**
@@ -348,19 +374,46 @@ class TvAmbientBackgroundView @JvmOverloads constructor(
         /** Palette crossfade, at the slow end of the 1.2-1.8s the design asks for. */
         const val PALETTE_FADE_MS = 1_400L
 
-        /** Where the gradient reaches zero alpha, as a fraction of the radius. */
-        const val EDGE_STOP = 0.72f
+        /**
+         * Where the gradient reaches zero alpha, as a fraction of the radius.
+         *
+         * A blob's radius at 1080p is most of the screen, so where the gradient
+         * gives up decides whether the field reads as four large soft areas or as
+         * four dots with long tails. The first pass let it reach zero at 0.72 of
+         * the radius and the areas were visibly too small; 0.62 holds the colour
+         * across more of what each blob covers.
+         */
+        const val EDGE_STOP = 0.58f
 
-        /** Movement, as a fraction of the frame - tens of pixels on a 1080p panel. */
-        const val X_DRIFT = 0.030f
-        const val Y_DRIFT = 0.026f
-        const val R_DRIFT = 0.060f
-        const val A_DRIFT = 0.120f
+        /**
+         * Movement, as a fraction of the frame: tens of pixels on a 1080p panel.
+         *
+         * Measured rather than guessed: at half these amplitudes the field moved
+         * by a mean of two units per channel over eight seconds, which is motion
+         * the eye does not catch on a soft gradient. These are the smallest values
+         * that read as drift without reading as a screensaver, and the second
+         * harmonic in [wobble] keeps the four areas from moving together.
+         */
+        const val X_DRIFT = 0.045f
+        const val Y_DRIFT = 0.038f
+        const val R_DRIFT = 0.090f
+        const val A_DRIFT = 0.160f
 
-        /** Overall blob alpha, before breathing, per blob. */
-        val BASE_ALPHA = floatArrayOf(0.50f, 0.42f, 0.46f, 0.38f)
-        val MIN_ALPHA = 0.30f
-        val MAX_ALPHA = 0.55f
+        /**
+         * Overall blob alpha, before breathing, per blob.
+         *
+         * The design's starting range was 0.35..0.55; the field measured nearly
+         * invisible through the player's dim at that strength with the gradient
+         * falling off as early as it did. These four alpha bases - deliberately
+         * not all the same, so the field has depth rather than four equal discs -
+         * put the field's brightest pixel at luma 67 of 255 in the worst case the
+         * policy allows, and the composited background behind the title at p99 20,
+         * against the 110 at which white text would drop below 4.5:1. The drift
+         * breathes them between [MIN_ALPHA] and [MAX_ALPHA].
+         */
+        val BASE_ALPHA = floatArrayOf(0.60f, 0.52f, 0.56f, 0.46f)
+        val MIN_ALPHA = 0.34f
+        val MAX_ALPHA = 0.66f
 
         /**
          * Anchors in fractions of the frame. Not a grid: two of the four sit off

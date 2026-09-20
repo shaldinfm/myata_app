@@ -43,10 +43,48 @@
              android:theme is the launch theme, not the app theme: it is the only
              theme the system can read before any of our code runs, and it is what
              gives the tap an immediate acknowledgement. installSplashScreen()
-             hands the activity straight back to AppTheme. -->
+             hands the activity straight back to AppTheme.
+
+             android:screenOrientation="portrait" - the phone app does not rotate.
+
+             HOME is a portrait composition: a 390dp-wide column whose rows scroll
+             horizontally and whose stream cards carry their own 16/15/43 lead,
+             gap and peek (see fragment_main.xml). It is responsive on the
+             vertical axis - a short screen trades section gaps, never type or a
+             touch target, for the height it is missing - and it has no landscape
+             variant, so a rotated phone would present the portrait column with
+             roughly a third of a viewport to scroll in. The owner's decision is
+             therefore to fix the mobile app in portrait rather than design a
+             second composition, and this declaration is that decision: the whole
+             app, because MainActivity is the only launcher activity on the phone.
+
+             It is the platform mechanism rather than a runtime call on purpose.
+             setRequestedOrientation from code runs after the first frame, so the
+             launch window itself could be composed landscape and then re-laid
+             out, and it would need a call in every entry path - the launcher
+             intent, ACTION_PLAY, a notification tap - to cover the app. The
+             manifest attribute applies before the first frame, to all of them.
+
+             ## What this does and does not guarantee
+
+             It is honoured on the phones this app ships to. Android 16 (API 36)
+             ignores an orientation restriction on a display whose smallest width
+             is 600dp or more - a tablet - which is the platform's adaptive-layout
+             rule rather than anything this app opts into; there is no mobile
+             landscape or large-screen layout here to present instead, so nothing
+             is lost by that and nothing needs building for it. `configChanges`
+             below still lists `orientation`, so even on such a display a rotation
+             re-lays out rather than restarting the activity and the playback
+             session with it.
+
+             TvMainActivity carries no orientation restriction and must keep
+             carrying none: a television is a landscape display and an orientation
+             request there would be wrong twice over. MobileOrientationLockTest
+             pins both halves. -->
         <activity
             android:windowSoftInputMode="adjustResize"
             android:name=".MainActivity"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.Myata.Splash"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
             android:launchMode="singleTask"

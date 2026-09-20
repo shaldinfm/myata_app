@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Rect
+import android.os.SystemClock
 import android.util.Log
 import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
@@ -15,12 +16,19 @@ import android.widget.ImageView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
+import com.example.musicplayerapp.service.AudioLevelRenderersFactory
+import com.example.musicplayerapp.service.PlaybackAudioLevel
 import com.example.musicplayerapp.ui.tv.TvAmbientBackgroundView
 import com.example.musicplayerapp.ui.tv.TvAmbientPalette
 import com.example.musicplayerapp.ui.tv.TvAmbientPolicy
 import com.example.musicplayerapp.ui.tv.TvAmbientSwatch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -30,7 +38,7 @@ import kotlin.math.roundToInt
  * The TV player's ambient field, measured where it can be: the frame it occupies,
  * the darkness it is allowed to have, and the lifecycle that owns its animators.
  *
- * Three things a screenshot cannot settle, and each is one test:
+ * What a screenshot cannot settle, and each is one test:
  *
  *   1. **It is still the frame it replaced.** The view that used to be here was a
  *      full-screen `ImageView` holding a flat colour. The ambient view has to cover
@@ -38,12 +46,18 @@ import kotlin.math.roundToInt
  *      rot silently - hiding it must not move a single other control, because a
  *      background that participates in layout is a background that can push the
  *      title off the screen.
- *   2. **It is dark enough.** The readability the flat background had was a
- *      property of one clamped colour; here it is a property of four translucent
- *      ones that can overlap. So the field is drawn into a bitmap and read back:
- *      a bright, four-colour cover is the worst case, and it still has to come out
- *      dark, non-flat, and no more saturated than the policy allows.
- *   3. **It stops.** An infinite animator on a TV player is exactly the kind of
+ *   2. **It is bright enough, and not too bright.** The readability the flat
+ *      background had was a property of one clamped colour; here it is a property
+ *      of a field of translucent layers that overlap, and the direction of this
+ *      slice is a *glow* - so "dark enough" is no longer the whole question. The
+ *      field is drawn into a bitmap and read back: it has to be lit, lit from its
+ *      core rather than evenly, not flat, and short of white - and the composited
+ *      frame behind the title and the pills has to stay under the luma at which
+ *      white text loses AA contrast.
+ *   3. **It moves with the music.** The energy comes from the audio pipeline
+ *      itself, so it is published here directly - an instrumentation test has no
+ *      decoded audio to play - and has to make the field measurably brighter.
+ *   4. **It stops.** An infinite animator on a TV player is exactly the kind of
  *      leak that is invisible in a screenshot and obvious in a battery report.
  *      The drift must be running only while the view is on screen, and
  *      `stopAmbient()` - what `onDestroyView` calls - must leave nothing behind.
@@ -65,6 +79,13 @@ class TvAmbientBackgroundTest {
 
         /** Anything this bright is a glyph, a glyph's antialiasing, or the plate. */
         const val GLYPH_LUMA = 180
+
+        /**
+         * Draws the field is advanced by, to let the loudness envelope settle: at
+         * the view's eight-millisecond floor that is a third of a second, which is
+         * past the attack and well into the release.
+         */
+        const val ENERGY_SETTLE_FRAMES = 40
     }
 
     /**
@@ -78,12 +99,13 @@ class TvAmbientBackgroundTest {
         val heightPx: Int,
         val densityDpi: Int,
         val artworkDp: Int,
+        val minTopAirDp: Int,
     )
 
     private val geometries = listOf(
-        Geometry("1080p@320", 1920, 1080, 320, artworkDp = 280),
-        Geometry("720p@240", 1280, 720, 240, artworkDp = 240),
-        Geometry("1080p@480", 1920, 1080, 480, artworkDp = 168),
+        Geometry("1080p@320", 1920, 1080, 320, artworkDp = 280, minTopAirDp = 12),
+        Geometry("720p@240", 1280, 720, 240, artworkDp = 200, minTopAirDp = 48),
+        Geometry("1080p@480", 1920, 1080, 480, artworkDp = 132, minTopAirDp = 32),
     )
 
     // ==================== the frame ====================
@@ -113,6 +135,15 @@ class TvAmbientBackgroundTest {
                 1f,
             )
 
+            // The air above the artwork, which is what the constrained buckets were
+            // rebuilt for: the column is anchored at the bottom, so the slack in it
+            // is what the artwork floats in.
+            assertTrue(
+                "${geometry.name}: the artwork is glued to the top " +
+                    "(${artwork.top}px of ${geometry.minTopAirDp * density}px expected)",
+                artwork.top >= geometry.minTopAirDp * density - 1f,
+            )
+
             val withField = everyOtherView(root, ambient)
             ambient.visibility = View.GONE
             layout(root, geometry.widthPx, geometry.heightPx)
@@ -128,15 +159,28 @@ class TvAmbientBackgroundTest {
             Log.i(
                 TAG,
                 "${geometry.name}: frame ${geometry.widthPx}x${geometry.heightPx}, " +
-                    "artwork ${artwork.width}px, ${withField.size} controls unmoved",
+                    "artwork ${artwork.width}px starting ${artwork.top}px down, " +
+                    "${withField.size} controls unmoved",
             )
         }
     }
 
     // ==================== what it looks like ====================
 
+    /**
+     * What the field itself is allowed to be, with the palette the policy is
+     * willing to hand it.
+     *
+     * This used to assert that the field stayed dark, because the first version of
+     * it was too dark to see. The direction since is a *glowing* field, so what is
+     * asserted now is the shape of that glow rather than its absence: bright enough
+     * to be light, short of white, never flat, never a wash of one loud colour.
+     * Readability is not this test's job - the field drawn here has no dim and no
+     * scrim over it, and [the_title_and_the_pills_keep_their_contrast] is where the
+     * composited frame is measured.
+     */
     @Test
-    fun the_field_stays_dark_whichever_cover_it_draws() {
+    fun the_field_glows_without_going_white_or_flat() {
         val cases = linkedMapOf(
             // The brand field: what is on screen before any cover has decoded.
             "MYATA fallback" to TvAmbientPolicy.FALLBACK,
@@ -170,20 +214,20 @@ class TvAmbientBackgroundTest {
             )
 
             assertTrue(
-                "$what: the mean is too bright for white text (${stats.meanLuma})",
-                stats.meanLuma in 8f..70f,
+                "$what: the field is still a near-black screen (${stats.meanLuma})",
+                stats.meanLuma >= 25f,
             )
             assertTrue(
-                "$what: something on screen is close to white (${stats.maxLuma})",
-                stats.maxLuma <= 150f,
+                "$what: the field is as bright as text would be (${stats.maxLuma})",
+                stats.maxLuma <= 180f,
             )
             assertTrue(
                 "$what: the field is a flat fill, not a field (p90-p10 ${stats.p90 - stats.p10})",
-                stats.p90 - stats.p10 >= 6,
+                stats.p90 - stats.p10 >= 20,
             )
             assertTrue(
-                "$what: the field is more saturated than the policy allows (${stats.meanSaturation})",
-                stats.meanSaturation <= 0.55f,
+                "$what: the field is a wash of one loud colour (${stats.meanSaturation})",
+                stats.meanSaturation <= 0.60f,
             )
         }
     }
@@ -238,6 +282,92 @@ class TvAmbientBackgroundTest {
                 background.p99 <= CONTRAST_LUMA,
             )
         }
+    }
+
+    /**
+     * The field has a light source, and it is not the middle of the screen.
+     *
+     * A field of equal masses would read as a wash; what makes it an aura is that
+     * the core is brighter than everything around it and sits off to one side. The
+     * two regions below are the core's own anchor and the opposite corner, both
+     * measured on the ambient view alone - no cover, no dim, no scrim.
+     */
+    @Test
+    fun the_field_is_lit_from_its_core_rather_than_evenly() {
+        val frame = render(worstCaseArtwork, 960, 540)
+
+        val core = statsOf(frame, Rect(150, 40, 460, 260))
+        val corner = statsOf(frame, Rect(640, 340, 940, 520))
+        val whole = statsOf(frame)
+
+        Log.i(
+            TAG,
+            "core region mean luma ${core.meanLuma} max ${core.maxLuma}; " +
+                "opposite corner mean ${corner.meanLuma} max ${corner.maxLuma}; " +
+                "whole frame mean ${whole.meanLuma}",
+        )
+        assertTrue(
+            "the core region (${core.meanLuma}) is no brighter than the frame's own " +
+                "average (${whole.meanLuma})",
+            core.meanLuma > whole.meanLuma * 1.15f,
+        )
+        assertTrue(
+            "the far corner (${corner.meanLuma}) is as bright as the core's own region",
+            corner.meanLuma < core.meanLuma,
+        )
+    }
+
+    /**
+     * The music-reactive half: the same palette, drawn with the pipeline quiet and
+     * with it loud.
+     *
+     * [PlaybackAudioLevel] is what the audio tap publishes into, so this is the
+     * same signal the shipped field moves with - published here directly, because
+     * an instrumentation test has no decoded audio to play.
+     */
+    @Test
+    fun the_field_lights_up_with_the_music() {
+        val quiet = statsOf(render(worstCaseArtwork, 960, 540, rms = 0f))
+        val loud = statsOf(render(worstCaseArtwork, 960, 540, rms = 0.3f))
+
+        Log.i(
+            TAG,
+            "quiet: mean ${quiet.meanLuma} p90 ${quiet.p90}; " +
+                "loud: mean ${loud.meanLuma} p90 ${loud.p90}",
+        )
+        assertTrue(
+            "loudness did not light the field up (${quiet.meanLuma} -> ${loud.meanLuma})",
+            loud.meanLuma > quiet.meanLuma * 1.05f,
+        )
+    }
+
+    /**
+     * The audio tap builds on a real device.
+     *
+     * This is the part of the music-reactive path that could take the player down
+     * with it: the sink is assembled from Media3 internals, and if that assembly
+     * fails at runtime, playback fails with it. The tap is therefore built the same
+     * way the service builds it, on this device, and has to come back as the same
+     * kind of sink Media3 would have made.
+     */
+    @OptIn(UnstableApi::class)
+    @Test
+    fun the_audio_tap_builds_the_same_kind_of_sink_media3_would() {
+        val context = instrumentation.targetContext
+        val tapped: AudioSink? = AudioLevelRenderersFactory(context).tappedSink(context, false, false)
+        val stock: AudioSink? = StockSinkProbe(context).sink(context)
+
+        assertNotNull("the stock sink could not be built either", stock)
+        assertNotNull("the tapped sink could not be built", tapped)
+        assertEquals(
+            "the tapped path did not produce the sink Media3 would have built",
+            stock!!.javaClass,
+            tapped!!.javaClass,
+        )
+        assertTrue(
+            "the tapped sink is not a DefaultAudioSink, so the chain was not installed",
+            tapped is DefaultAudioSink,
+        )
     }
 
     // ==================== lifecycle ====================
@@ -381,7 +511,12 @@ class TvAmbientBackgroundTest {
      * the bitmap is the palette's own frame rather than whatever phase an
      * animator happened to be at.
      */
-    private fun render(palette: TvAmbientPalette, width: Int, height: Int): Bitmap {
+    private fun render(
+        palette: TvAmbientPalette,
+        width: Int,
+        height: Int,
+        rms: Float = 0f,
+    ): Bitmap {
         val context = tvContext(geometries.first())
         val view = onMainThread {
             TvAmbientBackgroundView(context).apply {
@@ -392,7 +527,16 @@ class TvAmbientBackgroundTest {
         layout(view, width, height)
 
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        view.draw(Canvas(bitmap))
+        val canvas = Canvas(bitmap)
+
+        // The field follows loudness over time, so it is drawn repeatedly with the
+        // pipeline held at [rms] rather than once: one frame of a five-hundred
+        // millisecond envelope is not the state a viewer ever sees.
+        for (frame in 0 until ENERGY_SETTLE_FRAMES) {
+            PlaybackAudioLevel.publish(rms, SystemClock.uptimeMillis())
+            view.draw(canvas)
+        }
+        PlaybackAudioLevel.publishSilence(SystemClock.uptimeMillis())
         return bitmap
     }
 
@@ -405,10 +549,14 @@ class TvAmbientBackgroundTest {
     )
 
     private fun statsOf(bitmap: Bitmap): Stats {
-        val width = bitmap.width
-        val height = bitmap.height
+        return statsOf(bitmap, Rect(0, 0, bitmap.width, bitmap.height))
+    }
+
+    private fun statsOf(bitmap: Bitmap, region: Rect): Stats {
+        val width = region.width()
+        val height = region.height()
         val pixels = IntArray(width * height)
-        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        bitmap.getPixels(pixels, 0, width, region.left, region.top, width, height)
 
         val luma = IntArray(pixels.size)
         var total = 0L
@@ -486,5 +634,11 @@ class TvAmbientBackgroundTest {
         instrumentation.runOnMainSync { result = block() }
         @Suppress("UNCHECKED_CAST")
         return result as T
+    }
+
+    /** Media3's own audio sink, built the way Media3 builds it, for comparison. */
+    @OptIn(UnstableApi::class)
+    private class StockSinkProbe(context: Context) : DefaultRenderersFactory(context) {
+        fun sink(context: Context): AudioSink? = buildAudioSink(context, false, false)
     }
 }

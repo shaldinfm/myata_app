@@ -4,12 +4,18 @@
   1280x720 panel or box reports (853x480dp), where the audit measured the
   artwork clipped by 31dp off the top of the screen.
 
-  240 artwork + 20 gap + 24 track line + 16 + 42 + 16 + 50 + 40 = 448dp, so the
-  chain fits with 32dp of slack at the shortest height in this bucket and is
-  still free to sit slightly high rather than off the screen.
+  200 artwork + 16 gap + 24 track line + 16 + 42 + 16 + 50 + 40 = 404dp. The
+  chain is anchored at the bottom, so the 76dp that are left over sit above the
+  artwork - and the artwork's own bias puts four fifths of that there and one
+  fifth between itself and the title.
+
+  Measured on the 1280x720@240 TV AVD: the artwork used to start 26dp below the
+  top of the frame, which read as glued to it, with the artwork itself taking 50%
+  of the viewport's height. It now starts 61dp down and is 42% - smaller, with
+  real air above it, and the column below it unmoved.
 -->
 <resources>
-    <dimen name="tv_player_artwork_size">240dp</dimen>
-    <dimen name="tv_player_artwork_gap">20dp</dimen>
+    <dimen name="tv_player_artwork_size">200dp</dimen>
+    <dimen name="tv_player_artwork_gap">16dp</dimen>
     <dimen name="tv_player_bottom_inset">40dp</dimen>
 </resources>

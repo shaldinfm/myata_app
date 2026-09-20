@@ -4,11 +4,19 @@
   reproduced as 640x360dp (a 1080p panel reported at xxhdpi), where the artwork
   was pushed 128dp above the screen.
 
-  168 artwork + 12 gap + 24 track line + 16 + 42 + 16 + 50 + 24 = 352dp, which
-  fits the shortest height in this bucket with 8dp to spare.
+  132 artwork + 10 gap + 24 track line + 16 + 42 + 16 + 50 + 20 = 310dp. The
+  chain is anchored at the bottom, so the 50dp that are left over sit above the
+  artwork, and the artwork's own bias puts four fifths of that there.
+
+  Measured on the 1920x1080@480 TV AVD: this was the profile that read as
+  top-heavy - the artwork started 6dp below the top of the frame, with the
+  column's 8dp of slack invisible. It now starts 40dp down and is 37% of the
+  viewport's height rather than 47%, and the pills still clear the 5% safe area
+  at the bottom (20dp is 60px at this density, against the 54px a 1080p panel
+  crops).
 -->
 <resources>
-    <dimen name="tv_player_artwork_size">168dp</dimen>
-    <dimen name="tv_player_artwork_gap">12dp</dimen>
-    <dimen name="tv_player_bottom_inset">24dp</dimen>
+    <dimen name="tv_player_artwork_size">132dp</dimen>
+    <dimen name="tv_player_artwork_gap">10dp</dimen>
+    <dimen name="tv_player_bottom_inset">20dp</dimen>
 </resources>

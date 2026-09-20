@@ -63,8 +63,15 @@
       behind "Читать подробнее"; the shipping screen has always shown all three.
       Owner GO: keep every paragraph and make the frozen button expand them in
       place, so the collapsed default matches the design and no copy is lost.
+
+      The heading is "О проекте", not "О нас". The screen already carries "О нас"
+      twice - as its own header (about_title) and as the bottom bar's label
+      (nav_about) - so a third one on the card inside it named the section after
+      the screen instead of after what the section is about. Those two are
+      deliberately unchanged; this string is used in exactly one place,
+      fragment_info.xml's Section 2 heading.
     -->
-    <string name="about_heading">О нас</string>
+    <string name="about_heading">О проекте</string>
     <string name="about_paragraph_1">Радио Мята — интернет-радиостанция, ориентированная на инди-музыку и альтернативный рок.</string>
     <string name="about_paragraph_2">Это «инди-эклектичное» медиа, предлагающее ироничный взгляд на массовую культуру и оригинальный подход к современной музыке. Станция начала вещание в ночь с 27 на 28 сентября 2017 года.</string>
     <!--

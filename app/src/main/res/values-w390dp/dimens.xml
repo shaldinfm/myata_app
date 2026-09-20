@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HOME stream card, the frozen size - everything at 390dp and above.
+
+  390 is the width the canonical HOME frame is drawn at, so from here up the card
+  is reproduced exactly: 316x198 r14 with the next card 15 away. Above 390 it
+  stays 316 rather than growing, which is what it already did and what keeps a
+  412dp device looking like the design instead of a stretched copy of it; the
+  extra width goes into the peek, as it always has.
+
+  Below 390 the width is answered by another bucket rather than by a narrower
+  version of this card: `values-w360dp` holds the 286x179 that a 360..389dp
+  screen gets, and values/dimens.xml holds the 246x154 that a narrower one gets.
+  The card is one value per bucket - see the rule in values/dimens.xml.
+-->
+<resources>
+    <dimen name="home_stream_card_width">316dp</dimen>
+    <dimen name="home_stream_card_height">198dp</dimen>
+    <dimen name="home_stream_row_height">215dp</dimen>
+</resources>

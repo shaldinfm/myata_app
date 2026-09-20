@@ -76,20 +76,94 @@
       they hold - is what lands every canonical anchor exactly:
 
         heading    80    streams  132    heading  363    playlists  415
+
+      **This file holds the compact fallback, not the canonical numbers.** The
+      frozen values live behind qualifiers - `values-w390dp` for the card, and
+      `values-h757dp` for the vertical composition - because Android has no
+      "narrower than" or "shorter than" qualifier, only "at least". That is the
+      same inversion `values-w360dp` already uses for the ABOUT paddings, and it
+      means a device at or above the design's own size gets the frozen design
+      untouched while smaller ones get these.
     -->
     <dimen name="home_header_height">64dp</dimen>
     <dimen name="home_margin">16dp</dimen>
-    <dimen name="home_section_gap">16dp</dimen>
 
-    <!-- `плашка потока MYATA/GOLD`, 316x198 r14, next card 15 away. -->
-    <dimen name="home_stream_row_height">215dp</dimen>
-    <dimen name="home_stream_card_width">316dp</dimen>
-    <dimen name="home_stream_card_height">198dp</dimen>
+    <!--
+      Vertical slack, trimmed below 757dp of available height.
+
+      757 is the frozen frame's own height, so the rule reads "if the
+      composition the design was drawn for does not fit, stop spending height on
+      gaps". Only the gaps and the playlist row's dead space move; no card, glyph
+      or touch target is smaller on a short screen than on a tall one.
+
+      Note the two OS levels disagree about what `h` measures - API 24 reports the
+      app's height net of the status and navigation bars, API 36 reports the whole
+      viewport - so the same panel trips this sooner on 24. That is the direction
+      it should go: 24 really does have ~72dp less to work with.
+    -->
+    <dimen name="home_section_gap">12dp</dimen>
+    <dimen name="home_content_padding_top">12dp</dimen>
+
+    <!--
+      `плашка потока MYATA/GOLD`, 316x198 r14, next card 15 away.
+
+      The card is the one thing that scales with width, and it scales in
+      **buckets, not continuously**. Android has no "narrower than" qualifier,
+      only "at least", so a width is answered by the narrowest rule that still
+      fits it and the card is one value per bucket rather than a fraction of the
+      screen:
+
+        width >= 390dp   values-w390dp   316x198   (the frozen size)
+        360..389dp       values-w360dp   286x179
+        below 360dp      this file        246x154
+
+      Each of the three is the frozen 316x198's aspect to within the half dp a
+      whole-dp height rounds to - 286 x 198/316 is 179.2, so 179 - which is what
+      keeps the banner art undistorted: `HomeStreamCardImage` is fitXY over art
+      drawn at exactly that ratio. It is also why 275, 375 or 384 do not get a
+      card of their own; there is no qualifier that could express one.
+
+      What the width *does* change continuously is the **peek**: the row spends
+      16 of lead and 15 of gap on the first card, and whatever is left of the
+      viewport shows the next one. The frozen composition spends that as 43,
+      which is exactly what each bucket's own first width gives it - 246 at 320,
+      286 at 360, 316 at 390 - while a width in the middle of a bucket gets more
+      (58 at 375, 67 at 384, both answered by the same 286). HomeLayoutTest sweeps
+      all three of those widths, so the bucket is asserted rather than assumed.
+    -->
+    <dimen name="home_stream_card_width">246dp</dimen>
+    <dimen name="home_stream_card_height">154dp</dimen>
     <dimen name="home_stream_card_corner">14dp</dimen>
     <dimen name="home_stream_card_gap">15dp</dimen>
 
-    <!-- `Playlist N > Background`, 160x160 r20, pitch 176 so the gap is 16. -->
-    <dimen name="home_playlist_row_height">197dp</dimen>
+    <!--
+      The streams row: the card plus 17 of room for its drop shadow, which
+      `SoftShadowFrame` paints outside the card's own bounds.
+
+      17 is not spare space and is the same at every card size. The dominant
+      shadow layer reaches `1.5 * blur + dy` = 26dp below the card, so the row
+      always cuts the tail; 17 cuts it where it is about 3% black, and trimming to
+      10 would cut at roughly 12% instead - a visible hard line under the card.
+      So this shrinks only because the card does, and the height qualifier leaves
+      it alone.
+
+      It is one number per width rather than `wrap_content` + a padding because
+      the two round separately: at 2.625x the card's 198 and the slack's 17 land
+      on 520 + 45 = 565px where the row's own 215 lands on 564, and that 1px moves
+      `Мятные плейлисты` off its canonical y. HomeLayoutTest asserts this against
+      `card + 17` at every cell, so the pair cannot drift apart unnoticed.
+    -->
+    <dimen name="home_stream_row_height">171dp</dimen>
+
+    <!--
+      `Playlist N > Background`, 160x160 r20, pitch 176 so the gap is 16.
+
+      The row is 21 taller than the 160 card it holds (the frozen `Playlist` frame
+      is 181) and the frozen container is 197. Of that only the dead space moves
+      on short screens: 176 still clears the 160 card, the 160 skeleton and the
+      error block's text + 52dp retry.
+    -->
+    <dimen name="home_playlist_row_height">176dp</dimen>
     <dimen name="home_playlist_card_size">160dp</dimen>
     <dimen name="home_playlist_card_corner">20dp</dimen>
     <dimen name="home_playlist_card_gap">16dp</dimen>

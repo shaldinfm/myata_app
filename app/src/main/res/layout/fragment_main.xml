@@ -30,12 +30,17 @@
 
       **It is responsive on both axes now, without moving the design.** At 390dp
       and above - the width the frame is drawn at - every number here is still the
-      frozen one. Below 390 the stream card takes `screenWidth - 74` on the frozen
-      aspect, so the 16 lead, the 15 gap and the 43 peek are constants and the
-      card is proportionally the same object rather than the same absolute size on
-      a narrower screen. Below 757dp of available height the three section gaps
-      and the playlists container give back 37dp of slack. The cards, the type and
-      the touch targets are identical at every size; only spacing and the card's
+      frozen one. Below 390 the stream card steps down to the next bucket the
+      resource table holds - 286x179 from `values-w360dp` for a 360..389dp screen,
+      246x154 here for a narrower one - because a qualifier answers "at least this
+      wide", not "this wide", so the card is one value per bucket rather than a
+      fraction of the screen. Each step keeps the frozen 316x198's aspect, so the
+      card stays proportionally the same object, and the 16 lead and the 15 gap
+      stay exactly where they are: the width a bucket does not spend on the card
+      shows as more of the next card instead (43 at 320, 360 and 390, 58 at 375,
+      67 at 384). Below 757dp of available height the three section gaps and the
+      playlists container give back 37dp of slack. The cards, the type and the
+      touch targets are identical at every size; only spacing and the card's
       scale move. The dimens carry the rules - see values/dimens.xml.
     -->
     <FrameLayout

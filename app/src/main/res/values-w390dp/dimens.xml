@@ -8,8 +8,10 @@
   412dp device looking like the design instead of a stretched copy of it; the
   extra width goes into the peek, as it always has.
 
-  Below 390 the card is `screenWidth - 74` on the same aspect - see
-  values-w360dp/dimens.xml and the rule in values/dimens.xml.
+  Below 390 the width is answered by another bucket rather than by a narrower
+  version of this card: `values-w360dp` holds the 286x179 that a 360..389dp
+  screen gets, and values/dimens.xml holds the 246x154 that a narrower one gets.
+  The card is one value per bucket - see the rule in values/dimens.xml.
 -->
 <resources>
     <dimen name="home_stream_card_width">316dp</dimen>

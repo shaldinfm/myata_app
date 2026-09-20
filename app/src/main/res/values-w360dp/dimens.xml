@@ -23,9 +23,13 @@
     <dimen name="about_section_card_padding">32dp</dimen>
 
     <!--
-      HOME stream card at 360..389dp: `screenWidth - 74` at 360, so 286x179 on the
-      aspect the frozen 316x198 sets. See values/dimens.xml for the rule; the
-      frozen size itself is in values-w390dp.
+      HOME stream card, the 360..389dp bucket: 286x179, which is the frozen
+      316x198's aspect to within the half dp a whole-dp height rounds to. Every
+      width in the band gets this card, whatever its exact value - the bucket is
+      the whole of the rule, because there is no "narrower than" qualifier that
+      could narrow the card any further. The frozen size is in values-w390dp and
+      the rule, including how the leftover width becomes the peek, is in
+      values/dimens.xml.
     -->
     <dimen name="home_stream_card_width">286dp</dimen>
     <dimen name="home_stream_card_height">179dp</dimen>

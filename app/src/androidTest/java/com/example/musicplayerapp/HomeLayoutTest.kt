@@ -31,9 +31,20 @@ import kotlin.math.roundToInt
  * So the sweep runs a matrix of viewports rather than a list of widths, and each
  * cell is checked against the geometry its own qualifiers select:
  *
- *   width  >= 390dp   frozen card 316x198        below it   `screenWidth - 74`
- *                                                           on the frozen aspect
- *   height >= 757dp   frozen gaps 16, row 197    below it   gaps 12, row 176
+ *   width  >= 390dp   frozen card 316x198        360..389dp  286x179 (w360 bucket)
+ *                                                below 360   246x154 (values/)
+ *   height >= 757dp   frozen gaps 16, row 197    below it     gaps 12, row 176
+ *
+ * **The width rule is a step function, and it is modelled as one.** The card is
+ * not `screenWidth - 74`: Android has no "narrower than" qualifier, so a width is
+ * answered by the narrowest bucket that still fits it and the card is one value
+ * per bucket - 316 at 390 and up, 286 from 360, 246 below that. 375dp and 384dp
+ * are in the matrix precisely because they sit *inside* the 360 bucket: a
+ * continuous rule would hand them 301 and 310, the resources give them 286, and
+ * the width the bucket does not spend on the card shows up as a wider peek (58
+ * and 67, against the frozen 43). Each cell asserts the resolved dimen against
+ * the bucket as well as the card against the bucket, so the model here cannot
+ * drift away from the resource table. See [cardFor].
  *
  * The point of the matrix is that the canonical cells must come out byte for byte
  * identical to what the frozen frame says - a responsive rule that moves the
@@ -60,13 +71,41 @@ class HomeLayoutTest {
      * into, 390 is the design, 412 a modern Pixel; the heights are the four
      * profiles the responsive audit measured plus 731, which is the API 24 QA
      * panel and the case that used to hide content behind the navigation bar.
+     *
+     * 375 and 384 are here because they are the widths *inside* the
+     * `values-w360dp` bucket, where the card is 286 rather than the 301 and 310 a
+     * continuous `screenWidth - 74` rule would give them. They are the cells that
+     * would catch the formula creeping back in - see [cardFor].
      */
     private val viewports = listOf(
         360 to 640, 360 to 720, 360 to 915,
         320 to 640, 320 to 851,
+        375 to 812, 384 to 854,
         390 to 757, 390 to 851,
         393 to 851, 411 to 731, 412 to 915,
     )
+
+    /**
+     * The stream card a width selects, by bucket - the rule Android can express.
+     *
+     * `values-w390dp` holds 316x198, `values-w360dp` holds 286x179, and
+     * `values/dimens.xml` holds 246x154 for every width under 360. A qualifier
+     * answers "at least this wide", so the widest rule that still fits is the one
+     * that applies and a width in the middle of a bucket gets that bucket's card:
+     * 375 and 384 get 286, not 301 and 310. The sweep checks the resolved dimen
+     * against this table too, so the two cannot disagree silently.
+     */
+    private val cardBuckets = listOf(
+        designWidthDp to StreamCardBucket(316, 198),
+        360 to StreamCardBucket(286, 179),
+        0 to StreamCardBucket(246, 154),
+    )
+
+    private fun cardFor(widthDp: Int): StreamCardBucket =
+        cardBuckets.first { widthDp >= it.first }.second
+
+    /** The card one resource bucket holds, in dp. */
+    private data class StreamCardBucket(val widthDp: Int, val heightDp: Int)
 
     private val findings = mutableListOf<String>()
     private val log = mutableListOf<String>()
@@ -98,16 +137,19 @@ class HomeLayoutTest {
         heightDp: Int,
     ) {
         val inflater = inflaterFor(activity, night, widthDp, heightDp)
-        val dm = inflater.context.resources.displayMetrics
+        val res = inflater.context.resources
+        val dm = res.displayMetrics
         val dp = { v: Number -> v.toFloat() * dm.density }
 
         // What this viewport's qualifiers select. These are the rules under test,
         // written out here rather than read back from the resources, so that a
-        // dimens edit that changes them fails instead of redefining the target.
-        val canonicalWidth = widthDp >= designWidthDp
+        // dimens edit that changes them fails instead of redefining the target -
+        // and the card half of it is a bucket lookup rather than a formula,
+        // because no qualifier can express `screenWidth - 74`. See cardFor.
         val canonicalHeight = heightDp >= designHeightDp
-        val cardW = if (canonicalWidth) 316 else widthDp - 74
-        val cardH = cardW * 198.0 / 316.0
+        val card = cardFor(widthDp)
+        val cardW = card.widthDp
+        val cardH = card.heightDp
         val gap = if (canonicalHeight) 16 else 12
         val playlistRow = if (canonicalHeight) 197 else 176
 
@@ -180,19 +222,28 @@ class HomeLayoutTest {
                 expect(where, "stream card $i width", c.width, dp(cardW))
                 expect(where, "stream card $i height", c.height, dp(cardH))
             }
-            // The composition the width is spent on: 16 lead, 15 gap, and what is
-            // left over for the next card to peek by. Those three are constants at
-            // every width; the card is what absorbs the difference.
+            // And the bucket the model assumed is the bucket the resource table
+            // really resolved under this configuration. Without this the sweep
+            // could agree with itself: a card that fell into a different bucket
+            // than cardFor predicts already fails on its size, but a dimens edit
+            // that moved a bucket *and* this file's table together would pass -
+            // and the table, not the resource, is the hand-written half.
+            expect(where, "declared card width",
+                res.getDimensionPixelSize(R.dimen.home_stream_card_width), dp(cardW))
+            expect(where, "declared card height",
+                res.getDimensionPixelSize(R.dimen.home_stream_card_height), dp(cardH))
+
+            // The composition the width is spent on: a 16 lead and a 15 gap, both
+            // constants at every width, and then whatever the viewport has left
+            // over for the next card to peek by. The peek is the only part of the
+            // three that tracks the screen width continuously, so it is asserted
+            // as the remainder rather than as the frozen 43: 43 is what that
+            // remainder comes to at each bucket's own first width, while 375 and
+            // 384 - inside the 360 bucket - get 58 and 67.
             expect(where, "first stream card x", leftInRoot(cards[0]), dp(16))
             expect(where, "stream card gap", leftInRoot(cards[1]) - (leftInRoot(cards[0]) + cards[0].width), dp(15))
-            // How much of the second card is on screen. At and below the design
-            // width this is the frozen 43 at every size, which is the whole point
-            // of spending the width on the card rather than on the peek. Above
-            // 390 the card stops growing and the surplus goes here instead, which
-            // is what a 412dp device already did.
-            if (widthDp <= designWidthDp) {
-                expect(where, "next card peek", widthPx - leftInRoot(cards[1]), dp(43))
-            }
+            expect(where, "next card peek",
+                widthPx - leftInRoot(cards[1]), dp(widthDp - 31 - cardW))
             expect(where, "playlists row leading inset", playlists.paddingStart, dp(16))
 
             // The playlist card never scales - only the row's dead space does - so

@@ -25,14 +25,22 @@ import kotlin.math.roundToInt
  *     cover can still be a field - a deep blue area and a bright one are two
  *     areas, and collapsing them was what turned the first version of this policy
  *     back into the single wash it exists to replace.
+ *   - **Colour separation, but only where it is missing.** Lightness is not
+ *     colour: three blues are one colour as far as the eye is concerned, which is
+ *     why real covers kept coming out as one brown wash or one blue wash. So the
+ *     hues are counted, and when the artwork offers only one, the field gets its
+ *     separation from restrained *analogous* neighbours of that hue - see
+ *     [ACCENT_PLUS_DEGREES] - never from a complementary jump into a colour the
+ *     cover does not contain. When the artwork already has two or more real hues,
+ *     they are used and nothing is synthesised on top of them.
  *   - **Only what the artwork is made of.** A swatch under [MIN_USABLE_SHARE] of
  *     the cover is a highlight, not an area.
- *   - **Fallback, not blank.** A monochrome sleeve, an extraction that failed or
- *     the resolver's no-cover marker falls back to the MYATA palette in [FALLBACK]
- *     rather than to grey. A cover that offers *one* usable colour is not that
- *     case: it gets a field built from its own colour at two lightnesses (see
- *     [siblingOf]), because answering a red sleeve with the brand pink is a
- *     background that visibly does not belong to the track.
+     *   - **Fallback, not blank.** A monochrome sleeve, an extraction that failed or
+     *     the resolver's no-cover marker falls back to the MYATA palette in [FALLBACK]
+     *     rather than to grey. A cover that offers *one* usable colour is not that
+     *     case: it keeps its colour and gains accents around it, because answering
+     *     a red sleeve with the brand pink is a background that visibly does not
+     *     belong to the track.
  *
  * Everything here is integer and float maths with no `android.graphics` and no
  * `androidx.palette`, which is what lets the whole rule be pinned by JVM unit
@@ -118,8 +126,21 @@ object TvAmbientPolicy {
     private const val MIN_HUE_GAP = 18f
     private const val MIN_LIGHTNESS_GAP = 0.07f
 
-    /** How far [siblingOf] moves a single-colour cover's second area. */
-    private const val SIBLING_LIGHTNESS_STEP = 0.12f
+    /**
+     * How far the synthesised accents sit from a single-hue cover's own hue.
+     *
+     * Analogous, not complementary: a blue sleeve gets a cyan-leaning and a
+     * violet-leaning neighbour of *its* blue, which reads as that blue lit in more
+     * than one way. A complementary jump would read as a different cover.
+     */
+    private const val ACCENT_PLUS_DEGREES = 30f
+    private const val ACCENT_MINUS_DEGREES = -22f
+
+    /**
+     * Accents are quieter than the colour they come from, so the source hue stays
+     * the subject rather than one of three equals.
+     */
+    private const val ACCENT_SATURATION_SCALE = 0.85f
 
     // MYATA's own colours, as the app already uses them: the pink of the station
     // cards, the navy of `primary`, and the cyan of the play glyph. A dark purple
@@ -188,23 +209,56 @@ object TvAmbientPolicy {
         // from, so it belongs to the same colour the masses lead with.
         val core = if (picked.isEmpty()) FALLBACK.core else glow(candidates.first().argb)
 
-        return when (picked.size) {
-            // Several areas: the cover's own colours.
-            2, 3, 4 -> TvAmbientPalette(spread(picked), core, isFallback = false)
-            // One colour is most of a photographic sleeve - a red one, a blue one -
-            // and answering it with the brand field is a background that visibly
-            // does not belong to the track. Its own colour at a second lightness
-            // is still its colour, and two tones are a field where one is a fill.
-            1 -> TvAmbientPalette(
-                spread(listOf(picked[0], siblingOf(picked[0]))),
-                core,
-                isFallback = false,
-            )
-            // Nothing usable at all: a monochrome or unreadable cover. That is the
-            // brand field's job, not a grey version of the cover.
-            else -> FALLBACK
+        // Nothing usable at all: a monochrome or unreadable cover. That is the
+        // brand field's job, not a grey version of the cover.
+        if (picked.isEmpty()) return FALLBACK
+
+        // How many *hues* the artwork actually offered. Lightness does not count:
+        // three blues are one colour, and a field of three blues is the monochrome
+        // wash the brief is about.
+        if (distinctHueCount(picked) >= 2) {
+            // The cover has real colours of its own, so they are the field and
+            // nothing is synthesised on top of them.
+            return TvAmbientPalette(spread(picked), core, isFallback = false)
         }
+
+        // One hue: keep it - it is what the cover is - and give the field the
+        // separation it would otherwise lack from restrained analogous neighbours.
+        // The source leads: it is the first mass, which is the largest and the
+        // brightest, and the core is its hue as well.
+        val source = picked.first()
+        return TvAmbientPalette(
+            colors = spread(
+                listOf(
+                    source,
+                    accentOf(source, ACCENT_PLUS_DEGREES),
+                    accentOf(source, ACCENT_MINUS_DEGREES),
+                ),
+            ),
+            core = core,
+            isFallback = false,
+        )
     }
+
+    /** How many hues [colours] holds, counting hues a [MIN_HUE_GAP] apart. */
+    private fun distinctHueCount(colours: List<Int>): Int {
+        val hues = ArrayList<Float>(colours.size)
+        for (colour in colours) {
+            val hue = hueOf(colour)
+            if (hues.none { hueGap(it, hue) < MIN_HUE_GAP }) hues += hue
+        }
+        return hues.size
+    }
+
+    /**
+     * An analogue of [colour]: the same lightness and a quieter saturation, turned
+     * [degrees] around the wheel and wrapped.
+     */
+    private fun accentOf(colour: Int, degrees: Float): Int = hsvToArgb(
+        hue = (hueOf(colour) + degrees + 360f) % 360f,
+        saturation = saturationOf(colour) * ACCENT_SATURATION_SCALE,
+        value = valueOf(colour),
+    )
 
     /**
      * A cover colour as the *light* in the field: the same hue, its lightness
@@ -221,28 +275,6 @@ object TvAmbientPolicy {
         maxLightness = CORE_MAX_LIGHTNESS,
         maxSaturation = CORE_MAX_SATURATION,
     )
-
-    /**
-     * The second area for a cover that offered only one colour.
-     *
-     * Same hue and saturation, a neighbouring lightness - which is what the
-     * artwork would have shown if a little more or less light had fallen on it.
-     * The step is twice the gap at which two colours stop reading as one area, so
-     * the result is a field rather than the same colour twice.
-     */
-    private fun siblingOf(colour: Int): Int {
-        val middle = (MASS_MIN_LIGHTNESS + MASS_MAX_LIGHTNESS) / 2f
-        val shifted = if (valueOf(colour) >= middle) {
-            valueOf(colour) - SIBLING_LIGHTNESS_STEP
-        } else {
-            valueOf(colour) + SIBLING_LIGHTNESS_STEP
-        }
-        return hsvToArgb(
-            hue = hueOf(colour),
-            saturation = saturationOf(colour),
-            value = shifted.coerceIn(MASS_MIN_LIGHTNESS, MASS_MAX_LIGHTNESS),
-        )
-    }
 
     /**
      * [argb] as a mass of the field: saturation clamped down to [MASS_MAX_SATURATION],

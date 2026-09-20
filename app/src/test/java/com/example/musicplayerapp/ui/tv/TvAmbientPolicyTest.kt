@@ -164,12 +164,14 @@ class TvAmbientPolicyTest {
         )
 
         assertFalse("a red cover became the brand field", palette.isFallback)
-        assertEquals("the cover's colour at two lightnesses, not four times", 2, palette.colors.toSet().size)
-        for (colour in palette.colors) {
-            // Loose by a few degrees: the hue is re-derived from 8-bit channels, so
-            // a red that is exactly 0 coming in can be a degree or two going out.
-            assertEquals("the field left the cover's hue", 0f, hsv(colour).hue, 5f)
-        }
+        assertTrue(
+            "a red cover's field is still one red",
+            palette.colors.toSet().size >= 2,
+        )
+        assertTrue(
+            "the cover's own red is not in the field",
+            palette.colors.any { hueGap(hsv(it).hue, 0f) < 5f },
+        )
     }
 
     @Test
@@ -191,6 +193,81 @@ class TvAmbientPolicyTest {
             "one hue at several lightnesses must still be more than one area",
             palette.colors.toSet().size >= 2,
         )
+    }
+
+    // ==================== colour separation ====================
+
+    @Test
+    fun one_hue_gains_analogous_accents_rather_than_lightness_variants() {
+        // The measured blue sleeve, and the case behind "real covers come out as
+        // one wash": a photograph of one colour offers that colour several times,
+        // and a field built from it at three lightnesses is still one colour.
+        val palette = TvAmbientPolicy.fromSwatches(
+            listOf(
+                TvAmbientSwatch(0xFF082838.toInt(), 2239),
+                TvAmbientSwatch(0xFF305060.toInt(), 1136),
+                TvAmbientSwatch(0xFF08A0D8.toInt(), 526),
+                TvAmbientSwatch(0xFF588098.toInt(), 286),
+            ),
+            totalPopulation = 8776,
+        )
+
+        val hues = palette.colors.map { hsv(it).hue }
+        assertEquals("three masses, three hues", 3, hues.map { (it / 1f) }.toSet().size)
+        for (hue in hues) {
+            assertTrue(
+                "hue $hue is not a neighbour of the cover's own blue",
+                hueGap(hue, hues.first()) < 35f,
+            )
+        }
+        assertTrue(
+            "the field is a rainbow rather than one colour with accents",
+            (hues.max() - hues.min() + 360f) % 360f <= 60f,
+        )
+    }
+
+    @Test
+    fun the_synthesised_accents_stay_secondary() {
+        val palette = TvAmbientPolicy.fromSwatches(listOf(TvAmbientSwatch(0xFF1565C0.toInt(), 100)))
+        val source = palette.colors.first()
+
+        for (colour in palette.colors.drop(1)) {
+            assertTrue(
+                "an accent (#${hex(colour)}) is as saturated as the cover's own colour",
+                hsv(colour).saturation < hsv(source).saturation,
+            )
+            assertTrue(
+                "an accent is not adjacent to the source hue",
+                hueGap(hsv(colour).hue, hsv(source).hue) in 15f..35f,
+            )
+        }
+    }
+
+    @Test
+    fun a_cover_with_real_hues_gets_no_synthesised_accents() {
+        // Two genuinely different colours: they are the field, and the grey-blue
+        // that would otherwise be invented around them must not appear.
+        val red = 0xFFD32F2F.toInt()
+        val green = 0xFF2E7D32.toInt()
+        val palette = TvAmbientPolicy.fromSwatches(
+            listOf(
+                TvAmbientSwatch(red, 60),
+                TvAmbientSwatch(green, 40),
+            ),
+        )
+
+        assertFalse(palette.isFallback)
+        assertEquals(
+            "the field invented colours the cover does not have",
+            2,
+            palette.colors.toSet().size,
+        )
+        for (colour in palette.colors.toSet()) {
+            assertTrue(
+                "#${hex(colour)} is neither of the cover's colours",
+                colour == TvAmbientPolicy.normalize(red) || colour == TvAmbientPolicy.normalize(green),
+            )
+        }
     }
 
     @Test

@@ -102,7 +102,8 @@ class TvThemeIsolationTest {
         // The TV layouts reference these and no `@color/` at all. A `-night` copy of
         // any of them would be a TV asset that changes with the phone's choice.
         val tvDrawables = listOf(
-            "bg_tv_stream_button_new", "btn_back_tv", "btn_pause_tv", "card_gold_tv",
+            "bg_tv_stream_button_new", "bg_tv_play_pause", "ic_tv_play", "ic_tv_pause",
+            "btn_back_tv", "card_gold_tv",
             "card_myata_tv", "card_xtra_tv", "logo_tv", "myata_bg_tv",
             "myata_bg_load_tv", "gradient_scrim_bottom", "zaglushka_logo", "tv_banner",
         )

@@ -159,8 +159,13 @@ class MediaPlayerService(): MediaSessionService(){
      */
     private var userWantsPlayback = false
 
-    /** Consecutive failed attempts in the current episode; drives the backoff. */
-    private var recoveryAttempt = 0
+    /**
+     * The reconnect episode in progress: how much of the fast budget is spent, and
+     * whether the episode has moved on to its slow phase. The decisions live in
+     * [RecoveryPolicy], which is where they are pinned by JVM tests - this is only
+     * the service's copy of the answer.
+     */
+    private var recovery = RecoveryPolicy.Episode()
 
     /**
      * Whether this service instance has already acted on the durable playback
@@ -170,18 +175,15 @@ class MediaPlayerService(): MediaSessionService(){
      */
     private var playbackIntentRestored = false
 
-    /** At most one retry may be in flight. */
+    /** At most one retry may be in flight, in either phase. */
     private var pendingRetry: Runnable? = null
-    private val retryHandler by lazy { android.os.Handler(android.os.Looper.getMainLooper()) }
 
-    /** Parked because there is no network; resumed by the connectivity callback. */
-    private var waitingForNetwork = false
+    /** Which phase the armed attempt belongs to, so a cancellation can say which. */
+    private var pendingRetryPhase: String? = null
+    private val retryHandler by lazy { android.os.Handler(android.os.Looper.getMainLooper()) }
 
     /** When the current uninterrupted playback started, for the stability reset. */
     private var playingSinceMs = 0L
-
-    /** How long the last uninterrupted stretch of playback lasted. */
-    private var lastPlaybackRunMs = 0L
 
     // ============== SLEEP TIMER (G2) ==============
 
@@ -474,6 +476,21 @@ class MediaPlayerService(): MediaSessionService(){
                         restorePlaybackIntent("intent_restore")
                     }
                 }
+                SystemPlaybackEventContract.ACTION_BECOMING_NOISY -> {
+                    // The audio-route path, reachable. See
+                    // SystemPlaybackEventContract for why it exists and why a release
+                    // build refuses it. The refusal is the first thing here: nothing
+                    // is read, nothing is written and no field is touched before the
+                    // policy has answered.
+                    if (!SystemPlaybackEventContract.isSimulationAllowed(BuildConfig.DEBUG)) {
+                        PlaybackLog.problem(
+                            "SYSTEM_EVENT_SIMULATION_REFUSED",
+                            "event" to "audio_becoming_noisy", "reason" to "not_a_debug_build"
+                        )
+                    } else {
+                        simulateAudioBecomingNoisy()
+                    }
+                }
                 SleepTimerContract.ACTION_CANCEL -> cancelSleepTimer()
                 SleepTimerContract.ACTION_UNDO -> undoSleepTimerCancel()
                 SleepTimerContract.ACTION_SYNC -> {
@@ -596,7 +613,12 @@ class MediaPlayerService(): MediaSessionService(){
                         }
                     } else {
                         if (playingSinceMs > 0L) {
-                            lastPlaybackRunMs = android.os.SystemClock.elapsedRealtime() - playingSinceMs
+                            // How long that run lasted, handed to the episode: the next
+                            // failure credits it once and spends it.
+                            recovery = RecoveryPolicy.onPlaybackRunEnded(
+                                episode = recovery,
+                                runMs = android.os.SystemClock.elapsedRealtime() - playingSinceMs,
+                            )
                             playingSinceMs = 0L
                         }
                         stopMetadataPolling()
@@ -623,14 +645,7 @@ class MediaPlayerService(): MediaSessionService(){
                         "stream" to (stream.ifEmpty { "none" })
                     )
 
-                    // Headphones pulled out or another app took audio focus: the user
-                    // has to press Play again. Recovery must not undo that (#13).
-                    if (!playWhenReady &&
-                        (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY ||
-                                reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS)
-                    ) {
-                        onPlaybackNoLongerWanted(PlaybackLog.playWhenReadyReason(reason))
-                    }
+                    onSystemPlayWhenReadyChange(playWhenReady, reason)
                 }
 
                 /** Transient audio-focus loss shows up here rather than as a pause. */
@@ -834,11 +849,6 @@ class MediaPlayerService(): MediaSessionService(){
         return caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
-    /** Policy delay plus jitter, so many clients do not reconnect in lockstep. */
-    private fun backoffDelayMs(attempt: Int): Long =
-        StreamErrorPolicy.backoffDelayMs(attempt, RECOVERY_BASE_DELAY_MS, RECOVERY_MAX_DELAY_MS) +
-                (0..250).random()
-
     /**
      * Called when the user explicitly asks for audio. Ends any recovery episode:
      * the budget starts fresh and the transport goes back to HTTPS.
@@ -854,15 +864,15 @@ class MediaPlayerService(): MediaSessionService(){
         // that instant restores a radio nobody asked for. Written before the
         // prepare/play that follows every caller, so the kill cannot outrun it.
         PlaybackIntentStore.recordPlaybackWanted(this, stream)
-        cancelPendingRetry()
-        waitingForNetwork = false
-        if (recoveryAttempt != 0 || useHttpFallback) {
+        cancelPendingRetry("user_wants_playback")
+        if (!recovery.untouched || useHttpFallback) {
             PlaybackLog.event(
                 "RECOVERY_RESET", "reason" to reason,
-                "wasAttempt" to recoveryAttempt, "wasTransport" to (if (useHttpFallback) "http" else "https")
+                "wasAttempt" to recovery.fastAttempts, "wasDormant" to recovery.slow,
+                "wasTransport" to (if (useHttpFallback) "http" else "https")
             )
         }
-        recoveryAttempt = 0
+        recovery = RecoveryPolicy.onUserWantsPlayback()
         useHttpFallback = false
     }
 
@@ -878,22 +888,39 @@ class MediaPlayerService(): MediaSessionService(){
             PlaybackLog.event("USER_INTENT_CLEARED", "reason" to reason)
         }
         userWantsPlayback = false
-        cancelPendingRetry()
-        waitingForNetwork = false
-        recoveryAttempt = 0
-    }
-
-    private fun cancelPendingRetry() {
-        pendingRetry?.let {
-            retryHandler.removeCallbacks(it)
-            PlaybackLog.event("RECOVERY_CANCELLED", "reason" to "superseded_or_user_action")
-        }
-        pendingRetry = null
+        cancelPendingRetry("intent_ended")
+        recovery = RecoveryPolicy.onIntentEnded()
     }
 
     /**
-     * Single entry point for both failure sources - onPlayerError and a live stream
-     * reaching STATE_ENDED - so the two can never schedule two retries at once.
+     * Disarms the one deferred attempt, whatever phase it belongs to. Every explicit
+     * stop ends here - pause, stop, a sleep-timer expiry, headphones out, audio focus
+     * lost - which is what stops a slow retry from undoing a decision the listener
+     * just made.
+     */
+    private fun cancelPendingRetry(reason: String) {
+        pendingRetry?.let {
+            retryHandler.removeCallbacks(it)
+            PlaybackLog.event(
+                "RECOVERY_CANCELLED",
+                "reason" to reason, "phase" to (pendingRetryPhase ?: "none")
+            )
+        }
+        pendingRetry = null
+        pendingRetryPhase = null
+    }
+
+    /**
+     * Single entry point for every failure - onPlayerError, a live stream reaching
+     * STATE_ENDED, and the debug simulation seam - so none of them can schedule two
+     * retries at once, and so what a failure means is decided in one place
+     * ([RecoveryPolicy]).
+     *
+     * Three outcomes, and the third is the whole point of this slice: no connectivity
+     * parks the episode (spending nothing), a budget with room left arms the next fast
+     * attempt, and a budget that is spent arms one slow attempt minutes out instead of
+     * ending the episode. None of them turns the listener's intent into permanent
+     * silence.
      */
     private fun startRecovery(trigger: String, tlsFailure: Boolean) {
         if (!userWantsPlayback) {
@@ -909,62 +936,104 @@ class MediaPlayerService(): MediaSessionService(){
             return
         }
 
-        // A long, healthy run means this is a new problem, not a continuing one.
-        if (lastPlaybackRunMs >= RECOVERY_STABILITY_RESET_MS && recoveryAttempt != 0) {
+        val wasDormant = recovery.slow
+        val decision = RecoveryPolicy.onFailure(
+            episode = recovery,
+            networkAvailable = isNetworkAvailable(),
+        )
+        recovery = decision.episode
+
+        // A long, healthy run means this is a new problem, not a continuing one - once.
+        // The credit is spent by the failure that takes it, so the outage that follows a
+        // healthy stretch cannot reset the budget it is already spending.
+        decision.creditedRunMs?.let { creditedRunMs ->
             PlaybackLog.event(
                 "RECOVERY_RESET", "reason" to "stable_playback",
-                "stableForMs" to lastPlaybackRunMs, "wasAttempt" to recoveryAttempt
+                "stableForMs" to creditedRunMs, "wasDormant" to wasDormant
             )
-            recoveryAttempt = 0
         }
 
-        if (!isNetworkAvailable()) {
+        when (val plan = decision.plan) {
             // Do not spend the budget on attempts that cannot possibly succeed.
-            waitingForNetwork = true
-            PlaybackLog.event(
-                "RECOVERY_WAITING_FOR_NETWORK", "trigger" to trigger, "attempt" to recoveryAttempt
-            )
-            LocalBroadcastManager.getInstance(this).sendBroadcast(Intent("buffering"))
-            return
-        }
+            is RecoveryPolicy.Plan.WaitForNetwork -> {
+                PlaybackLog.event(
+                    "RECOVERY_WAITING_FOR_NETWORK", "trigger" to trigger,
+                    "attempt" to recovery.fastAttempts, "dormant" to recovery.slow
+                )
+                LocalBroadcastManager.getInstance(this).sendBroadcast(Intent("buffering"))
+            }
 
-        if (recoveryAttempt >= RECOVERY_MAX_ATTEMPTS) {
-            PlaybackLog.problem(
-                "RECOVERY_GAVE_UP", "trigger" to trigger, "attempts" to recoveryAttempt,
-                "outcome" to "playback_stopped_until_user_acts"
-            )
-            LocalBroadcastManager.getInstance(this).sendBroadcast(Intent("pause"))
-            return
-        }
+            is RecoveryPolicy.Plan.FastRetry -> {
+                // TV/projector only, and only when TLS itself failed - see issue #16.
+                if (tlsFailure && isTv && !useHttpFallback) {
+                    useHttpFallback = true
+                    PlaybackLog.problem(
+                        "TRANSPORT_FALLBACK", "from" to "https", "to" to "http",
+                        "reason" to "tls_failure_on_tv", "scope" to "current_episode_only"
+                    )
+                }
+                armRetry(trigger, plan.attempt, plan.delayMs, slow = false)
+            }
 
-        // TV/projector only, and only when TLS itself failed - see issue #16.
-        if (tlsFailure && isTv && !useHttpFallback) {
-            useHttpFallback = true
-            PlaybackLog.problem(
-                "TRANSPORT_FALLBACK", "from" to "https", "to" to "http",
-                "reason" to "tls_failure_on_tv", "scope" to "current_episode_only"
-            )
+            /**
+             * The fast budget is spent and playback is already stopped; the listener
+             * still wants the radio. Pause and keep exactly one attempt armed, minutes
+             * out - the state the old code called giving up, now with a way back. The
+             * "pause" broadcast is what the give-up path has always sent, and nothing
+             * else changes for the UI: the attempt that succeeds reports itself the
+             * normal way, through `onIsPlayingChanged`.
+             */
+            is RecoveryPolicy.Plan.SlowRetry -> {
+                if (wasDormant) {
+                    PlaybackLog.event(
+                        "RECOVERY_DORMANT", "trigger" to trigger,
+                        "attempts" to recovery.fastAttempts, "slowRetryInMs" to plan.delayMs
+                    )
+                } else {
+                    PlaybackLog.problem(
+                        "RECOVERY_GAVE_UP", "trigger" to trigger, "attempts" to recovery.fastAttempts,
+                        "outcome" to "dormant_slow_retry",
+                        "slowRetryInMs" to plan.delayMs, "wantsPlayback" to true
+                    )
+                }
+                LocalBroadcastManager.getInstance(this).sendBroadcast(Intent("pause"))
+                armRetry(trigger, recovery.fastAttempts, plan.delayMs, slow = true)
+            }
         }
+    }
 
-        val attempt = recoveryAttempt
-        val delay = backoffDelayMs(attempt)
-        recoveryAttempt++
+    /**
+     * The only place a retry is ever scheduled.
+     *
+     * One slot, [pendingRetry]: a second failure while an attempt is armed is
+     * refused by [startRecovery] rather than queued, so there is never more than one
+     * loop. The fast phase keeps its jitter (many clients, one server); the slow
+     * phase does not need any - it fires when it fires, minutes out.
+     */
+    private fun armRetry(trigger: String, attempt: Int, delayMs: Long, slow: Boolean) {
+        val phase = if (slow) "slow" else "fast"
+        val delay = if (slow) delayMs else delayMs + (0..250).random()
 
         PlaybackLog.event(
-            "RECOVERY_SCHEDULED", "trigger" to trigger, "attempt" to (attempt + 1),
-            "maxAttempts" to RECOVERY_MAX_ATTEMPTS, "delayMs" to delay,
-            "transport" to (if (useHttpFallback) "http" else "https")
+            "RECOVERY_SCHEDULED", "trigger" to trigger, "attempt" to attempt,
+            "maxAttempts" to RecoveryPolicy.MAX_FAST_ATTEMPTS, "delayMs" to delay,
+            "phase" to phase, "transport" to (if (useHttpFallback) "http" else "https")
         )
-        LocalBroadcastManager.getInstance(this).sendBroadcast(Intent("buffering"))
+        if (!slow) {
+            // The slow phase announces nothing: the radio is paused for minutes, and
+            // a buffering signal for an attempt that has not started would be a lie.
+            LocalBroadcastManager.getInstance(this).sendBroadcast(Intent("buffering"))
+        }
 
         val task = Runnable {
             pendingRetry = null
+            pendingRetryPhase = null
             if (!userWantsPlayback) {
                 PlaybackLog.event("RECOVERY_ABORTED", "reason" to "user_stopped_while_pending")
                 return@Runnable
             }
             PlaybackLog.event(
-                "RECOVERY_ATTEMPT", "attempt" to (attempt + 1),
+                "RECOVERY_ATTEMPT", "attempt" to attempt, "phase" to phase,
                 "transport" to (if (useHttpFallback) "http" else "https"), "stream" to stream
             )
             // Re-set the item so a transport change actually takes effect.
@@ -977,19 +1046,74 @@ class MediaPlayerService(): MediaSessionService(){
             exoPlayer.play()
         }
         pendingRetry = task
+        pendingRetryPhase = phase
         retryHandler.postDelayed(task, delay)
     }
 
-    /** Resumes a parked recovery once, when connectivity actually comes back. */
+    /**
+     * Resumes a parked recovery once, when connectivity actually comes back.
+     *
+     * Parked is the only state this wakes: an episode that is merely dormant (the
+     * fast budget spent, connectivity fine, a slow attempt already armed) is paced
+     * by that attempt, and letting a network event pull it forward as well would be
+     * a second trigger for the same loop. A parked episode has no timer on purpose -
+     * a timer cannot know when the network comes back - so this is its only way out,
+     * in either phase.
+     */
     private fun onNetworkRegained() {
-        if (!waitingForNetwork) return
-        waitingForNetwork = false
-        if (!userWantsPlayback) {
-            PlaybackLog.event("RECOVERY_NOT_RESUMED", "reason" to "user_does_not_want_playback")
-            return
-        }
-        PlaybackLog.event("RECOVERY_RESUMED_ON_NETWORK", "attempt" to recoveryAttempt)
+        // Parked episodes only: one that is merely dormant has its own armed attempt,
+        // and one the listener stopped was ended on the spot, so there is no
+        // "waiting on a network nobody wants" state left to report.
+        if (!recovery.awaitingNetwork) return
+        PlaybackLog.event(
+            "RECOVERY_RESUMED_ON_NETWORK",
+            "attempt" to recovery.fastAttempts, "dormant" to recovery.slow
+        )
         startRecovery("network_regained", tlsFailure = false)
+    }
+
+    /**
+     * The system stopped the audio, and the listener has to ask again.
+     *
+     * Both reasons this acts on mean the *output* went away - headphones unplugged,
+     * Bluetooth gone, another app taking the audio for good - so the episode is over
+     * and the durable record says so: a restarting process must not put the radio
+     * back on the phone speaker, and the reconnect loop must not re-open the stream
+     * the listener has just lost the output for. Which reasons those are is pinned
+     * by `SystemPlaybackStopPolicy`, and this is the only place they are acted on.
+     */
+    private fun onSystemPlayWhenReadyChange(playWhenReady: Boolean, reason: Int) {
+        if (playWhenReady) return
+        if (!SystemPlaybackStopPolicy.endsUserIntent(reason)) return
+        onPlaybackNoLongerWanted(PlaybackLog.playWhenReadyReason(reason))
+    }
+
+    /**
+     * The debug seam: deliver "the audio output went away" now.
+     *
+     * See [SystemPlaybackEventContract] for why the seam has to exist - the broadcast
+     * is protected, so neither a test nor `adb shell` may send it, and an emulator
+     * has no Bluetooth route to lose. This reproduces, in the two steps the platform
+     * performs, what the system's broadcast does:
+     *
+     *  1. the player is silenced the way `AudioBecomingNoisyManager` silences it -
+     *     `playWhenReady` cleared directly on the ExoPlayer, not through the session,
+     *     so the buffer and the media item are kept and one Play press resumes;
+     *  2. the reason that arrival carries is handed to the service's own listener
+     *     handler, which is the code the real callback reaches.
+     *
+     * The one difference is deliberate and is the reason this is a debug-only seam:
+     * step 2 is called directly rather than delivered by ExoPlayer, because the
+     * broadcast that would deliver it cannot be sent by anything but the system.
+     * Everything downstream of that call is the shipped path.
+     */
+    private fun simulateAudioBecomingNoisy() {
+        PlaybackLog.problem("SYSTEM_EVENT_SIMULATED", "event" to "audio_becoming_noisy")
+        exoPlayer.playWhenReady = false
+        onSystemPlayWhenReadyChange(
+            playWhenReady = false,
+            reason = Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY,
+        )
     }
 
     // ============== DURABLE PLAYBACK INTENT (process death) ==============
@@ -1270,7 +1394,7 @@ class MediaPlayerService(): MediaSessionService(){
             "stream" to (stream.ifEmpty { "none" })
         )
         unregisterNetworkLogging()
-        cancelPendingRetry()
+        cancelPendingRetry("service_destroyed")
 
         // The scheduled expiry goes; the record on disk deliberately stays, so a
         // service that is recreated re-adopts the same deadline rather than losing
@@ -1925,19 +2049,9 @@ class MediaPlayerService(): MediaSessionService(){
         // Notification is automatically updated by Media3 when metadata changes
     }
 
-    private companion object {
-        /** First backoff step; doubles per attempt up to the cap. */
-        const val RECOVERY_BASE_DELAY_MS = 1_000L
-        const val RECOVERY_MAX_DELAY_MS = 30_000L
-
-        /** Consecutive attempts before giving up: 1+2+4+8+16+30 is about a minute of trying. */
-        const val RECOVERY_MAX_ATTEMPTS = 6
-
-        /**
-         * How long playback must run uninterrupted for the next failure to count as
-         * a fresh problem. Resetting on STATE_READY instead would let a stream that
-         * plays for two seconds and dies retry forever.
-         */
-        const val RECOVERY_STABILITY_RESET_MS = 60_000L
-    }
+    // The recovery numbers - the fast budget, its backoff, the stability window and
+    // the slow phase's interval - all live in [RecoveryPolicy], which is where they
+    // are pinned by JVM tests. Nothing about an episode is kept here that the policy
+    // does not own: this class keeps the episode, the armed attempt and the
+    // connectivity it retries on.
 }

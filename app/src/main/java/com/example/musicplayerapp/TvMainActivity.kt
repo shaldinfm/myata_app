@@ -9,7 +9,14 @@ import androidx.activity.viewModels
 class TvMainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityTvMainBinding
-    private val vm: StreamsViewModel by viewModels {
+    /**
+     * Internal rather than private so `PlaybackIntentUiSyncTest` can ask a real TV
+     * Activity which station it opened on. `MainActivity` exposes its ViewModel
+     * the same way; there is nothing else to read it from, because `MainActivity`
+     * does not resume on a TV device.
+     */
+    @androidx.annotation.VisibleForTesting
+    internal val vm: StreamsViewModel by viewModels {
         StreamsViewModelFactory(application, this)
     }
     private var isExitDialogShowing = false

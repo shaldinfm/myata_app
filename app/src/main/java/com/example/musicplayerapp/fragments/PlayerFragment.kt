@@ -158,6 +158,27 @@ class PlayerFragment : Fragment() {
             }
         })
 
+        // The ViewModel can learn the station from the session *after* this view
+        // was built - a process death that restored GOLD while the app was gone is
+        // exactly that case, and the position above would otherwise be frozen at
+        // whatever the ViewModel knew a moment earlier. Following it here is what
+        // stops GOLD coming out of the speaker while the page shows MYATA.
+        //
+        // Moving the pager fires onPageSelected, whose own guard sees that the two
+        // already agree and therefore asks for no switch. So this never starts,
+        // stops or changes playback - it only catches the page up.
+        vm.currentStreamLive.observe(viewLifecycleOwner) { stream ->
+            val position = when (stream) {
+                "gold" -> 1
+                "myata_hits" -> 2
+                else -> 0
+            }
+            if (binding.viewPager.currentItem != position) {
+                binding.viewPager.setCurrentItem(position, false)
+                updateIndicators(position)
+            }
+        }
+
         return binding.root
     }
     override fun onResume() {

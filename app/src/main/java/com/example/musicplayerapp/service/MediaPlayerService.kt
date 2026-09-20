@@ -22,10 +22,13 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerNotificationManager
 import com.example.musicplayerapp.R
+import com.example.musicplayerapp.BuildConfig
 import com.example.musicplayerapp.SecureNetModule
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.data.BootIdentity
+import com.example.musicplayerapp.data.PlaybackIntentStore
 import com.example.musicplayerapp.data.SleepTimerStore
+import com.example.musicplayerapp.data.Streams
 import com.example.musicplayerapp.data.lastfm.LastfmConfig
 import com.example.musicplayerapp.data.lastfm.LastfmLink
 import com.example.musicplayerapp.data.lastfm.PrefsLastfmSessionStore
@@ -47,6 +50,18 @@ import java.util.concurrent.TimeUnit
 import android.app.NotificationChannel
 import android.app.NotificationManager
 
+
+/**
+ * A stream's media item, labelled with the stream key.
+ *
+ * The media id is the one part of a `MediaItem` that survives the session
+ * boundary: Media3 strips `localConfiguration` - and with it the URI - from every
+ * item it hands a `MediaController`, so a controller asking "which station is
+ * this?" can read this and nothing else. That is what lets the UI take its answer
+ * from the session rather than keeping a second copy of the selection.
+ */
+internal fun streamMediaItem(url: String, streamKey: String): MediaItem =
+    MediaItem.Builder().setUri(url).setMediaId(streamKey).build()
 
 // Media3 marks most of ExoPlayer's configuration surface (LoadControl, DataSource
 // factories, PlayerNotificationManager, ForwardingPlayer command sets) @UnstableApi.
@@ -115,14 +130,14 @@ class MediaPlayerService(): MediaSessionService(){
     private var fetchJob: kotlinx.coroutines.Job? = null
     
     // HTTPS URLs (по умолчанию)
-    val myataItemHttps = MediaItem.fromUri("https://radio.dline-media.com/myata")
-    val xtraItemHttps = MediaItem.fromUri("https://radio.dline-media.com/myata_hits")
-    val goldItemHttps = MediaItem.fromUri("https://radio.dline-media.com/gold")
+    val myataItemHttps = streamMediaItem("https://radio.dline-media.com/myata", Streams.MYATA)
+    val xtraItemHttps = streamMediaItem("https://radio.dline-media.com/myata_hits", Streams.XTRA)
+    val goldItemHttps = streamMediaItem("https://radio.dline-media.com/gold", Streams.GOLD)
     
     // HTTP URLs (fallback для проекторов с проблемами SSL)
-    val myataItemHttp = MediaItem.fromUri("http://radio.dline-media.com/myata")
-    val xtraItemHttp = MediaItem.fromUri("http://radio.dline-media.com/myata_hits")
-    val goldItemHttp = MediaItem.fromUri("http://radio.dline-media.com/gold")
+    val myataItemHttp = streamMediaItem("http://radio.dline-media.com/myata", Streams.MYATA)
+    val xtraItemHttp = streamMediaItem("http://radio.dline-media.com/myata_hits", Streams.XTRA)
+    val goldItemHttp = streamMediaItem("http://radio.dline-media.com/gold", Streams.GOLD)
     
     // Cleartext fallback for legacy TV/projector devices whose TLS stack cannot
     // complete the handshake at all. Scoped to ONE recovery episode: any explicit
@@ -146,6 +161,14 @@ class MediaPlayerService(): MediaSessionService(){
 
     /** Consecutive failed attempts in the current episode; drives the backoff. */
     private var recoveryAttempt = 0
+
+    /**
+     * Whether this service instance has already acted on the durable playback
+     * intent. A restarted service can be handed more than one start command, and
+     * Media3 issues its own while playback runs - without this, a second one would
+     * prepare and play on top of a player that is already going.
+     */
+    private var playbackIntentRestored = false
 
     /** At most one retry may be in flight. */
     private var pendingRetry: Runnable? = null
@@ -206,7 +229,10 @@ class MediaPlayerService(): MediaSessionService(){
         if (intent == null) {
             // START_STICKY handed the service back to us without the original
             // intent: the process was killed and restarted rather than started.
+            // Everything the listener had told us died with the old process, so
+            // this is the one point where the durable copy has to speak for them.
             PlaybackLog.problem("SERVICE_RESTARTED_BY_SYSTEM", "startId" to startId, "flags" to flags)
+            restorePlaybackIntent("sticky_restart")
         } else {
             // Media3 keeps the service alive with its own action-less start
             // commands during normal playback; those carry no information and
@@ -230,29 +256,7 @@ class MediaPlayerService(): MediaSessionService(){
         // Media3 will replace it with the real notification (with controls) moments later.
         val isForegroundStart = intent?.getBooleanExtra("FOREGROUND_START", false) == true
         if (isForegroundStart) {
-            try {
-                val channelId = "playback_channel"
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    val channel = NotificationChannel(channelId, "Playback", NotificationManager.IMPORTANCE_LOW)
-                    (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
-                }
-                // NotificationCompat, not Notification.Builder: the platform builder
-                // that takes a channel id requires API 26, and minSdk here is 24.
-                val notification = androidx.core.app.NotificationCompat.Builder(this, channelId)
-                    .setSmallIcon(R.drawable.ic_launcher_foreground)
-                    .setContentTitle("Radio Myata")
-                    .setContentText("Загрузка...")
-                    .setPriority(androidx.core.app.NotificationCompat.PRIORITY_LOW)
-                    .build()
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
-                } else {
-                    startForeground(1, notification)
-                }
-                Log.d("MediaPlayerService", "Foreground notification posted immediately")
-            } catch (e: Exception) {
-                Log.e("MediaPlayerService", "Failed to post foreground notification: ${e.message}")
-            }
+            postPlaceholderForegroundNotification()
         }
 
         if(intent != null) {
@@ -274,8 +278,10 @@ class MediaPlayerService(): MediaSessionService(){
                         if (intentStream != null) {
                             stream = intentStream
                         }
+                        // The station is assigned above, so the durable record
+                        // this writes carries the one being asked for.
+                        // onUserWantsPlayback canonicalises `stream` itself.
                         onUserWantsPlayback("startStop_toggle_on")
-                        ensureValidStream("startStop")
                         // Always set MediaItem (it may have been cleared by stop)
                         when(stream){
                             "myata"->{exoPlayer.setMediaItem(myataItem)}
@@ -298,12 +304,16 @@ class MediaPlayerService(): MediaSessionService(){
                     }
                 }
                 "play"->{
-                    onUserWantsPlayback("play_action")
                     val intentStream = intent.getStringExtra("STREAM")
-                    if (intentStream != null && stream != intentStream)
+                    val isStreamChange = intentStream != null && stream != intentStream
+                    // The station first, the intent second. onUserWantsPlayback is
+                    // what writes the durable record, and it has to carry the
+                    // station being asked for - not the one that was playing a
+                    // moment ago, which is what a process death would restore.
+                    if (isStreamChange) stream = intentStream!!
+                    onUserWantsPlayback("play_action")
+                    if (isStreamChange)
                     {
-                        stream = intentStream
-                        ensureValidStream("play_streamChange")
                         when(stream){
                             "myata"->{exoPlayer.setMediaItem(myataItem)}
                             "gold"->{exoPlayer.setMediaItem(goldItem)}
@@ -318,7 +328,6 @@ class MediaPlayerService(): MediaSessionService(){
                     if(!exoPlayer.isPlaying) {
                         // The player can be empty here after a stop cleared it.
                         if (exoPlayer.mediaItemCount == 0) {
-                            ensureValidStream("play_notPlaying")
                             when(stream){
                                 "myata"->{exoPlayer.setMediaItem(myataItem)}
                                 "gold"->{exoPlayer.setMediaItem(goldItem)}
@@ -350,7 +359,6 @@ class MediaPlayerService(): MediaSessionService(){
                             scrobbleTracker.onStreamSelected(stream, android.os.SystemClock.elapsedRealtime())
                         )
                         onUserWantsPlayback("stream_switch")
-                        ensureValidStream("switch_streamChange")
                         
                         val switchSong = intent.getStringExtra("SONG") ?: ""
                         val switchArtist = intent.getStringExtra("ARTIST") ?: ""
@@ -387,7 +395,6 @@ class MediaPlayerService(): MediaSessionService(){
                             onUserWantsPlayback("switch_forcePlay")
                             // A previous stop clears the playlist; restore it first.
                             if (exoPlayer.mediaItemCount == 0) {
-                                ensureValidStream("switch_forcePlay")
                                 when(stream){
                                     "myata"->{exoPlayer.setMediaItem(myataItem)}
                                     "gold"->{exoPlayer.setMediaItem(goldItem)}
@@ -448,6 +455,24 @@ class MediaPlayerService(): MediaSessionService(){
                         minutes = intent.getIntExtra(SleepTimerContract.EXTRA_MINUTES, 0),
                         isCustom = intent.getBooleanExtra(SleepTimerContract.EXTRA_IS_CUSTOM, false),
                     )
+                }
+                PlaybackIntentContract.ACTION_RESTORE -> {
+                    // The restart path, reachable. See PlaybackIntentContract for
+                    // why it exists and why a release build refuses it. The refusal
+                    // is the first thing here: nothing is read, nothing is written
+                    // and no field is touched before the policy has answered.
+                    if (!PlaybackIntentContract.isRestoreAllowed(BuildConfig.DEBUG)) {
+                        PlaybackLog.problem(
+                            "PLAYBACK_INTENT_RESTORE_REFUSED", "reason" to "not_a_debug_build"
+                        )
+                    } else {
+                        // A real sticky restart always lands on a brand new
+                        // instance, where this is false. The simulation has to
+                        // start from the same place or it would only ever be
+                        // testing the already-restored guard.
+                        playbackIntentRestored = false
+                        restorePlaybackIntent("intent_restore")
+                    }
                 }
                 SleepTimerContract.ACTION_CANCEL -> cancelSleepTimer()
                 SleepTimerContract.ACTION_UNDO -> undoSleepTimerCancel()
@@ -725,6 +750,15 @@ class MediaPlayerService(): MediaSessionService(){
                     "PLAYER_PLAY", "source" to "session",
                     "state" to PlaybackLog.stateName(playbackState)
                 )
+                // A player with nothing in it is what a process death leaves
+                // behind, and super.play() on an empty timeline is silent - the
+                // notification Play button looked dead for exactly that reason.
+                // Put the stream back first, so the prepare below has something
+                // to prepare. Deliberately only the selection: the press itself
+                // is the intent, and starting audio is what the rest of this does.
+                if (mediaItemCount == 0) {
+                    restoreStreamSelection("session_play")
+                }
                 onUserWantsPlayback("session_play")
                 // When resuming from pause, re-prepare to jump to live edge
                 // This handles both STATE_READY (paused) and STATE_IDLE (stopped) cases
@@ -810,7 +844,16 @@ class MediaPlayerService(): MediaSessionService(){
      * the budget starts fresh and the transport goes back to HTTPS.
      */
     private fun onUserWantsPlayback(reason: String) {
+        // Canonicalise first: every caller has already assigned the station it is
+        // about, so from here `stream` is the one the listener asked for.
+        canonicaliseStream(reason)
         userWantsPlayback = true
+        // The durable half of the same fact, and the station it belongs to, in one
+        // editor. Two edits would leave an instant in which the record reads
+        // "playback wanted" beside the *previous* station - and a process death in
+        // that instant restores a radio nobody asked for. Written before the
+        // prepare/play that follows every caller, so the kill cannot outrun it.
+        PlaybackIntentStore.recordPlaybackWanted(this, stream)
         cancelPendingRetry()
         waitingForNetwork = false
         if (recoveryAttempt != 0 || useHttpFallback) {
@@ -825,6 +868,12 @@ class MediaPlayerService(): MediaSessionService(){
 
     /** Called when the user - or the system on the user's behalf - stops playback. */
     private fun onPlaybackNoLongerWanted(reason: String) {
+        // The durable write comes first, before the in-memory flag and before the
+        // stop every caller performs next. Silence the listener asked for has to
+        // outlive the process: a kill between the stop and the record would leave
+        // a record that resurrects audio somebody had just ended. The station is
+        // kept, so the notification's Play still knows which one it means.
+        PlaybackIntentStore.recordPlaybackNotWanted(this)
         if (userWantsPlayback) {
             PlaybackLog.event("USER_INTENT_CLEARED", "reason" to reason)
         }
@@ -943,6 +992,167 @@ class MediaPlayerService(): MediaSessionService(){
         startRecovery("network_regained", tlsFailure = false)
     }
 
+    // ============== DURABLE PLAYBACK INTENT (process death) ==============
+    //
+    // Everything the listener had told this service - which station, and whether
+    // they wanted it playing - lived in memory and in the intents that put it
+    // there. A process death took all of it: START_STICKY brought the service
+    // back with a null intent, no stream, no media item and userWantsPlayback
+    // false, so the radio stayed silent and the notification Play button could
+    // not fix it either. PlaybackIntentStore is the durable copy of those two
+    // facts, and this section is the only thing that acts on it.
+
+    /**
+     * The null-intent START_STICKY restart: the system handed the service back
+     * and nobody is watching.
+     *
+     * Audio starts only because the listener had already asked for it. A record
+     * that says they had stopped restores the station and nothing else, and a
+     * record that cannot be read produces silence rather than a guess - the wrong
+     * station playing by itself in somebody pocket is worse than no station.
+     */
+    private fun restorePlaybackIntent(reason: String) {
+        val decision = PlaybackIntentPolicy.onStickyRestart(
+            stored = PlaybackIntentStore.read(this),
+            alreadyRestored = playbackIntentRestored,
+            playerHasMediaItem = exoPlayer.mediaItemCount > 0,
+        )
+        when (decision) {
+            is PlaybackIntentPolicy.Restore.Skip -> PlaybackLog.event(
+                "PLAYBACK_INTENT_SKIPPED", "at" to reason, "reason" to decision.reason
+            )
+
+            is PlaybackIntentPolicy.Restore.Discard -> {
+                playbackIntentRestored = true
+                PlaybackLog.problem(
+                    "PLAYBACK_INTENT_DISCARDED", "at" to reason,
+                    "invalid" to decision.rawStream, "outcome" to "nothing_restored"
+                )
+                PlaybackIntentStore.clear(this)
+            }
+
+            is PlaybackIntentPolicy.Restore.Adopt -> {
+                playbackIntentRestored = true
+                stream = decision.stream
+                PlaybackLog.event(
+                    "PLAYBACK_INTENT_ADOPTED", "at" to reason, "stream" to decision.stream,
+                    "outcome" to "stream_only_playback_was_not_wanted"
+                )
+            }
+
+            is PlaybackIntentPolicy.Restore.Resume -> {
+                playbackIntentRestored = true
+                PlaybackLog.event(
+                    "PLAYBACK_INTENT_RESUMING", "at" to reason, "stream" to decision.stream
+                )
+                // The system restarted us with a plain start command, so nothing
+                // has made this a foreground service yet and the five-second
+                // startForeground contract of the normal Play path does not
+                // apply. Post the placeholder anyway: Media3 replaces it the
+                // moment playback begins, and until then a service that is about
+                // to hold a wake lock should be visible.
+                postPlaceholderForegroundNotification()
+                stream = decision.stream
+                // Ends any recovery episode and sets userWantsPlayback, which is
+                // what the error and STATE_ENDED paths read: a stream restored
+                // this way has to be as reconnectable as one the listener started.
+                onUserWantsPlayback("sticky_restore")
+                if (!installStreamMediaItem("sticky_restore")) return
+                if (canPrepare("sticky_restore")) {
+                    PlaybackLog.event("PLAYER_PREPARE", "source" to "restore", "reason" to reason)
+                    exoPlayer.prepare()
+                    PlaybackLog.event("PLAYER_PLAY", "source" to "restore", "reason" to reason)
+                    exoPlayer.play()
+                    // The wake lock and the metadata poller are not started here,
+                    // and must not be: both hang off onIsPlayingChanged, so they
+                    // come back when audio actually does, and a restore that never
+                    // reaches the live edge leaves neither of them running.
+                }
+            }
+        }
+    }
+
+    /**
+     * Which stream a Play on an empty timeline means, put back on the player.
+     *
+     * Never starts audio - the caller is already doing that. Unlike the restart
+     * above this always resolves to some stream, because the listener is pressing
+     * Play right now and a Play that does nothing is issue #14.
+     */
+    private fun restoreStreamSelection(reason: String): Boolean {
+        val selection = PlaybackIntentPolicy.onEmptyTimelinePlay(
+            stored = PlaybackIntentStore.read(this),
+            inMemoryStream = stream,
+        )
+        PlaybackLog.event(
+            "PLAYBACK_INTENT_SELECTED", "at" to reason,
+            "stream" to selection.stream, "source" to selection.source
+        )
+        stream = selection.stream
+        return installStreamMediaItem(reason)
+    }
+
+    /**
+     * The media item for the current [stream], with the placeholder title and
+     * station name a fresh Play installs - so a restored stream reads as this app
+     * in the notification rather than as the raw ICY title the stream sends.
+     */
+    private fun installStreamMediaItem(where: String): Boolean {
+        if (!ensureValidStream(where)) return false
+        when (stream) {
+            Streams.MYATA -> exoPlayer.setMediaItem(myataItem)
+            Streams.GOLD -> exoPlayer.setMediaItem(goldItem)
+            Streams.XTRA -> exoPlayer.setMediaItem(xtraItem)
+            else -> return false
+        }
+        logStreamSelection(where)
+        currentAlbumArt = null
+        // The same call the in-app Play makes before any metadata has arrived:
+        // blank in, placeholders out, and no artwork lookup started for a track
+        // we do not know yet. The poller fills it in once audio is running.
+        updateMetadata("", "")
+        return true
+    }
+
+    /**
+     * The minimal notification that makes this a foreground service.
+     *
+     * Media3 replaces it with the real one, with controls, moments later. It
+     * exists because Android gives a startForegroundService five seconds to call
+     * startForeground, and because the restart path above has to be foreground
+     * before it touches the player.
+     */
+    private fun postPlaceholderForegroundNotification() {
+        try {
+            val channelId = "playback_channel"
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(channelId, "Playback", NotificationManager.IMPORTANCE_LOW)
+                (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
+            }
+            // NotificationCompat, not Notification.Builder: the platform builder
+            // that takes a channel id requires API 26, and minSdk here is 24.
+            val notification = androidx.core.app.NotificationCompat.Builder(this, channelId)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle("Radio Myata")
+                .setContentText("Загрузка...")
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_LOW)
+                .build()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+            } else {
+                startForeground(1, notification)
+            }
+            Log.d("MediaPlayerService", "Foreground notification posted immediately")
+        } catch (e: Exception) {
+            // Android 12+ can refuse a foreground start it did not ask for. Media3
+            // makes its own attempt when playback begins; nothing here retries.
+            Log.e("MediaPlayerService", "Failed to post foreground notification: ${e.message}")
+            PlaybackLog.problem(
+                "FOREGROUND_NOTIFICATION_REFUSED", "cause" to e.javaClass.simpleName
+            )
+        }
+    }
+
     // ============== DIAGNOSTICS (logging only, no playback behaviour) ==============
 
     /**
@@ -955,18 +1165,35 @@ class MediaPlayerService(): MediaSessionService(){
      * leaving the player with no media item. Returns true if a valid stream is set.
      */
     private fun ensureValidStream(where: String): Boolean {
-        val normalised = com.example.musicplayerapp.data.Streams.normalise(stream)
+        canonicaliseStream(where)
+        // The station on its own, with no claim about whether audio is wanted -
+        // that is [onUserWantsPlayback]'s single atomic write to make. Splitting
+        // the two is what lets this be called from places that only need a usable
+        // media item without them accidentally asserting an intent.
+        PlaybackIntentStore.recordSelectedStream(this, stream)
+        return true
+    }
+
+    /**
+     * Makes [stream] a canonical key, in memory only.
+     *
+     * The `when(stream)` blocks have no else branch, so an unrecognised key
+     * silently leaves the player with no media item - worth a loud line, and worth
+     * a default rather than nothing. Deliberately writes nothing: the callers
+     * differ in what they are entitled to record.
+     */
+    private fun canonicaliseStream(where: String) {
+        val normalised = Streams.normalise(stream)
         if (normalised == null) {
             PlaybackLog.problem(
                 "STREAM_FALLBACK_APPLIED", "invalid" to (stream.ifEmpty { "<empty>" }),
-                "usedInstead" to com.example.musicplayerapp.data.Streams.DEFAULT, "at" to where
+                "usedInstead" to Streams.DEFAULT, "at" to where
             )
-            stream = com.example.musicplayerapp.data.Streams.DEFAULT
+            stream = Streams.DEFAULT
         } else if (normalised != stream) {
             PlaybackLog.event("STREAM_NORMALISED", "from" to stream, "to" to normalised, "at" to where)
             stream = normalised
         }
-        return true
     }
 
     /**
@@ -1299,6 +1526,14 @@ class MediaPlayerService(): MediaSessionService(){
      */
     private fun expireSleepTimer(timer: SleepTimerState.Armed) {
         clearSleepTimerState()
+
+        // Unconditional, and before the branch below. A timer that reached zero
+        // means audio is not wanted, whether or not there was any to stop - so a
+        // process death after the expiry must not be able to bring it back. The
+        // wasWanted branch would clear it too, through onPlaybackNoLongerWanted,
+        // but only in the case where something was playing - and the case where
+        // the listener had already paused is where a stale true would be worst.
+        PlaybackIntentStore.recordPlaybackNotWanted(this)
 
         // Owner decision D5: an explicit pause leaves the timer armed, so a timer
         // can and does reach zero with nothing playing. There is nothing to stop

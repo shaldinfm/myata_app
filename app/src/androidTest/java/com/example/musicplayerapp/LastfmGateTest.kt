@@ -87,14 +87,17 @@ class LastfmGateTest {
     }
 
     @Test
-    fun the_compiled_backup_rules_exclude_only_the_lastfm_files() {
-        // The Last.fm session (P3b) and the scrobble queue database with its WAL and
-        // SHM (P5) - nothing else, so the rest of the app is backed up as before.
-        val lastfmFiles = listOf(
+    fun the_compiled_backup_rules_exclude_only_the_device_local_files() {
+        // The Last.fm session (P3b), the scrobble queue database with its WAL and
+        // SHM (P5), and the playback-intent record - nothing else, so the rest of
+        // the app is backed up as before. Each of the three is state that belongs
+        // to this device and would be wrong, or harmful, on another one.
+        val deviceLocalFiles = listOf(
             "sharedpref:lastfm_session.xml",
             "database:lastfm_queue",
             "database:lastfm_queue-wal",
             "database:lastfm_queue-shm",
+            "sharedpref:myata_playback_intent.xml",
         )
         // The resources as the build packaged them, read on the device. The API 31+
         // file lists them twice: once for cloud backup, once for device transfer.
@@ -113,7 +116,7 @@ class LastfmGateTest {
             }
             assertEquals("no <include> - it would stop the rest of the app being backed up", 0, includes)
             assertTrue("at least one exclude in $res", excludes.isNotEmpty())
-            assertEquals("exactly the Last.fm files in $res", List(times) { lastfmFiles }.flatten(), excludes)
+            assertEquals("exactly the device-local files in $res", List(times) { deviceLocalFiles }.flatten(), excludes)
         }
     }
 }

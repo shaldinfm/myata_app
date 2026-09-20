@@ -17,6 +17,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.example.musicplayerapp.service.MediaPlayerService
+import com.example.musicplayerapp.service.PlaybackIntentPolicy
 import com.example.musicplayerapp.service.PlaybackLog
 import com.example.musicplayerapp.utils.ServiceUtils
 import com.google.gson.Gson
@@ -156,8 +157,13 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
     var lastObservedStream: String? = null
     
-    // Use SavedStateHandle for persistence
-    var currentStreamLive = savedStateHandle.getLiveData<String>("stream_live", "myata")
+    // Use SavedStateHandle for persistence.
+    //
+    // No default here, deliberately: a default of "myata" is indistinguishable
+    // from a restored "myata", and `init` has to be able to tell the difference to
+    // resolve the station properly. It is given a value in `init` before anything
+    // can read it - see [initialStream].
+    var currentStreamLive = savedStateHandle.getLiveData<String>("stream_live")
     
     var currentFragmentLiveData = MutableLiveData<String>()
     @SuppressLint("StaticFieldLeak")
@@ -285,7 +291,7 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         isPlaying.value = false
         isBuffering.value = false
         isInSplitMode.value = false
-        currentStreamLive.value = "myata"
+        currentStreamLive.value = initialStream()
 
         setupMediaController()
 
@@ -324,6 +330,66 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         observeTrackForFavorites()
     }
 
+    /**
+     * Which station this UI opens on, before any session can answer.
+     *
+     * Three sources, in order, and the order is the point:
+     *
+     *  1. **This ViewModel's own saved state.** A UI that was recreated - a theme
+     *     change, a rotation, a restored task - already knows what it was showing.
+     *  2. **The durable playback record**, which is what the service last settled
+     *     on. This is what stops a process death from leaving GOLD coming out of
+     *     the speaker while the app draws MYATA, and it is also the answer in the
+     *     paused case, where the service holds the station but the session has no
+     *     media item to report.
+     *  3. **The default**, when neither can answer - a fresh install, or a record
+     *     holding something that is not a stream.
+     *
+     * The session is not consulted here because it cannot be: the controller
+     * connects asynchronously. It is consulted the moment it can be, in
+     * [applySessionStream], and it outranks all three.
+     */
+    private fun initialStream(): String {
+        val selection = PlaybackIntentPolicy.uiStream(
+            // The controller connects asynchronously, so there is no session to
+            // ask yet. It is asked the moment there is one, in [applySessionStream].
+            sessionMediaId = null,
+            uiStream = currentStreamLive.value,
+            storedStream = PlaybackIntentStore.selectedStream(context),
+        )
+        PlaybackLog.event("UI_STREAM_SEEDED", "stream" to selection.stream, "source" to selection.source)
+        return selection.stream
+    }
+
+    /**
+     * Re-resolves the station now that the session can answer.
+     *
+     * The service labels each stream's `MediaItem` with the stream key as its
+     * media id, and the media id is the one field that survives the session
+     * boundary - Media3 strips `localConfiguration`, and with it the URI, from
+     * every item handed to a controller. So this is the service's own selection,
+     * read from the service, rather than a second copy of it kept over here.
+     *
+     * When the session has nothing to report - after a restart that restored a
+     * *paused* station, for instance - the hierarchy falls through to what this UI
+     * already shows, so the seeded value is left alone rather than being replaced
+     * by a station nobody chose.
+     */
+    private fun applySessionStream(at: String) {
+        val selection = PlaybackIntentPolicy.uiStream(
+            sessionMediaId = mediaController?.currentMediaItem?.mediaId,
+            uiStream = currentStreamLive.value,
+            storedStream = PlaybackIntentStore.selectedStream(context),
+        )
+        if (currentStreamLive.value == selection.stream) return
+        PlaybackLog.event(
+            "UI_STREAM_ADOPTED", "stream" to selection.stream,
+            "from" to (currentStreamLive.value ?: "none"),
+            "source" to selection.source, "at" to at
+        )
+        currentStreamLive.value = selection.stream
+    }
+
     private fun setupMediaController(attempt: Int = 0) {
         if (isCleared) return
         // Use context.packageName (applicationId) since it may differ from the source package
@@ -357,6 +423,10 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
                 // Whatever the service was already doing before this controller
                 // existed - this is the only place a recreated UI learns it.
                 refreshPlaybackSession()
+                // Including which station, which after a process death is the
+                // difference between the app agreeing with the speaker and
+                // contradicting it.
+                applySessionStream("controller_connected")
                 // A Play pressed before the controller existed is honoured now.
                 flushPendingPlayRequest()
             } catch (e: Exception) {
@@ -507,6 +577,9 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
             reason: Int,
         ) {
             refreshPlaybackSession()
+            // A station the service settled on without this UI asking - a restored
+            // one, or one chosen from the notification.
+            applySessionStream("media_item_transition")
         }
 
         override fun onMediaMetadataChanged(metadata: MediaMetadata) {
@@ -516,14 +589,14 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
 
             if (artist == null || song == null) return
 
-            // VALIDATION: Identify which stream this metadata belongs to based on the current media item's URI
-            val currentUri = mediaController?.currentMediaItem?.localConfiguration?.uri?.toString() ?: ""
-            val streamKey = when {
-                currentUri.contains("myata_hits") -> "myata_hits"
-                currentUri.contains("gold") -> "gold"
-                currentUri.contains("/myata") || currentUri.endsWith("/myata") -> "myata"
-                else -> currentStreamLive.value ?: "myata"
-            }
+            // Which stream this metadata belongs to, taken from the session's own
+            // media id. This used to read `localConfiguration.uri`, which is always
+            // null on a controller - Media3 strips it crossing the session boundary
+            // - so every lookup fell through to the UI's current selection and the
+            // check validated nothing. The media id is the field that survives.
+            val streamKey = Streams.normalise(mediaController?.currentMediaItem?.mediaId)
+                ?: currentStreamLive.value
+                ?: Streams.DEFAULT
             val live = liveFor(streamKey) ?: return
 
             // The second writer of the now-playing state announces its track the

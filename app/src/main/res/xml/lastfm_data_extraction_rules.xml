@@ -5,10 +5,16 @@
   The API 31+ counterpart of lastfm_backup_rules.xml, which those releases ignore.
   The same exclusions in both places data can leave the device: cloud backup, and
   device-to-device transfer. Everything else keeps its default, so nothing but the
-  Last.fm session and the Last.fm scrobble queue changes.
+  Last.fm session, the Last.fm scrobble queue and the playback-intent record
+  changes.
+
+  `myata_playback_intent` is excluded from BOTH sections for the same reason it is
+  excluded on API 24-30: it is one device's playback runtime state, and a restore
+  or a transfer that carried it would hand a new phone a station it never chose
+  and an intent nobody expressed on it. See lastfm_backup_rules.xml.
 
   Keep the paths in step with PrefsLastfmSessionStore.FILE,
-  LastfmQueueDatabase.FILE and lastfm_backup_rules.xml.
+  LastfmQueueDatabase.FILE, PlaybackIntentStore.FILE and lastfm_backup_rules.xml.
 -->
 <data-extraction-rules>
     <cloud-backup>
@@ -16,11 +22,13 @@
         <exclude domain="database" path="lastfm_queue" />
         <exclude domain="database" path="lastfm_queue-wal" />
         <exclude domain="database" path="lastfm_queue-shm" />
+        <exclude domain="sharedpref" path="myata_playback_intent.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="lastfm_session.xml" />
         <exclude domain="database" path="lastfm_queue" />
         <exclude domain="database" path="lastfm_queue-wal" />
         <exclude domain="database" path="lastfm_queue-shm" />
+        <exclude domain="sharedpref" path="myata_playback_intent.xml" />
     </device-transfer>
 </data-extraction-rules>

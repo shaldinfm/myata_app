@@ -1,5 +1,6 @@
 package com.example.musicplayerapp.data.lastfm
 
+import com.example.musicplayerapp.data.PlaybackIntentStore
 import com.example.musicplayerapp.data.lastfm.queue.LastfmQueueDatabase
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
@@ -104,19 +105,26 @@ class LastfmLinkTest {
     }
 
     /**
-     * Exactly the Last.fm files, and nothing else: the session (P3b), and the P5
-     * scrobble queue database with its write-ahead log and shared-memory files.
+     * Exactly the device-local files, and nothing else: the Last.fm session (P3b),
+     * the P5 scrobble queue database with its write-ahead log and shared-memory
+     * files, and the playback-intent record.
+     *
+     * The last of those is not Last.fm's, and it is listed here because this is
+     * where the rule files are held to an exact set - `PlaybackIntentBackupTest`
+     * owns the reasoning for it. Anything added to those files without being added
+     * here fails, which is the point.
      */
-    private val lastfmExcludes = listOf(
+    private val deviceLocalExcludes = listOf(
         "sharedpref:${PrefsLastfmSessionStore.FILE}.xml",
         "database:${LastfmQueueDatabase.FILE}",
         "database:${LastfmQueueDatabase.FILE}-wal",
         "database:${LastfmQueueDatabase.FILE}-shm",
+        "sharedpref:${PlaybackIntentStore.FILE}.xml",
     )
 
     @Test
     fun `the API 24-30 rules exclude the Last fm session and queue, and only them`() {
-        assertEquals(lastfmExcludes, excludes("src/main/res/xml/lastfm_backup_rules.xml"))
+        assertEquals(deviceLocalExcludes, excludes("src/main/res/xml/lastfm_backup_rules.xml"))
         assertIncludesNothing("src/main/res/xml/lastfm_backup_rules.xml")
     }
 
@@ -131,7 +139,7 @@ class LastfmLinkTest {
                 val e = ex.item(it) as Element
                 "${e.getAttribute("domain")}:${e.getAttribute("path")}"
             }
-            assertEquals("$section excludes exactly the Last.fm files", lastfmExcludes, found)
+            assertEquals("$section excludes exactly the device-local files", deviceLocalExcludes, found)
         }
         assertIncludesNothing("src/main/res/xml/lastfm_data_extraction_rules.xml")
     }
@@ -140,7 +148,7 @@ class LastfmLinkTest {
     fun `the excluded paths are the files the app actually writes`() {
         assertEquals("lastfm_session", PrefsLastfmSessionStore.FILE)
         assertEquals("lastfm_queue", LastfmQueueDatabase.FILE)
-        assertEquals(lastfmExcludes, excludes("src/main/res/xml/lastfm_backup_rules.xml"))
+        assertEquals(deviceLocalExcludes, excludes("src/main/res/xml/lastfm_backup_rules.xml"))
     }
 
     @Test
@@ -150,7 +158,7 @@ class LastfmLinkTest {
             "src/main/res/xml/lastfm_data_extraction_rules.xml",
         )) {
             val all = excludes(path)
-            assertTrue("$path excludes only Last.fm files: $all", all.all { it in lastfmExcludes })
+            assertTrue("$path excludes only device-local files: $all", all.all { it in deviceLocalExcludes })
             assertTrue("$path must not exclude the Collections database", all.none { it.contains("myata_database") })
         }
     }

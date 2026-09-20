@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.palette.graphics.Palette
 import com.example.musicplayerapp.data.PlayerState
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.StreamsViewModel
@@ -16,6 +17,9 @@ import android.util.Log
 import com.example.musicplayerapp.data.NowPlayingArtwork
 import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.ui.CoverArt
+import com.example.musicplayerapp.ui.tv.TvAmbientPalette
+import com.example.musicplayerapp.ui.tv.TvAmbientPolicy
+import com.example.musicplayerapp.ui.tv.TvAmbientSwatch
 import com.squareup.picasso.Picasso
 
 class TvPlayerFragment : Fragment() {
@@ -25,7 +29,6 @@ class TvPlayerFragment : Fragment() {
     private val vm: StreamsViewModel by activityViewModels {
         com.example.musicplayerapp.StreamsViewModelFactory(requireActivity().application, requireActivity())
     }
-    private var currentColor: Int = Color.BLACK
     
     // Track previous track info to avoid re-animating unchanged content
     private var previousTrackInfo: String = ""
@@ -293,8 +296,8 @@ class TvPlayerFragment : Fragment() {
         // different paint rule.
         //
         // What stays TV-only is what happens *with* the bitmap: the ambient
-        // background colour is still extracted from it, and now from the image the
-        // view is actually showing rather than from a second full-resolution copy.
+        // background is still derived from it, and now from the image the view is
+        // actually showing rather than from a second full-resolution copy.
         val hadNoCover = NowPlayingArtwork.coverUrl(state.img) == null
 
         currentImageUrl = CoverArt.render(
@@ -308,13 +311,17 @@ class TvPlayerFragment : Fragment() {
             // The plate is already up; dropping the URL is what lets a later state
             // try the same cover again instead of treating it as already on screen.
             currentImageUrl = null
+            // The lookup failed, so no palette is coming for this track: the plate
+            // is what the viewer gets, and the background goes to the brand field
+            // rather than staying on the previous track's colours.
+            if (_binding != null) animateAmbient(TvAmbientPolicy.FALLBACK)
         }
 
         if (state.img == NowPlayingArtwork.NO_IMAGE) {
             // The resolver looked and found nothing: the plate is up, so the
-            // background returns to its neutral colour rather than keeping the
+            // background returns to the brand field rather than keeping the
             // previous track's extraction.
-            animateBackgroundColor(Color.parseColor("#2A2A2A"))
+            animateAmbient(TvAmbientPolicy.FALLBACK)
         } else if (hadNoCover) {
             // Pending artwork on a just-announced track. The cover is already down
             // (CoverArt did that); the background deliberately stays as it is until
@@ -324,43 +331,43 @@ class TvPlayerFragment : Fragment() {
         }
     }
 
+    /**
+     * The cover decoded: hand its palette to the ambient field.
+     *
+     * This runs once per decoded cover, never per frame and never per metadata
+     * tick - `CoverArt.render` returns early when the URL has not changed, so the
+     * callback only fires for a cover that is genuinely new. The swatches are the
+     * five the design names; which of them actually become areas of the field is
+     * [TvAmbientPolicy]'s decision, not this fragment's, and the field is left
+     * alone entirely when the palette reduces to what is already on screen.
+     */
     private fun extractColorsAndApply(bitmap: android.graphics.Bitmap) {
-        androidx.palette.graphics.Palette.from(bitmap).generate { palette ->
+        Palette.from(bitmap).generate { palette ->
             if (palette == null || _binding == null) return@generate
 
-            val dominantSwatch = palette.dominantSwatch
-            val vibrantSwatch = palette.vibrantSwatch
-            
-            val color = vibrantSwatch?.rgb ?: dominantSwatch?.rgb ?: Color.parseColor("#2A2A2A")
-            animateBackgroundColor(adjustForBackground(color))
+            val swatches = listOfNotNull(
+                palette.vibrantSwatch,
+                palette.darkVibrantSwatch,
+                palette.mutedSwatch,
+                palette.darkMutedSwatch,
+                palette.dominantSwatch,
+            ).map { TvAmbientSwatch(it.rgb, it.population) }
+
+            // The shares are taken against every swatch the palette found, not
+            // just these five, so "5% of the cover" means the cover.
+            animateAmbient(
+                TvAmbientPolicy.fromSwatches(
+                    swatches = swatches,
+                    totalPopulation = palette.swatches.sumOf { it.population },
+                ),
+            )
         }
-    }
-    
-    private fun adjustForBackground(color: Int): Int {
-        val hsv = FloatArray(3)
-        Color.colorToHSV(color, hsv)
-        
-        // Darken for background
-        hsv[2] = hsv[2] * 0.4f
-        
-        return Color.HSVToColor(hsv)
     }
 
-    private fun animateBackgroundColor(targetColor: Int) {
+    private fun animateAmbient(palette: TvAmbientPalette) {
         if (_binding == null) return
-        
-        val colorFrom = currentColor
-        val colorTo = targetColor
-        
-        val colorAnimation = android.animation.ValueAnimator.ofObject(android.animation.ArgbEvaluator(), colorFrom, colorTo)
-        colorAnimation.duration = 1000
-        colorAnimation.addUpdateListener { animator ->
-            if (_binding == null) return@addUpdateListener
-            val color = animator.animatedValue as Int
-            binding.ivBackground.setImageDrawable(android.graphics.drawable.ColorDrawable(color))
-            currentColor = color
-        }
-        colorAnimation.start()
+
+        binding.viewAmbient.setAmbientPalette(palette)
     }
 
     override fun onDestroyView() {
@@ -371,6 +378,9 @@ class TvPlayerFragment : Fragment() {
         binding.ivAlbumArt.animate().cancel()
         // The load itself belongs to the shared renderer, which cancels on the view.
         Picasso.get().cancelRequest(binding.ivAlbumArt)
+        // The drift and any palette crossfade belong to the view; this is the
+        // explicit end of them, alongside the detach that follows.
+        binding.viewAmbient.stopAmbient()
         currentImageUrl = null
         previousTrackInfo = ""
         super.onDestroyView()

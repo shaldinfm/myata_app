@@ -9,14 +9,20 @@
     android:clipToPadding="false"
     android:keepScreenOn="true">
 
-    <!-- Full Screen Background Image -->
-    <ImageView
-        android:id="@+id/iv_background"
+    <!--
+        Full Screen Ambient Background
+
+        Replaces the full-screen ImageView that held one flat palette colour. It
+        is still match_parent and it is still the first child, so the frame it
+        covers is exactly the frame it covered before: it draws the dark base and
+        the animated field itself, and it takes part in no constraint. The cover
+        is a separate view, above this and below the overlays, as it was.
+    -->
+    <com.example.musicplayerapp.ui.tv.TvAmbientBackgroundView
+        android:id="@+id/view_ambient"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_gravity="center"
-        android:scaleType="centerCrop"
-        android:visibility="visible" />
+        android:importantForAccessibility="no" />
 
     <!-- Global Dim Overlay -->
     <View

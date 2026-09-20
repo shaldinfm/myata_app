@@ -21,4 +21,13 @@
     <dimen name="about_card_padding">24dp</dimen>
     <dimen name="about_button_padding_horizontal">24dp</dimen>
     <dimen name="about_section_card_padding">32dp</dimen>
+
+    <!--
+      HOME stream card at 360..389dp: `screenWidth - 74` at 360, so 286x179 on the
+      aspect the frozen 316x198 sets. See values/dimens.xml for the rule; the
+      frozen size itself is in values-w390dp.
+    -->
+    <dimen name="home_stream_card_width">286dp</dimen>
+    <dimen name="home_stream_card_height">179dp</dimen>
+    <dimen name="home_stream_row_height">196dp</dimen>
 </resources>

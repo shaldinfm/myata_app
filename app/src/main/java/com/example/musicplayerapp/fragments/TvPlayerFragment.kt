@@ -1,7 +1,6 @@
 package com.example.musicplayerapp.fragments
 
 import android.content.Intent
-import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -224,9 +223,9 @@ class TvPlayerFragment : Fragment() {
             }
             binding.btnPlayPause.visibility = View.INVISIBLE
         } else {
-            binding.loadingSpinner.visibility = View.GONE
+        binding.loadingSpinner.visibility = View.GONE
             binding.btnPlayPause.visibility = View.VISIBLE
-            binding.btnPlayPause.setImageResource(if (isPlaying) R.drawable.btn_pause_tv else R.drawable.btn_play_tv)
+            binding.btnPlayPause.setImageResource(if (isPlaying) R.drawable.ic_tv_pause else R.drawable.ic_tv_play)
             // Восстановить фокус на кнопку, если ничего не в фокусе
             if (binding.root.findFocus() == null) {
                 binding.btnPlayPause.requestFocus()
@@ -244,13 +243,21 @@ class TvPlayerFragment : Fragment() {
         }
     }
 
+    /**
+     * Which station is playing, as view state rather than as a colour applied by
+     * hand.
+     *
+     * The pills' selected look - the yellow label and, since the Material 3
+     * treatment, the accent container under it - is a state list now, so the only
+     * thing this fragment has to say is *which* pill is selected. Focus stays a
+     * separate axis: a pill can be focused without being selected, and the styles
+     * keep those two states visibly different, which is the whole point on a
+     * remote.
+     */
     private fun updateTheme(stream: String) {
-        val yellow = Color.parseColor("#FFFF00")
-        val white = Color.WHITE
-
-        binding.btnStreamMyata.setTextColor(if (stream == "myata") yellow else white)
-        binding.btnStreamGold.setTextColor(if (stream == "gold") yellow else white)
-        binding.btnStreamXtra.setTextColor(if (stream == "myata_hits") yellow else white)
+        binding.btnStreamMyata.isSelected = stream == "myata"
+        binding.btnStreamGold.isSelected = stream == "gold"
+        binding.btnStreamXtra.isSelected = stream == "myata_hits"
     }
 
     private fun updateUI(state: PlayerState?) {

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The stream pill's label, by state.
+
+  Selected keeps the pure yellow the TV has always used for the station now
+  playing - that identity is not this slice's to change - and everything else is
+  white. Focus deliberately does *not* change the label colour: focus is drawn on
+  the container (the white indicator ring), which is what keeps "selected" and
+  "focused" tellable apart when a D-pad is the only input.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true" android:color="#FFFF00" />
+    <item android:color="#FFFFFFFF" />
+</selector>

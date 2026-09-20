@@ -1,5 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="oval">
-    <solid android:color="#33000000" /> <!-- Subtle dark circular shadow base -->
-</shape>
+<!--
+  The play/pause control's container, in the same Material 3 tonal language as the
+  stream pills.
+
+  It used to be a solid white disc with the glyph cut out of it, which is the
+  "floating white blob" the brief calls out: pure white is the brightest thing the
+  UI can draw, and on a warm aura it looked like a hole punched in the picture. It
+  is now a dark tonal surface from the same family as the pills, with the glyph
+  drawn *on* it rather than out of it, and the accent never enters the fill - the
+  play control is not a selected state, so it should not look like one.
+
+  Focus is the white indicator ring, per M3; press is the state layer. The
+  diameter is unchanged at 42dp, so nothing about the TV layout moves.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:state_pressed="true">
+        <shape android:shape="oval">
+            <solid android:color="#F04A4850" />
+            <stroke android:width="1dp" android:color="#59FFFFFF" />
+        </shape>
+    </item>
+
+    <item android:state_focused="true">
+        <shape android:shape="oval">
+            <solid android:color="#F03D3B44" />
+            <stroke android:width="2dp" android:color="#FFFFFFFF" />
+        </shape>
+    </item>
+
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#E62E2C33" />
+            <stroke android:width="1dp" android:color="#26FFFFFF" />
+        </shape>
+    </item>
+</selector>

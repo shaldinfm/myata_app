@@ -8,15 +8,18 @@ import kotlin.math.roundToInt
  * The rule that turns the current cover into the TV player's ambient field.
  *
  * The field replaces a flat background that was the cover's most vibrant colour
- * darkened until white text sat on it. What replaces it is four large soft areas
- * over a constant dark base - and the constraint that mattered before still
- * matters, so the colours are not handed straight from the palette:
+ * darkened until white text sat on it. What replaces it is a luminous field: four
+ * large light masses, one much brighter core and two small highlights over a dark
+ * base - and the constraint that mattered before still matters, so the colours are
+ * not handed straight from the palette:
  *
- *   - **Dark.** Saturation is clamped down to at most [MAX_SATURATION] and
- *     lightness is mapped into [MIN_LIGHTNESS]..[MAX_LIGHTNESS] before anything is
- *     drawn, so a cover that is white, neon or photographic cannot take the screen
- *     to a brightness where the track line and the stream pills stop being
- *     legible. The dim and the scrim still sit on top of this.
+ *   - **Bright, but bounded.** Saturation is clamped down and lightness is mapped
+ *     into two windows - [MASS_MIN_LIGHTNESS]..[MASS_MAX_LIGHTNESS] for the masses
+ *     and the much lighter [CORE_MIN_LIGHTNESS]..[CORE_MAX_LIGHTNESS] for the core
+ *     and the highlights - so a cover that is white, neon or photographic cannot
+ *     take the screen to a brightness where the track line and the stream pills
+ *     stop being legible. The dim and the scrim still sit on top of this, and what
+ *     they leave behind is measured by `TvAmbientBackgroundTest`, not eyeballed.
  *   - **Several, not one.** Up to [BLOB_COUNT] colours, and two colours are only
  *     the same area when they are close in hue *and* in lightness, so a blue
  *     cover can still be a field - a deep blue area and a bright one are two
@@ -33,14 +36,23 @@ import kotlin.math.roundToInt
  *
  * Everything here is integer and float maths with no `android.graphics` and no
  * `androidx.palette`, which is what lets the whole rule be pinned by JVM unit
- * tests: the clamps, the lightness window, the fallback and the "same cover, same
- * field" property are all checked there. Whether the result *looks* right is not
- * a unit test, and that is what the TV emulator pass is for.
+ * tests: the clamps, both lightness windows, the fallback and the "same cover,
+ * same field" property are all checked there. Whether the result *looks* right is
+ * not a unit test, and that is what the TV emulator pass is for.
  */
 object TvAmbientPolicy {
 
-    /** Blobs the view draws. Four slots, filled from however many colours survived. */
-    const val BLOB_COUNT = 4
+    /**
+     * Light masses the view draws, filled from however many colours survived.
+     *
+     * Three, not four. The fourth mass cost a third of the field's fill area and
+     * bought the least visible area of the frame - the bottom-right corner, under
+     * the scrim - and on the software-rendered TV AVD the heavier field was enough
+     * to take the emulator's graphics stack down during long 1080p playback. The
+     * cover's four colours are still all considered; it is the fourth *area* that
+     * went, and with it the least vivid of the colours.
+     */
+    const val BLOB_COUNT = 3
 
     /**
      * The base the blobs sit on.
@@ -51,11 +63,21 @@ object TvAmbientPolicy {
      */
     const val BASE_ARGB = 0xFF06070A.toInt()
 
-    /** No ambient colour may be more saturated than this. */
-    const val MAX_SATURATION = 0.55f
+    /**
+     * No mass may be more saturated than this, the core a little less.
+     *
+     * Driven up from the 0.55 the first version used, because "still restrained"
+     * and "reads as an aura" pulled in opposite directions and the second one won:
+     * at 0.55 a saturated cover and a muted one produced fields that were hard to
+     * tell apart, which is most of what "stronger colour identity from the cover"
+     * means. The core stays lower than the masses so the brightest thing on screen
+     * is not also the loudest.
+     */
+    const val MASS_MAX_SATURATION = 0.62f
+    const val CORE_MAX_SATURATION = 0.55f
 
     /**
-     * The window every ambient colour's lightness ends up in.
+     * The window the masses' lightness ends up in, and the window the glow does.
      *
      * A swatch is *mapped* into this window rather than clamped to it, because
      * clamping destroys exactly what a field is made of: a blue cover offers four
@@ -64,16 +86,18 @@ object TvAmbientPolicy {
      * first version of this policy back into the flat wash it replaces. Mapped,
      * they keep the order the artwork had: a deep blue area and a bright one.
      *
-     * The design's starting window was 0.14..0.34, and at 0.34 the field measured
-     * *too dark to be a field at all* on the TV AVD: the brightest pixel of four
-     * fully saturated swatches - the worst case this policy allows - came out at
-     * luma 39 of 255, and the player's own dim then took it to 23, which is a black
-     * screen with a rumour of colour on it. The window is 0.20..0.50 here, and the
-     * bright end of it is what makes a photographic sleeve's own muted colours
-     * visible instead of merely present.
+     * The two windows are what the visual brief is made of. The design's starting
+     * window was 0.14..0.34, and at 0.34 the field measured *too dark to be a field
+     * at all* on the TV AVD - the brightest pixel of four fully saturated swatches
+     * came out at luma 39 of 255 and the player's own dim took that to 23, which is
+     * a black screen with a rumour of colour on it. 0.30..0.60 gives the masses
+     * real colour presence; the core's own, much lighter window is what the eye
+     * reads as a field that is lit from the inside rather than as coloured glass.
      */
-    const val MIN_LIGHTNESS = 0.20f
-    const val MAX_LIGHTNESS = 0.50f
+    const val MASS_MIN_LIGHTNESS = 0.32f
+    const val MASS_MAX_LIGHTNESS = 0.68f
+    const val CORE_MIN_LIGHTNESS = 0.68f
+    const val CORE_MAX_LIGHTNESS = 0.88f
 
     /**
      * A swatch below this share of the cover is a highlight, not an area of it.
@@ -92,10 +116,10 @@ object TvAmbientPolicy {
 
     /** Two colours this close in hue *and* in lightness are one area, not two. */
     private const val MIN_HUE_GAP = 18f
-    private const val MIN_LIGHTNESS_GAP = 0.05f
+    private const val MIN_LIGHTNESS_GAP = 0.07f
 
     /** How far [siblingOf] moves a single-colour cover's second area. */
-    private const val SIBLING_LIGHTNESS_STEP = 0.10f
+    private const val SIBLING_LIGHTNESS_STEP = 0.12f
 
     // MYATA's own colours, as the app already uses them: the pink of the station
     // cards, the navy of `primary`, and the cyan of the play glyph. A dark purple
@@ -109,11 +133,16 @@ object TvAmbientPolicy {
     /**
      * What is drawn when the artwork cannot supply a field: no cover, a cover
      * still on its way, an extraction that failed, or a sleeve with nothing
-     * usable in it. Normalised through [normalize] like any other colour, so the
-     * brand field obeys exactly the same readability limits as an artwork one.
+     * usable in it. Normalised through the same windows as any other palette, so
+     * the brand field obeys exactly the same readability limits as an artwork one.
+     *
+     * Its core is the brand pink rather than the cyan: the heart of the field is
+     * where the warmth should come from, and the cyan reads as an accent rather
+     * than as the source of the light.
      */
-    val FALLBACK: TvAmbientPalette = spread(
-        listOf(normalize(BRAND_PINK), normalize(BRAND_PURPLE), normalize(BRAND_CYAN)),
+    val FALLBACK: TvAmbientPalette = TvAmbientPalette(
+        colors = spread(listOf(normalize(BRAND_PINK), normalize(BRAND_PURPLE), normalize(BRAND_CYAN))),
+        core = glow(BRAND_PINK),
         isFallback = true,
     )
 
@@ -154,19 +183,44 @@ object TvAmbientPolicy {
             if (picked.size == BLOB_COUNT) break
         }
 
+        // The heart of the field is the cover's most vivid tone, pushed into the
+        // glow window. It is chosen from the same ordered list the masses come
+        // from, so it belongs to the same colour the masses lead with.
+        val core = if (picked.isEmpty()) FALLBACK.core else glow(candidates.first().argb)
+
         return when (picked.size) {
             // Several areas: the cover's own colours.
-            2, 3, 4 -> spread(picked, isFallback = false)
+            2, 3, 4 -> TvAmbientPalette(spread(picked), core, isFallback = false)
             // One colour is most of a photographic sleeve - a red one, a blue one -
             // and answering it with the brand field is a background that visibly
             // does not belong to the track. Its own colour at a second lightness
             // is still its colour, and two tones are a field where one is a fill.
-            1 -> spread(listOf(picked[0], siblingOf(picked[0])), isFallback = false)
+            1 -> TvAmbientPalette(
+                spread(listOf(picked[0], siblingOf(picked[0]))),
+                core,
+                isFallback = false,
+            )
             // Nothing usable at all: a monochrome or unreadable cover. That is the
             // brand field's job, not a grey version of the cover.
             else -> FALLBACK
         }
     }
+
+    /**
+     * A cover colour as the *light* in the field: the same hue, its lightness
+     * pushed up into the glow window and its saturation held back a little.
+     *
+     * This is the one place a colour is deliberately made lighter than the artwork
+     * showed it. A sleeve's brightest swatch is almost always mid-tone - the
+     * measured blue sleeve's best tone was 0.42 of full scale - and an aura built
+     * only from those is a picture of a glow rather than a glow.
+     */
+    fun glow(argb: Int): Int = ambientTone(
+        argb = argb,
+        minLightness = CORE_MIN_LIGHTNESS,
+        maxLightness = CORE_MAX_LIGHTNESS,
+        maxSaturation = CORE_MAX_SATURATION,
+    )
 
     /**
      * The second area for a cover that offered only one colour.
@@ -177,7 +231,7 @@ object TvAmbientPolicy {
      * the result is a field rather than the same colour twice.
      */
     private fun siblingOf(colour: Int): Int {
-        val middle = (MIN_LIGHTNESS + MAX_LIGHTNESS) / 2f
+        val middle = (MASS_MIN_LIGHTNESS + MASS_MAX_LIGHTNESS) / 2f
         val shifted = if (valueOf(colour) >= middle) {
             valueOf(colour) - SIBLING_LIGHTNESS_STEP
         } else {
@@ -186,20 +240,32 @@ object TvAmbientPolicy {
         return hsvToArgb(
             hue = hueOf(colour),
             saturation = saturationOf(colour),
-            value = shifted.coerceIn(MIN_LIGHTNESS, MAX_LIGHTNESS),
+            value = shifted.coerceIn(MASS_MIN_LIGHTNESS, MASS_MAX_LIGHTNESS),
         )
     }
 
     /**
-     * [argb] as an ambient colour: saturation clamped down to [MAX_SATURATION],
-     * lightness mapped into [MIN_LIGHTNESS]..[MAX_LIGHTNESS], alpha forced opaque.
+     * [argb] as a mass of the field: saturation clamped down to [MASS_MAX_SATURATION],
+     * lightness mapped into the mass window, alpha forced opaque.
      *
      * Hue is never touched - it is the one thing that says which cover this is -
      * and lightness keeps its order, so two swatches the artwork drew as different
      * stay different here. Every caller passes a colour in exactly once: this is a
      * mapping, not a clamp, so applying it twice would squeeze the lightness again.
      */
-    fun normalize(argb: Int): Int {
+    fun normalize(argb: Int): Int = ambientTone(
+        argb = argb,
+        minLightness = MASS_MIN_LIGHTNESS,
+        maxLightness = MASS_MAX_LIGHTNESS,
+        maxSaturation = MASS_MAX_SATURATION,
+    )
+
+    private fun ambientTone(
+        argb: Int,
+        minLightness: Float,
+        maxLightness: Float,
+        maxSaturation: Float,
+    ): Int {
         val r = (argb shr 16) and 0xFF
         val g = (argb shr 8) and 0xFF
         val b = argb and 0xFF
@@ -208,8 +274,8 @@ object TvAmbientPolicy {
 
         return hsvToArgb(
             hue = hueOf(r, g, b, max, min),
-            saturation = min(if (max == 0) 0f else (max - min) / max.toFloat(), MAX_SATURATION),
-            value = MIN_LIGHTNESS + (max / 255f) * (MAX_LIGHTNESS - MIN_LIGHTNESS),
+            saturation = min(if (max == 0) 0f else (max - min) / max.toFloat(), maxSaturation),
+            value = minLightness + (max / 255f) * (maxLightness - minLightness),
         )
     }
 
@@ -289,6 +355,6 @@ object TvAmbientPolicy {
     private fun level(channel: Float): Int = (channel * 255f).roundToInt().coerceIn(0, 255)
 
     /** Exactly [BLOB_COUNT] colours, cycling when the cover offered fewer than four. */
-    private fun spread(colors: List<Int>, isFallback: Boolean): TvAmbientPalette =
-        TvAmbientPalette(List(BLOB_COUNT) { colors[it % colors.size] }, isFallback)
+    private fun spread(colors: List<Int>): List<Int> =
+        List(BLOB_COUNT) { colors[it % colors.size] }
 }

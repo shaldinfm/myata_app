@@ -46,7 +46,7 @@ class TvAmbientPolicyTest {
         for (colour in palette.colors) {
             assertTrue(
                 "saturation ${hsv(colour).saturation} of #${hex(colour)} is above the limit",
-                hsv(colour).saturation <= TvAmbientPolicy.MAX_SATURATION + ROUNDING,
+                hsv(colour).saturation <= TvAmbientPolicy.MASS_MAX_SATURATION + ROUNDING,
             )
         }
     }
@@ -57,7 +57,7 @@ class TvAmbientPolicyTest {
 
         assertEquals(
             "a white cover must not take the field above the lightness ceiling",
-            TvAmbientPolicy.MAX_LIGHTNESS,
+            TvAmbientPolicy.MASS_MAX_LIGHTNESS,
             hsv(white).value,
             ROUNDING,
         )
@@ -69,8 +69,8 @@ class TvAmbientPolicyTest {
 
         assertTrue(
             "a near-black cover must still produce something visible",
-            hsv(nearBlack).value in TvAmbientPolicy.MIN_LIGHTNESS..
-                (TvAmbientPolicy.MIN_LIGHTNESS + 0.05f),
+            hsv(nearBlack).value in TvAmbientPolicy.MASS_MIN_LIGHTNESS..
+                (TvAmbientPolicy.MASS_MIN_LIGHTNESS + 0.05f),
         )
     }
 
@@ -91,7 +91,7 @@ class TvAmbientPolicyTest {
         val vivid = 0xFF6C00FF.toInt() // hue 270, saturation 1.0
 
         assertEquals(0.45f, hsv(TvAmbientPolicy.normalize(muted)).saturation, 0.01f)
-        assertEquals(TvAmbientPolicy.MAX_SATURATION, hsv(TvAmbientPolicy.normalize(vivid)).saturation, 0.01f)
+        assertEquals(TvAmbientPolicy.MASS_MAX_SATURATION, hsv(TvAmbientPolicy.normalize(vivid)).saturation, 0.01f)
         assertEquals(hsv(muted).hue, hsv(TvAmbientPolicy.normalize(muted)).hue, 1.5f)
     }
 
@@ -108,7 +108,7 @@ class TvAmbientPolicyTest {
         for (value in listOf(deep, mid, bright)) {
             assertTrue(
                 "lightness $value is outside the window",
-                value in TvAmbientPolicy.MIN_LIGHTNESS..TvAmbientPolicy.MAX_LIGHTNESS,
+                value in TvAmbientPolicy.MASS_MIN_LIGHTNESS..TvAmbientPolicy.MASS_MAX_LIGHTNESS,
             )
         }
     }
@@ -116,7 +116,7 @@ class TvAmbientPolicyTest {
     // ==================== the field ====================
 
     @Test
-    fun four_usable_swatches_produce_four_areas() {
+    fun a_cover_of_many_colours_fills_every_area_with_a_different_one() {
         val palette = TvAmbientPolicy.fromSwatches(
             listOf(
                 TvAmbientSwatch(red, 25),
@@ -128,7 +128,11 @@ class TvAmbientPolicyTest {
 
         assertFalse(palette.isFallback)
         assertEquals(TvAmbientPolicy.BLOB_COUNT, palette.colors.size)
-        assertEquals("four different covers colours are four areas", 4, palette.colors.toSet().size)
+        assertEquals(
+            "the cover's most vivid colours must each be their own area",
+            TvAmbientPolicy.BLOB_COUNT,
+            palette.colors.toSet().size,
+        )
     }
 
     @Test
@@ -262,18 +266,74 @@ class TvAmbientPolicyTest {
             val hsv = hsv(colour)
             assertTrue(
                 "saturation ${hsv.saturation} of #${hex(colour)}",
-                hsv.saturation <= TvAmbientPolicy.MAX_SATURATION + ROUNDING,
+                hsv.saturation <= TvAmbientPolicy.MASS_MAX_SATURATION + ROUNDING,
             )
             assertTrue(
                 "lightness ${hsv.value} of #${hex(colour)}",
-                hsv.value in TvAmbientPolicy.MIN_LIGHTNESS - ROUNDING..
-                    TvAmbientPolicy.MAX_LIGHTNESS + ROUNDING,
+                hsv.value in TvAmbientPolicy.MASS_MIN_LIGHTNESS - ROUNDING..
+                    TvAmbientPolicy.MASS_MAX_LIGHTNESS + ROUNDING,
             )
         }
 
         // The brand field is three areas, not one colour repeated: pink, the
         // purple that stands in for the navy, and the cyan accent.
         assertEquals(3, TvAmbientPolicy.FALLBACK.colors.toSet().size)
+    }
+
+    // ==================== the glow ====================
+
+    @Test
+    fun the_core_is_brighter_than_every_mass_and_inside_its_own_window() {
+        val palette = TvAmbientPolicy.fromSwatches(
+            listOf(
+                TvAmbientSwatch(0xFF1F6FEB.toInt(), 40),
+                TvAmbientSwatch(0xFF7B2D8E.toInt(), 35),
+                TvAmbientSwatch(0xFF2E8B57.toInt(), 25),
+            ),
+        )
+
+        val core = hsv(palette.core)
+        assertTrue(
+            "the core's lightness ${core.value} is outside its window",
+            core.value in TvAmbientPolicy.CORE_MIN_LIGHTNESS - ROUNDING..
+                TvAmbientPolicy.CORE_MAX_LIGHTNESS + ROUNDING,
+        )
+        assertTrue(
+            "the core is more saturated than the glow may be (${core.saturation})",
+            core.saturation <= TvAmbientPolicy.CORE_MAX_SATURATION + ROUNDING,
+        )
+        for (mass in palette.colors) {
+            assertTrue(
+                "mass #${hex(mass)} is as bright as the core #${hex(palette.core)}",
+                hsv(mass).value < core.value,
+            )
+        }
+    }
+
+    @Test
+    fun the_core_takes_the_cover_s_most_vivid_hue() {
+        // The blue is the smaller swatch and the green the larger one; vividness,
+        // not size, is what says which colour the cover is *about*.
+        val palette = TvAmbientPolicy.fromSwatches(
+            listOf(
+                TvAmbientSwatch(0xFF2E8B57.toInt(), 70),
+                TvAmbientSwatch(0xFF1565C0.toInt(), 30),
+            ),
+        )
+
+        assertEquals(
+            "the glow took a colour the cover is not about",
+            hsv(TvAmbientPolicy.normalize(0xFF1565C0.toInt())).hue,
+            hsv(palette.core).hue,
+            5f,
+        )
+    }
+
+    @Test
+    fun the_fallback_glows_myata_pink() {
+        // #FF3F7B, the station cards' own pink: the brand field's light comes from
+        // the brand, and the cyan is left as the accent it is.
+        assertEquals(341.25f, hsv(TvAmbientPolicy.FALLBACK.core).hue, 5f)
     }
 
     @Test

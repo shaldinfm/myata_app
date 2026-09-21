@@ -27,11 +27,20 @@ import kotlin.math.sin
  *
  * ## What the field is
  *
- * Six layers, in this order: three large light masses spread across the frame,
- * one much brighter core offset from the centre, and two small highlights. Each is
- * a radial gradient whose ramp holds its colour through the middle before it
- * fades, so a layer reads as light with a heart rather than as a soft dot - and
- * where they overlap, each one's tail lights the next.
+ * Four layers, in this order: three large light masses spread across the frame and
+ * one much brighter core offset from the centre. Each is a radial gradient whose
+ * ramp gives it a luminous centre before it fades, so a layer reads as light with
+ * a heart rather than as a soft dot - and where they overlap, each one's tail
+ * lights the next.
+ *
+ * Four is not a taste, it is the budget this runs inside. The six-layer version -
+ * three masses, a core and two separate highlight glows - rendered the same
+ * picture but did enough per-frame work to take the TV emulator's *software* GL
+ * stack down with an access violation within tens of seconds of live playback,
+ * which the four-layer field below never does (see the crash-isolation notes in
+ * the slice's history). The two highlights are therefore gone as draw calls and
+ * the glow they carried is built into the core's own ramp: a lifted inner stop
+ * *is* the highlight, it just does not cost a layer to draw.
  *
  * That order matters: the core and the highlights are drawn last so they read as
  * the sources of the light rather than as more coloured fog, and the core sits up
@@ -300,11 +309,11 @@ class TvAmbientBackgroundView @JvmOverloads constructor(
      * at the centre and gone by the rim. The view scales and turns it into place,
      * so the object outlives every frame that draws it.
      *
-     * The ramp is what makes a layer luminous instead of flat. A mass holds its
-     * colour across the inner third, then fades through a translucent tail; the
-     * core and the highlights are the palette's glow tone, and pass through a
-     * lifted version of themselves first - a highlight that is only its own colour
-     * at low alpha is a smudge, and the lift is what makes it read as a light.
+     * The ramp is what makes a layer luminous instead of flat, and every ramp here
+     * is three stops: a lifted centre, the colour it belongs to, and nothing at the
+     * rim. The lift is what carries the highlight the six-layer version used to
+     * draw as its own layer - a light with no bright centre is a smudge, and a
+     * bright centre is a stop, not a draw call.
      */
     private fun gradientOf(index: Int, palette: TvAmbientPalette): RadialGradient {
         val core = palette.core
@@ -313,8 +322,8 @@ class TvAmbientBackgroundView @JvmOverloads constructor(
                 val mass = palette.colors[index]
                 RadialGradient(
                     0f, 0f, 1f,
-                    intArrayOf(blend(mass, core, MASS_CORE_MIX), mass, fadeTo(mass, 0.30f), fadeTo(mass, 0f)),
-                    floatArrayOf(0f, 0.20f, 0.60f, 1f),
+                    intArrayOf(blend(mass, core, MASS_CORE_MIX), mass, fadeTo(mass, 0f)),
+                    floatArrayOf(0f, MASS_BODY_STOP, 1f),
                     Shader.TileMode.CLAMP,
                 )
             }
@@ -322,19 +331,13 @@ class TvAmbientBackgroundView @JvmOverloads constructor(
             CORE_INDEX -> RadialGradient(
                 0f, 0f, 1f,
                 intArrayOf(lift(core, CORE_LIFT), core, fadeTo(core, 0f)),
-                floatArrayOf(0f, 0.24f, 1f),
+                floatArrayOf(0f, CORE_BODY_STOP, 1f),
                 Shader.TileMode.CLAMP,
             )
 
-            else -> {
-                val under = palette.colors[index % TvAmbientPolicy.BLOB_COUNT]
-                RadialGradient(
-                    0f, 0f, 1f,
-                    intArrayOf(lift(core, HIGHLIGHT_LIFT), blend(core, under, HIGHLIGHT_MIX), fadeTo(core, 0f)),
-                    floatArrayOf(0f, 0.40f, 1f),
-                    Shader.TileMode.CLAMP,
-                )
-            }
+            // Unreachable while LAYER_COUNT is BLOB_COUNT + 1, and kept as a mass so
+            // that a future layer cannot silently draw an invented colour.
+            else -> gradientOf(0, palette)
         }
     }
 
@@ -500,11 +503,23 @@ class TvAmbientBackgroundView @JvmOverloads constructor(
         const val BASE_TOP_ARGB = 0xFF0C0C16.toInt()
         const val BASE_BOTTOM_ARGB = 0xFF04040A.toInt()
 
-        /** How much of the core's tone each mass and highlight carries, and how far a highlight is lifted. */
-        const val MASS_CORE_MIX = 0.55f
-        const val HIGHLIGHT_MIX = 0.35f
-        const val CORE_LIFT = 0.20f
-        const val HIGHLIGHT_LIFT = 0.34f
+        /**
+         * How much of the core's tone each mass carries at its centre, and how far
+         * the core's own centre is lifted above the palette's glow tone.
+         *
+         * The core's lift is what the deleted highlight layers used to contribute,
+         * so it is stronger than the masses' - the centre of the field has to read
+         * as the brightest thing on screen without a second gradient to say so.
+         */
+        const val MASS_CORE_MIX = 0.60f
+        const val CORE_LIFT = 0.38f
+
+        /**
+         * Where each ramp stops holding its colour and starts fading: how far the
+         * solid body of a mass and of the core reaches before the transparent rim.
+         */
+        const val MASS_BODY_STOP = 0.34f
+        const val CORE_BODY_STOP = 0.40f
 
         /**
          * How fast loudness is followed: up in about a tenth of a second, down in
@@ -518,28 +533,27 @@ class TvAmbientBackgroundView @JvmOverloads constructor(
         const val MAX_FRAME_MS = 100f
 
         /**
-         * The layers, in draw order: four masses, the core, two highlights.
+         * The layers, in draw order: three masses, then the core.
          *
          * The masses sit off the centre line - the artwork and the title are what
          * the player is about, and the field is what they sit on - and the core is
          * up and to the left of it, offset rather than behind the cover, which is
          * what makes the frame read as lit from one side.
          *
-         * The two highlights are small, brightest and the most reactive: they are
-         * the plasma in the picture, and everything else is the room it lights.
+         * The core is where the music lands: it expands and brightens more than
+         * anything else. The primary mass answers a little, the other two barely -
+         * enough that a loud passage opens the field up, not enough to look like a
+         * visualiser.
          */
         val LAYERS = arrayOf(
             // Masses. Sized and placed so the frame keeps its dark corners: a mass
             // that reaches the edge of the screen is not a light, it is a colour.
-            Layer(0.20f, 0.30f, 0.33f, 0.70f, 0.40f, 0.96f, 0.22f, 0.12f, 0.045f, 0.038f, 0.090f, 0.26f, 0.00f),
-            Layer(0.82f, 0.34f, 0.29f, 0.60f, 0.34f, 0.88f, 0.22f, 0.12f, 0.040f, 0.034f, 0.085f, 0.22f, 0.27f),
-            Layer(0.34f, 0.80f, 0.31f, 0.52f, 0.28f, 0.80f, 0.22f, 0.12f, 0.050f, 0.040f, 0.095f, 0.28f, 0.51f),
+            Layer(0.20f, 0.30f, 0.34f, 0.72f, 0.42f, 0.98f, 0.14f, 0.08f, 0.045f, 0.038f, 0.090f, 0.26f, 0.00f),
+            Layer(0.82f, 0.34f, 0.29f, 0.60f, 0.34f, 0.88f, 0.08f, 0.05f, 0.040f, 0.034f, 0.085f, 0.22f, 0.27f),
+            Layer(0.34f, 0.80f, 0.31f, 0.52f, 0.28f, 0.80f, 0.08f, 0.05f, 0.050f, 0.040f, 0.095f, 0.28f, 0.51f),
             // The core: inside the main mass, brighter than anything else, and the
             // layer that moves most with the music.
-            Layer(0.26f, 0.26f, 0.24f, 0.62f, 0.34f, 0.86f, 0.42f, 0.26f, 0.026f, 0.024f, 0.100f, 0.18f, 0.63f),
-            // Highlights: the plasma, small and quick.
-            Layer(0.18f, 0.20f, 0.12f, 0.36f, 0.14f, 0.66f, 0.65f, 0.32f, 0.034f, 0.030f, 0.130f, 0.12f, 0.40f),
-            Layer(0.38f, 0.36f, 0.11f, 0.32f, 0.14f, 0.62f, 0.65f, 0.32f, 0.030f, 0.026f, 0.130f, 0.12f, 0.88f),
+            Layer(0.26f, 0.26f, 0.28f, 0.66f, 0.38f, 0.92f, 0.55f, 0.34f, 0.026f, 0.024f, 0.100f, 0.18f, 0.63f),
         )
 
         val LAYER_COUNT = LAYERS.size

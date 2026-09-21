@@ -5,7 +5,7 @@ Last updated: 2026-09-11.
 ## Current canonical state
 
 - **GitHub `main` (https://github.com/shaldinfm/myata_app) is the single source of truth** — see [SOURCE_OF_TRUTH.md](SOURCE_OF_TRUTH.md).
-- `main` builds **versionName 3.6.5 / versionCode 202611**.
+- `main` builds **versionName 3.6.6 / versionCode 202612**.
 - **API 36**: `compileSdk 36`, `targetSdk 36`, `minSdk 24`.
 - **Networking is secure**: full TLS validation with per-domain bundled trust anchors (`SecureNetModule`, `network_security_config.xml`). The old trust-all `UnsafeNetModule` is gone. Cleartext remains permitted for the audio stream host only, as a TV/legacy fallback that is now TV-only, TLS-triggered and episode-scoped.
 - **Play App Signing is resolved and documented** — see [PLAY_APP_SIGNING_CHECK.md](PLAY_APP_SIGNING_CHECK.md). Release signing comes from a local untracked `keystore.properties` ([RELEASE_SIGNING.md](RELEASE_SIGNING.md)), and the build refuses to produce an unsigned release artifact.
@@ -14,7 +14,7 @@ Last updated: 2026-09-11.
 
 ## Google Play
 
-**Version 3.6.5 / 202611 is handled outside this repository workflow.** Do not modify, build or upload a release from repository tasks. No release AAB is produced by agent work.
+**Version 3.6.6 / 202612 is handled outside this repository workflow.** Do not modify, build or upload a release from repository tasks. No release AAB is produced by agent work.
 
 ## Closed work
 

@@ -2,6 +2,7 @@ package com.example.musicplayerapp.data.lastfm
 
 import com.example.musicplayerapp.data.PlaybackIntentStore
 import com.example.musicplayerapp.data.lastfm.queue.LastfmQueueDatabase
+import com.example.musicplayerapp.service.PlaybackCommandInbox
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 import org.junit.Assert.assertEquals
@@ -107,12 +108,12 @@ class LastfmLinkTest {
     /**
      * Exactly the device-local files, and nothing else: the Last.fm session (P3b),
      * the P5 scrobble queue database with its write-ahead log and shared-memory
-     * files, and the playback-intent record.
+     * files, the playback-intent record, and the durable command inbox.
      *
-     * The last of those is not Last.fm's, and it is listed here because this is
-     * where the rule files are held to an exact set - `PlaybackIntentBackupTest`
-     * owns the reasoning for it. Anything added to those files without being added
-     * here fails, which is the point.
+     * The last two are not Last.fm's, and they are listed here because this is
+     * where the rule files are held to an exact set - `PlaybackIntentBackupTest` and
+     * `PlaybackCommandChannelTest` own the reasoning for them. Anything added to
+     * those files without being added here fails, which is the point.
      */
     private val deviceLocalExcludes = listOf(
         "sharedpref:${PrefsLastfmSessionStore.FILE}.xml",
@@ -120,6 +121,7 @@ class LastfmLinkTest {
         "database:${LastfmQueueDatabase.FILE}-wal",
         "database:${LastfmQueueDatabase.FILE}-shm",
         "sharedpref:${PlaybackIntentStore.FILE}.xml",
+        "sharedpref:${PlaybackCommandInbox.FILE}.xml",
     )
 
     @Test

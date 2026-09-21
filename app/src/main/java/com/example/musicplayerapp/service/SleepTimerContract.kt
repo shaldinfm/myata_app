@@ -12,11 +12,12 @@ import com.example.musicplayerapp.ui.sleeptimer.SleepTimerState
  * the idiom `play` / `pause` / `buffering` / `metadata_update` already use. Neither
  * direction is new machinery.
  *
- * The command direction is process memory rather than intent extras, and that is a
- * deliberate change: the extras used to ride a start intent for an exported
- * `MediaSessionService`, so any app on the device could arm a timer. See
+ * The command direction is the app's own durable inbox rather than intent extras,
+ * and that is a deliberate change: the extras used to ride a start intent for an
+ * exported `MediaSessionService`, so any app on the device could arm a timer. See
  * [PlaybackCommand] for what replaced them and why an exported component cannot
- * authenticate a start command at all.
+ * authenticate a start command at all - and [PlaybackCommandInbox] for why the
+ * record is on disk rather than in memory.
  *
  * Arming is still refused outright on TV, in the service, so no surface can give a
  * television a timer that no TV screen can show or cancel.

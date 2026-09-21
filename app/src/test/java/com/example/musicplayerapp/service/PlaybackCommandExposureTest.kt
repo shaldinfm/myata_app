@@ -90,8 +90,8 @@ class PlaybackCommandExposureTest {
     fun `the start intent carries no extras`() {
         val source = source("utils/ServiceUtils.kt")
         assertFalse(
-            "the start intent must stay empty - the command travels in process memory, " +
-                "which is the only thing another app cannot write to",
+            "the start intent must stay empty - the command travels through the app's own " +
+                "private storage, which is the only thing another app cannot write to",
             source.contains("putExtra("),
         )
     }

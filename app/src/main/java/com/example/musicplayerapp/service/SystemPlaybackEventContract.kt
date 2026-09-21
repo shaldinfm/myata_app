@@ -34,10 +34,11 @@ package com.example.musicplayerapp.service
  * ## Why it is safe in a shipped build
  *
  *  - **No new component, and no new surface.** It is one more action on the app's
- *    private command channel, [PlaybackCommand], which is this process's memory and
- *    nothing else: no other app can put a command on it, and nothing is added to the
- *    manifest - no service, no receiver, no activity, no `<intent-filter>`, no
- *    permission. `SystemPlaybackEventContractTest` asserts the manifest half.
+ *    private command channel, [PlaybackCommand], whose records live in this app's
+ *    own storage and nowhere else: no other app can put a command on it, and nothing
+ *    is added to the manifest - no service, no receiver, no activity, no
+ *    `<intent-filter>`, no permission. `SystemPlaybackEventContractTest` asserts the
+ *    manifest half.
  *  - **Release refuses it before touching anything.** The service consults
  *    [isSimulationAllowed] as the first statement of the branch, before it reads the
  *    player or writes anything. A release build logs

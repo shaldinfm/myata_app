@@ -313,8 +313,8 @@ class PlaybackNoisyServiceTest {
     /**
      * Blocks until the service has drained past everything sent before this.
      *
-     * Commands are handed over in process memory and run by the service's next start
-     * command, so they are handled after the call that sent them returns.
+     * Commands are recorded in the app's durable inbox and run by the service's next
+     * start command, so they are handled after the call that sent them returns.
      * `sleep_timer_sync` always answers with exactly one broadcast, and the commands a
      * start command drains are run in order - so an answer to this one is proof that
      * the command before it has been handled too.

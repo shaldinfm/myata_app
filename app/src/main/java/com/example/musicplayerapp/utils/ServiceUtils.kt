@@ -7,7 +7,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.service.PlaybackCommand
-import com.example.musicplayerapp.service.PlaybackCommands
+import com.example.musicplayerapp.service.PlaybackCommandInbox
 import com.example.musicplayerapp.service.PlaybackLog
 
 object ServiceUtils {
@@ -44,7 +44,7 @@ object ServiceUtils {
 
         return deliver(
             context,
-            PlaybackCommand(
+            PlaybackCommand.of(
                 action = action,
                 stream = stream,
                 artist = artist,
@@ -72,7 +72,7 @@ object ServiceUtils {
         forcePlay: Boolean = false,
     ): Boolean = deliver(
         context,
-        PlaybackCommand(
+        PlaybackCommand.of(
             action = action,
             stream = stream,
             artist = artist,
@@ -95,6 +95,12 @@ object ServiceUtils {
      * If that started service is later reclaimed while nothing is playing, the
      * durable record is what carries the deadline: the next time the service is
      * created it reconciles and re-adopts it.
+     *
+     * `ACTION_SET` arrives at the service as an **absolute deadline**, resolved
+     * here, at the instant the listener chose. A duration would be re-armed from
+     * whenever the command is finally handled, so a command that survived a process
+     * death would stop the radio later than the listener asked. See
+     * [PlaybackCommand].
      */
     fun sendSleepTimerCommand(
         context: Context,
@@ -103,7 +109,11 @@ object ServiceUtils {
         isCustom: Boolean = false,
     ): Boolean = deliver(
         context,
-        PlaybackCommand(action = action, minutes = minutes, isCustom = isCustom),
+        PlaybackCommand.of(
+            action = action,
+            minutes = minutes,
+            isCustom = isCustom,
+        ),
     )
 
     /**
@@ -111,23 +121,30 @@ object ServiceUtils {
      *
      * ## The order is the contract
      *
-     * The command goes into the queue **first**, and the start second. The service
-     * already running drains in its own `onStartCommand`, so a start delivered
-     * between the two would otherwise be answered by an empty queue and the command
-     * would sit there until the next start of any kind - which is exactly the kind
-     * of "Play did nothing, and then a minute later the radio came on" behaviour
-     * issue #14 was about.
+     * The command is **committed to app-private storage first** ([enqueue] is
+     * synchronous), and the start is requested second. The reverse - or a queue that
+     * only exists in memory - loses the gesture whenever the process dies between
+     * the two, while the start request itself survives. See [PlaybackCommandInbox].
+     *
+     * The other half of the same order: the service already running reads its inbox
+     * in its own `onStartCommand`, so a start delivered between the two would
+     * otherwise be answered by nothing and the command would sit there until the
+     * next start of any kind - which is exactly the kind of "Play did nothing, and
+     * then a minute later the radio came on" behaviour issue #14 was about. It does
+     * not sit there for long now, but the order is still what keeps the two ends
+     * from disagreeing.
      *
      * ## The intent carries nothing
      *
      * Not an action, not an extra, not the station: [Intent] here is a wake-up for
-     * a component and a lifecycle signal, and the only thing that has to be decided
-     * with it is whether this was a `startForegroundService` call. Everything else
-     * travels in process memory, where no other app can put it - see
-     * [PlaybackCommand].
+     * a component and a lifecycle signal, and the only input it could carry -
+     * whether this was a `startForegroundService` call - travels with the command
+     * instead, because a recreated service has to be able to answer it. Everything
+     * else travels in app-private storage - see [PlaybackCommandInbox].
      */
     private fun deliver(context: Context, command: PlaybackCommand): Boolean {
-        val queued = PlaybackCommands.enqueue(command)
+        // Durably recorded, and only then is a start requested.
+        val queued = PlaybackCommandInbox.forContext(context).enqueue(command)
         val intent = Intent(context, MediaPlayerService::class.java)
 
         return try {
@@ -145,8 +162,8 @@ object ServiceUtils {
             true
         } catch (e: Exception) {
             // The command never reached the service, so it must not be left in the
-            // queue for an unrelated start to find later.
-            PlaybackCommands.withdraw(queued)
+            // inbox for an unrelated start to find later.
+            PlaybackCommandInbox.forContext(context).withdraw(queued.id)
             Log.e("ServiceUtils", "Failed to start service (action: ${command.action}): ${e.message}")
             // Android 12+ refuses a foreground start from the background. That is a
             // platform rule, not something to retry in a loop - record exactly what

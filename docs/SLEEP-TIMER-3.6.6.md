@@ -139,18 +139,22 @@ StreamsViewModel ◀── LocalBroadcast "sleep_timer_state" ──────
    └─ LiveData → menu trailing · sheet · Settings row · snackbars
 ```
 
-Commands travel as `PlaybackCommand`s on the app's private in-process channel — the
-idiom every other UI→service command in this app uses since the exported-service
-slice — and state comes back on the `LocalBroadcastManager` channel `play` /
-`pause` / `buffering` / `metadata_update` already use. Neither direction is new
-machinery.
+Commands travel as `PlaybackCommand`s in the app's own durable inbox
+(`PlaybackCommandInbox`) — the idiom every other UI→service command in this app uses
+since the exported-service slice — and state comes back on the
+`LocalBroadcastManager` channel `play` / `pause` / `buffering` / `metadata_update`
+already use. Neither direction is new machinery.
 
 The command direction used to be `ACTION` extras on a start intent, and the service
 is an exported `MediaSessionService`, so arming a timer granted a capability to
 *every* app on the device rather than to the app. `PlaybackCommand` records why an
 exported component cannot authenticate a start at all and what replaced the extras;
-in short, the start intent now carries nothing and the command never leaves this
-process. Arming is still refused outright on TV (§7).
+in short, the start intent carries nothing and the command is written to app-private
+storage, which is the boundary now. It is written there rather than held in memory
+because a `startForegroundService` request can outlive the process that made it: a
+timer whose command was still in RAM when the process died used to be lost, and is
+now re-armed with **the deadline the listener chose** (the command carries the
+instant, not the duration). Arming is still refused outright on TV (§7).
 
 **Scheduling is a `Handler`, not an `AlarmManager`.** The timer can only *do*
 anything while playback is running, and while playback is running the service is

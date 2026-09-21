@@ -1,5 +1,8 @@
 package com.example.musicplayerapp.service
 
+import android.os.SystemClock
+import com.example.musicplayerapp.ui.sleeptimer.SleepTimerDuration
+
 /**
  * One app-private playback command, and the only path one can travel.
  *
@@ -19,48 +22,65 @@ package com.example.musicplayerapp.service
  * command at all. A start intent that carries instructions is a start intent any
  * app may send.
  *
- * So the instructions stopped being an intent and became process memory, which no
- * other app can reach:
+ * So the instructions stopped being an intent. The start intent is a wake-up and a
+ * lifecycle signal and nothing else: it carries no instruction, so no external app
+ * can make one mean anything. The exported endpoint stays exported - it is the
+ * Media3 session the platform and other media controllers discover, and it is
+ * unchanged - but what it exposes is a session, not a remote control for the app's
+ * own state.
+ *
+ * ## Why this is not process memory either
+ *
+ * The commands were process memory for one slice of this work, and that was a P1:
  *
  * ```
- *   Activity / Fragment / ViewModel        (this process)
- *            │
- *            ├── PlaybackCommands.enqueue(command) ──┐
- *            │                                       │
- *            └── bare start intent, no extras ───────┤
- *                                                    ▼
- *                        MediaPlayerService.onStartCommand
- *                             drain() ──▶ run the commands
+ *   caller:  enqueue in RAM, then request the service start
+ *   system:  accepts the start, then kills the process before the queue is drained
+ *   restart: the start request survives (START_STICKY), the RAM queue does not
  * ```
  *
- * The start intent is now a wake-up and a lifecycle signal and nothing else: it
- * carries no instruction, so no external app can make one mean anything. The
- * exported endpoint stays exported - it is the Media3 session the platform and
- * other media controllers discover, and it is unchanged - but what it exposes is
- * a session, not a remote control for the app's own state.
+ * A gesture the listener made - Play, Stop, a station switch, a sleep timer, and
+ * the foreground obligation of a `startForegroundService` call - could be lost in
+ * that window. Process memory is not a place correctness can live.
+ *
+ * So the command is written to the app's own storage *before* the start is
+ * requested, and the service reads it from there. The boundary is no longer the
+ * process, and it is not the start intent: it is **who can write this app's
+ * private storage**, which is this app and nothing else on the device. See
+ * [PlaybackCommandInbox] for what the record is and how it is acknowledged.
  *
  * ## What is deliberately not used
  *
  * No caller package or component check, no unguessable action name, no shared
  * secret: none of those is a boundary - the first two are trivially spoofed and
  * the third is a constant in a shipping APK - and each would have looked like
- * one. The boundary here is the process.
+ * one. The boundary is app-private storage.
  *
- * ## The one thing that still has to ride the start
+ * ## The two requests that are resolved before they are stored
  *
- * Whether the start was a `startForegroundService` call, because Android gives
- * the service five seconds to call `startForeground` after one and the caller is
- * the only one who knows. It travels as [openForeground]; failing to post the
- * placeholder would crash the app, and posting it on a start nobody asked for
- * would be a notification out of nowhere.
+ * A command that is replayed - because a process death landed between its handler
+ * and its acknowledgement - has to mean the same thing the second time. Two of
+ * these commands cannot say what they mean on their own:
  *
- * ## Threading
+ *  - `startStop` used to be a **toggle**, and a replayed toggle does the opposite
+ *    of what the listener asked for: Play arrives as Pause, Stop as Play. Every
+ *    call site in this app means "start playback" by it, so that is what [of]
+ *    stores - a resolved desire, not a question for whoever handles it.
+ *  - a sleep timer was a **duration**, and a replayed duration arms a *new*
+ *    deadline however long the process was away. The listener chose "stop in 30
+ *    minutes" at an instant, so that instant is what [of] stores:
+ *    [deadlineElapsedMs].
  *
- * Commands are enqueued by the thread that handled the gesture (in practice the
- * main thread) and drained by the service's own `onStartCommand`, which runs on
- * the main thread. The queue synchronizes anyway, so the invariant does not
- * depend on that staying true and an instrumentation suite may post from its own
- * thread.
+ * Both are the same move: persist the resolved desired state rather than the
+ * request that computes it. Nothing about the gesture changes; what changes is
+ * that acting on the command twice cannot produce two different states.
+ *
+ * ## What still has to ride the start, and now rides the record
+ *
+ * Whether the start was a `startForegroundService` call, because Android gives the
+ * service five seconds to call `startForeground` after one and the caller is the
+ * only one who knows. It travels as [openForeground], stored with the command, so a
+ * service recreated after a process death still knows it owes that promotion.
  */
 internal class PlaybackCommand(
     val action: String,
@@ -70,61 +90,58 @@ internal class PlaybackCommand(
     val forcePlay: Boolean = false,
     val minutes: Int = 0,
     val isCustom: Boolean = false,
+    /** True when the caller used `startForegroundService`: see the class docs. */
     val openForeground: Boolean = false,
-)
+    /** Resolved `startStop`: true = play. Null for every other action. */
+    val desiredPlaying: Boolean? = null,
+    /** Resolved `sleep_timer_set`: the absolute monotonic deadline. Null otherwise. */
+    val deadlineElapsedMs: Long? = null,
+) {
 
-/**
- * The queue between the app's own screens and the one service that owns playback.
- *
- * Deliberately tiny and deliberately memory-only, and deliberately a plain
- * object rather than a component: anything that can be reached by name from
- * outside this process is a surface, and this one is not a surface at all. A
- * command that is not handed over by this process in this process's lifetime is
- * a command that does not exist - which is exactly the property that keeps the
- * protocol private, and the reason there is nothing here to persist.
- */
-internal object PlaybackCommands {
+    companion object {
 
-    private val pending = ArrayDeque<PlaybackCommand>()
+        /** The one action whose meaning used to be a question. See the class docs. */
+        const val ACTION_START_STOP = "startStop"
 
-    /**
-     * Puts one command in the queue and hands it back, so a start that fails can
-     * take back the same object.
-     */
-    fun enqueue(command: PlaybackCommand): PlaybackCommand {
-        synchronized(pending) { pending.addLast(command) }
-        return command
-    }
-
-    /**
-     * Takes one command back out, unused.
-     *
-     * This is for a refused start - Android 12+ declining a background
-     * `startForegroundService`, say. A command that never reached the service has
-     * to leave nothing behind, or the next start of any kind, minutes later and
-     * for a different reason, would silently act on a gesture the listener had
-     * already stopped expecting anything from.
-     *
-     * Identity, not equality: it takes back the object [enqueue] returned.
-     */
-    fun withdraw(command: PlaybackCommand) {
-        synchronized(pending) { pending.remove(command) }
-    }
-
-    /**
-     * Everything waiting, in the order it was enqueued, and empty again.
-     *
-     * All of it rather than one at a time: two gestures can be enqueued before the
-     * service's first start command runs, and draining half of them would leave
-     * the rest to whatever unrelated start came next - still in order, which is
-     * what the queue is for, but later than the caller meant.
-     */
-    fun drain(): List<PlaybackCommand> {
-        synchronized(pending) {
-            if (pending.isEmpty()) return emptyList()
-            val all = pending.toList()
-            pending.clear()
-            return all
-        }
+        /**
+         * A command a caller is asking for, as it will be stored.
+         *
+         * The one place a request becomes a record, and therefore the one place the
+         * two resolved fields above can be got right or wrong. Both are pure
+         * functions of the request and of [nowElapsedMs], so both are pinned on the
+         * JVM in `PlaybackCommandChannelTest`.
+         *
+         * [nowElapsedMs] is a parameter rather than a call inside, so the resolution
+         * can be read without a device. Production leaves it at the one clock this
+         * app measures deadlines on - `elapsedRealtime`, which survives a clock
+         * change and does not survive a reboot - and the sleep timer's own store
+         * already speaks it (see `SleepTimerStore`).
+         */
+        internal fun of(
+            action: String,
+            stream: String? = null,
+            artist: String? = null,
+            song: String? = null,
+            forcePlay: Boolean = false,
+            minutes: Int = 0,
+            isCustom: Boolean = false,
+            openForeground: Boolean = false,
+            nowElapsedMs: Long = SystemClock.elapsedRealtime(),
+        ): PlaybackCommand = PlaybackCommand(
+            action = action,
+            stream = stream,
+            artist = artist,
+            song = song,
+            forcePlay = forcePlay,
+            minutes = minutes,
+            isCustom = isCustom,
+            openForeground = openForeground,
+            desiredPlaying = if (action == ACTION_START_STOP) true else null,
+            deadlineElapsedMs = if (action == SleepTimerContract.ACTION_SET) {
+                nowElapsedMs + SleepTimerDuration.toMs(minutes)
+            } else {
+                null
+            },
+        )
     }
 }

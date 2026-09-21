@@ -42,10 +42,9 @@ import kotlin.math.sin
  * the glow they carried is built into the core's own ramp: a lifted inner stop
  * *is* the highlight, it just does not cost a layer to draw.
  *
- * That order matters: the core and the highlights are drawn last so they read as
- * the sources of the light rather than as more coloured fog, and the core sits up
- * and to the left of centre, which is both where the artwork is not and where the
- * eye expects a light source to be.
+ * That order matters: the core is drawn last so it reads as the source of the light
+ * rather than as more coloured fog, and it sits up and to the left of centre, which
+ * is both where the artwork is not and where the eye expects a light source to be.
  *
  * This is not an enlarged, blurred cover and does not want to be one: nothing here
  * reads the bitmap. It is handed a palette by [TvAmbientPolicy] once per cover and
@@ -557,7 +556,7 @@ class TvAmbientBackgroundView @JvmOverloads constructor(
         )
 
         val LAYER_COUNT = LAYERS.size
-        /** The core follows the masses; the highlights follow the core. */
+        /** The core is the layer after the masses. */
         const val CORE_INDEX = TvAmbientPolicy.BLOB_COUNT
 
         const val TWO_PI = (2.0 * PI).toFloat()

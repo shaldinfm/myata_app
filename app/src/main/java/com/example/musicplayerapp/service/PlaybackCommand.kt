@@ -1,6 +1,7 @@
 package com.example.musicplayerapp.service
 
 import android.os.SystemClock
+import com.example.musicplayerapp.data.BootIdentity
 import com.example.musicplayerapp.ui.sleeptimer.SleepTimerDuration
 
 /**
@@ -81,6 +82,22 @@ import com.example.musicplayerapp.ui.sleeptimer.SleepTimerDuration
  * service five seconds to call `startForeground` after one and the caller is the
  * only one who knows. It travels as [openForeground], stored with the command, so a
  * service recreated after a process death still knows it owes that promotion.
+ *
+ * ## Which commands may be dropped, and which may not
+ *
+ * A handler can fail, and a command that fails every time must not block every later
+ * gesture for the life of the install - so a bounded number of attempts ends in a
+ * discard. That trade is only acceptable where losing the command cannot take
+ * anything away from the listener, and those are exactly the commands that only
+ * *restate* something the app derives anyway: [critical] is the list, and everything
+ * that changes what the listener asked for is on it. A critical command is never
+ * dropped by a retry count - it waits for the next legitimate start of the service.
+ *
+ * ## The one field that is about *when* the command was made
+ *
+ * [deadlineBootId]: the boot an `elapsedRealtime` deadline was measured on. That clock
+ * restarts at boot, so a deadline can look entirely plausible in a new boot's epoch -
+ * see `BootIdentity`, whose semantics this reuses rather than reinventing.
  */
 internal class PlaybackCommand(
     val action: String,
@@ -96,12 +113,56 @@ internal class PlaybackCommand(
     val desiredPlaying: Boolean? = null,
     /** Resolved `sleep_timer_set`: the absolute monotonic deadline. Null otherwise. */
     val deadlineElapsedMs: Long? = null,
+    /**
+     * The boot [deadlineElapsedMs] belongs to, as `BootIdentity` stores it
+     * (`BootIdentity.UNKNOWN` when the platform would not say). Non-null exactly when
+     * the command carries a deadline.
+     */
+    val deadlineBootId: Int? = null,
 ) {
+
+    /**
+     * Whether losing this command could take away something the listener asked for.
+     *
+     * The line is "does this command only restate state the app derives for itself, or
+     * is it the state the listener chose?" - and only the second kind is critical,
+     * because a retry counter is not a reason to discard a choice:
+     *
+     *  - **critical** - `play`, `startStop` ([desiredPlaying]), `switch` (a station),
+     *    `stop`: which station and whether audio is wanted, which is what
+     *    `PlaybackIntentStore` calls the listener's intent;
+     *  - **critical** - the three sleep-timer commands that change the timer:
+     *    `sleep_timer_set`, `sleep_timer_cancel` (which is also what creates the undo
+     *    affordance) and `sleep_timer_undo`;
+     *  - **not critical** - `switch_track`: a notification metadata refresh that the
+     *    metadata poller re-derives from the same feed within a minute;
+     *  - **not critical** - `get_status` and `sleep_timer_sync`: reads. Both only
+     *    re-broadcast what is already there, and the surfaces that need them ask again
+     *    whenever they are opened;
+     *  - **not critical** - the two debug seams: they exist for tests, a release build
+     *    refuses them before they do anything, and each only re-runs something the app
+     *    reaches on its own path (a null-intent restart, a system broadcast).
+     */
+    val critical: Boolean get() = isCritical(action)
 
     companion object {
 
         /** The one action whose meaning used to be a question. See the class docs. */
         const val ACTION_START_STOP = "startStop"
+
+        /** See [critical]: the commands whose loss can take away what a listener chose. */
+        fun isCritical(action: String): Boolean = when (action) {
+            "play",
+            ACTION_START_STOP,
+            "stop",
+            "switch",
+            SleepTimerContract.ACTION_SET,
+            SleepTimerContract.ACTION_CANCEL,
+            SleepTimerContract.ACTION_UNDO,
+            -> true
+
+            else -> false
+        }
 
         /**
          * A command a caller is asking for, as it will be stored.
@@ -116,6 +177,12 @@ internal class PlaybackCommand(
          * app measures deadlines on - `elapsedRealtime`, which survives a clock
          * change and does not survive a reboot - and the sleep timer's own store
          * already speaks it (see `SleepTimerStore`).
+         *
+         * [bootId] is the same clock's other half, read the same way - by
+         * `ServiceUtils`, where the gesture is made - and is stored with the deadline it
+         * belongs to. It is deliberately taken as a parameter rather than read here:
+         * reading `Settings.Global` would need a `Context`, and this stays a pure
+         * function of what the caller knew when the listener pressed something.
          */
         internal fun of(
             action: String,
@@ -127,6 +194,7 @@ internal class PlaybackCommand(
             isCustom: Boolean = false,
             openForeground: Boolean = false,
             nowElapsedMs: Long = SystemClock.elapsedRealtime(),
+            bootId: Int? = null,
         ): PlaybackCommand = PlaybackCommand(
             action = action,
             stream = stream,
@@ -139,6 +207,11 @@ internal class PlaybackCommand(
             desiredPlaying = if (action == ACTION_START_STOP) true else null,
             deadlineElapsedMs = if (action == SleepTimerContract.ACTION_SET) {
                 nowElapsedMs + SleepTimerDuration.toMs(minutes)
+            } else {
+                null
+            },
+            deadlineBootId = if (action == SleepTimerContract.ACTION_SET) {
+                BootIdentity.toStored(bootId)
             } else {
                 null
             },

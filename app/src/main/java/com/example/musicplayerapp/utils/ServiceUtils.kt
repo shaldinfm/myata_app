@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.example.musicplayerapp.data.BootIdentity
 import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.service.PlaybackCommand
 import com.example.musicplayerapp.service.PlaybackCommandInbox
@@ -51,6 +52,7 @@ object ServiceUtils {
                 song = song,
                 forcePlay = forcePlay,
                 openForeground = foregroundStart,
+                bootId = BootIdentity.read(context),
             ),
         )
     }
@@ -78,6 +80,7 @@ object ServiceUtils {
             artist = artist,
             song = song,
             forcePlay = forcePlay,
+            bootId = BootIdentity.read(context),
         ),
     )
 
@@ -113,6 +116,7 @@ object ServiceUtils {
             action = action,
             minutes = minutes,
             isCustom = isCustom,
+            bootId = BootIdentity.read(context),
         ),
     )
 
@@ -141,10 +145,37 @@ object ServiceUtils {
      * whether this was a `startForegroundService` call - travels with the command
      * instead, because a recreated service has to be able to answer it. Everything
      * else travels in app-private storage - see [PlaybackCommandInbox].
+     *
+     * ## What the start is allowed to mean
+     *
+     * The start is requested only for a command that is **already on disk**: an enqueue
+     * that did not commit is not an accepted command, and starting the service for it
+     * would ask the service to act on a gesture that only ever existed in RAM - the P1
+     * this design is about, one layer down.
+     *
+     * A start that throws is the other half. [PlaybackCommandInbox.withdraw] says
+     * whether this caller's command was still waiting (nothing ran, and the gesture is
+     * taken back out) or was already gone (another start consumed it), and that answer
+     * decides the return value: reporting a failure for a command the service has
+     * already carried out would tell the listener their press did nothing while the
+     * radio changes station.
      */
     private fun deliver(context: Context, command: PlaybackCommand): Boolean {
+        val inbox = PlaybackCommandInbox.forContext(context)
+
         // Durably recorded, and only then is a start requested.
-        val queued = PlaybackCommandInbox.forContext(context).enqueue(command)
+        val queued = inbox.enqueue(command)
+        if (queued == null) {
+            Log.e("ServiceUtils", "Command not stored (action: ${command.action}): no start requested")
+            PlaybackLog.problem(
+                "SERVICE_START_SKIPPED",
+                "action" to command.action,
+                "reason" to "command_not_stored",
+                "outcome" to "command_not_accepted"
+            )
+            return false
+        }
+
         val intent = Intent(context, MediaPlayerService::class.java)
 
         return try {
@@ -161,23 +192,41 @@ object ServiceUtils {
             }
             true
         } catch (e: Exception) {
-            // The command never reached the service, so it must not be left in the
-            // inbox for an unrelated start to find later.
-            PlaybackCommandInbox.forContext(context).withdraw(queued.id)
             Log.e("ServiceUtils", "Failed to start service (action: ${command.action}): ${e.message}")
-            // Android 12+ refuses a foreground start from the background. That is a
-            // platform rule, not something to retry in a loop - record exactly what
-            // happened and let the caller decide.
-            val blockedByPlatform = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                    e is android.app.ForegroundServiceStartNotAllowedException
-            PlaybackLog.problem(
-                "SERVICE_START_FAILED",
-                "action" to command.action,
-                "cause" to e.javaClass.simpleName,
-                "blockedByPlatform" to blockedByPlatform,
-                "outcome" to "start_refused"
-            )
-            false
+            when (inbox.withdraw(queued.id)) {
+                PlaybackCommandInbox.Withdraw.REMOVED_PENDING -> {
+                    // The command never reached the service, so it must not be left in
+                    // the inbox for an unrelated start to find later. Android 12+ refuses
+                    // a foreground start from the background: that is a platform rule,
+                    // not something to retry in a loop - record exactly what happened and
+                    // let the caller decide.
+                    val blockedByPlatform = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                            e is android.app.ForegroundServiceStartNotAllowedException
+                    PlaybackLog.problem(
+                        "SERVICE_START_FAILED",
+                        "action" to command.action,
+                        "cause" to e.javaClass.simpleName,
+                        "blockedByPlatform" to blockedByPlatform,
+                        "outcome" to "start_refused"
+                    )
+                    false
+                }
+
+                PlaybackCommandInbox.Withdraw.NOT_FOUND -> {
+                    // Another start - another of this app's screens, or a wake this
+                    // caller does not own - consumed the command before this one was
+                    // refused. The gesture has been delivered, so this is not a
+                    // failure: reporting one would tell the listener their press did
+                    // nothing while the radio acts on it.
+                    PlaybackLog.problem(
+                        "SERVICE_START_FAILED_BUT_DELIVERED",
+                        "action" to command.action,
+                        "cause" to e.javaClass.simpleName,
+                        "outcome" to "command_already_consumed"
+                    )
+                    true
+                }
+            }
         }
     }
 }

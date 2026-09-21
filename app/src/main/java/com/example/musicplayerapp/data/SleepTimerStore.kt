@@ -27,15 +27,46 @@ import com.example.musicplayerapp.ui.sleeptimer.SleepTimerState
  * when it is drawn - see `SleepTimerState` - so a timezone change, a DST step or
  * an NTP correction changes «остановится в HH:mm» and does not change the moment
  * playback actually stops.
+ *
+ * ## The second file: what `Вернуть` would put back
+ *
+ * `Отключить таймер` keeps the timer it cancelled so `Вернуть` can put back the
+ * deadline it had, and that snapshot has to survive a process death too - it is the
+ * state of a durable command (`sleep_timer_undo`), and a durable command whose state
+ * lived in RAM is a command that does nothing after the kill it was meant to survive.
+ * It lives here, in [UNDO_FILE], rather than in the keys above for two reasons:
+ *
+ *  - **the armed record is one thing and the affordance is another.** The keys above
+ *    are the timer that is going to fire; the snapshot is a one-gesture offer to put
+ *    a cancelled one back. Mixing them would make `restore` answer two questions.
+ *  - **backup granularity is per file.** The armed record keeps its current backup
+ *    story; the snapshot is excluded from cloud backup and device transfer in both
+ *    rule files, because a `Вернуть` on a phone that never cancelled anything is an
+ *    offer nobody made there.
+ *
+ * The snapshot is stamped with the boot its deadline was measured on, the same way
+ * the armed record is, so a snapshot that outlives a reboot is inert rather than a
+ * deadline reinterpreted in a new `elapsedRealtime` epoch.
  */
 object SleepTimerStore {
 
     private const val PREFS = "myata_sleep_timer"
+
+    /** Kept public so the backup-rule test can assert the excluded path is this one. */
+    const val UNDO_FILE = "myata_sleep_timer_undo"
+
     private const val KEY_DEADLINE = "deadline_elapsed_ms"
     private const val KEY_BOOT = "boot_id"
     private const val KEY_DURATION = "duration_minutes"
     private const val KEY_CUSTOM = "is_custom"
     private const val KEY_GENERATION = "generation"
+
+    private const val UNDO_KEY_DEADLINE = "cancelled_deadline_elapsed_ms"
+    private const val UNDO_KEY_BOOT = "cancelled_boot_id"
+    private const val UNDO_KEY_DURATION = "cancelled_duration_minutes"
+    private const val UNDO_KEY_CUSTOM = "cancelled_is_custom"
+    private const val UNDO_KEY_CANCELLED_BY = "cancelled_by"
+    private const val UNDO_KEY_CONSUMED_BY = "undo_consumed_by"
 
     /** What [restore] found. The service acts on all four; the UI treats every non-[Armed] as off. */
     sealed class Restored {
@@ -111,9 +142,170 @@ object SleepTimerStore {
     /** The highest generation this install has issued, so a restart cannot reuse one. */
     fun lastGeneration(context: Context): Long = prefs(context).getLong(KEY_GENERATION, 0L)
 
+    // ==================== the cancel snapshot (`Вернуть`) ====================
+
+    /**
+     * The timer as it was when it was cancelled, and the cancel command that made it:
+     * what `Вернуть` puts back, and the identity that keeps a replayed cancel from
+     * wiping it.
+     */
+    data class Cancelled(val timer: SleepTimerState.Armed, val cancelledBy: String)
+
+    /**
+     * The two replay rules of the timer's identity-bearing commands, as decisions.
+     *
+     * Both exist because delivery is at-least-once: a handler may run, the process may
+     * die before its acknowledgement, and the same durable command arrives again. A
+     * second run of the *same* cancel must not clear the snapshot the first run wrote
+     * (that would destroy `Вернуть`), and a second run of an undo must not consume a
+     * *later* cancel's snapshot. Pure, so the JVM holds both without a device.
+     */
+    object Replay {
+
+        /** True when [cancelId] is the cancel that produced [existing] and has run before. */
+        fun cancelAlreadyRecorded(existing: Cancelled?, cancelId: String): Boolean =
+            existing != null && existing.cancelledBy == cancelId
+
+        /** True when [undoId] is the undo that already consumed the snapshot. */
+        fun undoAlreadyConsumed(consumedBy: String?, undoId: String): Boolean =
+            consumedBy != null && consumedBy == undoId
+    }
+
+    /**
+     * Records what `Вернуть` may put back, or clears it when there was nothing worth
+     * keeping (no timer, or one whose deadline had already passed).
+     *
+     * A re-run of the same cancel command leaves the snapshot exactly as the first run
+     * left it: the second run finds no armed timer - cancel cleared it - and writing
+     * that "nothing" over the snapshot would be the replay destroying the affordance
+     * it created. Returns whether the write committed; a snapshot that could not be
+     * written means `Вернуть` is simply not on offer, never a stale one.
+     */
+    fun recordCancelled(
+        context: Context,
+        timer: SleepTimerState.Armed?,
+        bootId: Int?,
+        cancelledBy: String,
+    ): Boolean {
+        if (Replay.cancelAlreadyRecorded(readCancelled(context, BootIdentity.read(context)), cancelledBy)) {
+            return true
+        }
+
+        val p = undoPrefs(context)
+        val editor = p.edit()
+        if (timer == null) {
+            removeCancelled(editor)
+            // The cancel itself is still recorded: it is what a *later* replayed undo
+            // is compared against, and it is the only proof that this cancel ran.
+            editor.putString(UNDO_KEY_CANCELLED_BY, cancelledBy)
+        } else {
+            editor.putLong(UNDO_KEY_DEADLINE, timer.deadlineElapsedMs)
+            editor.putInt(UNDO_KEY_BOOT, BootIdentity.toStored(bootId))
+            editor.putInt(UNDO_KEY_DURATION, timer.durationMinutes)
+            editor.putBoolean(UNDO_KEY_CUSTOM, timer.isCustom)
+            editor.putString(UNDO_KEY_CANCELLED_BY, cancelledBy)
+        }
+        return editor.commit()
+    }
+
+    /**
+     * The snapshot `Вернуть` may put back, or null when there is none **for this
+     * boot**. Reads only.
+     *
+     * A snapshot from another boot - or one that cannot prove which boot it came from -
+     * is answered as nothing: its deadline belongs to an `elapsedRealtime` epoch that is
+     * over, and the app's rule is that a timer never resumes across a reboot.
+     */
+    fun readCancelled(context: Context, currentBootId: Int?): Cancelled? {
+        val p = undoPrefs(context)
+        if (!p.contains(UNDO_KEY_DEADLINE)) return null
+        if (!BootIdentity.matches(p.getInt(UNDO_KEY_BOOT, BootIdentity.UNKNOWN), currentBootId)) return null
+
+        return Cancelled(
+            timer = SleepTimerState.Armed(
+                deadlineElapsedMs = p.getLong(UNDO_KEY_DEADLINE, 0L),
+                durationMinutes = p.getInt(UNDO_KEY_DURATION, 0),
+                isCustom = p.getBoolean(UNDO_KEY_CUSTOM, false),
+                // A snapshot of a deadline, not of an arming: the generation belongs to
+                // the arm that is scheduled, and `Вернуть` assigns a fresh one.
+                generation = 0L,
+            ),
+            cancelledBy = p.getString(UNDO_KEY_CANCELLED_BY, null).orEmpty(),
+        )
+    }
+
+    /**
+     * `Вернуть` in one step: take the snapshot (whatever it turns out to be worth) and
+     * record which undo took it.
+     *
+     * Both halves in one editor, and the undo's identity with them, because an undo
+     * that ran must not be able to run again: a replayed undo finding a *newer*
+     * snapshot would otherwise put back a timer the listener cancelled afterwards.
+     * The snapshot is consumed even when it turns out to be unusable, which is what
+     * makes a replay of the same command a no-op rather than a second attempt.
+     *
+     * The answer says whether that write reached the disk - and [Consumed.NotConsumed]
+     * is the one the caller must not read as "there was nothing to put back": a
+     * consumption that did not commit leaves the snapshot where it was, so the command
+     * has not been delivered and will be replayed.
+     */
+    fun consumeCancelled(context: Context, currentBootId: Int?, consumedBy: String): Consumed {
+        val snapshot = readCancelled(context, currentBootId) ?: return Consumed.Nothing
+
+        val editor = undoPrefs(context).edit()
+        removeCancelled(editor)
+        editor.putString(UNDO_KEY_CONSUMED_BY, consumedBy)
+        if (!editor.commit()) return Consumed.NotConsumed
+        return Consumed.Timer(snapshot.timer)
+    }
+
+    /** What [consumeCancelled] found and did. */
+    sealed class Consumed {
+
+        /** Nothing to put back: no snapshot, or none that belongs to this boot. */
+        object Nothing : Consumed()
+
+        /** The snapshot is taken and its removal is durable. */
+        data class Timer(val timer: SleepTimerState.Armed) : Consumed()
+
+        /**
+         * The consumption did not commit: the snapshot is still on disk, so `Вернуть` has
+         * not been delivered and the next start has it again.
+         */
+        object NotConsumed : Consumed()
+    }
+
+    /** The id of the undo command that consumed the last snapshot, or null if none has. */
+    fun lastUndo(context: Context): String? = undoPrefs(context).getString(UNDO_KEY_CONSUMED_BY, null)
+
+    /**
+     * Drops the snapshot: the offer to put a cancelled timer back.
+     *
+     * The record of which undo consumed the last one deliberately stays. It is what makes
+     * a replayed undo a no-op, and an arming between the undo and its replay would
+     * otherwise put that replay back to consuming a snapshot it never saw.
+     */
+    fun clearCancelled(context: Context): Boolean {
+        val editor = undoPrefs(context).edit()
+        removeCancelled(editor)
+        return editor.commit()
+    }
+
     /** Test-only: return this install to the state a fresh one is in. */
     fun clearForTest(context: Context) {
         prefs(context).edit(commit = true) { clear() }
+        val editor = undoPrefs(context).edit()
+        removeCancelled(editor)
+        editor.remove(UNDO_KEY_CONSUMED_BY)
+        editor.commit()
+    }
+
+    private fun removeCancelled(editor: android.content.SharedPreferences.Editor) {
+        editor.remove(UNDO_KEY_DEADLINE)
+        editor.remove(UNDO_KEY_BOOT)
+        editor.remove(UNDO_KEY_DURATION)
+        editor.remove(UNDO_KEY_CUSTOM)
+        editor.remove(UNDO_KEY_CANCELLED_BY)
     }
 
     /** Test-only: put a record on disk directly, including one from another boot. */
@@ -139,4 +331,7 @@ object SleepTimerStore {
 
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    private fun undoPrefs(context: Context) =
+        context.applicationContext.getSharedPreferences(UNDO_FILE, Context.MODE_PRIVATE)
 }

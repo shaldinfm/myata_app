@@ -238,6 +238,104 @@ class SleepTimerStoreTest {
         assertTrue(SleepTimerStore.hasRecordForTest(context))
     }
 
+    // ================= the cancel snapshot (Вернуть) =================
+
+    /**
+     * Item 5: what `Вернуть` puts back is durable, in its own file, and stamped with the
+     * boot its deadline was measured on.
+     *
+     * Its own file is not tidiness. The armed record's schema is held to an exact set of
+     * keys by [the_record_holds_no_wall_clock_deadline], and the two states answer
+     * different questions - one is a timer that is going to fire, the other an offer to
+     * put back a timer that was cancelled. A file boundary is also the only granularity
+     * backup rules have, which is what lets the snapshot stay on this device while the
+     * armed record keeps its own story.
+     */
+    @Test
+    fun a_cancel_snapshot_survives_in_its_own_file() {
+        val cancelled = armed(SystemClock.elapsedRealtime() + 600_000L, minutes = 30)
+        assertTrue(SleepTimerStore.recordCancelled(context, cancelled, boot, cancelledBy = "3"))
+
+        val read = SleepTimerStore.readCancelled(context, boot)
+        assertNotNull("a durable command's state has to outlive the process that made it", read)
+        assertEquals(cancelled.deadlineElapsedMs, read!!.timer.deadlineElapsedMs)
+        assertEquals(cancelled.durationMinutes, read.timer.durationMinutes)
+        assertEquals("3", read.cancelledBy)
+
+        // The armed record is untouched: nothing here is a timer that will fire.
+        assertFalse(SleepTimerStore.hasRecordForTest(context))
+
+        // And it is not in the armed file's keys.
+        val keys = context
+            .getSharedPreferences("myata_sleep_timer", Context.MODE_PRIVATE)
+            .all.keys
+        assertTrue("the snapshot is not the armed record: $keys", keys.isEmpty())
+    }
+
+    /**
+     * A snapshot from another boot is answered as nothing, the way the armed record is:
+     * its deadline belongs to an `elapsedRealtime` epoch that is over, and restoring it
+     * would stop the radio at a moment nobody chose.
+     */
+    @Test
+    fun a_cancel_snapshot_from_another_boot_cannot_be_restored() {
+        SleepTimerStore.recordCancelled(
+            context,
+            armed(SystemClock.elapsedRealtime() + 600_000L),
+            boot - 1,
+            cancelledBy = "4",
+        )
+
+        assertNull(SleepTimerStore.readCancelled(context, boot))
+        assertEquals(
+            "and the undo that would consume it gets nothing to put back",
+            SleepTimerStore.Consumed.Nothing,
+            SleepTimerStore.consumeCancelled(context, boot, consumedBy = "5"),
+        )
+    }
+
+    /**
+     * Consuming is one step: the snapshot goes and the undo that took it is recorded.
+     * That record is what makes a *replayed* undo a no-op, so the second consume returns
+     * nothing even though the first one found something to give back.
+     */
+    @Test
+    fun consuming_the_snapshot_records_which_undo_took_it() {
+        SleepTimerStore.recordCancelled(
+            context,
+            armed(SystemClock.elapsedRealtime() + 600_000L),
+            boot,
+            cancelledBy = "6",
+        )
+
+        val consumed = SleepTimerStore.consumeCancelled(context, boot, consumedBy = "7")
+        assertTrue(
+            "a consumption that committed is the one the undo acts on: $consumed",
+            consumed is SleepTimerStore.Consumed.Timer,
+        )
+        assertEquals("7", SleepTimerStore.lastUndo(context))
+        assertNull("one gesture, so there is nothing left for a second undo", SleepTimerStore.readCancelled(context, boot))
+    }
+
+    @Test
+    fun clearing_the_snapshot_leaves_the_record_of_which_undo_took_it() {
+        SleepTimerStore.recordCancelled(context, armed(SystemClock.elapsedRealtime() + 600_000L), boot, cancelledBy = "8")
+        SleepTimerStore.consumeCancelled(context, boot, consumedBy = "9")
+
+        SleepTimerStore.clearCancelled(context)
+
+        assertNull(SleepTimerStore.readCancelled(context, boot))
+        assertEquals(
+            "a replayed undo must still be recognised as one that already ran",
+            "9",
+            SleepTimerStore.lastUndo(context),
+        )
+
+        // And the test-only reset, which a fresh install is, clears both.
+        SleepTimerStore.clearForTest(context)
+        assertNull(SleepTimerStore.lastUndo(context))
+    }
+
     private fun armed(
         deadline: Long,
         minutes: Int = 30,

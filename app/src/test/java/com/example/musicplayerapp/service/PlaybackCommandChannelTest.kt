@@ -2,6 +2,8 @@ package com.example.musicplayerapp.service
 
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
+import com.example.musicplayerapp.data.BootIdentity
+import com.example.musicplayerapp.data.SleepTimerStore
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -38,17 +40,26 @@ class PlaybackCommandChannelTest {
      * App-private storage, as the inbox uses it: encoded strings on "disk" and
      * nothing in memory. A new [PlaybackCommandInbox] over the same [Disk] is a new
      * process reading records that outlived the old one.
+     *
+     * [commits] is the disk's answer. Turning it off is what a commit that does not
+     * reach the file looks like from the caller's side: the change is not applied, and
+     * the one thing the inbox may do with that is say so.
      */
     private class Disk : PlaybackCommandInbox.Slot {
 
         private val values = mutableMapOf<String, String>()
 
+        /** False: every write from here on fails, exactly as a commit that returned false does. */
+        var commits = true
+
         override fun read(): Map<String, String> = values.toMap()
 
-        override fun edit(changes: Map<String, String?>) {
+        override fun edit(changes: Map<String, String?>): Boolean {
+            if (!commits) return false
             for ((key, value) in changes) {
                 if (value == null) values.remove(key) else values[key] = value
             }
+            return true
         }
 
         /** Test-only: what is physically there, values only. */
@@ -71,7 +82,7 @@ class PlaybackCommandChannelTest {
      */
     @Test
     fun `a command is on disk before the caller asks for a start`() {
-        val queued = process().enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))
+        val queued = process().enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))!!
 
         assertTrue("enqueue must have written before it returned", disk.values().isNotEmpty())
         assertNotNull(queued.id)
@@ -182,6 +193,52 @@ class PlaybackCommandChannelTest {
         assertNull("only a set carries a deadline", command.deadlineElapsedMs)
     }
 
+    /**
+     * Item 4: a deadline is meaningless without the boot it was measured on.
+     *
+     * `elapsedRealtime` restarts at zero at boot and climbs from there, so a deadline
+     * from a previous boot is a number that looks entirely ordinary in the new epoch.
+     * The boot is therefore stored with the deadline - as `BootIdentity` stores it, so
+     * "the platform would not tell us" is stored as unknown rather than as a boot - and
+     * the service refuses a deadline that cannot prove it belongs to this boot.
+     */
+    @Test
+    fun `a deadline is stored with the boot it was measured on`() {
+        val set = PlaybackCommand.of(
+            SleepTimerContract.ACTION_SET, minutes = 30, nowElapsedMs = 1_000L, bootId = 7,
+        )
+        assertEquals(7, set.deadlineBootId)
+
+        assertEquals(
+            "an unreadable boot counter is stored as unknown, never as \"this boot\"",
+            BootIdentity.UNKNOWN,
+            PlaybackCommand.of(SleepTimerContract.ACTION_SET, minutes = 30, bootId = null).deadlineBootId,
+        )
+
+        for (action in listOf(
+            SleepTimerContract.ACTION_CANCEL,
+            SleepTimerContract.ACTION_UNDO,
+            SleepTimerContract.ACTION_SYNC,
+            "play",
+            "stop",
+            "switch",
+        )) {
+            assertNull(
+                "$action carries no deadline, so it has no boot to belong to",
+                PlaybackCommand.of(action, bootId = 7).deadlineBootId,
+            )
+        }
+    }
+
+    @Test
+    fun `the boot a deadline was measured on survives recreation`() {
+        process().enqueue(
+            PlaybackCommand.of(SleepTimerContract.ACTION_SET, minutes = 15, nowElapsedMs = 0L, bootId = 42),
+        )
+
+        assertEquals(42, process().pending().single().command.deadlineBootId)
+    }
+
     // ==================== the foreground obligation ====================
 
     /**
@@ -207,9 +264,9 @@ class PlaybackCommandChannelTest {
 
     @Test
     fun `several commands survive recreation in the order they were made`() {
-        val first = process().enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))
-        val second = process().enqueue(PlaybackCommand.of("switch", stream = "gold", nowElapsedMs = 0L))
-        val third = process().enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L))
+        val first = process().enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))!!
+        val second = process().enqueue(PlaybackCommand.of("switch", stream = "gold", nowElapsedMs = 0L))!!
+        val third = process().enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L))!!
 
         val pending = process().pending()
         assertEquals(listOf("play", "switch", "stop"), pending.map { it.command.action })
@@ -228,7 +285,7 @@ class PlaybackCommandChannelTest {
         inbox.enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L))
 
         val ran = mutableListOf<String>()
-        inbox.drain { ran += it.action }
+        inbox.drain { ran += it.command.action }
 
         assertEquals(listOf("play", "switch", "stop"), ran)
     }
@@ -240,15 +297,106 @@ class PlaybackCommandChannelTest {
         inbox.enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))
 
         val ran = mutableListOf<String>()
-        inbox.drain { command ->
-            ran += command.action
-            if (command.action == "play") {
+        inbox.drain { entry ->
+            ran += entry.command.action
+            if (entry.command.action == "play") {
                 process().enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L))
             }
         }
 
         assertEquals(listOf("play", "stop"), ran)
         assertTrue(process().pending().isEmpty())
+    }
+
+    // ==================== the obligation before the handler ====================
+
+    /**
+     * Item 7's race, closed where it is closed: the head is offered to [prepare] *as it is
+     * on disk at that instant*, so a command appended while a pass is running is gated
+     * before its own handler rather than handled because it happened to be in a snapshot
+     * taken when the pass began.
+     */
+    @Test
+    fun `a command appended during a pass is prepared before it is handled`() {
+        val inbox = process()
+        inbox.enqueue(PlaybackCommand.of("switch_track", artist = "A", song = "A", nowElapsedMs = 0L))
+
+        val prepared = mutableListOf<String>()
+        val ran = mutableListOf<String>()
+        inbox.drain(prepare = { entry -> prepared += entry.command.action; true }) { entry ->
+            ran += entry.command.action
+            if (entry.command.action == "switch_track") {
+                process().enqueue(
+                    PlaybackCommand.of("play", stream = "myata", openForeground = true, nowElapsedMs = 0L),
+                )
+            }
+        }
+
+        assertEquals("the appended command is this pass's work", listOf("switch_track", "play"), ran)
+        assertEquals("and it was gated first, like the one that was already there", listOf("switch_track", "play"), prepared)
+    }
+
+    /**
+     * Item 12: preparation that fails means the command is **not delivered**. It is not
+     * handled, not acknowledged, and the pass stops with it - and everything behind it -
+     * still pending.
+     */
+    @Test
+    fun `a command whose preparation fails is neither handled nor acknowledged`() {
+        val inbox = process()
+        val refused = inbox.enqueue(
+            PlaybackCommand.of("play", stream = "myata", openForeground = true, nowElapsedMs = 0L),
+        )!!
+        val behind = inbox.enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L))!!
+
+        val prepared = mutableListOf<String>()
+        val ran = mutableListOf<String>()
+        inbox.drain(prepare = { prepared += it.id; false }) { ran += it.command.action }
+
+        assertEquals("the handler never ran", emptyList<String>(), ran)
+        assertEquals("the gate was asked about the head, and the pass stopped there", listOf(refused.id), prepared)
+        assertEquals(listOf(refused.id, behind.id), process().pending().map { it.id })
+    }
+
+    // ==================== withdraw has two answers ====================
+
+    /**
+     * Item 8: taking a command back and finding it already gone are different facts, and
+     * only the first is a delivery failure. `ServiceUtils` reads the same distinction.
+     */
+    @Test
+    fun `withdraw distinguishes a command taken back from one already consumed`() {
+        val queued = process().enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))!!
+
+        assertEquals(PlaybackCommandInbox.Withdraw.REMOVED_PENDING, process().withdraw(queued.id))
+        assertTrue("and it is out of the queue", process().pending().isEmpty())
+
+        assertEquals(
+            "already consumed is not the same answer as taken back",
+            PlaybackCommandInbox.Withdraw.NOT_FOUND,
+            process().withdraw(queued.id),
+        )
+    }
+
+    /**
+     * Item 8's race, one level down: another start drained the command while this
+     * caller's own start was being refused. The record is not there to take back, and
+     * nothing else may be touched.
+     */
+    @Test
+    fun `a command another start already consumed cannot be withdrawn`() {
+        val queued = process().enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))!!
+
+        // Another start takes the command and handles it.
+        val ran = mutableListOf<String>()
+        process().drain { ran += it.command.action }
+
+        assertEquals(
+            "the caller must not be told its command is still waiting",
+            PlaybackCommandInbox.Withdraw.NOT_FOUND,
+            process().withdraw(queued.id),
+        )
+        assertEquals(listOf("play"), ran)
     }
 
     // ==================== acknowledgement ====================
@@ -259,9 +407,9 @@ class PlaybackCommandChannelTest {
         inbox.enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))
 
         val ran = mutableListOf<String>()
-        inbox.drain { ran += it.action }
+        inbox.drain { ran += it.command.action }
         // The next start of the service, on the same records.
-        process().drain { ran += it.action }
+        process().drain { ran += it.command.action }
 
         assertEquals("handled once, and not again on the next start", listOf("play"), ran)
         assertTrue(process().pending().isEmpty())
@@ -269,7 +417,7 @@ class PlaybackCommandChannelTest {
 
     @Test
     fun `a start that was refused leaves nothing behind`() {
-        val queued = process().enqueue(PlaybackCommand.of("play", stream = "myata", openForeground = true, nowElapsedMs = 0L))
+        val queued = process().enqueue(PlaybackCommand.of("play", stream = "myata", openForeground = true, nowElapsedMs = 0L))!!
 
         process().withdraw(queued.id)
 
@@ -281,7 +429,7 @@ class PlaybackCommandChannelTest {
 
     @Test
     fun `withdraw takes back its own command and not the one behind it`() {
-        val refused = process().enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))
+        val refused = process().enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))!!
         process().enqueue(PlaybackCommand.of("switch", stream = "gold", nowElapsedMs = 0L))
 
         process().withdraw(refused.id)
@@ -299,12 +447,12 @@ class PlaybackCommandChannelTest {
     @Test
     fun `a handler that fails leaves its command and everything behind it pending`() {
         val inbox = process()
-        val failing = inbox.enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))
-        val later = inbox.enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L))
+        val failing = inbox.enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))!!
+        val later = inbox.enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L))!!
 
         val attempted = mutableListOf<String>()
-        inbox.drain { command ->
-            attempted += command.action
+        inbox.drain { entry ->
+            attempted += entry.command.action
             throw IllegalStateException("the handler could not run")
         }
 
@@ -313,20 +461,21 @@ class PlaybackCommandChannelTest {
 
         // The next start retries it, and the queue moves on once it works.
         val ran = mutableListOf<String>()
-        process().drain { ran += it.action }
+        process().drain { ran += it.command.action }
         assertEquals(listOf("play", "stop"), ran)
         assertTrue(process().pending().isEmpty())
     }
 
     /**
-     * The other side of that: a command that can never work must not sit in front of
-     * every later Play press for the life of the install. It is dropped after a
-     * bounded number of attempts, and the queue behind it is not.
+     * The other side of that, and it only applies to the commands whose loss cannot cost
+     * the listener anything: one that can never work must not sit in front of every later
+     * Play press for the life of the install. It is dropped after a bounded number of
+     * attempts, and the queue behind it is not.
      */
     @Test
     fun `a command that always fails is dropped after a bounded number of attempts`() {
         val inbox = process()
-        inbox.enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))
+        inbox.enqueue(PlaybackCommand.of("switch_track", artist = "A", song = "A", nowElapsedMs = 0L))
         inbox.enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L))
 
         repeat(PlaybackCommandInbox.MAX_HANDLER_ATTEMPTS) {
@@ -336,18 +485,176 @@ class PlaybackCommandChannelTest {
         assertEquals("the broken command is gone, the one behind it is not", listOf("stop"), actions())
 
         val ran = mutableListOf<String>()
-        process().drain { ran += it.action }
+        process().drain { ran += it.command.action }
         assertEquals(listOf("stop"), ran)
     }
 
     @Test
-    fun `an attempt that does not exist cannot be counted against a pending one`() {
+    fun `an attempt against a command that is not there is not a record left behind`() {
         val inbox = process()
-        val queued = inbox.enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))
+        val queued = inbox.enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))!!
         inbox.ack(queued.id)
 
-        assertTrue("nothing left to fail", inbox.noteFailure(queued.id))
+        assertEquals("nothing left to fail", PlaybackCommandInbox.Failure.Dropped, inbox.noteFailure(queued.id))
         assertTrue(process().pending().isEmpty())
+    }
+
+    /**
+     * The rule a retry count may not override: a command the listener asked for is never
+     * dropped, however often its handler fails, and everything behind it waits with it.
+     * Retrying happens on the next legitimate start, never in a loop here.
+     */
+    @Test
+    fun `a critical command is never discarded by its retry count`() {
+        val inbox = process()
+        val wanted = inbox.enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))!!
+        val behind = inbox.enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L))!!
+
+        repeat(PlaybackCommandInbox.MAX_HANDLER_ATTEMPTS * 4) {
+            val attempts = mutableListOf<String>()
+            inbox.drain { entry ->
+                attempts += entry.command.action
+                throw IllegalStateException("still broken")
+            }
+            assertEquals("the pass always stops at the head", listOf("play"), attempts)
+        }
+
+        assertEquals(
+            "kept, and everything behind it with it",
+            listOf(wanted.id, behind.id),
+            process().pending().map { it.id },
+        )
+    }
+
+    /**
+     * The classification itself, in full: the seven commands whose loss would take a
+     * choice away are critical, and the five that only restate state the app derives for
+     * itself are not.
+     */
+    @Test
+    fun `only the commands whose loss costs the listener nothing can be discarded`() {
+        for (action in listOf(
+            "play",
+            PlaybackCommand.ACTION_START_STOP,
+            "stop",
+            "switch",
+            SleepTimerContract.ACTION_SET,
+            SleepTimerContract.ACTION_CANCEL,
+            SleepTimerContract.ACTION_UNDO,
+        )) {
+            assertTrue("$action is a choice, not a restatement", PlaybackCommand.of(action).critical)
+        }
+
+        for (action in listOf(
+            "switch_track",
+            "get_status",
+            SleepTimerContract.ACTION_SYNC,
+            PlaybackIntentContract.ACTION_RESTORE,
+            SystemPlaybackEventContract.ACTION_BECOMING_NOISY,
+        )) {
+            assertFalse("$action is re-derived anyway", PlaybackCommand.of(action).critical)
+        }
+    }
+
+    // ==================== the disk has to say yes ====================
+
+    /**
+     * Item 1, first half. A commit that did not reach the disk is not an accepted
+     * command: no entry, nothing on disk, and - in `ServiceUtils` - no start request
+     * either, which is the whole point of the check.
+     */
+    @Test
+    fun `a command whose record did not commit is not accepted`() {
+        disk.commits = false
+
+        val queued = process().enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))
+
+        assertNull("a write that did not reach the disk is not a queued command", queued)
+        assertTrue("and nothing is left behind for a later start either", disk.values().isEmpty())
+    }
+
+    @Test
+    fun `the id of a command that did not commit is not spent`() {
+        val first = process().enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))!!
+        disk.commits = false
+        assertNull(process().enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L)))
+        disk.commits = true
+        val third = process().enqueue(PlaybackCommand.of("switch", stream = "gold", nowElapsedMs = 0L))!!
+
+        assertTrue("ids keep climbing", third.id.toLong() > first.id.toLong())
+        assertEquals(listOf("play", "switch"), actions())
+    }
+
+    /**
+     * Item 1, second half: a removal that did not commit is not an acknowledgement, and
+     * the command stays replayable rather than being treated as delivered.
+     */
+    @Test
+    fun `an acknowledgement that did not commit leaves the command replayable`() {
+        val inbox = process()
+        val queued = inbox.enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))!!
+
+        disk.commits = false
+        assertFalse("a removal that did not reach the disk is not an acknowledgement", inbox.ack(queued.id))
+        disk.commits = true
+
+        assertEquals("the record is still there, so the next start runs it", listOf("play"), actions())
+    }
+
+    /** And a pass that cannot acknowledge stops rather than handling the same head twice. */
+    @Test
+    fun `a pass whose acknowledgement does not commit stops instead of repeating itself`() {
+        val inbox = process()
+        inbox.enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))
+        inbox.enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L))
+
+        val ran = mutableListOf<String>()
+        inbox.drain { entry ->
+            ran += entry.command.action
+            // The disk fails exactly when the acknowledgement is written.
+            disk.commits = false
+        }
+
+        assertEquals("handled once, then the pass stopped", listOf("play"), ran)
+
+        disk.commits = true
+        assertEquals(listOf("play", "stop"), actions())
+    }
+
+    /**
+     * Item 1, third part: a failure that could not be written down must not change what
+     * happens to the command. The record is untouched, so the command is still pending -
+     * and, for a command whose loss costs nothing, still droppable later.
+     */
+    @Test
+    fun `a failure that cannot be written down leaves the command exactly as it was`() {
+        val inbox = process()
+        val queued = inbox.enqueue(PlaybackCommand.of("switch_track", nowElapsedMs = 0L))!!
+
+        disk.commits = false
+        assertEquals(PlaybackCommandInbox.Failure.NotPersisted, inbox.noteFailure(queued.id))
+        disk.commits = true
+
+        assertEquals(listOf("switch_track"), actions())
+    }
+
+    @Test
+    fun `a discard that cannot be committed keeps the command pending`() {
+        val inbox = process()
+        inbox.enqueue(PlaybackCommand.of("switch_track", nowElapsedMs = 0L))
+        repeat(PlaybackCommandInbox.MAX_HANDLER_ATTEMPTS - 1) {
+            inbox.drain { throw IllegalStateException("still broken") }
+        }
+
+        // The attempt that would have reached the bound, with a disk that refuses it.
+        disk.commits = false
+        assertEquals(
+            PlaybackCommandInbox.Failure.NotPersisted,
+            inbox.noteFailure(process().pending().single().id),
+        )
+        disk.commits = true
+
+        assertEquals(listOf("switch_track"), actions())
     }
 
     // ==================== unreadable records ====================
@@ -375,9 +682,9 @@ class PlaybackCommandChannelTest {
 
     @Test
     fun `identity keeps climbing, so a re-used slot cannot re-acknowledge an old id`() {
-        val first = process().enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))
+        val first = process().enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))!!
         process().ack(first.id)
-        val second = process().enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))
+        val second = process().enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))!!
 
         assertTrue(
             "ids must never be reused: an id is how a command is acknowledged",
@@ -450,10 +757,10 @@ class PlaybackCommandChannelTest {
     fun `the command is written before the start and taken back when the start is refused`() {
         val source = file("src/main/java/com/example/musicplayerapp/utils/ServiceUtils.kt").readText()
 
-        val enqueue = source.indexOf("PlaybackCommandInbox.forContext(context).enqueue(")
+        val enqueue = source.indexOf("inbox.enqueue(command)")
         val startForeground = source.indexOf("startForegroundService(context, intent)")
         val start = source.indexOf("context.startService(intent)")
-        val withdraw = source.indexOf("PlaybackCommandInbox.forContext(context).withdraw(")
+        val withdraw = source.indexOf("inbox.withdraw(queued.id)")
 
         assertTrue("the inbox is written in ServiceUtils", enqueue >= 0)
         assertTrue("a command is recorded before the foreground start", enqueue < startForeground)
@@ -461,13 +768,91 @@ class PlaybackCommandChannelTest {
         assertTrue("a refused start takes its command back out", withdraw > enqueue)
     }
 
+    /**
+     * Item 1, at the caller: the start is requested only for a command that was accepted,
+     * and the answer decides the return value the UI shows. Both are properties of the
+     * order and the branch, which is what a JVM test can read - a real start is a device
+     * test (`PlaybackCommandHandoffTest`).
+     */
+    @Test
+    fun `a command that was not stored is never started for`() {
+        val source = file("src/main/java/com/example/musicplayerapp/utils/ServiceUtils.kt").readText()
+
+        val enqueue = source.indexOf("val queued = inbox.enqueue(command)")
+        val refused = source.indexOf("if (queued == null)")
+        val start = source.indexOf("context.startService(intent)")
+
+        assertTrue("the record is written first", enqueue >= 0)
+        assertTrue("and a write that did not commit stops here", refused > enqueue)
+        assertTrue("before any start is requested", refused < start)
+    }
+
     /** `commit`, not `apply`: a write that returns before the file does is not durable. */
     @Test
     fun `the production slot commits synchronously`() {
         val source = source("service/PlaybackCommandInbox.kt")
 
-        assertTrue("the inbox must commit, not apply", source.contains("edit(commit = true)"))
+        assertTrue("the inbox must commit, not apply", source.contains("editor.commit()"))
+        assertTrue(
+            "and the commit's answer is what the slot reports - a discarded result is a " +
+                "write the queue would report as successful without knowing",
+            source.contains("return editor.commit()"),
+        )
         assertFalse("apply() returns before the file is written", source.contains(".apply()"))
+    }
+
+    /**
+     * Item 2, item 7 and item 10, as properties of the service's start path.
+     *
+     * The null-intent restart cannot be staged by a test - a process death cannot be
+     * performed from inside the process being killed, and nothing else sends a null
+     * intent (see `PlaybackIntentContract`) - so the ordering is asserted against the
+     * source, the way the write-before-start order above is. What is being held:
+     *
+     *  - the inbox is drained *before* the sticky restore is evaluated, so a pending
+     *    Stop or switch has already changed the durable state the restore reads;
+     *  - a pass that left a command undelivered defers the restore entirely, because
+     *    that command is newer than the state it would be restoring;
+     *  - the obligation to promote to foreground is part of the per-command pass
+     *    (`prepare`), not a snapshot taken before it;
+     *  - and the drain has exactly one caller, on the service's start path, which is
+     *    what makes "one head at a time" a property of the main thread rather than
+     *    something a second thread could interleave with.
+     */
+    @Test
+    fun `the service applies pending commands before it evaluates the sticky restore`() {
+        val service = source("service/MediaPlayerService.kt")
+
+        val drain = service.indexOf("inbox.drain(prepare = ::prepareHeadCommand)")
+        val stillPending = service.indexOf("val stillPending = inbox.pending()")
+        val guard = service.indexOf("if (stillPending.isEmpty()) {")
+        val restore = service.indexOf("restorePlaybackIntent(\"sticky_restart\")")
+        val deferral = service.indexOf("\"PLAYBACK_INTENT_DEFERRED\"")
+
+        assertTrue("the start path drains the inbox", drain >= 0)
+        assertTrue("and reads the queue again afterwards", stillPending > drain)
+        assertTrue("the sticky restore is decided on what is left", guard > stillPending)
+        assertTrue("and only runs when nothing is left", restore > guard)
+        assertTrue(
+            "a command that was not delivered defers the restore rather than losing to it",
+            deferral > restore,
+        )
+        assertTrue(
+            "the foreground obligation is part of the per-command pass, not a snapshot " +
+                "taken before it",
+            service.contains("private fun prepareHeadCommand(") &&
+                service.contains("inbox.drain(prepare = ::prepareHeadCommand)"),
+        )
+        assertTrue(
+            "and the pass asks about each head before it runs it",
+            source("service/PlaybackCommandInbox.kt").contains("if (!prepare(entry)) {"),
+        )
+
+        assertEquals(
+            "one pass, on the start path: no other thread may take the same head",
+            1,
+            Regex("""inbox\.drain\(""").findAll(service).count(),
+        )
     }
 
     /**
@@ -491,16 +876,19 @@ class PlaybackCommandChannelTest {
         val screens = source("utils/ServiceUtils.kt")
         assertTrue(
             "the adding end",
-            screens.contains("PlaybackCommandInbox.forContext(context).enqueue("),
+            screens.contains("PlaybackCommandInbox.forContext(context)") && screens.contains(".enqueue(command)"),
         )
         assertTrue(
             "and the end that takes a refused start back out",
-            screens.contains("PlaybackCommandInbox.forContext(context).withdraw("),
+            screens.contains(".withdraw(queued.id)"),
         )
 
         val service = source("service/MediaPlayerService.kt")
         assertTrue("the consuming end reads the inbox", service.contains("inbox.pending()"))
-        assertTrue("and hands it to the one pass that acknowledges", service.contains("inbox.drain {"))
+        assertTrue(
+            "and hands it to the one pass that acknowledges",
+            service.contains("inbox.drain(prepare = ::prepareHeadCommand) {"),
+        )
     }
 
     // ==================== not a thing a backup may carry ====================

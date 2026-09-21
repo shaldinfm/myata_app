@@ -154,7 +154,12 @@ storage, which is the boundary now. It is written there rather than held in memo
 because a `startForegroundService` request can outlive the process that made it: a
 timer whose command was still in RAM when the process died used to be lost, and is
 now re-armed with **the deadline the listener chose** (the command carries the
-instant, not the duration). Arming is still refused outright on TV (§7).
+instant, not the duration). The command also carries **the boot that instant was
+measured on**: an `elapsedRealtime` deadline only means something in the epoch it was
+made in, so a `sleep_timer_set` that outlived a reboot - or one whose boot cannot be
+proved - is refused rather than reinterpreted as a deadline in the new epoch. That is
+the same rule §4's store already applies to the record it holds. Arming is still
+refused outright on TV (§7).
 
 **Scheduling is a `Handler`, not an `AlarmManager`.** The timer can only *do*
 anything while playback is running, and while playback is running the service is
@@ -272,11 +277,26 @@ Off+snapshot ──set(m)──▶ Armed(...), snapshot dropped     a new choice
 Armed ──deadline──▶ Off  (+ stop, if anything was playing)
 ```
 
-The snapshot lives in the service, in memory only. It is a one-gesture affordance
-that lasts as long as a Snackbar, not state anybody should find again after a
-restart, and keeping it out of the store is what stops it competing with the one
-record that is meant to be durable. The Fragment never reconstructs a timer: it
-asks the service to put back the one the service is still holding.
+The snapshot is **durable**, in its own file: `myata_sleep_timer_undo`, holding the
+cancelled deadline, the boot it was measured on, the duration, the custom flag, the
+cancel command that made it, and the id of the undo that consumed the last one. The
+command that consumes it is durable too, so the state it puts back cannot live in RAM:
+a process death between the cancel and the undo would leave `sleep_timer_undo` with
+nothing to restore, on the one path the durable inbox exists for. It is excluded from
+cloud backup and device transfer, because a `Вернуть` on a phone where nothing was
+cancelled is an offer nobody made there - and its deadline is monotonic, so a snapshot
+that outlived a reboot cannot be honoured anywhere anyway.
+
+Two of these commands carry their own identity (the cancelling command's id, and the
+consuming undo's), because delivery is **at-least-once**: a handler may run and the
+process may die before its acknowledgement, and the same durable command is then read
+again. A replayed cancel finds no armed timer - it disarmed one a moment ago - and
+would otherwise write "nothing to put back" over the snapshot it had just created; a
+replayed undo would otherwise consume a *later* cancel's snapshot and put back a timer
+the listener cancelled afterwards. Neither can now.
+
+The Fragment never reconstructs a timer: it asks the service to put back the one the
+store still has.
 
 ## 7 · Android TV
 

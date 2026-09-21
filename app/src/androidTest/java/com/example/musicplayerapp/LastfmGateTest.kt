@@ -89,15 +89,18 @@ class LastfmGateTest {
     @Test
     fun the_compiled_backup_rules_exclude_only_the_device_local_files() {
         // The Last.fm session (P3b), the scrobble queue database with its WAL and
-        // SHM (P5), and the playback-intent record - nothing else, so the rest of
-        // the app is backed up as before. Each of the three is state that belongs
-        // to this device and would be wrong, or harmful, on another one.
+        // SHM (P5), the playback-intent record, the durable command inbox and the
+        // sleep timer's undo snapshot - nothing else, so the rest of the app is
+        // backed up as before. Each is state that belongs to this device and would
+        // be wrong, or harmful, on another one.
         val deviceLocalFiles = listOf(
             "sharedpref:lastfm_session.xml",
             "database:lastfm_queue",
             "database:lastfm_queue-wal",
             "database:lastfm_queue-shm",
             "sharedpref:myata_playback_intent.xml",
+            "sharedpref:myata_playback_commands.xml",
+            "sharedpref:myata_sleep_timer_undo.xml",
         )
         // The resources as the build packaged them, read on the device. The API 31+
         // file lists them twice: once for cloud backup, once for device transfer.

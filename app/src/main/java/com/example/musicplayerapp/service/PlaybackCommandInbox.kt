@@ -1,7 +1,7 @@
 package com.example.musicplayerapp.service
 
 import android.content.Context
-import androidx.core.content.edit
+import com.example.musicplayerapp.data.BootIdentity
 
 /**
  * The durable inbox between the app's own screens and the one service that owns
@@ -56,8 +56,21 @@ import androidx.core.content.edit
  *    is replay-safe and why the two requests that were not (a toggle, a duration)
  *    are resolved before they are stored - see [PlaybackCommand];
  *  - a handler that fails keeps its command **and everything behind it** pending
- *    ([noteFailure] counts the failures so one broken command cannot block the
- *    queue forever).
+ *    ([noteFailure] decides what happens from there: a command whose loss cannot
+ *    cost the listener anything is dropped once it has exhausted its attempts, and
+ *    one the listener asked for is never dropped at all - see
+ *    [PlaybackCommand.critical]).
+ *
+ * ## Every write is checked
+ *
+ * A `SharedPreferences` commit can fail - a disk that is full, a file that cannot be
+ * opened - and a queue whose "success" is a write that never reached the disk is the
+ * same class of bug as one that lived in memory: the caller would start the service
+ * for a command that is not there. So every write this class makes is checked and
+ * reported: an enqueue that did not commit is **not an accepted command**
+ * ([enqueue]), a removal that did not commit is **not an acknowledgement** ([ack]),
+ * and a failure that could not be written down does not change what happens to the
+ * command ([noteFailure]).
  *
  * [withdraw] is the other way out, and it is not an acknowledgement: it is for a
  * start the platform refused, where the command never reached the service at all.
@@ -77,6 +90,12 @@ import androidx.core.content.edit
  * writer of each record at a time in production - a screen appends, the service
  * acknowledges - and both go through the one instance [forContext] hands out.
  *
+ * One *pass* at a time is a property of the thread rather than of that lock: [drain] is
+ * called from exactly one place, `MediaPlayerService.onStartCommand`, which runs on the
+ * main thread, so two start commands cannot interleave their passes and the same head
+ * cannot be executed twice. That is why the lock is held around each read-modify-write
+ * and never across a handler.
+ *
  * ## Not backed up
  *
  * `myata_playback_commands.xml` is excluded from cloud backup and device transfer
@@ -85,15 +104,23 @@ import androidx.core.content.edit
  * device's speaker. Restored onto a new phone it would be an instruction nobody
  * gave there.
  *
- * ## What is not stamped
+ * ## Boot identity, where it is load-bearing
  *
- * No boot identity, unlike `SleepTimerStore`. Nothing starts this service at boot
+ * Most commands here mean the same thing whenever they are read: a Play is a Play, a
+ * Stop is a Stop, a switch names its station. One does not - `sleep_timer_set`
+ * carries an `elapsedRealtime` deadline, and that clock restarts at boot, so the same
+ * number can look like a perfectly ordinary deadline in a new boot's epoch. That
+ * command therefore records the boot it was measured on
+ * ([PlaybackCommand.deadlineBootId], using the same `BootIdentity` semantics
+ * `SleepTimerStore` does) and the service refuses a deadline that cannot prove it
+ * belongs to this boot.
+ *
+ * Everything else is deliberately not stamped. Nothing starts this service at boot
  * (there is no `BOOT_COMPLETED` receiver anywhere), so a record that outlives a
- * reboot is never acted on by itself: it is read when something has already
- * started the service, and a stale record is consumed before whatever that start
- * was for. Stamping the boot would mean dropping every pending command on the
- * devices where the boot counter cannot be read at all, which is the opposite of
- * what this inbox is for.
+ * reboot is never acted on by itself: it is read when something has already started
+ * the service, and a stale record is consumed before whatever that start was for.
+ * Stamping every command would mean dropping all of them on a device whose boot
+ * counter cannot be read, which is the opposite of what this inbox is for.
  */
 internal class PlaybackCommandInbox(private val slot: Slot) {
 
@@ -115,11 +142,12 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
         fun read(): Map<String, String>
 
         /**
-         * Applies every change in one commit. A `null` value removes the key.
-         * One edit is what makes an append atomic: the record and the advanced
-         * sequence land together, or neither does.
+         * Applies every change in one commit, and reports whether it reached the
+         * disk. A `null` value removes the key. One edit is what makes an append
+         * atomic: the record and the advanced sequence land together, or neither
+         * does - and the caller is told which.
          */
-        fun edit(changes: Map<String, String?>)
+        fun edit(changes: Map<String, String?>): Boolean
     }
 
     /**
@@ -128,8 +156,12 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
      * Synchronous by contract, and that is the point: the caller requests the
      * service start only after this returns, so there is no instant in which the
      * start exists and the command does not.
+     *
+     * `null` means the record did **not** commit: the command was not accepted, and
+     * the caller must not request a start for it. The sequence is not advanced
+     * either, so the id that was not used is not left as a hole.
      */
-    fun enqueue(command: PlaybackCommand): Entry = synchronized(LOCK) {
+    fun enqueue(command: PlaybackCommand): Entry? = synchronized(LOCK) {
         val stored = slot.read()
         val decoded = decode(stored)
         // The stored counter, and - in case a truncated file left a record without
@@ -140,12 +172,20 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
             decoded.entries.maxOfOrNull { it.sequence } ?: 0L,
         ) + 1L
 
-        slot.edit(
+        val committed = slot.edit(
             mapOf(
                 KEY_SEQUENCE to sequence.toString(),
                 keyFor(sequence) to PlaybackCommandCodec.encode(command, attempts = 0),
             ),
         )
+        if (!committed) {
+            PlaybackLog.problem(
+                "COMMAND_NOT_STORED",
+                "action" to command.action, "sequence" to sequence,
+                "outcome" to "command_not_accepted",
+            )
+            return@synchronized null
+        }
         Entry(sequence.toString(), command)
     }
 
@@ -160,7 +200,12 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
         val decoded = decode(slot.read())
         if (decoded.unreadable.isNotEmpty()) {
             PlaybackLog.problem("COMMAND_UNREADABLE", "records" to decoded.unreadable.size)
-            slot.edit(decoded.unreadable.associateWith { null })
+            if (!slot.edit(decoded.unreadable.associateWith { null })) {
+                // Those records are not run either way - what they said is unknowable
+                // - but one that could not be removed is read again on the next start,
+                // which is worth its own line.
+                PlaybackLog.problem("COMMAND_UNREADABLE_NOT_REMOVED", "records" to decoded.unreadable.size)
+            }
         }
         decoded.entries.map { Entry(it.sequence.toString(), it.command) }
     }
@@ -170,34 +215,54 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
      *
      * Called after the handler, never before it. The window this leaves is the
      * reason every handler is replay-safe.
+     *
+     * @return true only when the removal is durable. `false` means the record is
+     *   still on disk: a command whose removal did not commit has **not** been
+     *   acknowledged, and the next start of the service replays it - which is the
+     *   safe direction, because the alternative is a handler's side effect with no
+     *   record left to say it happened.
      */
-    fun ack(id: String) = synchronized(LOCK) {
-        slot.edit(mapOf(keyFor(id) to null))
-    }
+    fun ack(id: String): Boolean = synchronized(LOCK) { slot.edit(mapOf(keyFor(id) to null)) }
 
     /**
      * Runs everything waiting, one command at a time, oldest first.
      *
-     * The whole handover, start to finish: take the head, run [handler] on it, and
-     * acknowledge it only once that has returned. The queue is re-read between
-     * commands because the acknowledgement changes which command is the head, so a
-     * command appended while this runs is picked up by *this* pass rather than left
-     * for the next start.
+     * The whole handover, start to finish: take the head, offer it to [prepare], run
+     * [handler] on it, and acknowledge it only once that has returned. The queue is
+     * re-read between commands because the acknowledgement changes which command is
+     * the head, so a command appended while this runs is picked up by *this* pass
+     * rather than left for the next start.
      *
+     *  - [prepare] is the one thing that has to happen *before* a command is handled
+     *    and cannot be done by its handler: the caller's obligation to the platform.
+     *    It is called with the entry as it is on disk at that instant, so a command
+     *    appended while this pass runs is offered to it too - which is what keeps that
+     *    obligation attached to the command that carries it rather than to a snapshot
+     *    of the queue taken when the pass began. Returning false declines the command:
+     *    no handler, no acknowledgement, and the pass ends with the head and
+     *    everything behind it still pending.
      *  - a handler that returns leaves its command acknowledged exactly once, so a
-     *    later start finds nothing to do;
+     *    later start finds nothing to do. An acknowledgement that cannot be committed
+     *    ends the pass instead, with the command left exactly where it was: not
+     *    acknowledged, and therefore replayable - see [ack].
      *  - a handler that throws leaves its command - and everything behind it -
      *    pending and ends this pass, so the next start retries it rather than
-     *    skipping the listener's gesture;
-     *  - [noteFailure] counts those failures and drops a command that has exhausted
-     *    them, so one broken command cannot block the queue for the life of the
-     *    install.
+     *    skipping the listener's gesture; [noteFailure] decides whether the record is
+     *    kept or dropped.
      */
-    fun drain(handler: (PlaybackCommand) -> Unit) {
+    fun drain(prepare: (Entry) -> Boolean = { true }, handler: (Entry) -> Unit) {
         while (true) {
             val entry = pending().firstOrNull() ?: return
+            if (!prepare(entry)) {
+                PlaybackLog.event(
+                    "COMMAND_NOT_PREPARED",
+                    "action" to entry.command.action, "id" to entry.id,
+                    "outcome" to "left_pending",
+                )
+                return
+            }
             val handled = try {
-                handler(entry.command)
+                handler(entry)
                 true
             } catch (e: Exception) {
                 PlaybackLog.problem(
@@ -209,13 +274,33 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
             }
 
             when {
-                handled -> ack(entry.id)
-                noteFailure(entry.id) -> PlaybackLog.problem(
-                    "COMMAND_DISCARDED",
-                    "action" to entry.command.action, "id" to entry.id,
-                    "attempts" to MAX_HANDLER_ATTEMPTS,
-                )
-                else -> return
+                handled -> if (!ack(entry.id)) {
+                    PlaybackLog.problem(
+                        "COMMAND_ACK_NOT_STORED",
+                        "action" to entry.command.action, "id" to entry.id,
+                        "outcome" to "command_left_replayable",
+                    )
+                    return
+                }
+
+                else -> when (noteFailure(entry.id)) {
+                    Failure.Dropped -> PlaybackLog.problem(
+                        "COMMAND_DISCARDED",
+                        "action" to entry.command.action, "id" to entry.id,
+                        "attempts" to MAX_HANDLER_ATTEMPTS,
+                    )
+
+                    Failure.Retried -> return
+
+                    Failure.NotPersisted -> {
+                        PlaybackLog.problem(
+                            "COMMAND_FAILURE_NOT_STORED",
+                            "action" to entry.command.action, "id" to entry.id,
+                            "outcome" to "command_still_pending",
+                        )
+                        return
+                    }
+                }
             }
         }
     }
@@ -225,44 +310,112 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
      *
      * Not an acknowledgement - nothing ran. See the class docs for why a refused
      * start must leave nothing behind.
+     *
+     * @return [Withdraw.REMOVED_PENDING] when the command was still waiting and is now
+     *   gone; [Withdraw.NOT_FOUND] when it was not there to take back, which is what a
+     *   command another start has already consumed looks like. A removal that cannot
+     *   be committed is reported the same way and logged: the record is still on disk
+     *   and a later start will run it, so the one answer that must not be given is a
+     *   delivery failure that did not happen.
      */
-    fun withdraw(id: String) = synchronized(LOCK) {
-        slot.edit(mapOf(keyFor(id) to null))
+    fun withdraw(id: String): Withdraw = synchronized(LOCK) {
+        val key = keyFor(id)
+        if (!slot.read().containsKey(key)) return@synchronized Withdraw.NOT_FOUND
+
+        if (slot.edit(mapOf(key to null))) {
+            Withdraw.REMOVED_PENDING
+        } else {
+            PlaybackLog.problem(
+                "COMMAND_NOT_WITHDRAWN", "id" to id,
+                "outcome" to "command_still_pending",
+            )
+            Withdraw.NOT_FOUND
+        }
     }
 
     /**
-     * A handler failed. Counts the failure and keeps the command pending.
+     * A handler failed. Records the failure and says what happens to the command.
      *
-     * Returns true when that was the last attempt and the record was removed -
-     * one command that throws every time must not block every Play after it for
-     * the life of the install - and false while it is still waiting to be retried
-     * by a later start.
+     * A failure is not a delivery, and what this decides is only ever whether the
+     * record can be *dropped*:
+     *
+     *  - a critical command is never dropped, however often it fails. No retry count
+     *    may throw away a state the listener asked for
+     *    ([PlaybackCommand.critical]): the command stays pending, the pass that failed
+     *    has already ended, and the next legitimate start tries again;
+     *  - anything else is dropped after [MAX_HANDLER_ATTEMPTS], so one command that
+     *    can never work does not sit in front of every later Play press for the life
+     *    of the install.
+     *
+     * Either way the record only moves if the write that moves it committed: a failure
+     * that could not be written down is [Failure.NotPersisted] and leaves the record
+     * exactly as it was.
      */
-    fun noteFailure(id: String): Boolean = synchronized(LOCK) {
+    fun noteFailure(id: String): Failure = synchronized(LOCK) {
         val key = keyFor(id)
-        val raw = slot.read()[key]
-        val decoded = raw?.let(PlaybackCommandCodec::decode)
-        when {
-            decoded == null -> {
-                // Gone, or unreadable and therefore unretryable. Either way there
-                // is nothing left to keep.
-                slot.edit(mapOf(key to null))
-                true
-            }
-            decoded.attempts + 1 >= MAX_HANDLER_ATTEMPTS -> {
-                slot.edit(mapOf(key to null))
-                true
-            }
-            else -> {
-                slot.edit(mapOf(key to PlaybackCommandCodec.encode(decoded.command, decoded.attempts + 1)))
-                false
-            }
+        val decoded = slot.read()[key]?.let(PlaybackCommandCodec::decode)
+
+        if (decoded == null) {
+            // Gone, or unreadable and therefore unretryable. Either way there is
+            // nothing left to keep.
+            return@synchronized if (slot.edit(mapOf(key to null))) Failure.Dropped else Failure.NotPersisted
         }
+
+        val attempts = decoded.attempts + 1
+        if (attempts >= MAX_HANDLER_ATTEMPTS && !decoded.command.critical) {
+            return@synchronized if (slot.edit(mapOf(key to null))) Failure.Dropped else Failure.NotPersisted
+        }
+
+        // A critical command's count is a record of the failures, never an input to a
+        // decision about dropping it - so it saturates instead of climbing forever.
+        val recorded = if (decoded.command.critical) minOf(attempts, MAX_HANDLER_ATTEMPTS) else attempts
+        val written = slot.edit(mapOf(key to PlaybackCommandCodec.encode(decoded.command, recorded)))
+        return@synchronized if (written) Failure.Retried else Failure.NotPersisted
     }
 
     /** Test-only: leave this install's inbox the way a fresh one finds it. */
     fun clearForTest() = synchronized(LOCK) {
         slot.edit(slot.read().keys.associateWith { null })
+    }
+
+    /**
+     * Test-only: put [entry] back under its own id, which is the state a lost
+     * acknowledgement leaves behind - the handler ran, the removal never reached the
+     * disk, and the same record is read again by the next start.
+     */
+    fun plantForTest(entry: Entry) = synchronized(LOCK) {
+        slot.edit(mapOf(keyFor(entry.id) to PlaybackCommandCodec.encode(entry.command, attempts = 0)))
+    }
+
+    /** What [withdraw] found. */
+    enum class Withdraw {
+        /** The command was still waiting, and has been taken back out unused. */
+        REMOVED_PENDING,
+
+        /**
+         * The command is not in the inbox: it has been consumed (its handler ran, or is
+         * running now) or was withdrawn earlier. Never reported as a failed delivery.
+         */
+        NOT_FOUND,
+    }
+
+    /** What [noteFailure] did with the record. */
+    sealed class Failure {
+
+        /** The failure is recorded and the command is still waiting to be retried. */
+        object Retried : Failure()
+
+        /**
+         * The record reached the end of its attempts and is gone. A
+         * [critical][PlaybackCommand.critical] command never gets here.
+         */
+        object Dropped : Failure()
+
+        /**
+         * Nothing was written - the record is exactly as it was, and still pending. A
+         * failure the disk would not take must not change what happens to the command.
+         */
+        object NotPersisted : Failure()
     }
 
     // ============================ read ============================
@@ -301,10 +454,14 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
         const val FILE = "myata_playback_commands"
 
         /**
-         * How many times one command may fail before it is dropped. Three, so a
-         * transient failure - the player being torn down mid-command, say - is
-         * retried by the next starts, and a command that can never work does not
-         * sit in front of every later Play press.
+         * How many times a command whose loss cannot cost the listener anything may
+         * fail before it is dropped. Three, so a transient failure - the player being
+         * torn down mid-command, say - is retried by the next starts, and a command
+         * that can never work does not sit in front of every later Play press.
+         *
+         * A [critical][PlaybackCommand.critical] command never reaches this count as a
+         * decision: it is kept however often it fails, because a retry counter is not
+         * a reason to throw away a state the listener asked for.
          */
         const val MAX_HANDLER_ATTEMPTS = 3
 
@@ -327,23 +484,24 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
         }
 
         /**
-         * `commit = true`, deliberately: `apply()` returns before the file is
-         * written and is lost if the process is killed in between, which is
-         * precisely the event this inbox exists for. A command is written once, by
-         * a listener pressing something, so the synchronous write costs nothing
-         * that matters - the same trade `PlaybackIntentStore` makes.
+         * `commit()`, deliberately: `apply()` returns before the file is written and is
+         * lost if the process is killed in between, which is precisely the event this
+         * inbox exists for - and, unlike the `edit {}` extension, calling it directly is
+         * what makes its answer available. A command is written once, by a listener
+         * pressing something, so the synchronous write costs nothing that matters - the
+         * same trade `PlaybackIntentStore` makes.
          */
         private class PrefsSlot(private val context: Context) : Slot {
 
             override fun read(): Map<String, String> =
                 prefs().all.mapNotNull { (key, value) -> (value as? String)?.let { key to it } }.toMap()
 
-            override fun edit(changes: Map<String, String?>) {
-                prefs().edit(commit = true) {
-                    for ((key, value) in changes) {
-                        if (value == null) remove(key) else putString(key, value)
-                    }
+            override fun edit(changes: Map<String, String?>): Boolean {
+                val editor = prefs().edit()
+                for ((key, value) in changes) {
+                    if (value == null) editor.remove(key) else editor.putString(key, value)
                 }
+                return editor.commit()
             }
 
             private fun prefs() = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -364,12 +522,18 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
  * record whose misreading would start a radio, so every field is written and read
  * explicitly here, and a missing or malformed field is refused instead of
  * defaulting into a plausible-looking command.
+ *
+ * The version is `2`, and it moved when [PlaybackCommand.deadlineBootId] was added - the
+ * first time this format gained a field, which is what the marker was for. A version-1
+ * record is therefore not run and not guessed at: it is dropped as unreadable by
+ * [PlaybackCommandInbox.pending], and a version-1 `sleep_timer_set` could not have proved
+ * which boot its deadline belonged to anyway.
  */
 private object PlaybackCommandCodec {
 
-    private const val VERSION = "1"
+    private const val VERSION = "2"
     private const val SEPARATOR = '\t'
-    private const val FIELD_COUNT = 12
+    private const val FIELD_COUNT = 13
 
     private const val IDX_VERSION = 0
     private const val IDX_ATTEMPTS = 1
@@ -383,6 +547,7 @@ private object PlaybackCommandCodec {
     private const val IDX_OPEN_FOREGROUND = 9
     private const val IDX_DESIRED_PLAYING = 10
     private const val IDX_DEADLINE = 11
+    private const val IDX_DEADLINE_BOOT = 12
 
     class Decoded(val command: PlaybackCommand, val attempts: Int)
 
@@ -399,6 +564,7 @@ private object PlaybackCommandCodec {
         flag(command.openForeground),
         command.desiredPlaying?.let(::flag).orEmpty(),
         command.deadlineElapsedMs?.toString().orEmpty(),
+        command.deadlineBootId?.let(BootIdentity::toStored)?.toString().orEmpty(),
     ).joinToString(SEPARATOR.toString())
 
     fun decode(raw: String): Decoded? {
@@ -420,6 +586,9 @@ private object PlaybackCommandCodec {
         val deadlineElapsedMs = fields[IDX_DEADLINE].let {
             if (it.isEmpty()) null else it.toLongOrNull() ?: return null
         }
+        val deadlineBootId = fields[IDX_DEADLINE_BOOT].let {
+            if (it.isEmpty()) null else it.toIntOrNull() ?: return null
+        }
 
         return Decoded(
             attempts = attempts,
@@ -434,6 +603,7 @@ private object PlaybackCommandCodec {
                 openForeground = openForeground,
                 desiredPlaying = desiredPlaying,
                 deadlineElapsedMs = deadlineElapsedMs,
+                deadlineBootId = deadlineBootId,
             ),
         )
     }

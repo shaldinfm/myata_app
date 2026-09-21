@@ -3,6 +3,7 @@ package com.example.musicplayerapp
 import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.os.Build
 import android.os.ParcelFileDescriptor
@@ -27,6 +28,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Assume.assumeNotNull
@@ -187,7 +189,10 @@ class PlaybackCommandHandoffTest {
         val chosenAt = SystemClock.elapsedRealtime()
 
         inbox.enqueue(
-            PlaybackCommand.of(SleepTimerContract.ACTION_SET, minutes = 30, nowElapsedMs = chosenAt),
+            PlaybackCommand.of(
+                SleepTimerContract.ACTION_SET, minutes = 30,
+                nowElapsedMs = chosenAt, bootId = boot,
+            ),
         )
         bareStart()
 
@@ -215,6 +220,167 @@ class PlaybackCommandHandoffTest {
     }
 
     /**
+     * Item 4, on a device. A `sleep_timer_set` that belongs to another boot can carry a
+     * deadline that looks perfectly live in this boot's `elapsedRealtime` epoch - which is
+     * exactly the trap: arming it would stop the radio at a moment nobody chose. The boot
+     * it was measured on travels with the command, and a mismatch means it is refused
+     * rather than reinterpreted.
+     */
+    @Test
+    fun a_timer_set_from_another_boot_is_refused_rather_than_reinterpreted() {
+        assumeNotNull(BootIdentity.read(context))
+        val previousBoot = boot - 1
+
+        inbox.enqueue(
+            PlaybackCommand.of(
+                SleepTimerContract.ACTION_SET, minutes = 30,
+                nowElapsedMs = SystemClock.elapsedRealtime(), bootId = previousBoot,
+            ),
+        )
+        bareStart()
+        awaitInboxEmpty()
+        Thread.sleep(QUIET_MS)
+
+        assertFalse(
+            "the deadline is not this boot's, so it is not this boot's timer",
+            SleepTimerStore.hasRecordForTest(context),
+        )
+        assertEquals(
+            "and no surface may be shown a timer that was refused",
+            SleepTimerState.Off,
+            SleepTimerStore.peek(context, SystemClock.elapsedRealtime()),
+        )
+    }
+
+    /**
+     * Item 6, exactly the sequence the review asked for: the cancel runs, its effect lands
+     * (the timer is disarmed and the snapshot is written), the acknowledgement is lost -
+     * so the same record with the same id is read again by the next start - and the
+     * replayed cancel must not be able to clear the snapshot it created.
+     *
+     * The lost acknowledgement is staged by putting the *same entry* back, which is
+     * precisely the state it leaves behind: the handler ran, the removal never reached the
+     * disk. Nothing about the command's identity is faked.
+     */
+    @Test
+    fun a_cancel_replayed_after_a_lost_acknowledgement_leaves_undo_intact() {
+        assumeNotNull(BootIdentity.read(context))
+
+        inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_SET, minutes = 30, bootId = boot))
+        bareStart()
+        val armed = awaitArmedTimer()
+
+        val cancelRecord = inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_CANCEL))
+        assertNotNull("the cancel record must be written", cancelRecord)
+        val cancel = cancelRecord!!
+        bareStart()
+        awaitCancelledSnapshot(armed.deadlineElapsedMs)
+        val afterFirstRun = SleepTimerStore.readCancelled(context, boot)
+        assertNotNull("a cancel puts `Вернуть` on offer", afterFirstRun)
+
+        // The acknowledgement was lost: the same command, under the same id, comes back.
+        inbox.plantForTest(cancel)
+        bareStart()
+        awaitInboxEmpty()
+
+        assertEquals(
+            "the replay may not clear the snapshot the first run wrote",
+            afterFirstRun,
+            SleepTimerStore.readCancelled(context, boot),
+        )
+
+        // And it still works: the original deadline is what comes back.
+        ServiceUtils.sendSleepTimerCommand(context, SleepTimerContract.ACTION_UNDO)
+        assertEquals(armed.deadlineElapsedMs, awaitArmedTimer().deadlineElapsedMs)
+    }
+
+    /**
+     * Item 5, as far as a suite can stage it: the snapshot is on disk, so the undo works
+     * on a **service instance that had nothing to do with the cancel** - the app's own
+     * stop/start, which is what a recreated process looks like from the durable state's
+     * point of view. A snapshot in RAM would make the undo do nothing at all here.
+     */
+    @Test
+    fun undo_survives_a_recreated_service_and_restores_the_same_deadline() {
+        assumeNotNull(BootIdentity.read(context))
+
+        ServiceUtils.sendSleepTimerCommand(context, SleepTimerContract.ACTION_SET, minutes = 30)
+        val original = awaitArmedTimer()
+
+        ServiceUtils.sendSleepTimerCommand(context, SleepTimerContract.ACTION_CANCEL)
+        awaitCancelledSnapshot(original.deadlineElapsedMs)
+        assertEquals(
+            "the snapshot is on disk before the service that made it goes away",
+            original.deadlineElapsedMs,
+            SleepTimerStore.readCancelled(context, boot)?.timer?.deadlineElapsedMs,
+        )
+
+        context.stopService(Intent(context, MediaPlayerService::class.java))
+        Thread.sleep(RECREATE_MS)
+
+        ServiceUtils.sendSleepTimerCommand(context, SleepTimerContract.ACTION_UNDO)
+        val restored = awaitArmedTimer()
+
+        assertEquals(
+            "Вернуть restores the deadline it had, not a deadline measured now",
+            original.deadlineElapsedMs,
+            restored.deadlineElapsedMs,
+        )
+        assertEquals(30, restored.durationMinutes)
+        assertNull(
+            "one gesture: the snapshot is consumed by the undo that used it",
+            SleepTimerStore.readCancelled(context, boot),
+        )
+    }
+
+    /**
+     * The undo's own replay rule, staged the same way: after a cancel (snapshot A), an
+     * undo (consumes A), a new timer and a new cancel (snapshot B), a replay of the *first*
+     * undo must not consume B. Without the record of which undo took which snapshot, that
+     * replay would put back a timer the listener had cancelled after the undo.
+     */
+    @Test
+    fun a_replayed_undo_does_not_consume_a_later_cancels_snapshot() {
+        assumeNotNull(BootIdentity.read(context))
+
+        inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_SET, minutes = 30, bootId = boot))
+        bareStart()
+        awaitArmedTimer()
+        inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_CANCEL))
+        bareStart()
+        awaitNoTimerRecord()
+
+        val firstUndoRecord = inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_UNDO))
+        assertNotNull("the undo record must be written", firstUndoRecord)
+        val firstUndo = firstUndoRecord!!
+        bareStart()
+        awaitArmedTimer()
+
+        // A later choice, cancelled: snapshot B.
+        inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_SET, minutes = 45, bootId = boot))
+        bareStart()
+        val second = awaitArmedTimer(accept = { it.durationMinutes == 45 })
+        inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_CANCEL))
+        bareStart()
+        awaitCancelledSnapshot(second.deadlineElapsedMs)
+        val laterSnapshot = SleepTimerStore.readCancelled(context, boot)
+        assertNotNull(laterSnapshot)
+
+        // The first undo, replayed, finds a snapshot that is not the one it consumed.
+        inbox.plantForTest(firstUndo)
+        bareStart()
+        awaitInboxEmpty()
+        Thread.sleep(QUIET_MS)
+
+        assertEquals(
+            "a replayed undo leaves a later cancel's snapshot alone",
+            laterSnapshot,
+            SleepTimerStore.readCancelled(context, boot),
+        )
+        assertNull("and nothing is armed from it", restoredTimer())
+    }
+
+    /**
      * The acknowledgement, on a device: a handled command is removed, so the next
      * start of the service does not run it a second time. The deadline is the
      * witness - a second arming would be measured from the later moment.
@@ -223,7 +389,12 @@ class PlaybackCommandHandoffTest {
     fun a_handled_command_is_not_handled_again_by_the_next_start() {
         assumeNotNull(BootIdentity.read(context))
         val chosenAt = SystemClock.elapsedRealtime()
-        inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_SET, minutes = 45, nowElapsedMs = chosenAt))
+        inbox.enqueue(
+            PlaybackCommand.of(
+                SleepTimerContract.ACTION_SET, minutes = 45,
+                nowElapsedMs = chosenAt, bootId = boot,
+            ),
+        )
 
         bareStart()
         val first = awaitArmedTimer()
@@ -253,7 +424,7 @@ class PlaybackCommandHandoffTest {
     fun commands_recorded_before_the_start_keep_their_order() {
         assumeNotNull(BootIdentity.read(context))
 
-        inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_SET, minutes = 15))
+        inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_SET, minutes = 15, bootId = boot))
         inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_CANCEL))
 
         bareStart()
@@ -266,7 +437,7 @@ class PlaybackCommandHandoffTest {
 
         // The control: reversed, the same two commands leave a timer running.
         inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_CANCEL))
-        inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_SET, minutes = 15))
+        inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_SET, minutes = 15, bootId = boot))
 
         bareStart()
         awaitInboxEmpty()
@@ -329,6 +500,102 @@ class PlaybackCommandHandoffTest {
         assertTrue("nothing an outside start carries may become a command", inbox.pending().isEmpty())
     }
 
+    // ==================== pending commands outrank the durable state ====================
+
+    /**
+     * Item 2's consequence, as far as a test in this process can stage it.
+     *
+     * The null-intent restart itself cannot be sent by a suite (see
+     * `PlaybackIntentContract`), so `PlaybackCommandChannelTest` holds the ordering
+     * against the service's source. What is held here is what the ordering is for: the
+     * durable state a restart would read says the listener wanted audio, a Stop is
+     * waiting in the inbox, and the Stop is what the durable state ends up saying.
+     */
+    @Test
+    fun a_pending_stop_outranks_a_durable_want_playback() {
+        PlaybackIntentStore.writeRawForTest(context, Streams.GOLD, wantsPlayback = true)
+        inbox.enqueue(PlaybackCommand.of("stop"))
+
+        bareStart()
+        awaitStoppedAndEmpty()
+
+        assertEquals(
+            "a restart after this must find silence, not the audio the listener stopped",
+            PlaybackIntentStore.Stored.Known(Streams.GOLD, false),
+            PlaybackIntentStore.read(context),
+        )
+    }
+
+    /**
+     * And the station: a pending switch names the one that is wanted now, and the station
+     * the durable record was still pointing at is never what plays.
+     */
+    @Test
+    fun a_pending_switch_outranks_the_stored_station() {
+        PlaybackIntentStore.writeRawForTest(context, Streams.MYATA, wantsPlayback = true)
+        inbox.enqueue(
+            PlaybackCommand.of(
+                "switch", stream = Streams.XTRA, forcePlay = true, openForeground = true,
+            ),
+        )
+
+        bareStart()
+
+        val controller = awaitController()
+        val deadline = SystemClock.uptimeMillis() + COMMAND_TIMEOUT_MS
+        val seen = mutableListOf<String>()
+        while (SystemClock.uptimeMillis() < deadline) {
+            val current = onMainThread { controller.currentMediaItem?.mediaId ?: "none" }
+            if (seen.lastOrNull() != current) seen += current
+            if (current == Streams.XTRA) break
+            Thread.sleep(POLL_MS)
+        }
+
+        assertEquals("the station the command names is the one that ends up on the player", Streams.XTRA, seen.lastOrNull())
+        assertFalse("the station the durable record still held never gets installed", Streams.MYATA in seen)
+        assertEquals(
+            PlaybackIntentStore.Stored.Known(Streams.XTRA, true),
+            PlaybackIntentStore.read(context),
+        )
+    }
+
+    // ==================== a refused start that was already delivered ================
+
+    /**
+     * Item 8 and item 13 on a device: the caller records its command and asks for the
+     * start; another start drains the command first; this caller's own start is then
+     * refused.
+     *
+     * The wrapper is what makes that order deterministic - it hands the start to the real
+     * service, waits for the command to have been consumed, and only then throws the way a
+     * refused start does. `ServiceUtils` must not answer with a delivery failure, because
+     * the command *was* delivered.
+     */
+    @Test
+    fun a_refused_start_after_another_consumed_the_command_is_not_reported_as_failed() {
+        val delivered = ServiceUtils.sendUiCommand(ConsumingThenFailingContext(context), "play", Streams.GOLD)
+
+        assertTrue("the command reached the service, so this is not a failure", delivered)
+        awaitMediaItem(Streams.GOLD)
+        assertTrue(inbox.pending().isEmpty())
+    }
+
+    /**
+     * The other half of the same rule: a start refused *before* the command reached the
+     * service is a delivery failure, and the unused command is taken back out rather than
+     * left for an unrelated start to find later.
+     */
+    @Test
+    fun a_refused_start_before_the_command_reached_the_service_is_a_failure() {
+        val delivered = ServiceUtils.sendUiCommand(AlwaysRefusingContext(context), "play", Streams.GOLD)
+
+        assertFalse("nothing was delivered, and the caller has to be able to say so", delivered)
+        assertTrue(
+            "a command whose start never happened must not be left behind",
+            inbox.pending().isEmpty(),
+        )
+    }
+
     // ============================ plumbing ============================
 
     /**
@@ -339,14 +606,46 @@ class PlaybackCommandHandoffTest {
         context.startService(Intent(context, MediaPlayerService::class.java))
     }
 
+    /**
+     * A start that is accepted by the system, turns into a real drain of the inbox, and is
+     * then refused anyway - the exact order item 8 is about.
+     */
+    private class ConsumingThenFailingContext(base: Context) : ContextWrapper(base) {
+
+        override fun startService(service: Intent?): ComponentName? {
+            val started = super.startService(service)
+            // Wait until the start that *did* happen has consumed the record, or the test
+            // would be racing the very race it is about.
+            val deadline = SystemClock.uptimeMillis() + CONSUME_TIMEOUT_MS
+            while (SystemClock.uptimeMillis() < deadline) {
+                if (PlaybackCommandInbox.forContext(this).pending().isEmpty()) break
+                Thread.sleep(POLL_MS)
+            }
+            throw IllegalStateException("the platform refused this start")
+        }
+    }
+
+    /** A start the platform refuses outright: nothing was handed over. */
+    private class AlwaysRefusingContext(base: Context) : ContextWrapper(base) {
+
+        override fun startService(service: Intent?): ComponentName? =
+            throw IllegalStateException("the platform refused this start")
+
+        override fun startForegroundService(service: Intent?): ComponentName =
+            throw IllegalStateException("the platform refused this start")
+    }
+
     private fun restoredTimer(): SleepTimerState.Armed? =
         (SleepTimerStore.restore(context, boot, SystemClock.elapsedRealtime())
             as? SleepTimerStore.Restored.Armed)?.timer
 
-    private fun awaitArmedTimer(timeoutMs: Long = COMMAND_TIMEOUT_MS): SleepTimerState.Armed {
+    private fun awaitArmedTimer(
+        timeoutMs: Long = COMMAND_TIMEOUT_MS,
+        accept: (SleepTimerState.Armed) -> Boolean = { true },
+    ): SleepTimerState.Armed {
         val deadline = SystemClock.uptimeMillis() + timeoutMs
         while (SystemClock.uptimeMillis() < deadline) {
-            restoredTimer()?.let { return it }
+            restoredTimer()?.let { if (accept(it)) return it }
             Thread.sleep(POLL_MS)
         }
         fail("no armed timer within ${timeoutMs}ms")
@@ -360,6 +659,20 @@ class PlaybackCommandHandoffTest {
             Thread.sleep(POLL_MS)
         }
         fail("a sleep-timer record was still on disk after ${timeoutMs}ms")
+    }
+
+    /**
+     * Waits for what `Вернуть` would put back to be on disk with the deadline it was
+     * holding. The cancel clears the armed record *before* it writes the snapshot, so
+     * "the timer is gone" is not by itself proof that the cancel has finished.
+     */
+    private fun awaitCancelledSnapshot(deadlineElapsedMs: Long, timeoutMs: Long = COMMAND_TIMEOUT_MS) {
+        val deadline = SystemClock.uptimeMillis() + timeoutMs
+        while (SystemClock.uptimeMillis() < deadline) {
+            if (SleepTimerStore.readCancelled(context, boot)?.timer?.deadlineElapsedMs == deadlineElapsedMs) return
+            Thread.sleep(POLL_MS)
+        }
+        fail("no cancel snapshot holding $deadlineElapsedMs within ${timeoutMs}ms")
     }
 
     /**
@@ -454,6 +767,12 @@ class PlaybackCommandHandoffTest {
     private companion object {
         const val CONNECT_TIMEOUT_MS = 20_000L
         const val COMMAND_TIMEOUT_MS = 10_000L
+
+        /** Long enough for a start that did happen to have been handled. */
+        const val CONSUME_TIMEOUT_MS = 10_000L
+
+        /** Long enough for a stopped service to be really gone before it is started again. */
+        const val RECREATE_MS = 1_000L
 
         /** Long enough for a command to have shown itself, or not to have. */
         const val QUIET_MS = 2_000L

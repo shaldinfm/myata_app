@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The play glyph, on its own. It used to be baked into the button's white disc;
+  the disc is now a tonal container drawn by bg_tv_play_pause, so the icon is an
+  icon. 24dp in a 42dp control is Material 3's own proportion for an icon button.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFF">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M8,5.14V18.86L19,12L8,5.14Z" />
+</vector>

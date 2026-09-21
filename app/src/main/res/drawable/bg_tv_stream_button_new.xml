@@ -1,6 +1,71 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-    <corners android:radius="100dp" />
-    <solid android:color="#E6404040" />
-</shape>
+<!--
+  A TV stream pill, in Material 3's tonal-button language.
+
+  M3 gives a button a container role, a state layer over it, and - when it is
+  selected, as a segmented button is - the accent container; focus is drawn as an
+  indicator rather than as a second fill. That is what these five states are,
+  recreated as a state list rather than taken from `MaterialButton`, because the
+  TV already has a proven focus path (D-pad focus change plus the scale animation
+  in `TvPlayerFragment`) and a stock Material button would put its own ripple,
+  insets and press-elevation on top of it.
+
+  Two things have to stay tellable apart on a remote:
+
+    - **selected** is the station now playing: a yellow-tinted container with the
+      accent label, which is the identity the pills already had;
+    - **focused** is where the D-pad is: a lighter surface with a white indicator
+      ring, so a focused pill that is not selected cannot be mistaken for the
+      selected one - the failure this whole treatment exists to avoid.
+
+  Colours are the dark-theme surface containers (#2E2C33 / #3D3B44) rather than
+  the flat #404040 they replace, so the pills sit in the same tonal family as the
+  play button and neither of them reads as a grey box dropped on the artwork.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Pressed: M3's state layer at its strongest, over the focused surface. -->
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="100dp" />
+            <solid android:color="#F04A4850" />
+            <stroke android:width="1dp" android:color="#59FFFFFF" />
+        </shape>
+    </item>
+
+    <!-- Focused and selected: accent container, white indicator, accent label. -->
+    <item android:state_focused="true" android:state_selected="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="100dp" />
+            <solid android:color="#3DFFFF00" />
+            <stroke android:width="2dp" android:color="#FFFFFFFF" />
+        </shape>
+    </item>
+
+    <!-- Focused, not selected: the indicator is what says "here", not the fill. -->
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="100dp" />
+            <solid android:color="#F03D3B44" />
+            <stroke android:width="2dp" android:color="#FFFFFFFF" />
+        </shape>
+    </item>
+
+    <!-- Selected, not focused: the accent container at rest. -->
+    <item android:state_selected="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="100dp" />
+            <solid android:color="#2EFFFF00" />
+            <stroke android:width="1dp" android:color="#59FFFF00" />
+        </shape>
+    </item>
+
+    <!-- Unselected, unfocused: a quiet tonal surface with a hairline outline. -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="100dp" />
+            <solid android:color="#E62E2C33" />
+            <stroke android:width="1dp" android:color="#26FFFFFF" />
+        </shape>
+    </item>
+</selector>

@@ -228,6 +228,12 @@ class MediaPlayerService(): MediaSessionService(){
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
 
+        // Everything the app itself asked for comes out of process memory rather
+        // than out of `intent`, and this whole path reads no extra. That is the fix
+        // for the exported endpoint: any app may send this component a start, and a
+        // start carries no instruction any more. See [PlaybackCommand].
+        val commands = PlaybackCommands.drain()
+
         if (intent == null) {
             // START_STICKY handed the service back to us without the original
             // intent: the process was killed and restarted rather than started.
@@ -235,36 +241,38 @@ class MediaPlayerService(): MediaSessionService(){
             // this is the one point where the durable copy has to speak for them.
             PlaybackLog.problem("SERVICE_RESTARTED_BY_SYSTEM", "startId" to startId, "flags" to flags)
             restorePlaybackIntent("sticky_restart")
-        } else {
-            // Media3 keeps the service alive with its own action-less start
-            // commands during normal playback; those carry no information and
-            // would drown out the interesting lines, so only ours are logged.
-            val requestedAction = intent.getStringExtra("ACTION")
-            if (requestedAction != null) {
-                PlaybackLog.event(
-                    "START_COMMAND",
-                    "action" to requestedAction,
-                    "intentStream" to (intent.getStringExtra("STREAM") ?: "none"),
-                    "forcePlay" to intent.getBooleanExtra("force_play", false),
-                    "foregroundStart" to intent.getBooleanExtra("FOREGROUND_START", false),
-                    "currentStream" to (stream.ifEmpty { "none" }),
-                    "startId" to startId
-                )
-            }
+        }
+
+        // Media3 keeps the service alive with its own action-less start commands
+        // during normal playback; those carry no command and would drown out the
+        // interesting lines, so only ours are logged.
+        for (command in commands) {
+            PlaybackLog.event(
+                "START_COMMAND",
+                "action" to command.action,
+                "intentStream" to (command.stream ?: "none"),
+                "forcePlay" to command.forcePlay,
+                "foregroundStart" to command.openForeground,
+                "currentStream" to (stream.ifEmpty { "none" }),
+                "startId" to startId
+            )
         }
 
         // CRITICAL: Android requires startForeground() within 5s of startForegroundService().
         // Post a minimal notification immediately to satisfy the contract.
         // Media3 will replace it with the real notification (with controls) moments later.
-        val isForegroundStart = intent?.getBooleanExtra("FOREGROUND_START", false) == true
-        if (isForegroundStart) {
+        // Only a start the app itself asked for has that contract to answer, and the
+        // command it carried is where the fact travels now.
+        if (commands.any { it.openForeground }) {
             postPlaceholderForegroundNotification()
         }
 
-        if(intent != null) {
-            val action = intent.getStringExtra("ACTION")
-            
-            when(action){
+        // A `switch` that arrived without a station is the one command that answers
+        // its start with "do not keep me"; everything else leaves the service sticky.
+        var keepSticky = true
+
+        for (command in commands) {
+            when(command.action){
                 "startStop"->{
                     if(exoPlayer.isPlaying) {
                         PlaybackLog.event("PLAYER_STOP", "source" to "intent", "reason" to "startStop_toggle_off")
@@ -276,7 +284,7 @@ class MediaPlayerService(): MediaSessionService(){
                         updateMetadata("", "")
                     }
                     else{
-                        val intentStream = intent.getStringExtra("STREAM")
+                        val intentStream = command.stream
                         if (intentStream != null) {
                             stream = intentStream
                         }
@@ -293,8 +301,8 @@ class MediaPlayerService(): MediaSessionService(){
                         logStreamSelection("startStop")
 
                         // Use updateMetadata to ensure art is reset, fetched, and notification updated
-                        val startSong = intent.getStringExtra("SONG") ?: ""
-                        val startArtist = intent.getStringExtra("ARTIST") ?: ""
+                        val startSong = command.song ?: ""
+                        val startArtist = command.artist ?: ""
                         updateMetadata(startArtist, startSong)
 
                         if (canPrepare("startStop")) {
@@ -306,7 +314,7 @@ class MediaPlayerService(): MediaSessionService(){
                     }
                 }
                 "play"->{
-                    val intentStream = intent.getStringExtra("STREAM")
+                    val intentStream = command.stream
                     val isStreamChange = intentStream != null && stream != intentStream
                     // The station first, the intent second. onUserWantsPlayback is
                     // what writes the durable record, and it has to carry the
@@ -346,14 +354,19 @@ class MediaPlayerService(): MediaSessionService(){
                     }
                 }
                 "switch"->{
-                    val intentStream = intent.getStringExtra("STREAM")
-                    val forcePlay = intent.getBooleanExtra("force_play", false)
+                    val intentStream = command.stream
+                    val forcePlay = command.forcePlay
                     
-                    if (intentStream == null) return START_NOT_STICKY
+                    // Without a station there is nothing to do with this command, and
+                    // it is the one action that leaves the service non-sticky - the
+                    // answer it has always given a station-less switch.
+                    if (intentStream == null) {
+                        keepSticky = false
+                    }
                     
                     val isStreamChange = stream != intentStream
                     
-                    if (isStreamChange) {
+                    if (intentStream != null && isStreamChange) {
                         // DIFFERENT stream - need to set up new media item
                         stream = intentStream
                         // A different station discards the partial listen (G6b P4, D1).
@@ -362,8 +375,8 @@ class MediaPlayerService(): MediaSessionService(){
                         )
                         onUserWantsPlayback("stream_switch")
                         
-                        val switchSong = intent.getStringExtra("SONG") ?: ""
-                        val switchArtist = intent.getStringExtra("ARTIST") ?: ""
+                        val switchSong = command.song ?: ""
+                        val switchArtist = command.artist ?: ""
 
                         val initialMetadata = MediaMetadata.Builder()
                             .setArtist(switchArtist)
@@ -391,7 +404,7 @@ class MediaPlayerService(): MediaSessionService(){
                             exoPlayer.play()
                             Log.d("SWITCH", "Stream switched to $stream and playback started")
                         }
-                    } else {
+                    } else if (intentStream != null) {
                         // SAME stream - only start if forcePlay requested AND not already playing
                         if (forcePlay && !exoPlayer.isPlaying) {
                             onUserWantsPlayback("switch_forcePlay")
@@ -418,8 +431,8 @@ class MediaPlayerService(): MediaSessionService(){
                 }
 
                 "switch_track"->{
-                    val newSong = intent.getStringExtra("SONG") ?: ""
-                    val newArtist = intent.getStringExtra("ARTIST") ?: ""
+                    val newSong = command.song ?: ""
+                    val newArtist = command.artist ?: ""
                     // Use updateMetadata to ensure art is reset, fetched, and notification updated
                     updateMetadata(newArtist, newSong)
                     Log.d("SWITCH", "Track metadata updated: $newArtist - $newSong")
@@ -454,8 +467,8 @@ class MediaPlayerService(): MediaSessionService(){
                 }
                 SleepTimerContract.ACTION_SET -> {
                     armSleepTimer(
-                        minutes = intent.getIntExtra(SleepTimerContract.EXTRA_MINUTES, 0),
-                        isCustom = intent.getBooleanExtra(SleepTimerContract.EXTRA_IS_CUSTOM, false),
+                        minutes = command.minutes,
+                        isCustom = command.isCustom,
                     )
                 }
                 PlaybackIntentContract.ACTION_RESTORE -> {
@@ -512,7 +525,7 @@ class MediaPlayerService(): MediaSessionService(){
             }
         }
 
-        return START_STICKY
+        return if (keepSticky) START_STICKY else START_NOT_STICKY
     }
 
     override fun onCreate() {
@@ -1449,8 +1462,9 @@ class MediaPlayerService(): MediaSessionService(){
      */
     private fun armSleepTimer(minutes: Int, isCustom: Boolean) {
         // Android TV has no way to reach this and must never acquire one. The
-        // service is exported, so the guard belongs here rather than in a UI that
-        // TV does not run - it is the only place that is true for every caller.
+        // guard belongs in the service rather than in a UI that TV does not run: the
+        // service owns the timer, so it is the only place that is true for every
+        // caller.
         if (isTv) {
             PlaybackLog.problem("SLEEP_TIMER_REFUSED", "reason" to "tv_device", "minutes" to minutes)
             clearSleepTimerState()

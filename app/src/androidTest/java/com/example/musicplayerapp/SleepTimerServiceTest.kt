@@ -1,7 +1,6 @@
 package com.example.musicplayerapp
 
 import android.content.Context
-import android.content.Intent
 import android.os.SystemClock
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -10,7 +9,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.example.musicplayerapp.data.BootIdentity
 import com.example.musicplayerapp.data.SleepTimerStore
 import com.example.musicplayerapp.data.ThemeStore
-import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.service.SleepTimerContract
 import com.example.musicplayerapp.ui.settings.ThemeMode
 import com.example.musicplayerapp.ui.sleeptimer.SleepTimerState
@@ -361,9 +359,10 @@ class SleepTimerServiceTest {
         command(SleepTimerContract.ACTION_SET, minutes = 30)
         val armed = awaitArmed()
 
-        context.startService(
-            Intent(context, MediaPlayerService::class.java).putExtra("ACTION", "stop")
-        )
+        // The app's own `stop`, sent the way every screen sends one: the command goes
+        // into the process-memory channel and the service runs it on its next start
+        // command. See PlaybackCommand for why it is no longer an intent extra.
+        ServiceUtils.sendUiCommand(context, "stop")
         Thread.sleep(1_500L)
 
         assertTrue(

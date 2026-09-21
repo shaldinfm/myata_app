@@ -132,20 +132,25 @@ anything UI-scoped would evaporate in exactly the case the feature exists for: t
 phone face down, the app swiped away, the radio still on.
 
 ```
-SleepTimerSheet ──ACTION=sleep_timer_{set,cancel,undo,sync}──▶ MediaPlayerService
-                                                                │ Handler.postDelayed
-                                                                │ SleepTimerStore
-                                                                ▼
-StreamsViewModel ◀──LocalBroadcast "sleep_timer_state"──────────┘
+SleepTimerSheet ──── PlaybackCommand ────▶ MediaPlayerService
+                                                               │ Handler.postDelayed · SleepTimerStore
+                                                               ▼
+StreamsViewModel ◀── LocalBroadcast "sleep_timer_state" ───────┘
    └─ LiveData → menu trailing · sheet · Settings row · snackbars
 ```
 
-Commands use the intent idiom every other UI→service command already uses, and
-state comes back on the `LocalBroadcastManager` channel `play` / `pause` /
-`buffering` / `metadata_update` already use. Neither direction is new machinery.
-The service is exported and its `stop` action has always been reachable from
-outside, so a timer command grants no capability that was not already there — and
-arming is refused outright on TV (§7).
+Commands travel as `PlaybackCommand`s on the app's private in-process channel — the
+idiom every other UI→service command in this app uses since the exported-service
+slice — and state comes back on the `LocalBroadcastManager` channel `play` /
+`pause` / `buffering` / `metadata_update` already use. Neither direction is new
+machinery.
+
+The command direction used to be `ACTION` extras on a start intent, and the service
+is an exported `MediaSessionService`, so arming a timer granted a capability to
+*every* app on the device rather than to the app. `PlaybackCommand` records why an
+exported component cannot authenticate a start at all and what replaced the extras;
+in short, the start intent now carries nothing and the command never leaves this
+process. Arming is still refused outright on TV (§7).
 
 **Scheduling is a `Handler`, not an `AlarmManager`.** The timer can only *do*
 anything while playback is running, and while playback is running the service is
@@ -278,9 +283,10 @@ overflow, a Settings screen or a sheet —
 `SleepTimerSurfacesTest.androidTvHasNoWayToReachTheTimer` inflates all four TV
 layouts and says so.
 
-The service is shared, and it is exported, so the guard also lives **in the
-service**: `armSleepTimer` refuses when `isTv`. That is the only place that is
-true for every caller, including one outside the app.
+The service is shared and it owns the timer, so the guard also lives **in the
+service**: `armSleepTimer` refuses when `isTv`. That is the only place that is true
+for every caller — the sheet, the Player, Settings and the notification all end up
+in the same method.
 
 ## 8 · Playback semantics that did not change
 

@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.OnBackPressedCallback
 import com.example.musicplayerapp.databinding.ActivityTvMainBinding
 import androidx.activity.viewModels
+import com.example.musicplayerapp.utils.ServiceUtils
 
 class TvMainActivity : AppCompatActivity() {
 
@@ -143,10 +144,7 @@ class TvMainActivity : AppCompatActivity() {
             .setTitle("Выход")
             .setMessage("Что вы хотите сделать?")
             .setPositiveButton("Закрыть") { _, _ ->
-                val intent = android.content.Intent(this, com.example.musicplayerapp.service.MediaPlayerService::class.java).apply {
-                    putExtra("ACTION", "stop")
-                }
-                startService(intent)
+                ServiceUtils.sendUiCommand(this, "stop")
                 finishAffinity()
             }
             .setNeutralButton("Свернуть") { _, _ ->

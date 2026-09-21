@@ -23,20 +23,20 @@ package com.example.musicplayerapp.service
  *
  * ## Why it is safe in a shipped build
  *
- *  - **No new component.** It is an `ACTION` extra on a start intent for the
- *    already-declared `MediaPlayerService`, which has been exported since it
- *    became a `MediaSessionService`. Nothing is added to the manifest: no
- *    service, no receiver, no activity, no `<intent-filter>`, no permission.
- *    `PlaybackIntentManifestTest` asserts that.
+ *  - **No new component, and no new surface.** It is one more action on the app's
+ *    private command channel, [PlaybackCommand], which is this process's memory and
+ *    nothing else: no other app can put a command on it, and nothing is added to the
+ *    manifest - no service, no receiver, no activity, no `<intent-filter>`, no
+ *    permission. `PlaybackIntentContractTest` asserts the manifest half.
  *  - **Release refuses it before touching anything.** The service consults
  *    [isRestoreAllowed] as the first statement of the branch, before it reads the
  *    store, before it clears `playbackIntentRestored`, before any player call. A
  *    release build logs `PLAYBACK_INTENT_RESTORE_REFUSED` and returns.
  *  - **Even honoured, it adds no capability.** The most it can do is what the
  *    listener's own stored intent already says - the same station, and only if
- *    they had left it wanted. The service's `play`, `switch` and `stop` actions
- *    have always been reachable on that same exported surface and can do strictly
- *    more.
+ *    they had left it wanted. The service's `play`, `switch` and `stop` commands
+ *    can do strictly more, and by the same rule every one of them is reachable
+ *    only from inside this app.
  */
 object PlaybackIntentContract {
 

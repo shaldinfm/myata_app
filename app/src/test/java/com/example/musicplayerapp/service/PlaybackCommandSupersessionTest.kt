@@ -28,44 +28,29 @@ import org.junit.Test
  *
  * ## What is real here
  *
- * The same fake as `PlaybackCommandChannelTest`: a map of the *encoded strings* and
- * nothing else, so a new [PlaybackCommandInbox] over the same [Disk] is a new process
- * reading records that outlived the old one, and so "the commit failed" is the disk
- * refusing the edit. The Android half - a real `SharedPreferences` commit, a real service
- * start, and the notification and durable intent a real handler writes - is in
- * `PlaybackCommandHandoffTest` on a device.
+ * The same store as `PlaybackCommandChannelTest`: [FaithfulPrefs] on a [QueueFile], so a
+ * new [PlaybackCommandInbox] over a new process's view of that file reads records that
+ * outlived the old one, and so "the commit failed" is the disk refusing the edit *after*
+ * the change has landed in the process's map - which is what Android does, and what the
+ * rollback in [PlaybackCommandInbox.TransactionalSlot] is for. The Android half - a real
+ * `SharedPreferences` commit, a real service start, and the notification and durable
+ * intent a real handler writes - is `PlaybackCommandHandoffTest` on a device.
  */
 class PlaybackCommandSupersessionTest {
 
-    /**
-     * App-private storage as the inbox uses it. [commits] is the disk's answer: turning it
-     * off is a commit that never reached the file, which is the one failure mode the queue
-     * has to survive without believing it wrote something.
-     */
-    private class Disk : PlaybackCommandInbox.Slot {
+    private val file = QueueFile()
 
-        private val values = mutableMapOf<String, String>()
+    /** The device under the store, as the process making the gestures sees it. */
+    private val raw = FaithfulPrefs(file)
 
-        var commits = true
+    /** The one transaction boundary every read and write below goes through. */
+    private val store = PlaybackCommandInbox.TransactionalSlot(raw)
 
-        override fun read(): Map<String, String> = values.toMap()
+    /** The queue as the process that made the gestures sees it. */
+    private fun process() = PlaybackCommandInbox(store)
 
-        override fun edit(changes: Map<String, String?>): Boolean {
-            if (!commits) return false
-            for ((key, value) in changes) {
-                if (value == null) values.remove(key) else values[key] = value
-            }
-            return true
-        }
-
-        /** Test-only: everything physically on the disk, keys included. */
-        fun stored(): Map<String, String> = values.toMap()
-    }
-
-    private val disk = Disk()
-
-    /** The queue as a fresh process sees it: no state but what is on [disk]. */
-    private fun process() = PlaybackCommandInbox(disk)
+    /** The queue as a process that has not run yet sees it: [file], and nothing else. */
+    private fun newProcess() = PlaybackCommandInbox(PlaybackCommandInbox.TransactionalSlot(FaithfulPrefs(file)))
 
     private fun pendingIds(): List<String> = process().pending().map { it.id }
 
@@ -452,16 +437,20 @@ class PlaybackCommandSupersessionTest {
     @Test
     fun `a commit that fails while advancing a generation leaves the older command valid`() {
         val play = enqueuePlay()
-        val before = disk.stored()
+        val before = raw.onDisk()
 
-        disk.commits = false
+        raw.failedCommits = 1
         assertNull(
             "a write that did not reach the disk is not an accepted command",
             process().enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L)),
         )
-        disk.commits = true
 
-        assertEquals("nothing at all moved on the disk", before, disk.stored())
+        assertEquals("nothing at all moved on the disk", before, raw.onDisk())
+        assertEquals(
+            "and nothing was left in the process's map for a later write to make durable",
+            before,
+            raw.visible(),
+        )
         val pass = drainPass()
         assertEquals("the older command is still the intent", listOf("play"), pass.ranActions)
         assertEquals(listOf(play.id), pass.ranIds)
@@ -478,7 +467,7 @@ class PlaybackCommandSupersessionTest {
         val play = enqueuePlay(openForeground = true)
         val stop = enqueueStop()
 
-        disk.commits = false
+        raw.failedCommits = 1
         val blocked = drainPass()
         assertEquals("nothing ran", emptyList<String>(), blocked.ranActions)
         assertEquals(
@@ -488,7 +477,6 @@ class PlaybackCommandSupersessionTest {
         )
         assertEquals(listOf(play.id, stop.id), pendingIds())
 
-        disk.commits = true
         val pass = drainPass()
         assertEquals(
             "stale again on the next pass, and this time it goes",
@@ -567,25 +555,24 @@ class PlaybackCommandSupersessionTest {
     // ==================== durable, not remembered ====================
 
     /**
-     * The generation is a record, not a field in a live process. Two more inboxes over the
-     * same disk - a process that made the second command, and a third that drains both -
-     * reach the same answer, and the domain's newest generation is on the disk beside the
-     * commands it decides about.
+     * The generation is a record, not a field in a live process. Two more processes over the
+     * same file - one that made the second command, and one that drains both - reach the
+     * same answer, and the domain's newest generation is on the disk beside the commands it
+     * decides about.
      */
     @Test
     fun `supersession survives the process that made the commands`() {
         enqueuePlay(stream = "myata")
-        val stop = PlaybackCommandInbox(disk)
-            .enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L))!!
+        val stop = newProcess().enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L))!!
 
         assertEquals(
             "the domain's newest generation is durable, and it is the command that advanced it",
             stop.id,
-            disk.stored()["generation_playback"],
+            raw.onDisk()["generation_playback"],
         )
 
         val pass = Pass()
-        PlaybackCommandInbox(disk).drain(prepare = { pass.prepared += it; true }) { pass.ran += it }
+        newProcess().drain(prepare = { pass.prepared += it; true }) { pass.ran += it }
 
         assertEquals(listOf("stop"), pass.ranActions)
         assertEquals(listOf(stop.id), pass.ranIds)

@@ -130,11 +130,36 @@ import com.example.musicplayerapp.data.BootIdentity
  * and a failure that could not be written down does not change what happens to the
  * command ([noteFailure]).
  *
+ * ## Why the check is not enough: writes are transactions
+ *
+ * Checking the answer is necessary and not sufficient, because of what a failed
+ * `commit()` means on Android. An editor's changes land in the **process's own map**
+ * first and the file is written afterwards, so a commit that returns false leaves the
+ * file alone *and leaves the change visible in this process* - and the next commit
+ * that succeeds writes the whole map, so a value that never reached the file can
+ * become durable later through an unrelated write. "The commit said no" is not
+ * "nothing happened". A queue that read the failed mutation back would let a command it
+ * never accepted win: the unaccepted record and the generation it advanced would be in
+ * the map, the older command would then read as stale, and any later successful write
+ * of any kind would make the unaccepted command the durable one.
+ *
+ * So the records do not live in an editor. Every read and every write in this class
+ * goes through [Slot], and the only implementation of it - [TransactionalSlot] - makes
+ * each write a transaction: the new state, or the previous one, and never the attempt
+ * in between. A write that cannot even be put back puts the store in its failure state
+ * ([Slot.healthy] is false), where reads answer from the last state the process knows
+ * the file to hold and every write is refused, with one loud `QUEUE_STORAGE_UNHEALTHY`
+ * line to [PlaybackLog]. See [TransactionalSlot] for the mechanism, and for why failing
+ * closed is the right trade there.
+ *
  * [withdraw] is the other way out, and it is not an acknowledgement: it is for a
  * start the platform refused, where the command never reached the service at all.
  * A command that never reached the service has to leave nothing behind, or the
  * next start of any kind - minutes later, for a different reason - would act on a
- * gesture the listener had stopped expecting anything from.
+ * gesture the listener had stopped expecting anything from. Its removal is a
+ * transaction like every other, so one that did not commit reports that and nothing
+ * else ([Withdraw.NOT_REMOVED]) rather than claiming either side of a race it cannot
+ * see.
  *
  * ## Order, identity, and who may write
  *
@@ -203,23 +228,203 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
     }
 
     /**
-     * Where the records live. An interface so the queue's own rules - order,
-     * identity, acknowledgement, retry - can be pinned on the JVM against a
-     * fake, with the real `SharedPreferences` construction left to
-     * `PlaybackCommandHandoffTest` on a device.
+     * Where the records live, as the queue sees it: a **transaction boundary**, not an
+     * editor.
+     *
+     * The contract is the one the queue's correctness needs, and it is stronger than
+     * what the platform gives:
+     *
+     * ```
+     *   edit(changes) true  -> the new state is durable AND visible: it happened
+     *                 false -> the previous state is still visible and still
+     *                          authoritative: nothing the caller asked for leaked,
+     *                          and nothing of it can become durable later
+     *   read()              -> never the remains of an edit that returned false
+     * ```
+     *
+     * An interface so the queue's own rules - order, identity, acknowledgement,
+     * retry, supersession - can be pinned on the JVM against a fake, with the real
+     * `SharedPreferences` construction left to `PlaybackCommandHandoffTest` on a
+     * device. [TransactionalSlot] is the only implementation, production or test: the
+     * fakes replace the *device* under it ([RawSlot]), never the transaction itself, so
+     * every test that writes through this interface is a test of the rollback.
      */
     interface Slot {
+
+        /**
+         * Whether this store can be written to at all.
+         *
+         * False once it has entered its failure state - a write that did not reach the
+         * file *and* could not be put back - from which nothing returns. The queue asks
+         * so it can tell "this command is gone" apart from "this store cannot answer",
+         * which is the difference between a delivered gesture and a storage failure
+         * (see [Withdraw.NOT_REMOVED]).
+         */
+        val healthy: Boolean
 
         /** Every key this inbox owns, in no particular order. */
         fun read(): Map<String, String>
 
         /**
-         * Applies every change in one commit, and reports whether it reached the
-         * disk. A `null` value removes the key. One edit is what makes an append
-         * atomic: the record and the advanced sequence land together, or neither
-         * does - and the caller is told which.
+         * Applies every change in one transaction. A `null` value removes the key.
+         *
+         * One edit is what makes an append atomic: the record and the advanced sequence
+         * land together, or neither does - and the caller is told which, with the
+         * previous state left visible and authoritative when the answer is false. See
+         * [TransactionalSlot] for what that costs and how it is reached.
          */
         fun edit(changes: Map<String, String?>): Boolean
+    }
+
+    /**
+     * The device under [TransactionalSlot]: app-private storage as Android's
+     * `SharedPreferences` actually behaves.
+     *
+     * This is the seam a JVM test replaces, and the fake has to reproduce the property
+     * the queue's correctness rests on rather than a convenient one. An [edit] that
+     * returns false has **already** been applied to the map a later [read] would
+     * return; only the file was left alone. A fake that refuses before touching its map
+     * cannot see the bug this class exists to close - see the class docs.
+     */
+    interface RawSlot {
+
+        /** Every key this inbox owns, in no particular order. */
+        fun read(): Map<String, String>
+
+        /**
+         * Applies every change, and reports whether the commit reached the file. A
+         * `null` value removes the key.
+         *
+         * The answer is about the *file*. By the time this returns, the change is in
+         * the map [read] sees whatever the answer is; putting that back is
+         * [TransactionalSlot]'s job, never an assumption made here.
+         */
+        fun edit(changes: Map<String, String?>): Boolean
+    }
+
+    /**
+     * The queue's storage, as a transaction: the successful change or the previous
+     * state, never the wreckage of an attempt in between.
+     *
+     * ## Why a check is not enough
+     *
+     * `SharedPreferences.Editor.commit()` applies its changes to the **process's own
+     * map** first and writes the file afterwards, so its answer is about the file and
+     * nothing else. A commit that returns false therefore leaves the file alone *and
+     * leaves the change visible in this process* - and the next commit that succeeds
+     * writes the whole map, so a value that never reached the file can become durable
+     * later through a write that has nothing to do with it. "The commit said no" is not
+     * "nothing happened". A queue that read the failed mutation back would let a
+     * command it never accepted win: the record and the generation it advanced would be
+     * there, an older accepted command would read as stale, and any later successful
+     * write would make the unaccepted command the durable one.
+     *
+     * ## The transaction
+     *
+     * ```
+     *   before = what the store shows now
+     *   raw.edit(change)  true  -> new state is durable and visible: done
+     *                     false -> put the previous state back, and VERIFY it is back,
+     *                              by reading it, instead of trusting the answer
+     *                              verified -> the change is gone, the old state stands
+     *                              not      -> the failure state, below
+     * ```
+     *
+     * The restore is asked for rather than assumed, twice over. The map is read first,
+     * because there may be nothing to undo; and the undo is then *checked* by reading
+     * the map back, because "a second editor call put it back" is exactly the kind of
+     * assumption about raw platform semantics this class exists to avoid. What makes the
+     * restore sufficient is that a commit that returned false never reached the file -
+     * the one thing its answer does say - so putting the map back to [before] puts both
+     * halves back: what readers see, and what the file holds.
+     *
+     * ## The failure state: a write that could not be put back
+     *
+     * If the change fails *and* the restore fails, this process holds something the
+     * file does not and has no way to put it back. That is not a degraded queue, it is a
+     * queue whose contents are unknown, and it is not allowed to guess:
+     *
+     *  - [read] answers from [frozen] - the state this process knows the file to hold,
+     *    captured before the failed write - so no reader sees the value that failed to
+     *    commit and no accepted command is made stale by one that should not exist;
+     *  - every write is refused ([healthy] is false), so a later successful commit
+     *    cannot make the failed value durable, and no enqueue, acknowledgement, discard
+     *    or generation advance is ever reported as done;
+     *  - one loud `QUEUE_STORAGE_UNHEALTHY` line goes to [PlaybackLog], because a queue
+     *    that has stopped accepting commands must not be discovered from a Play that
+     *    did nothing.
+     *
+     * The state belongs to one process and ends with it: nothing about it reached the
+     * file, so the next process reads exactly the records this one did and starts
+     * healthy. Failing closed costs the rest of this process's commands and is still the
+     * right trade - the alternative is an unaccepted command winning.
+     */
+    class TransactionalSlot(private val raw: RawSlot) : Slot {
+
+        /**
+         * The last state this process knows the file to hold, once a failed write could
+         * not be put back. Null is the normal state.
+         *
+         * Deliberately in memory and deliberately written nowhere: the point of the
+         * failure state is that the *file* is the one thing that did not change.
+         */
+        private var frozen: Map<String, String>? = null
+
+        override val healthy: Boolean get() = synchronized(this) { frozen == null }
+
+        /** What the queue reads: the store's own map, or the frozen state. */
+        override fun read(): Map<String, String> = synchronized(this) { now() }
+
+        /**
+         * One write, as a transaction. True only when the new state is durable and
+         * visible; false leaves the previous state visible and authoritative.
+         */
+        override fun edit(changes: Map<String, String?>): Boolean = synchronized(this) {
+            if (frozen != null) {
+                PlaybackLog.problem(
+                    "QUEUE_STORAGE_REFUSED",
+                    "reason" to "storage_unhealthy",
+                    "outcome" to "no_write_attempted",
+                )
+                return@synchronized false
+            }
+
+            val before = raw.read()
+            if (raw.edit(changes)) return@synchronized true
+
+            if (restore(before)) return@synchronized false
+
+            frozen = before
+            PlaybackLog.problem(
+                "QUEUE_STORAGE_UNHEALTHY",
+                "reason" to "write_not_durable_and_not_undoable",
+                "outcome" to "reads_frozen_writes_refused",
+            )
+            return@synchronized false
+        }
+
+        /** The visible state: the store's map while healthy, the snapshot once it is not. */
+        private fun now(): Map<String, String> = frozen ?: raw.read()
+
+        /**
+         * Puts the visible map back to [before] after a write that did not reach the
+         * file, and answers whether the map now *is* [before] again.
+         *
+         * A write is only made when the map is not already [before], and the undo is
+         * only accepted when the store committed it - the read-back guards against the
+         * undo not having taken effect at all, and the commit's own answer guards
+         * against it not being durable. Either way this is what the failure state is
+         * entered for; see the class docs.
+         */
+        private fun restore(before: Map<String, String>): Boolean {
+            val leaked = raw.read()
+            if (leaked == before) return true
+
+            val undo = (leaked.keys + before.keys).associateWith { before[it] }
+            if (!raw.edit(undo)) return false
+
+            return raw.read() == before
+        }
     }
 
     /**
@@ -232,6 +437,13 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
      * `null` means the record did **not** commit: the command was not accepted, and
      * the caller must not request a start for it. The sequence is not advanced
      * either, so the id that was not used is not left as a hole.
+     *
+     * That answer is only as good as the transaction it comes from: a commit that
+     * failed is not by itself a record that was not written, so the record and the
+     * sequence it would have spent are taken back out and the map is verified before
+     * this reports anything - see [TransactionalSlot]. A caller that is told `null` can rely on
+     * the queue reading exactly what it read before, and on nothing the failed attempt
+     * left behind ever being written.
      */
     fun enqueue(command: PlaybackCommand): Entry? = synchronized(LOCK) {
         val stored = slot.read()
@@ -467,15 +679,21 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
      *
      * @return [Withdraw.REMOVED_PENDING] when the command was still waiting and is now
      *   gone; [Withdraw.NOT_FOUND] when it was not there to take back, which is what a
-     *   command another start has already consumed looks like. A removal that cannot
-     *   be committed is reported the same way and logged: the record is still on disk
-     *   and a later start will run it, so the one answer that must not be given is a
-     *   delivery failure that did not happen.
+     *   command another start has already consumed looks like; [Withdraw.NOT_REMOVED]
+     *   when the removal could not be committed, which is neither of those facts and
+     *   is reported as itself.
      */
     fun withdraw(id: String): Withdraw = synchronized(LOCK) {
         val key = keyFor(id)
         val stored = slot.read()
-        if (!stored.containsKey(key)) return@synchronized Withdraw.NOT_FOUND
+
+        // A store that cannot be trusted cannot answer the question this branch exists
+        // for. "Not there" reads to the caller as "another start already consumed it",
+        // which is a claim that the gesture was delivered - the one claim a queue in
+        // the failure state must never make on evidence it does not have.
+        if (!stored.containsKey(key)) {
+            return@synchronized if (slot.healthy) Withdraw.NOT_FOUND else Withdraw.NOT_REMOVED
+        }
 
         val changes = mutableMapOf<String, String?>(key to null)
         rollBackGeneration(stored, id, changes)
@@ -487,7 +705,7 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
                 "COMMAND_NOT_WITHDRAWN", "id" to id,
                 "outcome" to "command_still_pending",
             )
-            Withdraw.NOT_FOUND
+            Withdraw.NOT_REMOVED
         }
     }
 
@@ -601,6 +819,17 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
          * running now) or was withdrawn earlier. Never reported as a failed delivery.
          */
         NOT_FOUND,
+
+        /**
+         * The command is still in the inbox because taking it out did not commit - a
+         * storage failure, and deliberately its own answer.
+         *
+         * It is not [REMOVED_PENDING] (the record is still there, and a later start will
+         * run it) and it is not [NOT_FOUND] either, which is the answer that means
+         * "another start already carried this out": claiming a delivery on a store that
+         * could not be written is exactly the lie the rest of this class refuses to tell.
+         */
+        NOT_REMOVED,
     }
 
     /** What [noteFailure] did with the record. */
@@ -706,10 +935,17 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
 
         /** The process's one inbox - the callers' half and the service's half. */
         fun forContext(context: Context): PlaybackCommandInbox = process ?: synchronized(this) {
-            process ?: PlaybackCommandInbox(PrefsSlot(context.applicationContext)).also { process = it }
+            process ?: PlaybackCommandInbox(
+                TransactionalSlot(PrefsSlot(context.applicationContext)),
+            ).also { process = it }
         }
 
         /**
+         * The real `SharedPreferences`, and only that: the raw [RawSlot] half, with the
+         * memory-first behaviour it really has. Wrapping it in [TransactionalSlot] - which
+         * [forContext] does, and nothing else does - is what turns its writes into
+         * transactions the queue can rely on.
+         *
          * `commit()`, deliberately: `apply()` returns before the file is written and is
          * lost if the process is killed in between, which is precisely the event this
          * inbox exists for - and, unlike the `edit {}` extension, calling it directly is
@@ -717,7 +953,7 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
          * pressing something, so the synchronous write costs nothing that matters - the
          * same trade `PlaybackIntentStore` makes.
          */
-        private class PrefsSlot(private val context: Context) : Slot {
+        private class PrefsSlot(private val context: Context) : RawSlot {
 
             override fun read(): Map<String, String> =
                 prefs().all.mapNotNull { (key, value) -> (value as? String)?.let { key to it } }.toMap()

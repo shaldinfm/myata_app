@@ -158,7 +158,9 @@ object ServiceUtils {
      * taken back out) or was already gone (another start consumed it), and that answer
      * decides the return value: reporting a failure for a command the service has
      * already carried out would tell the listener their press did nothing while the
-     * radio changes station.
+     * radio changes station. Its third answer is a storage failure - the record could
+     * not be taken back out - and that is reported as itself: the press did nothing,
+     * and the queue still holds the gesture for a later start either way.
      */
     private fun deliver(context: Context, command: PlaybackCommand): Boolean {
         val inbox = PlaybackCommandInbox.forContext(context)
@@ -225,6 +227,22 @@ object ServiceUtils {
                         "outcome" to "command_already_consumed"
                     )
                     true
+                }
+
+                PlaybackCommandInbox.Withdraw.NOT_REMOVED -> {
+                    // The start was refused *and* the command could not be taken back
+                    // out: the record is still in the inbox and a later start will run
+                    // it. Neither a delivery nor a removal, and reported as its own
+                    // storage failure rather than as either - the caller is told the
+                    // press did nothing, because it did not, and the queue keeps the
+                    // gesture instead of pretending it was never made.
+                    PlaybackLog.problem(
+                        "SERVICE_START_FAILED_COMMAND_NOT_WITHDRAWN",
+                        "action" to command.action,
+                        "cause" to e.javaClass.simpleName,
+                        "outcome" to "command_still_pending_storage_failure"
+                    )
+                    false
                 }
             }
         }

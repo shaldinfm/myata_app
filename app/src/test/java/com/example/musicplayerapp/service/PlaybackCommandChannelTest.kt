@@ -22,12 +22,14 @@ import org.w3c.dom.Element
  *
  * ## What is real here and what is not
  *
- * The slot is a fake - a map of the *encoded strings* and nothing else - so the
- * whole queue can be exercised without a device, and so "the process died and was
- * recreated" is honest: nothing but those strings crosses from one
- * [PlaybackCommandInbox] to the next. The fake reproduces the two properties the
- * real `SharedPreferences` slot has and that this design needs: every edit lands in
- * one call, and what is read back is what was written.
+ * The device under the store is a fake - a map of the *encoded strings* on a file that
+ * outlives it - so the whole queue can be exercised without a device, and so "the
+ * process died and was recreated" is honest: nothing but those strings crosses from one
+ * process to the next. It is [FaithfulPrefs], deliberately, and not a convenient fake:
+ * a commit that does not reach the file still lands in the process's map, which is what
+ * Android's `SharedPreferences` does and what the queue's rollback exists for. The
+ * transaction layer itself is never faked - [PlaybackCommandInbox.TransactionalSlot] is
+ * production code, and every write below goes through it.
  *
  * The Android half - `commit = true`, the file's name and its exclusion from
  * backup, and a service that really does act on a record it finds after its start
@@ -36,40 +38,22 @@ import org.w3c.dom.Element
  */
 class PlaybackCommandChannelTest {
 
+    private val file = QueueFile()
+
+    /** The device under the store, as the process making the gestures sees it. */
+    private val raw = FaithfulPrefs(file)
+
     /**
-     * App-private storage, as the inbox uses it: encoded strings on "disk" and
-     * nothing in memory. A new [PlaybackCommandInbox] over the same [Disk] is a new
-     * process reading records that outlived the old one.
-     *
-     * [commits] is the disk's answer. Turning it off is what a commit that does not
-     * reach the file looks like from the caller's side: the change is not applied, and
-     * the one thing the inbox may do with that is say so.
+     * The channel as the process that made the gestures sees it: the one store
+     * [PlaybackCommandInbox.forContext] would hand out, behind the one transaction
+     * boundary every write goes through.
      */
-    private class Disk : PlaybackCommandInbox.Slot {
+    private val store = PlaybackCommandInbox.TransactionalSlot(raw)
 
-        private val values = mutableMapOf<String, String>()
+    private fun process() = PlaybackCommandInbox(store)
 
-        /** False: every write from here on fails, exactly as a commit that returned false does. */
-        var commits = true
-
-        override fun read(): Map<String, String> = values.toMap()
-
-        override fun edit(changes: Map<String, String?>): Boolean {
-            if (!commits) return false
-            for ((key, value) in changes) {
-                if (value == null) values.remove(key) else values[key] = value
-            }
-            return true
-        }
-
-        /** Test-only: what is physically there, values only. */
-        fun values(): List<String> = values.values.toList()
-    }
-
-    private val disk = Disk()
-
-    /** The channel as a fresh process sees it: no state but what is on [disk]. */
-    private fun process() = PlaybackCommandInbox(disk)
+    /** The channel as a process that has not run yet sees it: [file], and nothing else. */
+    private fun newProcess() = PlaybackCommandInbox(PlaybackCommandInbox.TransactionalSlot(FaithfulPrefs(file)))
 
     private fun actions(): List<String> = process().pending().map { it.command.action }
 
@@ -84,7 +68,7 @@ class PlaybackCommandChannelTest {
     fun `a command is on disk before the caller asks for a start`() {
         val queued = process().enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))!!
 
-        assertTrue("enqueue must have written before it returned", disk.values().isNotEmpty())
+        assertTrue("enqueue must have written before it returned", raw.onDisk().isNotEmpty())
         assertNotNull(queued.id)
         assertEquals(listOf("play"), actions())
     }
@@ -97,7 +81,7 @@ class PlaybackCommandChannelTest {
     fun `a recreated process finds the command the dead one never handled`() {
         process().enqueue(PlaybackCommand.of("play", stream = "gold", nowElapsedMs = 0L))
 
-        val recreated = process()
+        val recreated = newProcess()
         val pending = recreated.pending()
 
         assertEquals(1, pending.size)
@@ -375,7 +359,7 @@ class PlaybackCommandChannelTest {
         assertEquals(listOf(refused.id, behind.id), process().pending().map { it.id })
     }
 
-    // ==================== withdraw has two answers ====================
+    // ==================== withdraw has three answers ====================
 
     /**
      * Item 8: taking a command back and finding it already gone are different facts, and
@@ -414,6 +398,36 @@ class PlaybackCommandChannelTest {
             process().withdraw(queued.id),
         )
         assertEquals(listOf("play"), ran)
+    }
+
+    /**
+     * The third answer, and the reason it is not either of the other two: the removal
+     * itself did not commit. The command is still in the inbox - a later start will run
+     * it - so claiming it was taken back would be wrong, and claiming another start
+     * already carried it out would be worse: that is the answer `ServiceUtils` turns
+     * into "the gesture was delivered". A store that could not be written is reported as
+     * what it is.
+     */
+    @Test
+    fun `a withdrawal that did not commit is neither a removal nor a delivery`() {
+        val queued = process().enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))!!
+
+        raw.failedCommits = 1
+        assertEquals(
+            "a removal the store did not take is not a removal",
+            PlaybackCommandInbox.Withdraw.NOT_REMOVED,
+            process().withdraw(queued.id),
+        )
+        assertEquals("and the record is still where it was", listOf(queued.id), process().pending().map { it.id })
+        assertEquals(
+            "the file still holds it for a later start",
+            listOf(queued.id),
+            newProcess().pending().map { it.id },
+        )
+
+        // And once the store commits again, the same call does what it says.
+        assertEquals(PlaybackCommandInbox.Withdraw.REMOVED_PENDING, process().withdraw(queued.id))
+        assertTrue(process().pending().isEmpty())
     }
 
     // ==================== acknowledgement ====================
@@ -592,20 +606,24 @@ class PlaybackCommandChannelTest {
      */
     @Test
     fun `a command whose record did not commit is not accepted`() {
-        disk.commits = false
+        raw.failedCommits = 1
 
         val queued = process().enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))
 
         assertNull("a write that did not reach the disk is not a queued command", queued)
-        assertTrue("and nothing is left behind for a later start either", disk.values().isEmpty())
+        assertTrue("and nothing is left behind for a later start either", process().pending().isEmpty())
+        assertTrue("nor in the file this process would write next", raw.onDisk().isEmpty())
+        assertTrue(
+            "nor in the process's own map, where a failed commit puts it before undo",
+            raw.visible().isEmpty(),
+        )
     }
 
     @Test
     fun `the id of a command that did not commit is not spent`() {
         val first = process().enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))!!
-        disk.commits = false
+        raw.failedCommits = 1
         assertNull(process().enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L)))
-        disk.commits = true
         val third = process().enqueue(PlaybackCommand.of("switch", stream = "gold", nowElapsedMs = 0L))!!
 
         assertTrue("ids keep climbing", third.id.toLong() > first.id.toLong())
@@ -621,9 +639,8 @@ class PlaybackCommandChannelTest {
         val inbox = process()
         val queued = inbox.enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))!!
 
-        disk.commits = false
+        raw.failedCommits = 1
         assertFalse("a removal that did not reach the disk is not an acknowledgement", inbox.ack(queued.id))
-        disk.commits = true
 
         assertEquals("the record is still there, so the next start runs it", listOf("play"), actions())
     }
@@ -645,12 +662,10 @@ class PlaybackCommandChannelTest {
         inbox.drain { entry ->
             ran += entry.command.action
             // The disk fails exactly when the acknowledgement is written.
-            disk.commits = false
+            raw.failedCommits = 1
         }
 
         assertEquals("handled once, then the pass stopped", listOf("play"), ran)
-
-        disk.commits = true
         assertEquals(listOf("play", SleepTimerContract.ACTION_CANCEL), actions())
     }
 
@@ -664,9 +679,8 @@ class PlaybackCommandChannelTest {
         val inbox = process()
         val queued = inbox.enqueue(PlaybackCommand.of("switch_track", nowElapsedMs = 0L))!!
 
-        disk.commits = false
+        raw.failedCommits = 1
         assertEquals(PlaybackCommandInbox.Failure.NotPersisted, inbox.noteFailure(queued.id))
-        disk.commits = true
 
         assertEquals(listOf("switch_track"), actions())
     }
@@ -680,12 +694,11 @@ class PlaybackCommandChannelTest {
         }
 
         // The attempt that would have reached the bound, with a disk that refuses it.
-        disk.commits = false
+        raw.failedCommits = 1
         assertEquals(
             PlaybackCommandInbox.Failure.NotPersisted,
             inbox.noteFailure(process().pending().single().id),
         )
-        disk.commits = true
 
         assertEquals(listOf("switch_track"), actions())
     }
@@ -701,8 +714,8 @@ class PlaybackCommandChannelTest {
         val inbox = process()
         inbox.enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))
 
-        val corrupt = disk.read().keys.associateWith { "<not a record>" }
-        disk.edit(corrupt)
+        val corrupt = raw.read().keys.associateWith { "<not a record>" }
+        raw.edit(corrupt)
 
         assertTrue(process().pending().isEmpty())
 

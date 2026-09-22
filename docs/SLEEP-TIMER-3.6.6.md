@@ -161,6 +161,18 @@ proved - is refused rather than reinterpreted as a deadline in the new epoch. Th
 the same rule §4's store already applies to the record it holds. Arming is still
 refused outright on TV (§7).
 
+The queue is durable and FIFO, and what it also needed was a way past a command that can
+never be delivered: a timer command whose handler keeps failing - or a Play whose
+foreground promotion Android refuses - used to stand in front of every later gesture for
+the life of the install. The listener pressed `Отключить таймер`, and the timer stayed
+armed because an older command was still stuck in front of it. A newer command in the
+**same domain** now supersedes an older one, and the domain is what keeps the two kinds of
+command apart: a newer `sleep_timer_cancel` retires an older `sleep_timer_set`, undo or
+cancel and can never drop a Play, a Stop or a station switch. The generation a command
+supersedes with is its own inbox sequence, written in the same commit as the command
+itself, so the decision outlives the process exactly as the command does - and `Вернуть`'s
+snapshot cannot be consumed by a command that never ran.
+
 **Scheduling is a `Handler`, not an `AlarmManager`.** The timer can only *do*
 anything while playback is running, and while playback is running the service is
 foreground and holds a `PARTIAL_WAKE_LOCK`, so the CPU is up and Doze cannot defer

@@ -61,6 +61,64 @@ import com.example.musicplayerapp.data.BootIdentity
  *    one the listener asked for is never dropped at all - see
  *    [PlaybackCommand.critical]).
  *
+ * ## The other way out: a newer intent in the same domain
+ *
+ * "Never dropped" is not "always first". A critical command waits for the next start
+ * of the service, but if it and a *newer command in its domain* are both waiting, the
+ * newer one is what the listener wants and the older one is stale by definition:
+ *
+ * ```
+ *   queued:  play(gold)      stop            -- the listener has since said stop
+ *   pass:    stale, removed  handled
+ * ```
+ *
+ * Without that, one command whose handler can never succeed - or whose foreground
+ * promotion Android keeps refusing - is in front of every later gesture for the life
+ * of the install: the listener presses Stop and nothing stops. What makes the older
+ * command disposable is not a retry count, it is that a newer command replaced what it
+ * meant; see [PlaybackDomain] for which commands may supersede which, and how a
+ * command about the timer can never supersede a command about playback.
+ *
+ * **The generation is the sequence.** A record's own sequence - the durable, monotonic
+ * id it is stored and acknowledged under - *is* its generation in its domain, and the
+ * domain's newest generation is one more preference key in this same file
+ * (`generation_<domain>`). So supersession needs no new record format and no new field:
+ * two sequences compare, and the bigger one is newer by construction, because
+ * `next_sequence` only ever climbs and a record keeps the number it was written with.
+ * The newest generation a domain has seen is written in the *same* commit as the record
+ * that advanced it ([enqueue]), so there is no instant in which a command is on disk
+ * without the generation that says it supersedes the older ones - and a commit that
+ * failed leaves both the record and the generation exactly as they were, which is what
+ * keeps an old command valid when a new one was not accepted.
+ *
+ * [drain] applies it, and only [drain]: before a head is offered to its `prepare` step
+ * (so a stale command is never promoted to the foreground) and before any handler sees
+ * it, a head belonging to a domain with a newer generation is removed durably as
+ * superseded and the pass moves on to the next command. A command that cannot be
+ * removed is not skipped - it stays, the pass ends, and the next start recognises it as
+ * stale again. [withdraw] is the one other place this matters: a command whose start the
+ * platform refused never happened, so it takes its own generation advance back with it
+ * when it leaves, or it would have superseded an older command with a gesture that was
+ * never delivered.
+ *
+ * ## A command that is already running
+ *
+ * One race is left open on purpose, and it is the one supersession cannot close: command A
+ * is *already being handled* - it is off the head, and its record is still on disk, because
+ * the acknowledgement comes after the handler - when the listener's newer command B in the
+ * same domain is enqueued. B advances the generation, so A is stale as of that instant, and
+ * A is halfway through doing what it said. Two things follow:
+ *
+ *  - A finishes and is acknowledged by its own id, so B's record - a different key, with a
+ *    newer sequence - is untouched by that acknowledgement and is still there afterwards;
+ *  - what makes B safe from there is the generation: A can never be *run* a second time,
+ *    because a replay of A (an acknowledgement that did not reach the disk) or a failure of
+ *    A's handler is resolved by the next pass finding A stale and removing it in favour of
+ *    B.
+ *
+ * So A may briefly produce its side effect if B was submitted after A had already started,
+ * and B still wins, and cannot be lost.
+ *
  * ## Every write is checked
  *
  * A `SharedPreferences` commit can fail - a disk that is full, a file that cannot be
@@ -85,6 +143,10 @@ import com.example.musicplayerapp.data.BootIdentity
  * dies immediately after an [enqueue]. Order is the sequence, so FIFO survives
  * both a process death and concurrent callers: every read-modify-write here runs
  * under one process-wide lock, so two threads cannot interleave an append.
+ * Supersession is decided on the same number - a record's sequence is its
+ * generation - and the domain's newest generation lives in this same file, so nothing
+ * about the decision is in memory: a process that dies and comes back reads the same
+ * two numbers off the disk and reaches the same answer.
  *
  * The lock is process-wide rather than per-instance because there is exactly one
  * writer of each record at a time in production - a screen appends, the service
@@ -126,9 +188,19 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
 
     /**
      * One waiting command, with the stable identity that makes its
-     * acknowledgement possible. [id] is unique for the life of the install.
+     * acknowledgement possible and the generation that makes supersession possible.
+     *
+     * [generation] is the record's sequence, and that is the whole of what a generation
+     * is here: sequences are durable, monotonic and never reused, so the newest one
+     * accepted in a [PlaybackDomain] is a durable revision of that domain and a record
+     * is superseded exactly when a newer one has been accepted. [id] is the same number
+     * as text, because a preference key is what an acknowledgement names.
      */
-    class Entry(val id: String, val command: PlaybackCommand)
+    class Entry(val generation: Long, val command: PlaybackCommand) {
+
+        /** Unique for the life of the install. See [generation]. */
+        val id: String get() = generation.toString()
+    }
 
     /**
      * Where the records live. An interface so the queue's own rules - order,
@@ -172,12 +244,19 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
             decoded.entries.maxOfOrNull { it.sequence } ?: 0L,
         ) + 1L
 
-        val committed = slot.edit(
-            mapOf(
-                KEY_SEQUENCE to sequence.toString(),
-                keyFor(sequence) to PlaybackCommandCodec.encode(command, attempts = 0),
-            ),
+        val changes = mutableMapOf<String, String?>(
+            KEY_SEQUENCE to sequence.toString(),
+            keyFor(sequence) to PlaybackCommandCodec.encode(command, attempts = 0),
         )
+
+        // The generation advance is part of the same commit, and that is the whole
+        // point: the record and the fact that it supersedes older commands in its
+        // domain land together or not at all. A commit that fails therefore leaves the
+        // older commands valid and this one unaccepted - there is no state in which a
+        // command was not stored but an older one became stale.
+        PlaybackDomain.of(command.action)?.let { changes[generationKey(it)] = sequence.toString() }
+
+        val committed = slot.edit(changes)
         if (!committed) {
             PlaybackLog.problem(
                 "COMMAND_NOT_STORED",
@@ -186,7 +265,7 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
             )
             return@synchronized null
         }
-        Entry(sequence.toString(), command)
+        Entry(sequence, command)
     }
 
     /**
@@ -207,7 +286,7 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
                 PlaybackLog.problem("COMMAND_UNREADABLE_NOT_REMOVED", "records" to decoded.unreadable.size)
             }
         }
-        decoded.entries.map { Entry(it.sequence.toString(), it.command) }
+        decoded.entries.map { Entry(it.sequence, it.command) }
     }
 
     /**
@@ -215,6 +294,11 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
      *
      * Called after the handler, never before it. The window this leaves is the
      * reason every handler is replay-safe.
+     *
+     * The removal names one record, so it can only ever remove that one: a command
+     * accepted *while* this one was being handled is a different key with a newer
+     * sequence - see the class docs on the executing-command race - and is left exactly
+     * where it is for the rest of this pass or the next one.
      *
      * @return true only when the removal is durable. `false` means the record is
      *   still on disk: a command whose removal did not commit has **not** been
@@ -249,10 +333,18 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
      *    pending and ends this pass, so the next start retries it rather than
      *    skipping the listener's gesture; [noteFailure] decides whether the record is
      *    kept or dropped.
+     *
+     * What a pass never does is offer a **superseded** command to either step. The head
+     * is read through [nextLiveHead], which durably removes every command that a newer
+     * command in its own [PlaybackDomain] has replaced - so a stale Play is not promoted
+     * to the foreground, its handler does not run, and the pass walks on to the command
+     * the listener actually wants. That is the one way a critical command leaves this
+     * queue without being handled, and it is not a discard: the command it gives way to
+     * is the same choice, made later.
      */
     fun drain(prepare: (Entry) -> Boolean = { true }, handler: (Entry) -> Unit) {
         while (true) {
-            val entry = pending().firstOrNull() ?: return
+            val entry = nextLiveHead() ?: return
             if (!prepare(entry)) {
                 PlaybackLog.event(
                     "COMMAND_NOT_PREPARED",
@@ -306,10 +398,72 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
     }
 
     /**
+     * The oldest command that is still something the listener is waiting for, with every
+     * superseded command in front of it removed.
+     *
+     * The decision is made here rather than in the service because it is a property of
+     * the queue's own order and its own durable generations, and because it has to be
+     * made *before* the head is handed to anything - a superseded Play must not be
+     * promoted to the foreground and must not reach a handler, and what the caller gets
+     * back has to be a command with both of those still ahead of it.
+     *
+     * Three answers, and each one is a distinct fact:
+     *
+     *  - a command: the oldest live one, and the caller's work;
+     *  - `null` with an empty queue: there is nothing to do, which is the normal end of
+     *    a pass;
+     *  - `null` with a **superseded record that could not be removed**: the record is
+     *    still on disk, so it cannot be skipped - the pass ends with it in place and the
+     *    next start recognises it as stale again by the same comparison. Reporting the
+     *    removal as done when the disk refused it would be the same lie [ack] refuses to
+     *    tell.
+     *
+     * A command in no [PlaybackDomain] is never stale: nothing supersedes it, and it
+     * supersedes nothing.
+     */
+    private fun nextLiveHead(): Entry? = synchronized(LOCK) { liveHeadUnderLock() }
+
+    /** [nextLiveHead]'s body, which must run with [LOCK] held: it reads and writes the queue. */
+    private fun liveHeadUnderLock(): Entry? {
+        while (true) {
+            val head = pending().firstOrNull() ?: return null
+
+            val domain = PlaybackDomain.of(head.command.action) ?: return head
+            val newest = generationOf(slot.read(), domain)
+            if (head.generation >= newest) return head
+
+            if (!slot.edit(mapOf(keyFor(head.id) to null))) {
+                PlaybackLog.problem(
+                    "COMMAND_SUPERSEDED_NOT_REMOVED",
+                    "action" to head.command.action, "id" to head.id,
+                    "generation" to head.generation, "newest" to newest,
+                    "outcome" to "command_left_pending",
+                )
+                return null
+            }
+
+            PlaybackLog.event(
+                "COMMAND_SUPERSEDED",
+                "action" to head.command.action, "id" to head.id,
+                "generation" to head.generation, "newest" to newest,
+                "outcome" to "removed_superseded",
+            )
+        }
+    }
+
+    /**
      * The start never happened: take the command back out, unused.
      *
      * Not an acknowledgement - nothing ran. See the class docs for why a refused
      * start must leave nothing behind.
+     *
+     * "Nothing" includes the generation the command advanced when it was accepted. A
+     * command whose start the platform refused was never delivered, so it must not have
+     * superseded anything either: leaving the domain's newest generation pointing at a
+     * record that has been taken back would let a gesture that never happened make an
+     * older one stale - the listener's Play would then be dropped on behalf of a Stop
+     * that never reached the service. [rollBackGeneration] does the part of that which
+     * this record actually owns, in the same commit as the removal.
      *
      * @return [Withdraw.REMOVED_PENDING] when the command was still waiting and is now
      *   gone; [Withdraw.NOT_FOUND] when it was not there to take back, which is what a
@@ -320,9 +474,13 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
      */
     fun withdraw(id: String): Withdraw = synchronized(LOCK) {
         val key = keyFor(id)
-        if (!slot.read().containsKey(key)) return@synchronized Withdraw.NOT_FOUND
+        val stored = slot.read()
+        if (!stored.containsKey(key)) return@synchronized Withdraw.NOT_FOUND
 
-        if (slot.edit(mapOf(key to null))) {
+        val changes = mutableMapOf<String, String?>(key to null)
+        rollBackGeneration(stored, id, changes)
+
+        if (slot.edit(changes)) {
             Withdraw.REMOVED_PENDING
         } else {
             PlaybackLog.problem(
@@ -331,6 +489,46 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
             )
             Withdraw.NOT_FOUND
         }
+    }
+
+    /**
+     * Moves a domain's newest generation back to whatever is still waiting, when the
+     * record being removed is the one that generation names.
+     *
+     * [withdraw]'s half of "a command that never reached the service has to leave nothing
+     * behind". The generation is the sequence of the newest command accepted in the
+     * domain, so:
+     *
+     *  - a record that is *not* that newest one owns nothing: a later command has already
+     *    moved the domain on, and lowering the counter here would take that later
+     *    command's own supersession away from it;
+     *  - a record that *is* it hands the domain back to the newest command still waiting
+     *    in the domain - or, when there is none, removes the key, which is the state a
+     *    domain nothing has ever been accepted in is in.
+     *
+     * Either way the counter can only move back to a generation a waiting record actually
+     * carries, so nothing that was superseded while this command was accepted becomes
+     * live again by accident - and nothing is left pointing at a record that is gone.
+     */
+    private fun rollBackGeneration(
+        stored: Map<String, String>,
+        id: String,
+        changes: MutableMap<String, String?>,
+    ) {
+        val sequence = id.toLongOrNull() ?: return
+        val domain = stored[keyFor(id)]
+            ?.let(PlaybackCommandCodec::decode)
+            ?.command?.action
+            ?.let(PlaybackDomain::of)
+            ?: return
+
+        if (generationOf(stored, domain) != sequence) return
+
+        val newestRemaining = decode(stored).entries
+            .filter { it.sequence != sequence && PlaybackDomain.of(it.command.action) == domain }
+            .maxOfOrNull { it.sequence }
+
+        changes[generationKey(domain)] = newestRemaining?.toString()
     }
 
     /**
@@ -382,6 +580,12 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
      * Test-only: put [entry] back under its own id, which is the state a lost
      * acknowledgement leaves behind - the handler ran, the removal never reached the
      * disk, and the same record is read again by the next start.
+     *
+     * The record comes back with the generation it was written under, so whether the
+     * queue runs it is the same question it asks of any record: if the listener's
+     * newest command in that domain is this one, it runs; if a newer one has been
+     * accepted since, it is stale and a duplicate of a command that already happened is
+     * the last thing anything should act on again.
      */
     fun plantForTest(entry: Entry) = synchronized(LOCK) {
         slot.edit(mapOf(keyFor(entry.id) to PlaybackCommandCodec.encode(entry.command, attempts = 0)))
@@ -448,6 +652,20 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
 
     private fun keyFor(id: String): String = "$KEY_PREFIX$id"
 
+    /**
+     * The newest generation accepted in [domain], off the disk.
+     *
+     * Absent is zero, which is older than every sequence an [enqueue] can produce, so a
+     * domain nothing has been accepted in supersedes nothing - and so does a counter this
+     * code cannot read, which is the direction to fail in: an unreadable counter cannot
+     * make a command stale, and a command is only ever removed here in favour of one that
+     * is *newer*, never in favour of nothing.
+     */
+    private fun generationOf(stored: Map<String, String>, domain: PlaybackDomain): Long =
+        stored[generationKey(domain)]?.toLongOrNull() ?: 0L
+
+    private fun generationKey(domain: PlaybackDomain): String = "$KEY_DOMAIN_PREFIX${domain.key}"
+
     companion object {
 
         /** Kept public so the backup-rule test can assert the excluded path is this one. */
@@ -467,6 +685,14 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
 
         private const val KEY_SEQUENCE = "next_sequence"
         private const val KEY_PREFIX = "command_"
+
+        /**
+         * One key per [PlaybackDomain], holding the sequence of the newest command
+         * accepted in it. In this same file, deliberately: the generation a command
+         * supersedes with has to commit with the command, and it has to survive the
+         * process exactly as the command does.
+         */
+        private const val KEY_DOMAIN_PREFIX = "generation_"
 
         /**
          * One lock for every inbox in this process: the append a screen makes and
@@ -528,6 +754,14 @@ internal class PlaybackCommandInbox(private val slot: Slot) {
  * record is therefore not run and not guessed at: it is dropped as unreadable by
  * [PlaybackCommandInbox.pending], and a version-1 `sleep_timer_set` could not have proved
  * which boot its deadline belonged to anyway.
+ *
+ * The version did **not** move when supersession arrived, and that is not an oversight:
+ * a command's generation is its sequence, which this format never stored because the
+ * sequence is the preference key the record lives under, and the domain's newest
+ * generation is its own key beside it. So there is no new field to write, no older
+ * record to reinterpret, and a record written by an earlier build of this app stays
+ * exactly as readable as it was - which is what a command outliving an app update
+ * requires.
  */
 private object PlaybackCommandCodec {
 

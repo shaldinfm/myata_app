@@ -277,17 +277,28 @@ class PlaybackCommandChannelTest {
         )
     }
 
+    /**
+     * Order is the sequence, oldest first, and every command the app makes comes out in it.
+     * The four here are in different domains, or in none - a command that only restates
+     * derived state - because the one thing that outranks order is a *newer command in the
+     * same domain*, which is supersession rather than ordering, and is
+     * `PlaybackCommandSupersessionTest`.
+     */
     @Test
     fun `handling runs oldest first`() {
         val inbox = process()
         inbox.enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))
-        inbox.enqueue(PlaybackCommand.of("switch", stream = "gold", nowElapsedMs = 0L))
-        inbox.enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L))
+        inbox.enqueue(PlaybackCommand.of("switch_track", artist = "A", song = "A", nowElapsedMs = 0L))
+        inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_SET, minutes = 15, nowElapsedMs = 0L))
+        inbox.enqueue(PlaybackCommand.of("get_status", nowElapsedMs = 0L))
 
         val ran = mutableListOf<String>()
         inbox.drain { ran += it.command.action }
 
-        assertEquals(listOf("play", "switch", "stop"), ran)
+        assertEquals(
+            listOf("play", "switch_track", SleepTimerContract.ACTION_SET, "get_status"),
+            ran,
+        )
     }
 
     /** A gesture made while the service is working is this pass's work, not the next one's. */
@@ -340,6 +351,10 @@ class PlaybackCommandChannelTest {
      * Item 12: preparation that fails means the command is **not delivered**. It is not
      * handled, not acknowledged, and the pass stops with it - and everything behind it -
      * still pending.
+     *
+     * The command behind it belongs to the other domain, so this stays a test about a
+     * refused head rather than about supersession: a newer command *in the same domain*
+     * would replace the refused one instead of waiting behind it.
      */
     @Test
     fun `a command whose preparation fails is neither handled nor acknowledged`() {
@@ -347,7 +362,9 @@ class PlaybackCommandChannelTest {
         val refused = inbox.enqueue(
             PlaybackCommand.of("play", stream = "myata", openForeground = true, nowElapsedMs = 0L),
         )!!
-        val behind = inbox.enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L))!!
+        val behind = inbox.enqueue(
+            PlaybackCommand.of(SleepTimerContract.ACTION_CANCEL, nowElapsedMs = 0L),
+        )!!
 
         val prepared = mutableListOf<String>()
         val ran = mutableListOf<String>()
@@ -443,12 +460,17 @@ class PlaybackCommandChannelTest {
      * The requirement that makes the queue trustworthy: a handler that fails must
      * not cost the listener anything. Its command stays, and so does everything
      * behind it - and it is *not* silently dropped on the way past.
+     *
+     * What is behind it is a sleep-timer command, deliberately: a newer command in the
+     * *same* domain is not something the failing head waits behind, it is what supersedes
+     * it (`PlaybackCommandSupersessionTest`), and this test is about the case where
+     * nothing has replaced the listener's intent.
      */
     @Test
     fun `a handler that fails leaves its command and everything behind it pending`() {
         val inbox = process()
         val failing = inbox.enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))!!
-        val later = inbox.enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L))!!
+        val later = inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_CANCEL, nowElapsedMs = 0L))!!
 
         val attempted = mutableListOf<String>()
         inbox.drain { entry ->
@@ -462,7 +484,7 @@ class PlaybackCommandChannelTest {
         // The next start retries it, and the queue moves on once it works.
         val ran = mutableListOf<String>()
         process().drain { ran += it.command.action }
-        assertEquals(listOf("play", "stop"), ran)
+        assertEquals(listOf("play", SleepTimerContract.ACTION_CANCEL), ran)
         assertTrue(process().pending().isEmpty())
     }
 
@@ -503,12 +525,17 @@ class PlaybackCommandChannelTest {
      * The rule a retry count may not override: a command the listener asked for is never
      * dropped, however often its handler fails, and everything behind it waits with it.
      * Retrying happens on the next legitimate start, never in a loop here.
+     *
+     * The command behind it is a sleep-timer one on purpose. A newer command in the *same*
+     * domain would not wait behind the failing head at all - it is what supersedes it, and
+     * that is `PlaybackCommandSupersessionTest`. What is held here is the case the review
+     * named separately: no newer intent, so nothing may be discarded.
      */
     @Test
     fun `a critical command is never discarded by its retry count`() {
         val inbox = process()
         val wanted = inbox.enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))!!
-        val behind = inbox.enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L))!!
+        val behind = inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_SET, minutes = 15, nowElapsedMs = 0L))!!
 
         repeat(PlaybackCommandInbox.MAX_HANDLER_ATTEMPTS * 4) {
             val attempts = mutableListOf<String>()
@@ -601,12 +628,18 @@ class PlaybackCommandChannelTest {
         assertEquals("the record is still there, so the next start runs it", listOf("play"), actions())
     }
 
-    /** And a pass that cannot acknowledge stops rather than handling the same head twice. */
+    /**
+     * And a pass that cannot acknowledge stops rather than handling the same head twice.
+     *
+     * The command behind the head is a sleep-timer one, because a newer command in the same
+     * domain is not what waits behind a head - it is what supersedes it, and this test is
+     * about the head itself being handled once and then left replayable.
+     */
     @Test
     fun `a pass whose acknowledgement does not commit stops instead of repeating itself`() {
         val inbox = process()
         inbox.enqueue(PlaybackCommand.of("play", stream = "myata", nowElapsedMs = 0L))
-        inbox.enqueue(PlaybackCommand.of("stop", nowElapsedMs = 0L))
+        inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_CANCEL, nowElapsedMs = 0L))
 
         val ran = mutableListOf<String>()
         inbox.drain { entry ->
@@ -618,7 +651,7 @@ class PlaybackCommandChannelTest {
         assertEquals("handled once, then the pass stopped", listOf("play"), ran)
 
         disk.commits = true
-        assertEquals(listOf("play", "stop"), actions())
+        assertEquals(listOf("play", SleepTimerContract.ACTION_CANCEL), actions())
     }
 
     /**

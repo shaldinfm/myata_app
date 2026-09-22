@@ -93,6 +93,13 @@ import com.example.musicplayerapp.ui.sleeptimer.SleepTimerDuration
  * that changes what the listener asked for is on it. A critical command is never
  * dropped by a retry count - it waits for the next legitimate start of the service.
  *
+ * It does not wait forever in front of a newer one, though. A critical command is
+ * exactly one that belongs to a [PlaybackDomain], and a newer command in the same
+ * domain states what the listener wants *now*; the older one is then no longer anything
+ * they are waiting for and the queue supersedes it. See [PlaybackDomain] for which
+ * commands may supersede which, and `PlaybackCommandInbox` for how the decision is made
+ * durable.
+ *
  * ## The one field that is about *when* the command was made
  *
  * [deadlineBootId]: the boot an `elapsedRealtime` deadline was measured on. That clock
@@ -216,5 +223,75 @@ internal class PlaybackCommand(
                 null
             },
         )
+    }
+}
+
+/**
+ * The logical intent domain a command belongs to, and the only thing that may
+ * supersede another command.
+ *
+ * ## Why supersession is per domain, and why it is needed at all
+ *
+ * The queue is FIFO and durable, and both of those are load-bearing: a record is a
+ * listener's gesture, and the order they made the gestures in is part of what they
+ * meant. FIFO on its own has one hole, and it is the one this enum closes. A command
+ * at the head that can never be delivered - a Play whose handler throws every time, a
+ * Play whose foreground promotion Android refuses - stands in front of every later
+ * gesture for the life of the install. The listener presses Stop and the radio does not
+ * stop, because an older Play is still stuck; pressing Stop again changes nothing,
+ * because that command lands behind the same stuck record.
+ *
+ * Dropping critical commands after N failures is not the answer
+ * ([PlaybackCommand.critical] says why), and neither is reordering the queue. What
+ * makes the older command disposable is that a **newer command in the same logical
+ * domain has replaced what it meant**: the listener's latest statement about what they
+ * want playing beats their earlier one, so the earlier one is no longer anything they
+ * are waiting for. A statement about another domain says nothing about it at all.
+ *
+ * ```
+ *   newer stop          supersedes an older play / startStop / switch
+ *   newer cancel        supersedes an older sleep_timer_set / undo
+ *   newer play          supersedes an older stop
+ *   nothing             supersedes switch_track / get_status / sleep_timer_sync / debug seams
+ * ```
+ *
+ * The last line matters as much as the others: those commands only restate state the
+ * app re-derives for itself, so a newer restatement is not a reason to throw an older
+ * one away - and they are never a reason to throw a *choice* away either.
+ */
+internal enum class PlaybackDomain(val key: String) {
+
+    /** What the listener wants playing: `play`, `startStop`, `stop`, `switch`. */
+    PLAYBACK("playback"),
+
+    /** What the listener wants the sleep timer to do: set, cancel, undo. */
+    TIMER("timer"),
+    ;
+
+    companion object {
+
+        /**
+         * The domain [action] belongs to, or null when nothing about it is supersedable.
+         *
+         * That this list is exactly [PlaybackCommand.critical]'s is not a coincidence: a
+         * command the listener chose is a command a newer choice can replace, and a
+         * command that only restates derived state has no choice in it to replace. The
+         * two are asserted equal in `PlaybackCommandSupersessionTest`, so neither can
+         * drift away from the other without a test saying so.
+         */
+        fun of(action: String): PlaybackDomain? = when (action) {
+            "play",
+            PlaybackCommand.ACTION_START_STOP,
+            "stop",
+            "switch",
+            -> PLAYBACK
+
+            SleepTimerContract.ACTION_SET,
+            SleepTimerContract.ACTION_CANCEL,
+            SleepTimerContract.ACTION_UNDO,
+            -> TIMER
+
+            else -> null
+        }
     }
 }

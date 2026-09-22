@@ -338,6 +338,13 @@ class PlaybackCommandHandoffTest {
      * undo (consumes A), a new timer and a new cancel (snapshot B), a replay of the *first*
      * undo must not consume B. Without the record of which undo took which snapshot, that
      * replay would put back a timer the listener had cancelled after the undo.
+     *
+     * Two rules now stand between that replay and snapshot B, and this test is deliberately
+     * about the invariant rather than about which one fires: the replayed undo is older than
+     * the timer commands that came after it, so the queue retires it as superseded before any
+     * handler sees it, and the store's own identity rule - the undo that already consumed a
+     * snapshot cannot consume a later one - is the second line, pinned on the JVM in
+     * `SleepTimerUndoTest`. What must never happen is what is asserted here.
      */
     @Test
     fun a_replayed_undo_does_not_consume_a_later_cancels_snapshot() {
@@ -415,10 +422,14 @@ class PlaybackCommandHandoffTest {
     }
 
     /**
-     * Order, across the boundary: a timer set and then cancelled comes out
-     * cancelled, and the control below shows that the same two commands in the
-     * other order arm one - so the assertion is about the order, not about a
-     * command that never ran.
+     * Across the boundary, the listener's last word is what happens: a timer set and then
+     * cancelled comes out cancelled, and the control below shows that the same two commands
+     * in the other order arm one - so the assertion is about which command is newest, not
+     * about a command that never ran.
+     *
+     * Both halves are decided before either handler runs: the older command in the domain is
+     * retired as superseded, which is what `PlaybackCommandSupersessionTest` holds on the
+     * JVM. What is held here is the visible result, on a device.
      */
     @Test
     fun commands_recorded_before_the_start_keep_their_order() {
@@ -557,6 +568,176 @@ class PlaybackCommandHandoffTest {
             PlaybackIntentStore.Stored.Known(Streams.XTRA, true),
             PlaybackIntentStore.read(context),
         )
+    }
+
+    // ==================== a newer intent supersedes an older one ====================
+
+    /**
+     * The last P1 of this slice, on a device: a Play the listener has since replaced must
+     * not run at all.
+     *
+     * Nothing here is broken. The Play's handler is fine and its record is intact - a newer
+     * command in the same domain simply means the older one is no longer anything the
+     * listener is waiting for, so the pass retires it and runs the Stop. The witnesses are
+     * the two things its handler would have changed and could not have changed invisibly:
+     * the station the durable record holds (a Play installs the one it names; a Stop keeps
+     * the one that is there), and the foreground notification a Play owes the platform.
+     */
+    @Test
+    fun a_play_superseded_by_a_newer_stop_never_reaches_the_player() {
+        assumeNotNull(BootIdentity.read(context))
+        PlaybackIntentStore.writeRawForTest(context, Streams.MYATA, wantsPlayback = true)
+
+        inbox.enqueue(PlaybackCommand.of("play", stream = Streams.GOLD, openForeground = true))
+        inbox.enqueue(PlaybackCommand.of("stop"))
+        bareStart()
+
+        awaitInboxEmpty()
+        Thread.sleep(QUIET_MS)
+
+        assertEquals(
+            "the station the superseded play named must never have been installed",
+            PlaybackIntentStore.Stored.Known(Streams.MYATA, false),
+            PlaybackIntentStore.read(context),
+        )
+        assertFalse(
+            "and a stale play must not be promoted to the foreground on its way past",
+            placeholderIsUp(),
+        )
+        assertStoppedAndEmpty()
+        assertTrue("nothing is left waiting either", inbox.pending().isEmpty())
+    }
+
+    /**
+     * The same thing across a service that was recreated in between, which is the state the
+     * durable inbox exists for: the record and the generation it wrote are on the disk, and
+     * the service that reads them had nothing to do with the process that made them.
+     */
+    @Test
+    fun a_play_the_dead_service_never_delivered_is_still_superseded_by_a_later_stop() {
+        assumeNotNull(BootIdentity.read(context))
+        PlaybackIntentStore.writeRawForTest(context, Streams.MYATA, wantsPlayback = true)
+
+        inbox.enqueue(PlaybackCommand.of("play", stream = Streams.GOLD, openForeground = true))
+
+        context.stopService(Intent(context, MediaPlayerService::class.java))
+        Thread.sleep(RECREATE_MS)
+
+        inbox.enqueue(PlaybackCommand.of("stop"))
+        bareStart()
+
+        awaitInboxEmpty()
+        Thread.sleep(QUIET_MS)
+
+        assertEquals(
+            "the newer stop wins over the play no service ever delivered",
+            PlaybackIntentStore.Stored.Known(Streams.MYATA, false),
+            PlaybackIntentStore.read(context),
+        )
+        assertFalse(placeholderIsUp())
+    }
+
+    /**
+     * Cross-domain, on a device: the newer Stop supersedes the older Play and must not take
+     * the timer command with it. If the timer command had been dropped as "stale" too, there
+     * would be no timer at all when this returns.
+     */
+    @Test
+    fun a_newer_stop_supersedes_a_play_and_leaves_the_timer_command_alone() {
+        assumeNotNull(BootIdentity.read(context))
+        PlaybackIntentStore.writeRawForTest(context, Streams.MYATA, wantsPlayback = true)
+        val chosenAt = SystemClock.elapsedRealtime()
+
+        inbox.enqueue(PlaybackCommand.of("play", stream = Streams.GOLD, openForeground = true))
+        inbox.enqueue(
+            PlaybackCommand.of(
+                SleepTimerContract.ACTION_SET, minutes = 30,
+                nowElapsedMs = chosenAt, bootId = boot,
+            ),
+        )
+        inbox.enqueue(PlaybackCommand.of("stop"))
+        bareStart()
+
+        val armed = awaitArmedTimer()
+        awaitInboxEmpty()
+
+        assertEquals("the timer command survives the playback domain's supersession", 30, armed.durationMinutes)
+        assertEquals(chosenAt + 30 * 60_000L, armed.deadlineElapsedMs)
+        assertEquals(
+            "and the playback side ends where the newest playback command said",
+            PlaybackIntentStore.Stored.Known(Streams.MYATA, false),
+            PlaybackIntentStore.read(context),
+        )
+    }
+
+    /**
+     * The timer's half, with a witness that tells the two answers apart. A stale
+     * `sleep_timer_undo` that had reached its handler would put the cancelled timer back on
+     * the player, and the newer `cancel` behind it would then have something to put on offer
+     * again - `Вернуть` would be live. It never ran, so the later cancel finds nothing armed
+     * and takes the offer down, which is what a cancel with nothing to restore means.
+     */
+    @Test
+    fun a_stale_timer_undo_cannot_put_a_cancelled_timer_back() {
+        assumeNotNull(BootIdentity.read(context))
+
+        inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_SET, minutes = 30, bootId = boot))
+        bareStart()
+        awaitArmedTimer()
+
+        inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_CANCEL))
+        bareStart()
+        awaitNoTimerRecord()
+
+        // The listener's newer intent replaces the undo that never reached the service.
+        inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_UNDO))
+        inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_CANCEL))
+        bareStart()
+        awaitInboxEmpty()
+        Thread.sleep(QUIET_MS)
+
+        assertNull(
+            "only the undo that never ran could have left Вернуть on offer here",
+            SleepTimerStore.readCancelled(context, boot),
+        )
+        assertNull("nothing is armed", restoredTimer())
+        assertFalse(SleepTimerStore.hasRecordForTest(context))
+    }
+
+    /**
+     * And what any app on the device can send. The bare start is the same one this file uses
+     * everywhere, here carrying the old private protocol in extras - including the
+     * superseded Play's own station, which is the one thing a start that could rewrite the
+     * queue would say. It cannot: the newest command is still the Stop afterwards, nothing
+     * it carried promoted the service, and nothing was added to the queue.
+     */
+    @Test
+    fun an_external_start_cannot_resurrect_a_superseded_command() {
+        assumeNotNull(BootIdentity.read(context))
+        PlaybackIntentStore.writeRawForTest(context, Streams.MYATA, wantsPlayback = true)
+
+        inbox.enqueue(PlaybackCommand.of("play", stream = Streams.GOLD, openForeground = true))
+        inbox.enqueue(PlaybackCommand.of("stop"))
+
+        val hostile = Intent(context, MediaPlayerService::class.java).apply {
+            putExtra("ACTION", "play")
+            putExtra("STREAM", Streams.GOLD)
+            putExtra("force_play", true)
+            putExtra("FOREGROUND_START", true)
+        }
+        context.startService(hostile)
+
+        awaitInboxEmpty()
+        Thread.sleep(QUIET_MS)
+
+        assertEquals(
+            "a start carries no command, so it cannot change which command is newest",
+            PlaybackIntentStore.Stored.Known(Streams.MYATA, false),
+            PlaybackIntentStore.read(context),
+        )
+        assertFalse("nor can it promote the service", placeholderIsUp())
+        assertTrue("nor add anything to the queue", inbox.pending().isEmpty())
+        assertStoppedAndEmpty()
     }
 
     // ==================== a refused start that was already delivered ================
@@ -732,6 +913,17 @@ class PlaybackCommandHandoffTest {
         }
         return false
     }
+
+    /**
+     * The same question asked without waiting, for the tests whose answer is *no*: a stale
+     * command's promotion would have been posted by the time the pass it belonged to has
+     * ended and the queue is empty, so what a quiet moment and this check say together is
+     * "it never happened".
+     */
+    private fun placeholderIsUp(): Boolean =
+        (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+            .activeNotifications
+            .any { it.id == PLACEHOLDER_ID }
 
     private fun awaitController(): MediaController {
         controllerFuture?.let { existing ->

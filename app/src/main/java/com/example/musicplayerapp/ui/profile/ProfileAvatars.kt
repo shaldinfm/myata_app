@@ -8,8 +8,7 @@ import com.example.musicplayerapp.R
  *
  * [key] is what the account stores: `myata-01` … `myata-24`, a Radio Myata identifier that
  * is independent of the artwork, so an image can be re-exported without touching anything
- * an account has saved. [number] is the one-based place in the grid, for the spoken
- * description.
+ * an account has saved. [number] identifies that same avatar in the spoken description.
  */
 data class ProfileAvatar(
     val key: String,
@@ -19,6 +18,8 @@ data class ProfileAvatar(
 
 /**
  * The fixed avatar set, in grid reading order - left to right, top to bottom, four across.
+ * The picker displays avatar 24 first and avatar 1 last; each key and drawable remain paired
+ * with its original avatar number regardless of this presentation order.
  *
  * The artwork is bundled (`drawable-nodpi/avatar_myata_NN.webp`), owner-created and prepared
  * by `tools/avatars/export_avatars.py` from the approved candidates; `tools/avatars/manifest.json`
@@ -64,7 +65,7 @@ object ProfileAvatars {
         val number = index + 1
         // padStart, not "%02d".format: a stored key must not depend on the locale's digits.
         ProfileAvatar(key = "myata-" + number.toString().padStart(2, '0'), number = number, drawable = drawable)
-    }
+    }.reversed()
 
     /** The avatar [storedKey] names, or null for none - including a key nobody knows. */
     fun resolve(storedKey: String?): ProfileAvatar? {

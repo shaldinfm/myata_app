@@ -13,8 +13,21 @@
   or a transfer that carried it would hand a new phone a station it never chose
   and an intent nobody expressed on it. See lastfm_backup_rules.xml.
 
+  `myata_playback_commands` is excluded from both sections too: it is the durable
+  inbox of gestures this device's listener made and the service has not handled
+  yet, and on another device the next service start would carry one out. See
+  lastfm_backup_rules.xml.
+
+  `myata_sleep_timer_undo` (what `Вернуть` would put back) is excluded from both
+  sections for the same reason: it is the timer as it was when this device's
+  listener cancelled it, which is a gesture nobody made on another device. Its
+  deadline is monotonic, so it is inert off the boot it was measured on as well.
+  The armed-timer record keeps its own backup story; only the undo affordance is
+  excluded. See lastfm_backup_rules.xml.
+
   Keep the paths in step with PrefsLastfmSessionStore.FILE,
-  LastfmQueueDatabase.FILE, PlaybackIntentStore.FILE and lastfm_backup_rules.xml.
+  LastfmQueueDatabase.FILE, PlaybackIntentStore.FILE, PlaybackCommandInbox.FILE,
+  SleepTimerStore.UNDO_FILE and lastfm_backup_rules.xml.
 -->
 <data-extraction-rules>
     <cloud-backup>
@@ -23,6 +36,8 @@
         <exclude domain="database" path="lastfm_queue-wal" />
         <exclude domain="database" path="lastfm_queue-shm" />
         <exclude domain="sharedpref" path="myata_playback_intent.xml" />
+        <exclude domain="sharedpref" path="myata_playback_commands.xml" />
+        <exclude domain="sharedpref" path="myata_sleep_timer_undo.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="lastfm_session.xml" />
@@ -30,5 +45,7 @@
         <exclude domain="database" path="lastfm_queue-wal" />
         <exclude domain="database" path="lastfm_queue-shm" />
         <exclude domain="sharedpref" path="myata_playback_intent.xml" />
+        <exclude domain="sharedpref" path="myata_playback_commands.xml" />
+        <exclude domain="sharedpref" path="myata_sleep_timer_undo.xml" />
     </device-transfer>
 </data-extraction-rules>

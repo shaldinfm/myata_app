@@ -206,16 +206,13 @@ class MediaPlayerService(): MediaSessionService(){
     private var sleepTimerGeneration = 0L
 
     /**
-     * What `Вернуть` puts back: the timer as it was at the moment it was cancelled,
-     * **with its original deadline** (owner decision D4). Undoing a 30-minute timer
-     * that had 10 minutes left restores 10 minutes, not 30.
-     *
-     * Deliberately in memory only. It is a one-gesture affordance that lives as
-     * long as a Snackbar, not a state anybody should find again after a restart,
-     * and keeping it out of the store is what stops it competing with the one
-     * record that is meant to be durable.
+     * Whether the placeholder foreground notification is up - the one
+     * [postPlaceholderForegroundNotification] posts to answer Android's
+     * `startForegroundService` contract. Tracked so that a pass which could not deliver
+     * its command can take it down again rather than leave the app foreground forever;
+     * see [releasePlaceholderForeground].
      */
-    private var lastCancelledTimer: SleepTimerState.Armed? = null
+    private var placeholderForegroundUp = false
 
     var song: String = ""
     var artist: String = ""
@@ -228,291 +225,377 @@ class MediaPlayerService(): MediaSessionService(){
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
 
+        // Everything the app itself asked for is read from the app's own durable
+        // inbox rather than out of `intent`, and this whole path reads no extra.
+        // That is the fix for the exported endpoint - any app may send this
+        // component a start, and a start carries no instruction any more - and it is
+        // also what carries a command across a process death, which process memory
+        // did not: a start request survives a kill, so the command has to. See
+        // [PlaybackCommand] and [PlaybackCommandInbox].
+        val inbox = PlaybackCommandInbox.forContext(this)
+        val commands = inbox.pending()
+
         if (intent == null) {
             // START_STICKY handed the service back to us without the original
             // intent: the process was killed and restarted rather than started.
-            // Everything the listener had told us died with the old process, so
-            // this is the one point where the durable copy has to speak for them.
-            PlaybackLog.problem("SERVICE_RESTARTED_BY_SYSTEM", "startId" to startId, "flags" to flags)
-            restorePlaybackIntent("sticky_restart")
-        } else {
-            // Media3 keeps the service alive with its own action-less start
-            // commands during normal playback; those carry no information and
-            // would drown out the interesting lines, so only ours are logged.
-            val requestedAction = intent.getStringExtra("ACTION")
-            if (requestedAction != null) {
+            // Everything the listener had told us died with the old process, so this
+            // is the one point where the durable copies have to speak for them - the
+            // inbox read above, and the playback intent at the end of this method.
+            PlaybackLog.problem(
+                "SERVICE_RESTARTED_BY_SYSTEM",
+                "startId" to startId, "flags" to flags, "pending" to commands.size
+            )
+        }
+
+        // Media3 keeps the service alive with its own action-less start commands
+        // during normal playback; those carry no command and would drown out the
+        // interesting lines, so only ours are logged.
+        for (entry in commands) {
+            PlaybackLog.event(
+                "START_COMMAND",
+                "action" to entry.command.action,
+                "id" to entry.id,
+                "intentStream" to (entry.command.stream ?: "none"),
+                "forcePlay" to entry.command.forcePlay,
+                "foregroundStart" to entry.command.openForeground,
+                "currentStream" to (stream.ifEmpty { "none" }),
+                "startId" to startId
+            )
+        }
+
+        // One command at a time, oldest first; the inbox owns the order, the
+        // acknowledgement and what a failed handler means. What stays here is the one
+        // per-command answer the service itself owns: whether this start should keep
+        // the service sticky - and the platform obligation that belongs to a command,
+        // answered by [prepareHeadCommand] before that command's handler and never
+        // before an older one's.
+        //
+        // The answer rides beside the handling rather than deciding it, which is what
+        // [PlaybackCommandPass] is for: a command that says "do not keep me" - a
+        // station-less `switch` - is still handled and still acknowledged, and every
+        // command behind it still reaches its own handler.
+        val pass = PlaybackCommandPass(::handleOneCommand)
+        pass.run(inbox, prepare = ::prepareHeadCommand)
+        val keepSticky = pass.keepSticky
+
+        // Whatever the pass did not get through. A pass that emptied the inbox left
+        // nothing here; anything still present is a command that was *not* delivered -
+        // it is newer than the durable playback state below and it is what the listener
+        // asked for since, so the two lines after this one are ordered by it.
+        val stillPending = inbox.pending()
+
+        if (intent == null) {
+            if (stillPending.isEmpty()) {
+                // The null-intent restart, on the durable state the pass above has just
+                // updated: a pending Stop has already been applied, a pending switch has
+                // already moved the station, and what is read here is the result rather
+                // than the state the process died on. A kill between a gesture and the
+                // service handling it can therefore never resurrect what the gesture
+                // replaced.
+                restorePlaybackIntent("sticky_restart")
+            } else {
+                // A command the pass could not deliver is still the listener's latest
+                // word on the subject, and the durable playback state is the older one.
+                // Restoring now would put older intent over newer intent - the exact
+                // resurrection this ordering exists to prevent - so it waits for the
+                // start that finally delivers the command.
                 PlaybackLog.event(
-                    "START_COMMAND",
-                    "action" to requestedAction,
-                    "intentStream" to (intent.getStringExtra("STREAM") ?: "none"),
-                    "forcePlay" to intent.getBooleanExtra("force_play", false),
-                    "foregroundStart" to intent.getBooleanExtra("FOREGROUND_START", false),
-                    "currentStream" to (stream.ifEmpty { "none" }),
-                    "startId" to startId
+                    "PLAYBACK_INTENT_DEFERRED", "at" to "sticky_restart",
+                    "reason" to "pending_commands", "pending" to stillPending.size,
                 )
             }
         }
 
-        // CRITICAL: Android requires startForeground() within 5s of startForegroundService().
-        // Post a minimal notification immediately to satisfy the contract.
-        // Media3 will replace it with the real notification (with controls) moments later.
-        val isForegroundStart = intent?.getBooleanExtra("FOREGROUND_START", false) == true
-        if (isForegroundStart) {
-            postPlaceholderForegroundNotification()
+        if (stillPending.isNotEmpty()) {
+            releasePlaceholderForeground("commands_left_pending")
         }
 
-        if(intent != null) {
-            val action = intent.getStringExtra("ACTION")
-            
-            when(action){
-                "startStop"->{
-                    if(exoPlayer.isPlaying) {
-                        PlaybackLog.event("PLAYER_STOP", "source" to "intent", "reason" to "startStop_toggle_off")
-                        onPlaybackNoLongerWanted("startStop_toggle_off")
-                        exoPlayer.stop()
-                        exoPlayer.clearMediaItems()
-                        artist = ""
-                        song = ""
-                        updateMetadata("", "")
+        return if (keepSticky) START_STICKY else START_NOT_STICKY
+    }
+
+    /**
+     * Runs one command from the durable inbox.
+     *
+     * Split out of `onStartCommand` so "one command" is a unit the start path can
+     * acknowledge, retry or give up on, which is what the inbox's ordering and its
+     * acknowledge-after-the-handler rule need. The whole [PlaybackCommandInbox.Entry]
+     * rather than the command alone, because two of the sleep-timer commands are
+     * identified by the record that carried them: a replayed cancel must not wipe the
+     * snapshot it created, and a replayed undo must not consume a later one.
+     *
+     * Returning at all is the success report - the inbox acknowledges what it sees here -
+     * and the one answer the start path cannot work out for itself rides along as a
+     * [CommandHandling]: a `switch` that arrived without a station is the app's own answer
+     * that this start should not be sticky, and everything else leaves the service sticky.
+     * The two never decide each other - see [PlaybackCommandPass] for why that separation
+     * is load-bearing - and a command that genuinely could not be handled raises
+     * [PlaybackCommandFailure] rather than returning.
+     */
+    private fun handleOneCommand(entry: PlaybackCommandInbox.Entry): CommandHandling {
+        val command = entry.command
+
+        when(command.action){
+            "startStop"->{
+                // The desire is data here, not a question. `startStop` used to
+                // be a toggle, and a toggle replayed after a process death does
+                // the opposite of what the listener asked for - Play arriving
+                // as Pause. [PlaybackCommand.of] resolves it where the listener
+                // makes the gesture, to the one thing every call site in this
+                // app means by it ("start playback"), so a second run of the
+                // same command can only re-state the same desire.
+                val wantPlaying = command.desiredPlaying ?: !exoPlayer.isPlaying
+                if(!wantPlaying) {
+                    PlaybackLog.event("PLAYER_STOP", "source" to "intent", "reason" to "startStop_toggle_off")
+                    onPlaybackNoLongerWanted("startStop_toggle_off")
+                    exoPlayer.stop()
+                    exoPlayer.clearMediaItems()
+                    artist = ""
+                    song = ""
+                    updateMetadata("", "")
+                }
+                // Already playing is not a second start: the command says what
+                // the listener wants, and that is what is already happening.
+                else if(!exoPlayer.isPlaying){
+                    val intentStream = command.stream
+                    if (intentStream != null) {
+                        stream = intentStream
                     }
-                    else{
-                        val intentStream = intent.getStringExtra("STREAM")
-                        if (intentStream != null) {
-                            stream = intentStream
-                        }
-                        // The station is assigned above, so the durable record
-                        // this writes carries the one being asked for.
-                        // onUserWantsPlayback canonicalises `stream` itself.
-                        onUserWantsPlayback("startStop_toggle_on")
-                        // Always set MediaItem (it may have been cleared by stop)
-                        when(stream){
-                            "myata"->{exoPlayer.setMediaItem(myataItem)}
-                            "gold"->{exoPlayer.setMediaItem(goldItem)}
-                            "myata_hits"->{exoPlayer.setMediaItem(xtraItem)}
-                        }
-                        logStreamSelection("startStop")
+                    // The station is assigned above, so the durable record
+                    // this writes carries the one being asked for.
+                    // onUserWantsPlayback canonicalises `stream` itself.
+                    onUserWantsPlayback("startStop_toggle_on")
+                    // Always set MediaItem (it may have been cleared by stop)
+                    when(stream){
+                        "myata"->{exoPlayer.setMediaItem(myataItem)}
+                        "gold"->{exoPlayer.setMediaItem(goldItem)}
+                        "myata_hits"->{exoPlayer.setMediaItem(xtraItem)}
+                    }
+                    logStreamSelection("startStop")
 
-                        // Use updateMetadata to ensure art is reset, fetched, and notification updated
-                        val startSong = intent.getStringExtra("SONG") ?: ""
-                        val startArtist = intent.getStringExtra("ARTIST") ?: ""
-                        updateMetadata(startArtist, startSong)
+                    // Use updateMetadata to ensure art is reset, fetched, and notification updated
+                    val startSong = command.song ?: ""
+                    val startArtist = command.artist ?: ""
+                    updateMetadata(startArtist, startSong)
 
-                        if (canPrepare("startStop")) {
-                            PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "startStop_toggle_on")
-                            exoPlayer.prepare()
-                            PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "startStop_toggle_on")
-                            exoPlayer.play()
-                        }
+                    if (canPrepare("startStop")) {
+                        PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "startStop_toggle_on")
+                        exoPlayer.prepare()
+                        PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "startStop_toggle_on")
+                        exoPlayer.play()
                     }
                 }
-                "play"->{
-                    val intentStream = intent.getStringExtra("STREAM")
-                    val isStreamChange = intentStream != null && stream != intentStream
-                    // The station first, the intent second. onUserWantsPlayback is
-                    // what writes the durable record, and it has to carry the
-                    // station being asked for - not the one that was playing a
-                    // moment ago, which is what a process death would restore.
-                    if (isStreamChange) stream = intentStream!!
-                    onUserWantsPlayback("play_action")
-                    if (isStreamChange)
-                    {
+            }
+            "play"->{
+                val intentStream = command.stream
+                val isStreamChange = intentStream != null && stream != intentStream
+                // The station first, the intent second. onUserWantsPlayback is
+                // what writes the durable record, and it has to carry the
+                // station being asked for - not the one that was playing a
+                // moment ago, which is what a process death would restore.
+                if (isStreamChange) stream = intentStream!!
+                onUserWantsPlayback("play_action")
+                if (isStreamChange)
+                {
+                    when(stream){
+                        "myata"->{exoPlayer.setMediaItem(myataItem)}
+                        "gold"->{exoPlayer.setMediaItem(goldItem)}
+                        "myata_hits"->{exoPlayer.setMediaItem(xtraItem)}
+                    }
+                    logStreamSelection("play_streamChange")
+                    if (canPrepare("play_streamChange")) {
+                        PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "play_streamChange")
+                        exoPlayer.prepare()
+                    }
+                }
+                if(!exoPlayer.isPlaying) {
+                    // The player can be empty here after a stop cleared it.
+                    if (exoPlayer.mediaItemCount == 0) {
                         when(stream){
                             "myata"->{exoPlayer.setMediaItem(myataItem)}
                             "gold"->{exoPlayer.setMediaItem(goldItem)}
                             "myata_hits"->{exoPlayer.setMediaItem(xtraItem)}
                         }
-                        logStreamSelection("play_streamChange")
-                        if (canPrepare("play_streamChange")) {
-                            PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "play_streamChange")
-                            exoPlayer.prepare()
-                        }
+                        logStreamSelection("play_notPlaying")
                     }
-                    if(!exoPlayer.isPlaying) {
-                        // The player can be empty here after a stop cleared it.
+                    if (canPrepare("play_notPlaying")) {
+                        PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "play_notPlaying")
+                        exoPlayer.prepare()
+                        PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "play_notPlaying")
+                        exoPlayer.play()
+                    }
+                }
+            }
+            "switch"->{
+                val intentStream = command.stream
+                val forcePlay = command.forcePlay
+
+                // Without a station there is nothing to do with this command. What the
+                // command *answers* its start is the other half of it and is not decided
+                // here: see [CommandHandling.forCommand].
+                val isStreamChange = stream != intentStream
+                    
+                if (intentStream != null && isStreamChange) {
+                    // DIFFERENT stream - need to set up new media item
+                    stream = intentStream
+                    // A different station discards the partial listen (G6b P4, D1).
+                    scheduleScrobbleCheck(
+                        scrobbleTracker.onStreamSelected(stream, android.os.SystemClock.elapsedRealtime())
+                    )
+                    onUserWantsPlayback("stream_switch")
+                        
+                    val switchSong = command.song ?: ""
+                    val switchArtist = command.artist ?: ""
+
+                    val initialMetadata = MediaMetadata.Builder()
+                        .setArtist(switchArtist)
+                        .setTitle(switchSong)
+                        .setAlbumTitle(getStreamDisplayName())
+                        .build()
+
+                    val mediaItem = when(stream){
+                        "myata"->myataItem
+                        "gold"->goldItem
+                        "myata_hits"->xtraItem
+                        else -> myataItem
+                    }.buildUpon().setMediaMetadata(initialMetadata).build()
+                        
+                    exoPlayer.setMediaItem(mediaItem)
+                    logStreamSelection("switch_streamChange")
+                    currentAlbumArt = null
+                    updateMetadata(switchArtist, switchSong)
+
+                    // Always start playback for stream changes
+                    if (canPrepare("switch_streamChange")) {
+                        PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "switch_streamChange")
+                        exoPlayer.prepare()
+                        PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "switch_streamChange")
+                        exoPlayer.play()
+                        Log.d("SWITCH", "Stream switched to $stream and playback started")
+                    }
+                } else if (intentStream != null) {
+                    // SAME stream - only start if forcePlay requested AND not already playing
+                    if (forcePlay && !exoPlayer.isPlaying) {
+                        onUserWantsPlayback("switch_forcePlay")
+                        // A previous stop clears the playlist; restore it first.
                         if (exoPlayer.mediaItemCount == 0) {
                             when(stream){
                                 "myata"->{exoPlayer.setMediaItem(myataItem)}
                                 "gold"->{exoPlayer.setMediaItem(goldItem)}
                                 "myata_hits"->{exoPlayer.setMediaItem(xtraItem)}
                             }
-                            logStreamSelection("play_notPlaying")
+                            logStreamSelection("switch_forcePlay")
                         }
-                        if (canPrepare("play_notPlaying")) {
-                            PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "play_notPlaying")
+                        if (canPrepare("switch_forcePlay")) {
+                            PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "switch_forcePlay")
                             exoPlayer.prepare()
-                            PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "play_notPlaying")
+                            PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "switch_forcePlay")
                             exoPlayer.play()
-                        }
-                    }
-                }
-                "switch"->{
-                    val intentStream = intent.getStringExtra("STREAM")
-                    val forcePlay = intent.getBooleanExtra("force_play", false)
-                    
-                    if (intentStream == null) return START_NOT_STICKY
-                    
-                    val isStreamChange = stream != intentStream
-                    
-                    if (isStreamChange) {
-                        // DIFFERENT stream - need to set up new media item
-                        stream = intentStream
-                        // A different station discards the partial listen (G6b P4, D1).
-                        scheduleScrobbleCheck(
-                            scrobbleTracker.onStreamSelected(stream, android.os.SystemClock.elapsedRealtime())
-                        )
-                        onUserWantsPlayback("stream_switch")
-                        
-                        val switchSong = intent.getStringExtra("SONG") ?: ""
-                        val switchArtist = intent.getStringExtra("ARTIST") ?: ""
-
-                        val initialMetadata = MediaMetadata.Builder()
-                            .setArtist(switchArtist)
-                            .setTitle(switchSong)
-                            .setAlbumTitle(getStreamDisplayName())
-                            .build()
-
-                        val mediaItem = when(stream){
-                            "myata"->myataItem
-                            "gold"->goldItem
-                            "myata_hits"->xtraItem
-                            else -> myataItem
-                        }.buildUpon().setMediaMetadata(initialMetadata).build()
-                        
-                        exoPlayer.setMediaItem(mediaItem)
-                        logStreamSelection("switch_streamChange")
-                        currentAlbumArt = null
-                        updateMetadata(switchArtist, switchSong)
-
-                        // Always start playback for stream changes
-                        if (canPrepare("switch_streamChange")) {
-                            PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "switch_streamChange")
-                            exoPlayer.prepare()
-                            PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "switch_streamChange")
-                            exoPlayer.play()
-                            Log.d("SWITCH", "Stream switched to $stream and playback started")
+                            Log.d("SWITCH", "Same stream $stream - resuming playback")
                         }
                     } else {
-                        // SAME stream - only start if forcePlay requested AND not already playing
-                        if (forcePlay && !exoPlayer.isPlaying) {
-                            onUserWantsPlayback("switch_forcePlay")
-                            // A previous stop clears the playlist; restore it first.
-                            if (exoPlayer.mediaItemCount == 0) {
-                                when(stream){
-                                    "myata"->{exoPlayer.setMediaItem(myataItem)}
-                                    "gold"->{exoPlayer.setMediaItem(goldItem)}
-                                    "myata_hits"->{exoPlayer.setMediaItem(xtraItem)}
-                                }
-                                logStreamSelection("switch_forcePlay")
-                            }
-                            if (canPrepare("switch_forcePlay")) {
-                                PlaybackLog.event("PLAYER_PREPARE", "source" to "intent", "reason" to "switch_forcePlay")
-                                exoPlayer.prepare()
-                                PlaybackLog.event("PLAYER_PLAY", "source" to "intent", "reason" to "switch_forcePlay")
-                                exoPlayer.play()
-                                Log.d("SWITCH", "Same stream $stream - resuming playback")
-                            }
-                        } else {
-                            Log.d("SWITCH", "Same stream $stream - already playing, no action needed")
-                        }
+                        Log.d("SWITCH", "Same stream $stream - already playing, no action needed")
                     }
-                }
-
-                "switch_track"->{
-                    val newSong = intent.getStringExtra("SONG") ?: ""
-                    val newArtist = intent.getStringExtra("ARTIST") ?: ""
-                    // Use updateMetadata to ensure art is reset, fetched, and notification updated
-                    updateMetadata(newArtist, newSong)
-                    Log.d("SWITCH", "Track metadata updated: $newArtist - $newSong")
-                }
-                "get_status" -> {
-                    // Broadcast current state to sync UI
-                    val action = if(exoPlayer.isPlaying) "play" else "pause"
-                    LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(action))
-                    if (exoPlayer.playbackState == Player.STATE_BUFFERING) {
-                        LocalBroadcastManager.getInstance(this).sendBroadcast(Intent("buffering"))
-                    }
-                    
-                    // Also broadcast current metadata so UI can update immediately
-                    // ONLY if playing or buffering to avoid overriding fresh API metadata with stale service data
-                    if (stream.isNotEmpty() && (exoPlayer.isPlaying || exoPlayer.playbackState == Player.STATE_BUFFERING)) {
-                        LocalBroadcastManager.getInstance(this).sendBroadcast(
-                            Intent("metadata_update").apply {
-                                putExtra("artist", artist)
-                                putExtra("song", song)
-                                putExtra("stream", stream)
-                                // Send album art URL if we have one for this track
-                                val currentCacheKey = "$artist:$song"
-                                // We don't have direct access to the URL map here easily without refactoring, 
-                                // but the UI will fetch if missing or using the "metadata_update" receiver in VM 
-                                // can trigger a fetch if needed. 
-                                // Actually, let's trigger a fresh broadcast from updateMetadata logic if possible 
-                                // or just send what we have.
-                            }
-                        )
-                    }
-                    Log.d("MediaPlayerService", "Status requested: $action")
-                }
-                SleepTimerContract.ACTION_SET -> {
-                    armSleepTimer(
-                        minutes = intent.getIntExtra(SleepTimerContract.EXTRA_MINUTES, 0),
-                        isCustom = intent.getBooleanExtra(SleepTimerContract.EXTRA_IS_CUSTOM, false),
-                    )
-                }
-                PlaybackIntentContract.ACTION_RESTORE -> {
-                    // The restart path, reachable. See PlaybackIntentContract for
-                    // why it exists and why a release build refuses it. The refusal
-                    // is the first thing here: nothing is read, nothing is written
-                    // and no field is touched before the policy has answered.
-                    if (!PlaybackIntentContract.isRestoreAllowed(BuildConfig.DEBUG)) {
-                        PlaybackLog.problem(
-                            "PLAYBACK_INTENT_RESTORE_REFUSED", "reason" to "not_a_debug_build"
-                        )
-                    } else {
-                        // A real sticky restart always lands on a brand new
-                        // instance, where this is false. The simulation has to
-                        // start from the same place or it would only ever be
-                        // testing the already-restored guard.
-                        playbackIntentRestored = false
-                        restorePlaybackIntent("intent_restore")
-                    }
-                }
-                SystemPlaybackEventContract.ACTION_BECOMING_NOISY -> {
-                    // The audio-route path, reachable. See
-                    // SystemPlaybackEventContract for why it exists and why a release
-                    // build refuses it. The refusal is the first thing here: nothing
-                    // is read, nothing is written and no field is touched before the
-                    // policy has answered.
-                    if (!SystemPlaybackEventContract.isSimulationAllowed(BuildConfig.DEBUG)) {
-                        PlaybackLog.problem(
-                            "SYSTEM_EVENT_SIMULATION_REFUSED",
-                            "event" to "audio_becoming_noisy", "reason" to "not_a_debug_build"
-                        )
-                    } else {
-                        simulateAudioBecomingNoisy()
-                    }
-                }
-                SleepTimerContract.ACTION_CANCEL -> cancelSleepTimer()
-                SleepTimerContract.ACTION_UNDO -> undoSleepTimerCancel()
-                SleepTimerContract.ACTION_SYNC -> {
-                    // Every read is a reconciliation. A Handler that was delayed
-                    // while nothing was playing, or a service that came back after
-                    // the deadline had passed, must not leave a dead timer looking
-                    // armed on a screen that has just been opened.
-                    reconcileSleepTimer("sync")
-                    broadcastSleepTimerState()
-                }
-                "stop" -> {
-                    Log.d("MediaPlayerService", "Stop action received - shutting down")
-                    PlaybackLog.event("PLAYER_STOP", "source" to "intent", "reason" to "stop_action_shutdown")
-                    onPlaybackNoLongerWanted("stop_action")
-                    exoPlayer.stop()
-                    exoPlayer.clearMediaItems()
-                    stopSelf()
                 }
             }
-        }
 
-        return START_STICKY
+            "switch_track"->{
+                val newSong = command.song ?: ""
+                val newArtist = command.artist ?: ""
+                // Use updateMetadata to ensure art is reset, fetched, and notification updated
+                updateMetadata(newArtist, newSong)
+                Log.d("SWITCH", "Track metadata updated: $newArtist - $newSong")
+            }
+            "get_status" -> {
+                // Broadcast current state to sync UI
+                val action = if(exoPlayer.isPlaying) "play" else "pause"
+                LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(action))
+                if (exoPlayer.playbackState == Player.STATE_BUFFERING) {
+                    LocalBroadcastManager.getInstance(this).sendBroadcast(Intent("buffering"))
+                }
+                    
+                // Also broadcast current metadata so UI can update immediately
+                // ONLY if playing or buffering to avoid overriding fresh API metadata with stale service data
+                if (stream.isNotEmpty() && (exoPlayer.isPlaying || exoPlayer.playbackState == Player.STATE_BUFFERING)) {
+                    LocalBroadcastManager.getInstance(this).sendBroadcast(
+                        Intent("metadata_update").apply {
+                            putExtra("artist", artist)
+                            putExtra("song", song)
+                            putExtra("stream", stream)
+                            // Send album art URL if we have one for this track
+                            val currentCacheKey = "$artist:$song"
+                            // We don't have direct access to the URL map here easily without refactoring, 
+                            // but the UI will fetch if missing or using the "metadata_update" receiver in VM 
+                            // can trigger a fetch if needed. 
+                            // Actually, let's trigger a fresh broadcast from updateMetadata logic if possible 
+                            // or just send what we have.
+                        }
+                    )
+                }
+                Log.d("MediaPlayerService", "Status requested: $action")
+            }
+            SleepTimerContract.ACTION_SET -> {
+                // The deadline was resolved when the listener chose the
+                // duration, so a command that outlived the process still stops
+                // the radio at the time they asked for - see [PlaybackCommand] -
+                // and it is checked against the boot it was measured on before it
+                // is honoured.
+                armSleepTimerFromCommand(command)
+            }
+            PlaybackIntentContract.ACTION_RESTORE -> {
+                // The restart path, reachable. See PlaybackIntentContract for
+                // why it exists and why a release build refuses it. The refusal
+                // is the first thing here: nothing is read, nothing is written
+                // and no field is touched before the policy has answered.
+                if (!PlaybackIntentContract.isRestoreAllowed(BuildConfig.DEBUG)) {
+                    PlaybackLog.problem(
+                        "PLAYBACK_INTENT_RESTORE_REFUSED", "reason" to "not_a_debug_build"
+                    )
+                } else {
+                    // A real sticky restart always lands on a brand new
+                    // instance, where this is false. The simulation has to
+                    // start from the same place or it would only ever be
+                    // testing the already-restored guard.
+                    playbackIntentRestored = false
+                    restorePlaybackIntent("intent_restore")
+                }
+            }
+            SystemPlaybackEventContract.ACTION_BECOMING_NOISY -> {
+                // The audio-route path, reachable. See
+                // SystemPlaybackEventContract for why it exists and why a release
+                // build refuses it. The refusal is the first thing here: nothing
+                // is read, nothing is written and no field is touched before the
+                // policy has answered.
+                if (!SystemPlaybackEventContract.isSimulationAllowed(BuildConfig.DEBUG)) {
+                    PlaybackLog.problem(
+                        "SYSTEM_EVENT_SIMULATION_REFUSED",
+                        "event" to "audio_becoming_noisy", "reason" to "not_a_debug_build"
+                    )
+                } else {
+                    simulateAudioBecomingNoisy()
+                }
+            }
+            SleepTimerContract.ACTION_CANCEL -> cancelSleepTimer(entry.id)
+            SleepTimerContract.ACTION_UNDO -> undoSleepTimerCancel(entry.id)
+            SleepTimerContract.ACTION_SYNC -> {
+                // Every read is a reconciliation. A Handler that was delayed
+                // while nothing was playing, or a service that came back after
+                // the deadline had passed, must not leave a dead timer looking
+                // armed on a screen that has just been opened.
+                reconcileSleepTimer("sync")
+                broadcastSleepTimerState()
+            }
+            "stop" -> {
+                Log.d("MediaPlayerService", "Stop action received - shutting down")
+                PlaybackLog.event("PLAYER_STOP", "source" to "intent", "reason" to "stop_action_shutdown")
+                onPlaybackNoLongerWanted("stop_action")
+                exoPlayer.stop()
+                exoPlayer.clearMediaItems()
+                stopSelf()
+            }
+        }
+        // The command was handled: this is that report, and the one answer about the start
+        // that a command owns. See [CommandHandling].
+        return CommandHandling.forCommand(command)
     }
 
     override fun onCreate() {
@@ -1245,14 +1328,79 @@ class MediaPlayerService(): MediaSessionService(){
     }
 
     /**
+     * The one thing that has to happen before a command is handled, and cannot be done
+     * by its handler: the obligation Android attached to the *start*, which only the
+     * command knows about.
+     *
+     * `startForegroundService` gives this service five seconds to call
+     * `startForeground`, and the caller that chose that start is the only one who knew
+     * it did - so the fact rides the command ([PlaybackCommand.openForeground]) and is
+     * answered here, from the record on disk, for the command that is about to run.
+     * The queue's head is read again for every command, so a foreground command
+     * appended while a pass is running is promoted for too, before *its* handler: the
+     * snapshot this replaced could be made stale by exactly that append, and the
+     * command would have been handled without the promotion it promised.
+     *
+     * A promotion that fails means the command is not delivered: it is not handled, not
+     * acknowledged, and the pass stops with it still pending, where a later start will
+     * find it. Android's timing requirement is not weakened either way - the first
+     * thing the pass does for such a command is post the placeholder, well inside the
+     * five seconds - and it is the only obligation in play: an external bare start
+     * cannot fabricate one, because the only place that flag exists is the record.
+     */
+    private fun prepareHeadCommand(entry: PlaybackCommandInbox.Entry): Boolean {
+        if (!entry.command.openForeground) return true
+
+        if (postPlaceholderForegroundNotification()) return true
+
+        PlaybackLog.problem(
+            "FOREGROUND_REQUIRED_BUT_REFUSED",
+            "action" to entry.command.action, "id" to entry.id,
+            "outcome" to "command_left_pending",
+        )
+        return false
+    }
+
+    /**
+     * Takes the placeholder notification down when that is the only thing keeping this
+     * service in the foreground.
+     *
+     * A pass that could not deliver its command leaves the record waiting for a later
+     * start, and the placeholder its promotion posted would then be a service claiming
+     * foreground work it is not doing: with nothing playing nothing replaces it - Media3
+     * posts its own notification when audio actually starts - so it would sit there for
+     * as long as this service lives. Nothing about the pending command changes: the
+     * next start promotes again, and Media3 promotes again the moment playback begins.
+     */
+    private fun releasePlaceholderForeground(reason: String) {
+        if (!placeholderForegroundUp) return
+        // Audio that is running, or on its way, is the reason to be foreground. Only
+        // the leftover placeholder of a command that never happened is released.
+        if (exoPlayer.isPlaying || exoPlayer.playbackState == Player.STATE_BUFFERING) return
+
+        placeholderForegroundUp = false
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            PlaybackLog.event("FOREGROUND_PLACEHOLDER_RELEASED", "reason" to reason)
+        } catch (e: Exception) {
+            PlaybackLog.problem(
+                "FOREGROUND_PLACEHOLDER_RELEASE_FAILED", "cause" to e.javaClass.simpleName
+            )
+        }
+    }
+
+    /**
      * The minimal notification that makes this a foreground service.
      *
      * Media3 replaces it with the real one, with controls, moments later. It
      * exists because Android gives a startForegroundService five seconds to call
      * startForeground, and because the restart path above has to be foreground
      * before it touches the player.
+     *
+     * @return true when the service really was promoted. The caller is the head
+     *   command's gate, which must not run a command whose promotion was refused.
      */
-    private fun postPlaceholderForegroundNotification() {
+    private fun postPlaceholderForegroundNotification(): Boolean {
         try {
             val channelId = "playback_channel"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -1273,6 +1421,8 @@ class MediaPlayerService(): MediaSessionService(){
                 startForeground(1, notification)
             }
             Log.d("MediaPlayerService", "Foreground notification posted immediately")
+            placeholderForegroundUp = true
+            return true
         } catch (e: Exception) {
             // Android 12+ can refuse a foreground start it did not ask for. Media3
             // makes its own attempt when playback begins; nothing here retries.
@@ -1280,6 +1430,7 @@ class MediaPlayerService(): MediaSessionService(){
             PlaybackLog.problem(
                 "FOREGROUND_NOTIFICATION_REFUSED", "cause" to e.javaClass.simpleName
             )
+            return false
         }
     }
 
@@ -1441,16 +1592,55 @@ class MediaPlayerService(): MediaSessionService(){
     // apps - a radio sleep timer does not qualify, and would gain nothing here.
 
     /**
+     * A `sleep_timer_set` as it arrived: a deadline, and the boot it was measured on.
+     *
+     * The deadline is an `elapsedRealtime` instant and that clock restarts at boot, so a
+     * command that outlived a reboot can carry a number that looks like a perfectly
+     * ordinary deadline in the new boot's epoch - and arming it would stop the radio at
+     * a moment nobody chose. The boot travels with the command
+     * ([PlaybackCommand.deadlineBootId], the same `BootIdentity` semantics
+     * `SleepTimerStore` uses), and a deadline that cannot prove it belongs to this boot
+     * is refused rather than reinterpreted: nothing is armed, nothing is written, and
+     * the app's existing reboot rule - a timer never resumes across a reboot - is what
+     * answers. A device whose boot counter cannot be read is the same case, on purpose:
+     * "unknown" is not "same boot" anywhere else in this app either.
+     */
+    private fun armSleepTimerFromCommand(command: PlaybackCommand) {
+        val currentBoot = BootIdentity.read(this)
+        if (!BootIdentity.matches(command.deadlineBootId ?: BootIdentity.UNKNOWN, currentBoot)) {
+            PlaybackLog.problem(
+                "SLEEP_TIMER_REFUSED",
+                "reason" to "deadline_from_another_boot", "minutes" to command.minutes,
+            )
+            broadcastSleepTimerState()
+            return
+        }
+        armSleepTimer(
+            minutes = command.minutes,
+            isCustom = command.isCustom,
+            resolvedDeadlineMs = command.deadlineElapsedMs,
+        )
+    }
+
+    /**
      * Starts a timer, replacing whatever was running.
      *
      * Replacement is total: a new choice is a new deadline measured from now, not
      * an extension of the old one, and it discards anything `Вернуть` could have
      * put back.
+     *
+     * [resolvedDeadlineMs] is when the listener's choice stops being "in 30
+     * minutes" and becomes an instant - resolved where the gesture is made, and
+     * carried with the command so that handling it a second time after a process
+     * death re-arms the *same* deadline rather than a later one. A caller that
+     * resolved nothing falls back to now + [minutes], which is what this has always
+     * done. See [PlaybackCommand].
      */
-    private fun armSleepTimer(minutes: Int, isCustom: Boolean) {
+    private fun armSleepTimer(minutes: Int, isCustom: Boolean, resolvedDeadlineMs: Long? = null) {
         // Android TV has no way to reach this and must never acquire one. The
-        // service is exported, so the guard belongs here rather than in a UI that
-        // TV does not run - it is the only place that is true for every caller.
+        // guard belongs in the service rather than in a UI that TV does not run: the
+        // service owns the timer, so it is the only place that is true for every
+        // caller.
         if (isTv) {
             PlaybackLog.problem("SLEEP_TIMER_REFUSED", "reason" to "tv_device", "minutes" to minutes)
             clearSleepTimerState()
@@ -1465,11 +1655,19 @@ class MediaPlayerService(): MediaSessionService(){
         }
 
         cancelScheduledSleepTimer()
-        lastCancelledTimer = null
+        // A new choice is not the cancelled one, so the offer to put the cancelled one
+        // back goes with it - durably, so it does not come back after a restart.
+        if (!SleepTimerStore.clearCancelled(this)) {
+            PlaybackLog.problem(
+                "SLEEP_TIMER_UNDO_NOT_CLEARED", "reason" to "new_choice",
+                "outcome" to "stale_snapshot_may_remain",
+            )
+        }
         sleepTimerGeneration += 1
 
         val timer = SleepTimerState.Armed(
-            deadlineElapsedMs = android.os.SystemClock.elapsedRealtime() + SleepTimerDuration.toMs(minutes),
+            deadlineElapsedMs = resolvedDeadlineMs
+                ?: (android.os.SystemClock.elapsedRealtime() + SleepTimerDuration.toMs(minutes)),
             durationMinutes = minutes,
             isCustom = isCustom,
             generation = sleepTimerGeneration,
@@ -1489,11 +1687,18 @@ class MediaPlayerService(): MediaSessionService(){
     /**
      * `Отключить таймер`.
      *
-     * Keeps the cancelled timer in memory so `Вернуть` can put back the deadline it
-     * had - not the duration it was created with. A 30-minute timer with 10 minutes
-     * left is worth 10 minutes to an undo, and no more.
+     * Keeps the cancelled timer - durably - so `Вернуть` can put back the deadline it
+     * had, not the duration it was created with: a 30-minute timer with 10 minutes left
+     * is worth 10 minutes to an undo, and no more.
+     *
+     * [cancelledBy] is the inbox record's id, and it is what makes this command
+     * replay-safe. Delivery is at-least-once: a process death between this handler and
+     * its acknowledgement replays the same cancel, and the second run finds no armed
+     * timer - this run disarmed it - so it would write "nothing to put back" over the
+     * snapshot this run stored. A snapshot stamped with the cancel that created it
+     * cannot be overwritten by that same cancel.
      */
-    private fun cancelSleepTimer() {
+    private fun cancelSleepTimer(cancelledBy: String) {
         val cancelled = sleepTimer
         val now = android.os.SystemClock.elapsedRealtime()
 
@@ -1504,12 +1709,19 @@ class MediaPlayerService(): MediaSessionService(){
 
         // Nothing to give back if the deadline had already passed. Undo must never
         // manufacture time that had already run out.
-        lastCancelledTimer = cancelled?.takeIf { !it.hasExpired(now) }
+        val snapshot = cancelled?.takeIf { !it.hasExpired(now) }
+        if (!SleepTimerStore.recordCancelled(this, snapshot, BootIdentity.read(this), cancelledBy)) {
+            PlaybackLog.problem(
+                "SLEEP_TIMER_CANCEL_NOT_STORED", "id" to cancelledBy,
+                "outcome" to "undo_not_on_offer",
+            )
+        }
 
         PlaybackLog.event(
             "SLEEP_TIMER_CANCELLED",
             "hadTimer" to (cancelled != null),
-            "canUndo" to (lastCancelledTimer != null),
+            "canUndo" to (snapshot != null),
+            "id" to cancelledBy,
         )
         broadcastSleepTimerState()
     }
@@ -1520,17 +1732,49 @@ class MediaPlayerService(): MediaSessionService(){
      * If that deadline has gone by while the Snackbar was up, this does nothing at
      * all rather than pushing it into the future: a timer that would have fired
      * already is not a timer anybody can have back.
+     *
+     * [consumedBy] is the inbox record's id, and the snapshot is consumed together with
+     * the record of which undo consumed it. That record is what stops a *replayed*
+     * undo - the same at-least-once window a cancel has - from consuming a snapshot a
+     * later cancel wrote, which would put back a timer the listener had cancelled
+     * afterwards.
      */
-    private fun undoSleepTimerCancel() {
-        val snapshot = lastCancelledTimer
-        lastCancelledTimer = null
+    private fun undoSleepTimerCancel(consumedBy: String) {
         val now = android.os.SystemClock.elapsedRealtime()
 
-        if (snapshot == null || snapshot.hasExpired(now)) {
-            PlaybackLog.event(
-                "SLEEP_TIMER_UNDO_DECLINED",
-                "reason" to if (snapshot == null) "nothing_to_restore" else "deadline_already_passed",
-            )
+        if (SleepTimerStore.Replay.undoAlreadyConsumed(SleepTimerStore.lastUndo(this), consumedBy)) {
+            PlaybackLog.event("SLEEP_TIMER_UNDO_REPLAYED", "id" to consumedBy)
+            broadcastSleepTimerState()
+            return
+        }
+
+        val timer = when (val consumed = SleepTimerStore.consumeCancelled(this, BootIdentity.read(this), consumedBy)) {
+            SleepTimerStore.Consumed.NotConsumed -> {
+                // The snapshot could not be taken, so this undo did not happen. Returning
+                // here would say the opposite: a handler that returns is a command the
+                // inbox acknowledges, and the record would be consumed with the snapshot
+                // still on disk and no timer put back. The failure is therefore raised as
+                // one - the record stays pending, this pass stops, and the next
+                // legitimate start tries again. See [PlaybackCommandFailure].
+                PlaybackLog.problem(
+                    "SLEEP_TIMER_UNDO_NOT_CONSUMED", "id" to consumedBy,
+                    "outcome" to "command_left_pending",
+                )
+                broadcastSleepTimerState()
+                throw PlaybackCommandFailure("sleep_timer_undo_not_consumed")
+            }
+
+            SleepTimerStore.Consumed.Nothing -> {
+                PlaybackLog.event("SLEEP_TIMER_UNDO_DECLINED", "reason" to "nothing_to_restore")
+                broadcastSleepTimerState()
+                return
+            }
+
+            is SleepTimerStore.Consumed.Timer -> consumed.timer
+        }
+
+        if (timer.hasExpired(now)) {
+            PlaybackLog.event("SLEEP_TIMER_UNDO_DECLINED", "reason" to "deadline_already_passed")
             broadcastSleepTimerState()
             return
         }
@@ -1539,7 +1783,7 @@ class MediaPlayerService(): MediaSessionService(){
         sleepTimerGeneration += 1
         // copy(), so the deadline is carried across untouched and only the
         // generation moves. This is what makes undo a restore rather than a re-arm.
-        val restored = snapshot.copy(generation = sleepTimerGeneration)
+        val restored = timer.copy(generation = sleepTimerGeneration)
         sleepTimer = restored
         SleepTimerStore.write(this, restored, BootIdentity.read(this))
         scheduleSleepTimer(restored)
@@ -1688,9 +1932,16 @@ class MediaPlayerService(): MediaSessionService(){
     private fun clearSleepTimerState() {
         cancelScheduledSleepTimer()
         sleepTimer = null
-        lastCancelledTimer = null
         sleepTimerGeneration += 1
         SleepTimerStore.clear(this)
+        // The affordance goes with the timer it would have put back: an expiry must not
+        // leave `Вернуть` on offer for a deadline that has already been honoured.
+        if (!SleepTimerStore.clearCancelled(this)) {
+            PlaybackLog.problem(
+                "SLEEP_TIMER_UNDO_NOT_CLEARED", "reason" to "timer_cleared",
+                "outcome" to "stale_snapshot_may_remain",
+            )
+        }
     }
 
     private fun cancelScheduledSleepTimer() {
@@ -1713,7 +1964,16 @@ class MediaPlayerService(): MediaSessionService(){
             putExtra(SleepTimerContract.STATE_DURATION_MINUTES, timer?.durationMinutes ?: 0)
             putExtra(SleepTimerContract.STATE_IS_CUSTOM, timer?.isCustom ?: false)
             putExtra(SleepTimerContract.STATE_GENERATION, timer?.generation ?: 0L)
-            putExtra(SleepTimerContract.STATE_CAN_UNDO, lastCancelledTimer != null)
+            // Read from the store rather than from a field here: the offer has to be the
+            // same one after a restart, and a process that died between the cancel and
+            // this broadcast must not be the only place it ever existed.
+            putExtra(
+                SleepTimerContract.STATE_CAN_UNDO,
+                SleepTimerStore.readCancelled(
+                    this@MediaPlayerService,
+                    BootIdentity.read(this@MediaPlayerService),
+                ) != null,
+            )
             putExtra(SleepTimerContract.STATE_COMPLETED, completed)
         }
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)

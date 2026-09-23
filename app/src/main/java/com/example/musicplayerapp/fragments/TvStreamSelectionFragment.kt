@@ -6,9 +6,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import android.content.Intent
 import com.example.musicplayerapp.databinding.FragmentTvStreamSelectionBinding
-import com.example.musicplayerapp.service.MediaPlayerService
+import com.example.musicplayerapp.utils.ServiceUtils
 
 class TvStreamSelectionFragment : Fragment() {
 
@@ -59,12 +58,10 @@ class TvStreamSelectionFragment : Fragment() {
         vm.currentStreamLive.value = stream
         vm.triggerMetadataUpdate()
         
-        // Auto-play: Send play intent immediately
-        val intent = Intent(context, MediaPlayerService::class.java).apply {
-            putExtra("STREAM", stream)
-            putExtra("ACTION", "play")
-        }
-        activity?.startService(intent)
+        // Auto-play: hand the command over and wake the service. The station travels
+        // in process memory, not in the start intent - see PlaybackCommand - and this
+        // screen is in front, which is what a plain start needs.
+        context?.let { ServiceUtils.sendUiCommand(it, "play", stream) }
 
         // Navigate
         parentFragmentManager.beginTransaction()

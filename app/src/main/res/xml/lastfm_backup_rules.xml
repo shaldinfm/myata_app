@@ -15,16 +15,25 @@
    - `lastfm_queue` (P5) holds scrobbles waiting to be sent. Restored elsewhere they
      would be sent from there too, duplicating what this device already sent. It is
      a Room database, so its write-ahead log and shared-memory files go with it.
-   - `myata_playback_intent` (playback process-death recovery) holds which station
+  - `myata_playback_intent` (playback process-death recovery) holds which station
      was last selected and whether the listener wanted it playing. It is runtime
      state about one device's speaker: restored onto a new phone it would mean an
-     app that has never played anything believing it was mid-broadcast, and the
-     first thing the system restarted could be a radio the owner never started
-     there. Nothing is lost by dropping it - a fresh device has nothing to recover.
+    app that has never played anything believing it was mid-broadcast, and the
+    first thing the system restarted could be a radio the owner never started
+    there. Nothing is lost by dropping it - a fresh device has nothing to recover.
+   - `myata_playback_commands` (the durable command inbox) holds gestures this
+     device's listener has made and the service has not handled yet. Same reason,
+     one step stronger: restored onto another device it is an instruction nobody
+     gave there, and the first service start would carry it out.
+   - `myata_sleep_timer_undo` (what `Вернуть` would put back) holds the timer as it
+     was at the moment it was cancelled. It is one device's gesture too, and on
+     another device it would offer to restore a countdown that was never running
+     there. Its deadline is monotonic, so it is also inert anywhere but the boot it
+     was measured on.
 
   Keep the paths in step with PrefsLastfmSessionStore.FILE,
-  LastfmQueueDatabase.FILE, PlaybackIntentStore.FILE and
-  lastfm_data_extraction_rules.xml.
+  LastfmQueueDatabase.FILE, PlaybackIntentStore.FILE, PlaybackCommandInbox.FILE,
+  SleepTimerStore.UNDO_FILE and lastfm_data_extraction_rules.xml.
 -->
 <full-backup-content>
     <exclude domain="sharedpref" path="lastfm_session.xml" />
@@ -32,4 +41,6 @@
     <exclude domain="database" path="lastfm_queue-wal" />
     <exclude domain="database" path="lastfm_queue-shm" />
     <exclude domain="sharedpref" path="myata_playback_intent.xml" />
+    <exclude domain="sharedpref" path="myata_playback_commands.xml" />
+    <exclude domain="sharedpref" path="myata_sleep_timer_undo.xml" />
 </full-backup-content>

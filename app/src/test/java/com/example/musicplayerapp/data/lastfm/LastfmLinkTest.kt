@@ -1,7 +1,9 @@
 package com.example.musicplayerapp.data.lastfm
 
 import com.example.musicplayerapp.data.PlaybackIntentStore
+import com.example.musicplayerapp.data.SleepTimerStore
 import com.example.musicplayerapp.data.lastfm.queue.LastfmQueueDatabase
+import com.example.musicplayerapp.service.PlaybackCommandInbox
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 import org.junit.Assert.assertEquals
@@ -107,12 +109,14 @@ class LastfmLinkTest {
     /**
      * Exactly the device-local files, and nothing else: the Last.fm session (P3b),
      * the P5 scrobble queue database with its write-ahead log and shared-memory
-     * files, and the playback-intent record.
+     * files, the playback-intent record, the durable command inbox, and the sleep
+     * timer's undo snapshot.
      *
-     * The last of those is not Last.fm's, and it is listed here because this is
-     * where the rule files are held to an exact set - `PlaybackIntentBackupTest`
-     * owns the reasoning for it. Anything added to those files without being added
-     * here fails, which is the point.
+     * The last three are not Last.fm's, and they are listed here because this is
+     * where the rule files are held to an exact set - `PlaybackIntentBackupTest` and
+     * `PlaybackCommandChannelTest` own the reasoning for the first two, and
+     * `SleepTimerStoreTest` for the snapshot. Anything added to those files without
+     * being added here fails, which is the point.
      */
     private val deviceLocalExcludes = listOf(
         "sharedpref:${PrefsLastfmSessionStore.FILE}.xml",
@@ -120,6 +124,8 @@ class LastfmLinkTest {
         "database:${LastfmQueueDatabase.FILE}-wal",
         "database:${LastfmQueueDatabase.FILE}-shm",
         "sharedpref:${PlaybackIntentStore.FILE}.xml",
+        "sharedpref:${PlaybackCommandInbox.FILE}.xml",
+        "sharedpref:${SleepTimerStore.UNDO_FILE}.xml",
     )
 
     @Test
@@ -148,6 +154,7 @@ class LastfmLinkTest {
     fun `the excluded paths are the files the app actually writes`() {
         assertEquals("lastfm_session", PrefsLastfmSessionStore.FILE)
         assertEquals("lastfm_queue", LastfmQueueDatabase.FILE)
+        assertEquals("myata_sleep_timer_undo", SleepTimerStore.UNDO_FILE)
         assertEquals(deviceLocalExcludes, excludes("src/main/res/xml/lastfm_backup_rules.xml"))
     }
 

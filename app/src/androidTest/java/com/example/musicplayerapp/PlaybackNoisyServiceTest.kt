@@ -22,6 +22,7 @@ import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.service.PlaybackIntentContract
 import com.example.musicplayerapp.service.SleepTimerContract
 import com.example.musicplayerapp.service.SystemPlaybackEventContract
+import com.example.musicplayerapp.utils.ServiceUtils
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.After
@@ -299,21 +300,23 @@ class PlaybackNoisyServiceTest {
         drainService()
     }
 
+    /**
+     * Sends one app-private command the way every screen sends one: the command goes
+     * into the process-memory channel and the start intent carries nothing. The shape
+     * this replaced - `ACTION`/`STREAM` extras on a start intent for the exported
+     * component - is asserted inert by `PlaybackCommandBoundaryTest`.
+     */
     private fun command(action: String, stream: String? = null) {
-        context.startService(
-            Intent(context, MediaPlayerService::class.java).apply {
-                putExtra("ACTION", action)
-                stream?.let { putExtra("STREAM", it) }
-            }
-        )
+        ServiceUtils.sendUiCommand(context, action, stream)
     }
 
     /**
      * Blocks until the service has drained past everything sent before this.
      *
-     * Commands reach the service as intents, so they are handled after the call that
-     * sent them returns. `sleep_timer_sync` always answers with exactly one broadcast,
-     * and start commands are handled in order - so an answer to this one is proof that
+     * Commands are recorded in the app's durable inbox and run by the service's next
+     * start command, so they are handled after the call that sent them returns.
+     * `sleep_timer_sync` always answers with exactly one broadcast, and the commands a
+     * start command drains are run in order - so an answer to this one is proof that
      * the command before it has been handled too.
      */
     private fun drainService() {

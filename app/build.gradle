@@ -178,8 +178,8 @@ android {
         // that raised this) and network_security_config only applies from 24.
         minSdk 24
         targetSdk 36
-        versionCode 202611
-        versionName "3.6.5"
+        versionCode 202612
+        versionName "3.6.6"
 
         // Not the stock runner. MyataTestRunner installs the live-Supabase gate
         // before MyataApplication.onCreate, which is the only point early enough to
@@ -408,8 +408,17 @@ dependencies {
     implementation "io.ktor:ktor-client-okhttp:$ktorVersion"
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:$desugarVersion"
 
-    // Firebase
+    // Firebase Crashlytics only. `firebase-analytics-ktx` used to sit beside it and was
+    // removed by the pre-release P1 slice: no production code ever read it, nothing else
+    // in the dependency graph requires it (`dependencyInsight` on releaseRuntimeClasspath
+    // says the app's own declaration was the only requester), and it was the entire source
+    // of this app's advertising-identifier surface - play-services-measurement-api, which
+    // only it brings, contributed ACCESS_ADSERVICES_ATTRIBUTION, ACCESS_ADSERVICES_AD_ID
+    // and BIND_GET_INSTALL_REFERRER_SERVICE to the merged RELEASE manifest, and Firebase
+    // Analytics initialises through firebase-common's component discovery and collects
+    // automatically, with no call anywhere in the app and nothing disabling it. Crash
+    // reports do not need it: what is given up is Crashlytics' Analytics breadcrumbs.
+    // Removing this line is a one-line revert if that trade is ever re-decided.
     implementation platform('com.google.firebase:firebase-bom:32.7.0')
     implementation 'com.google.firebase:firebase-crashlytics-ktx'
-    implementation 'com.google.firebase:firebase-analytics-ktx'
 }

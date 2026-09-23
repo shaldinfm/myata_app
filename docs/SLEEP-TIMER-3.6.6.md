@@ -132,20 +132,46 @@ anything UI-scoped would evaporate in exactly the case the feature exists for: t
 phone face down, the app swiped away, the radio still on.
 
 ```
-SleepTimerSheet ──ACTION=sleep_timer_{set,cancel,undo,sync}──▶ MediaPlayerService
-                                                                │ Handler.postDelayed
-                                                                │ SleepTimerStore
-                                                                ▼
-StreamsViewModel ◀──LocalBroadcast "sleep_timer_state"──────────┘
+SleepTimerSheet ──── PlaybackCommand ────▶ MediaPlayerService
+                                                               │ Handler.postDelayed · SleepTimerStore
+                                                               ▼
+StreamsViewModel ◀── LocalBroadcast "sleep_timer_state" ───────┘
    └─ LiveData → menu trailing · sheet · Settings row · snackbars
 ```
 
-Commands use the intent idiom every other UI→service command already uses, and
-state comes back on the `LocalBroadcastManager` channel `play` / `pause` /
-`buffering` / `metadata_update` already use. Neither direction is new machinery.
-The service is exported and its `stop` action has always been reachable from
-outside, so a timer command grants no capability that was not already there — and
-arming is refused outright on TV (§7).
+Commands travel as `PlaybackCommand`s in the app's own durable inbox
+(`PlaybackCommandInbox`) — the idiom every other UI→service command in this app uses
+since the exported-service slice — and state comes back on the
+`LocalBroadcastManager` channel `play` / `pause` / `buffering` / `metadata_update`
+already use. Neither direction is new machinery.
+
+The command direction used to be `ACTION` extras on a start intent, and the service
+is an exported `MediaSessionService`, so arming a timer granted a capability to
+*every* app on the device rather than to the app. `PlaybackCommand` records why an
+exported component cannot authenticate a start at all and what replaced the extras;
+in short, the start intent carries nothing and the command is written to app-private
+storage, which is the boundary now. It is written there rather than held in memory
+because a `startForegroundService` request can outlive the process that made it: a
+timer whose command was still in RAM when the process died used to be lost, and is
+now re-armed with **the deadline the listener chose** (the command carries the
+instant, not the duration). The command also carries **the boot that instant was
+measured on**: an `elapsedRealtime` deadline only means something in the epoch it was
+made in, so a `sleep_timer_set` that outlived a reboot - or one whose boot cannot be
+proved - is refused rather than reinterpreted as a deadline in the new epoch. That is
+the same rule §4's store already applies to the record it holds. Arming is still
+refused outright on TV (§7).
+
+The queue is durable and FIFO, and what it also needed was a way past a command that can
+never be delivered: a timer command whose handler keeps failing - or a Play whose
+foreground promotion Android refuses - used to stand in front of every later gesture for
+the life of the install. The listener pressed `Отключить таймер`, and the timer stayed
+armed because an older command was still stuck in front of it. A newer command in the
+**same domain** now supersedes an older one, and the domain is what keeps the two kinds of
+command apart: a newer `sleep_timer_cancel` retires an older `sleep_timer_set`, undo or
+cancel and can never drop a Play, a Stop or a station switch. The generation a command
+supersedes with is its own inbox sequence, written in the same commit as the command
+itself, so the decision outlives the process exactly as the command does - and `Вернуть`'s
+snapshot cannot be consumed by a command that never ran.
 
 **Scheduling is a `Handler`, not an `AlarmManager`.** The timer can only *do*
 anything while playback is running, and while playback is running the service is
@@ -263,11 +289,26 @@ Off+snapshot ──set(m)──▶ Armed(...), snapshot dropped     a new choice
 Armed ──deadline──▶ Off  (+ stop, if anything was playing)
 ```
 
-The snapshot lives in the service, in memory only. It is a one-gesture affordance
-that lasts as long as a Snackbar, not state anybody should find again after a
-restart, and keeping it out of the store is what stops it competing with the one
-record that is meant to be durable. The Fragment never reconstructs a timer: it
-asks the service to put back the one the service is still holding.
+The snapshot is **durable**, in its own file: `myata_sleep_timer_undo`, holding the
+cancelled deadline, the boot it was measured on, the duration, the custom flag, the
+cancel command that made it, and the id of the undo that consumed the last one. The
+command that consumes it is durable too, so the state it puts back cannot live in RAM:
+a process death between the cancel and the undo would leave `sleep_timer_undo` with
+nothing to restore, on the one path the durable inbox exists for. It is excluded from
+cloud backup and device transfer, because a `Вернуть` on a phone where nothing was
+cancelled is an offer nobody made there - and its deadline is monotonic, so a snapshot
+that outlived a reboot cannot be honoured anywhere anyway.
+
+Two of these commands carry their own identity (the cancelling command's id, and the
+consuming undo's), because delivery is **at-least-once**: a handler may run and the
+process may die before its acknowledgement, and the same durable command is then read
+again. A replayed cancel finds no armed timer - it disarmed one a moment ago - and
+would otherwise write "nothing to put back" over the snapshot it had just created; a
+replayed undo would otherwise consume a *later* cancel's snapshot and put back a timer
+the listener cancelled afterwards. Neither can now.
+
+The Fragment never reconstructs a timer: it asks the service to put back the one the
+store still has.
 
 ## 7 · Android TV
 
@@ -278,9 +319,10 @@ overflow, a Settings screen or a sheet —
 `SleepTimerSurfacesTest.androidTvHasNoWayToReachTheTimer` inflates all four TV
 layouts and says so.
 
-The service is shared, and it is exported, so the guard also lives **in the
-service**: `armSleepTimer` refuses when `isTv`. That is the only place that is
-true for every caller, including one outside the app.
+The service is shared and it owns the timer, so the guard also lives **in the
+service**: `armSleepTimer` refuses when `isTv`. That is the only place that is true
+for every caller — the sheet, the Player, Settings and the notification all end up
+in the same method.
 
 ## 8 · Playback semantics that did not change
 

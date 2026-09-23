@@ -7,21 +7,24 @@ import com.example.musicplayerapp.ui.sleeptimer.SleepTimerState
  * The wire between the one owner of the sleep timer and everything that draws it.
  *
  * Commands go to [com.example.musicplayerapp.service.MediaPlayerService] as
- * `ACTION` extras on a service intent - the same idiom every other UI-to-service
- * command in this app already uses - and state comes back as one
- * `LocalBroadcastManager` broadcast, which is the idiom `play` / `pause` /
- * `buffering` / `metadata_update` already use. Neither direction is new
- * machinery.
+ * [PlaybackCommand]s - the same idiom every other UI-to-service command in this app
+ * now uses - and state comes back as one `LocalBroadcastManager` broadcast, which is
+ * the idiom `play` / `pause` / `buffering` / `metadata_update` already use. Neither
+ * direction is new machinery.
  *
- * The commands add no capability the service did not already expose: it is an
- * exported `MediaSessionService` whose `stop` action has always been reachable, and
- * the most a timer command can do is stop playback. Arming is additionally refused
- * outright on TV, in the service, so the exported surface cannot give a television
- * a timer no TV screen can show or cancel.
+ * The command direction is the app's own durable inbox rather than intent extras,
+ * and that is a deliberate change: the extras used to ride a start intent for an
+ * exported `MediaSessionService`, so any app on the device could arm a timer. See
+ * [PlaybackCommand] for what replaced them and why an exported component cannot
+ * authenticate a start command at all - and [PlaybackCommandInbox] for why the
+ * record is on disk rather than in memory.
+ *
+ * Arming is still refused outright on TV, in the service, so no surface can give a
+ * television a timer that no TV screen can show or cancel.
  */
 object SleepTimerContract {
 
-    /** Set a timer. `MINUTES` (Int) and `IS_CUSTOM` (Boolean). */
+    /** Set a timer. The duration, and whether it is a custom one, travel with the command. */
     const val ACTION_SET = "sleep_timer_set"
 
     /** `Отключить таймер`. */
@@ -32,9 +35,6 @@ object SleepTimerContract {
 
     /** Reconcile and re-broadcast. What a screen asks for when it opens. */
     const val ACTION_SYNC = "sleep_timer_sync"
-
-    const val EXTRA_MINUTES = "MINUTES"
-    const val EXTRA_IS_CUSTOM = "IS_CUSTOM"
 
     /** The one state broadcast. Every surface reads this and nothing else. */
     const val BROADCAST_STATE = "sleep_timer_state"

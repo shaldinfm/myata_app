@@ -21,6 +21,7 @@ import com.example.musicplayerapp.data.Streams
 import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.service.PlaybackIntentContract
 import com.example.musicplayerapp.service.SleepTimerContract
+import com.example.musicplayerapp.utils.ServiceUtils
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -292,10 +293,11 @@ class PlaybackIntentServiceTest {
     /**
      * Blocks until the service has drained past everything sent before this.
      *
-     * Commands reach the service as intents, so they are handled after the call
-     * that sent them returns. `sleep_timer_sync` always answers with exactly one
-     * broadcast, and the service handles start commands in order - so an answer to
-     * this one is proof that the command before it has been handled too.
+     * Commands are recorded in the app's durable inbox and run by the service's next
+     * start command, so they are handled after the call that sent them returns.
+     * `sleep_timer_sync` always answers with exactly one broadcast, and the service
+     * runs the commands it drained in order - so an answer to this one is proof that
+     * the command before it has been handled too.
      */
     private fun drainService() {
         val latch = CountDownLatch(1)
@@ -316,10 +318,14 @@ class PlaybackIntentServiceTest {
         }
     }
 
+    /**
+     * Sends one app-private command the way every screen sends one: the command goes
+     * into the process-memory channel and the start intent carries nothing. The shape
+     * this replaced - `ACTION` extras on a start intent for the exported component -
+     * is asserted inert by `PlaybackCommandBoundaryTest`.
+     */
     private fun command(action: String) {
-        context.startService(
-            Intent(context, MediaPlayerService::class.java).putExtra("ACTION", action)
-        )
+        ServiceUtils.sendUiCommand(context, action)
     }
 
     /**

@@ -1,6 +1,5 @@
 package com.example.musicplayerapp.fragments
 
-import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -14,7 +13,7 @@ import com.example.musicplayerapp.StreamsViewModel
 import com.example.musicplayerapp.databinding.FragmentTvPlayerBinding
 import android.util.Log
 import com.example.musicplayerapp.data.NowPlayingArtwork
-import com.example.musicplayerapp.service.MediaPlayerService
+import com.example.musicplayerapp.utils.ServiceUtils
 import com.example.musicplayerapp.ui.CoverArt
 import com.example.musicplayerapp.ui.tv.TvAmbientPalette
 import com.example.musicplayerapp.ui.tv.TvAmbientPolicy
@@ -51,11 +50,9 @@ class TvPlayerFragment : Fragment() {
 
         // Auto-play if not already playing
         if (vm.isPlaying.value != true) {
-            val intent = Intent(context, MediaPlayerService::class.java).apply {
-                putExtra("STREAM", vm.currentStreamLive.value)
-                putExtra("ACTION", "startStop")
-            }
-            activity?.startService(intent)
+            // The station travels in process memory rather than in the start intent:
+            // see PlaybackCommand.
+            context?.let { ServiceUtils.sendUiCommand(it, "startStop", vm.currentStreamLive.value) }
         }
         
         setupFocus(binding.btnBack)

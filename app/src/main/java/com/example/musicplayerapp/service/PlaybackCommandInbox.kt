@@ -178,10 +178,10 @@ import com.example.musicplayerapp.data.BootIdentity
  * acknowledges - and both go through the one instance [forContext] hands out.
  *
  * One *pass* at a time is a property of the thread rather than of that lock: [drain] is
- * called from exactly one place, `MediaPlayerService.onStartCommand`, which runs on the
- * main thread, so two start commands cannot interleave their passes and the same head
- * cannot be executed twice. That is why the lock is held around each read-modify-write
- * and never across a handler.
+ * called from exactly one place, `PlaybackCommandPass.run`, which `MediaPlayerService`
+ * drives from `onStartCommand` on the main thread, so two start commands cannot interleave
+ * their passes and the same head cannot be executed twice. That is why the lock is held
+ * around each read-modify-write and never across a handler.
  *
  * ## Not backed up
  *

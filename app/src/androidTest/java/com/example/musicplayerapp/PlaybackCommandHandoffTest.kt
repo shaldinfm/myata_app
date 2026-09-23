@@ -388,6 +388,132 @@ class PlaybackCommandHandoffTest {
     }
 
     /**
+     * The second P1, on a device: an undo whose snapshot could not be consumed.
+     *
+     * `SleepTimerStore.consumeCancelled` answers `NotConsumed` when the write that would
+     * have taken the snapshot did not reach the disk, and the handler used to return from
+     * there - and a handler that returns is a command the inbox acknowledges. So the
+     * command disappeared, the snapshot stayed where the cancel left it, and the `Вернуть`
+     * the listener pressed had not happened: nothing put the timer back, and there was no
+     * record left to try again.
+     *
+     * The refusal is staged on the store's own seam ([SleepTimerStore.failUndoCommitsForTest]),
+     * and what is asserted first is the pair that has to survive it: the record is still
+     * waiting and the snapshot is still there to be consumed. Then the service goes away -
+     * the state that survives is the durable pair, not this instance's memory - and the next
+     * legitimate start retries the same record, puts the same deadline back, and consumes the
+     * snapshot exactly once.
+     */
+    @Test
+    fun an_undo_whose_snapshot_could_not_be_consumed_is_not_acknowledged() {
+        assumeNotNull(BootIdentity.read(context))
+
+        ServiceUtils.sendSleepTimerCommand(context, SleepTimerContract.ACTION_SET, minutes = 30)
+        val armed = awaitArmedTimer()
+        ServiceUtils.sendSleepTimerCommand(context, SleepTimerContract.ACTION_CANCEL)
+        awaitCancelledSnapshot(armed.deadlineElapsedMs)
+
+        SleepTimerStore.failUndoCommitsForTest(1)
+        val undo = inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_UNDO))
+        assertNotNull("the undo record must be written", undo)
+        bareStart()
+
+        // The attempt happened - the store refused it - and it is not a delivery.
+        awaitRefusedUndoCommit()
+        assertEquals(
+            "an undo that could not consume its snapshot is not acknowledged",
+            listOf(SleepTimerContract.ACTION_UNDO),
+            inbox.pending().map { it.command.action },
+        )
+        assertEquals(
+            "and the snapshot is still the one the cancel left",
+            armed.deadlineElapsedMs,
+            SleepTimerStore.readCancelled(context, boot)?.timer?.deadlineElapsedMs,
+        )
+        assertNull("nothing was put back", restoredTimer())
+        assertNull("and no undo is recorded as having consumed it", SleepTimerStore.lastUndo(context))
+
+        context.stopService(Intent(context, MediaPlayerService::class.java))
+        Thread.sleep(RECREATE_MS)
+
+        // The retry: the same record, read off the disk by a service that never saw the
+        // failed attempt, with storage that takes the write this time.
+        bareStart()
+        awaitInboxEmpty()
+
+        assertEquals(
+            "Вернуть puts back the deadline it had, not one measured now",
+            armed.deadlineElapsedMs,
+            awaitArmedTimer().deadlineElapsedMs,
+        )
+        assertEquals(
+            "and exactly once, by that record",
+            undo!!.id,
+            SleepTimerStore.lastUndo(context),
+        )
+        assertNull(
+            "one gesture: the snapshot is consumed by the undo that used it",
+            SleepTimerStore.readCancelled(context, boot),
+        )
+    }
+
+    // ==================== a command that lets the service go ====================
+
+    /**
+     * The P1, on a device: a station-less `switch` is the one command that answers "do not
+     * keep me", and that answer used to be folded into the handling with a short-circuiting
+     * `&&` - so the commands behind it were never offered to their handlers and the inbox
+     * acknowledged them anyway. The timer set here is such a command, and the armed timer
+     * is the witness: a timer that is acknowledged without being armed is a gesture the
+     * listener made and lost.
+     */
+    @Test
+    fun a_stationless_switch_does_not_swallow_the_timer_behind_it() {
+        assumeNotNull(BootIdentity.read(context))
+
+        inbox.enqueue(PlaybackCommand.of("switch", stream = null, openForeground = true))
+        inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_SET, minutes = 15, bootId = boot))
+
+        bareStart()
+
+        assertEquals(
+            "the timer set behind the switch has to run",
+            15,
+            awaitArmedTimer().durationMinutes,
+        )
+        assertTrue("and both commands are acknowledged", inbox.pending().isEmpty())
+    }
+
+    /**
+     * The other command a listener leaves behind such a switch, with the durable record as
+     * the witness: a Stop that ran writes "playback is no longer wanted", and a Stop that
+     * was only acknowledged does not.
+     *
+     * (A Stop is also newer in the same [PlaybackDomain] as the switch, so it supersedes it
+     * before either handler runs - which is the ordering rule that already covered this
+     * pair, and is what `PlaybackCommandSupersessionTest` holds on the JVM.)
+     */
+    @Test
+    fun a_stationless_switch_does_not_swallow_the_stop_behind_it() {
+        PlaybackIntentStore.writeRawForTest(context, Streams.MYATA, wantsPlayback = true)
+
+        inbox.enqueue(PlaybackCommand.of("switch", stream = null, openForeground = true))
+        inbox.enqueue(PlaybackCommand.of("stop"))
+
+        bareStart()
+
+        awaitInboxEmpty()
+        Thread.sleep(QUIET_MS)
+
+        assertEquals(
+            "the stop behind the switch ran, and the station it stopped is still the one loaded",
+            PlaybackIntentStore.Stored.Known(Streams.MYATA, false),
+            PlaybackIntentStore.read(context),
+        )
+        assertTrue("and it is acknowledged", inbox.pending().isEmpty())
+    }
+
+    /**
      * The acknowledgement, on a device: a handled command is removed, so the next
      * start of the service does not run it a second time. The deadline is the
      * witness - a second arming would be measured from the later moment.
@@ -854,6 +980,21 @@ class PlaybackCommandHandoffTest {
             Thread.sleep(POLL_MS)
         }
         fail("no cancel snapshot holding $deadlineElapsedMs within ${timeoutMs}ms")
+    }
+
+    /**
+     * Waits for the store to have refused a write to its undo file, which is proof that the
+     * undo's consumption was *attempted* - the fact a test about a failed consumption has to
+     * wait for, since a refusal leaves the record and the snapshot exactly where they were
+     * and nothing else moves.
+     */
+    private fun awaitRefusedUndoCommit(timeoutMs: Long = COMMAND_TIMEOUT_MS) {
+        val deadline = SystemClock.uptimeMillis() + timeoutMs
+        while (SystemClock.uptimeMillis() < deadline) {
+            if (SleepTimerStore.refusedUndoCommitsForTest() >= 1) return
+            Thread.sleep(POLL_MS)
+        }
+        fail("the undo's consumption was never attempted within ${timeoutMs}ms")
     }
 
     /**

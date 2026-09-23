@@ -269,10 +269,14 @@ class MediaPlayerService(): MediaSessionService(){
         // the service sticky - and the platform obligation that belongs to a command,
         // answered by [prepareHeadCommand] before that command's handler and never
         // before an older one's.
-        var keepSticky = true
-        inbox.drain(prepare = ::prepareHeadCommand) { entry ->
-            keepSticky = keepSticky && handleOneCommand(entry)
-        }
+        //
+        // The answer rides beside the handling rather than deciding it, which is what
+        // [PlaybackCommandPass] is for: a command that says "do not keep me" - a
+        // station-less `switch` - is still handled and still acknowledged, and every
+        // command behind it still reaches its own handler.
+        val pass = PlaybackCommandPass(::handleOneCommand)
+        pass.run(inbox, prepare = ::prepareHeadCommand)
+        val keepSticky = pass.keepSticky
 
         // Whatever the pass did not get through. A pass that emptied the inbox left
         // nothing here; anything still present is a command that was *not* delivered -
@@ -319,15 +323,16 @@ class MediaPlayerService(): MediaSessionService(){
      * identified by the record that carried them: a replayed cancel must not wipe the
      * snapshot it created, and a replayed undo must not consume a later one.
      *
-     * The return value is the one thing the start path cannot work out for itself:
-     * a `switch` that arrived without a station is the app's own answer that this
-     * start should not be sticky. Everything else leaves the service sticky.
+     * Returning at all is the success report - the inbox acknowledges what it sees here -
+     * and the one answer the start path cannot work out for itself rides along as a
+     * [CommandHandling]: a `switch` that arrived without a station is the app's own answer
+     * that this start should not be sticky, and everything else leaves the service sticky.
+     * The two never decide each other - see [PlaybackCommandPass] for why that separation
+     * is load-bearing - and a command that genuinely could not be handled raises
+     * [PlaybackCommandFailure] rather than returning.
      */
-    private fun handleOneCommand(entry: PlaybackCommandInbox.Entry): Boolean {
+    private fun handleOneCommand(entry: PlaybackCommandInbox.Entry): CommandHandling {
         val command = entry.command
-        // A `switch` that arrived without a station is the one command that answers
-        // its start with "do not keep me"; everything else leaves the service sticky.
-        var keepSticky = true
 
         when(command.action){
             "startStop"->{
@@ -423,14 +428,10 @@ class MediaPlayerService(): MediaSessionService(){
             "switch"->{
                 val intentStream = command.stream
                 val forcePlay = command.forcePlay
-                    
-                // Without a station there is nothing to do with this command, and
-                // it is the one action that leaves the service non-sticky - the
-                // answer it has always given a station-less switch.
-                if (intentStream == null) {
-                    keepSticky = false
-                }
-                    
+
+                // Without a station there is nothing to do with this command. What the
+                // command *answers* its start is the other half of it and is not decided
+                // here: see [CommandHandling.forCommand].
                 val isStreamChange = stream != intentStream
                     
                 if (intentStream != null && isStreamChange) {
@@ -592,7 +593,9 @@ class MediaPlayerService(): MediaSessionService(){
                 stopSelf()
             }
         }
-        return keepSticky
+        // The command was handled: this is that report, and the one answer about the start
+        // that a command owns. See [CommandHandling].
+        return CommandHandling.forCommand(command)
     }
 
     override fun onCreate() {
@@ -1747,14 +1750,18 @@ class MediaPlayerService(): MediaSessionService(){
 
         val timer = when (val consumed = SleepTimerStore.consumeCancelled(this, BootIdentity.read(this), consumedBy)) {
             SleepTimerStore.Consumed.NotConsumed -> {
-                // The snapshot could not be taken: the undo has not been delivered, and
-                // the record stays for the next start to try again.
+                // The snapshot could not be taken, so this undo did not happen. Returning
+                // here would say the opposite: a handler that returns is a command the
+                // inbox acknowledges, and the record would be consumed with the snapshot
+                // still on disk and no timer put back. The failure is therefore raised as
+                // one - the record stays pending, this pass stops, and the next
+                // legitimate start tries again. See [PlaybackCommandFailure].
                 PlaybackLog.problem(
                     "SLEEP_TIMER_UNDO_NOT_CONSUMED", "id" to consumedBy,
                     "outcome" to "command_left_pending",
                 )
                 broadcastSleepTimerState()
-                return
+                throw PlaybackCommandFailure("sleep_timer_undo_not_consumed")
             }
 
             SleepTimerStore.Consumed.Nothing -> {

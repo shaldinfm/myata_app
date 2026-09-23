@@ -3,6 +3,7 @@ package com.example.musicplayerapp.data
 import android.content.Context
 import androidx.core.content.edit
 import com.example.musicplayerapp.ui.sleeptimer.SleepTimerState
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * The armed sleep timer, durably.
@@ -205,7 +206,7 @@ object SleepTimerStore {
             editor.putBoolean(UNDO_KEY_CUSTOM, timer.isCustom)
             editor.putString(UNDO_KEY_CANCELLED_BY, cancelledBy)
         }
-        return editor.commit()
+        return commitUndo(editor)
     }
 
     /**
@@ -255,7 +256,7 @@ object SleepTimerStore {
         val editor = undoPrefs(context).edit()
         removeCancelled(editor)
         editor.putString(UNDO_KEY_CONSUMED_BY, consumedBy)
-        if (!editor.commit()) return Consumed.NotConsumed
+        if (!commitUndo(editor)) return Consumed.NotConsumed
         return Consumed.Timer(snapshot.timer)
     }
 
@@ -328,6 +329,46 @@ object SleepTimerStore {
 
     /** Test-only: is there a record at all, whatever it says. */
     fun hasRecordForTest(context: Context): Boolean = prefs(context).contains(KEY_DEADLINE)
+
+    /**
+     * Test-only: the disk under the undo file, told to refuse writes.
+     *
+     * [Consumed.NotConsumed] is what a write to this file reports when it did not reach the
+     * disk, and staging that on a device otherwise takes a disk that will not take one.
+     * [failUndoCommitsForTest] holds the refusals back, and [refusedUndoCommitsForTest]
+     * counts them, so a test can wait for the attempt to have happened rather than for a
+     * delay to have passed.
+     */
+    fun failUndoCommitsForTest(count: Int) {
+        undoCommitsToRefuse.set(count)
+        undoCommitsRefused.set(0)
+    }
+
+    /** Test-only: how many writes to the undo file have been refused. */
+    fun refusedUndoCommitsForTest(): Int = undoCommitsRefused.get()
+
+    /**
+     * The undo file's write, as every writer of it sees it.
+     *
+     * The refusal is modelled here rather than at the store's API: a write that is refused
+     * does not reach the file, which is exactly what `commit()` reports on a disk that
+     * would not take it, and the snapshot therefore stays where it was - the state
+     * [consumeCancelled] answers [Consumed.NotConsumed] about.
+     */
+    private fun commitUndo(editor: android.content.SharedPreferences.Editor): Boolean {
+        if (undoCommitsToRefuse.get() > 0) {
+            undoCommitsToRefuse.decrementAndGet()
+            undoCommitsRefused.incrementAndGet()
+            return false
+        }
+        return editor.commit()
+    }
+
+    /** How many of the next undo-file writes do not reach it. Test-only; see [commitUndo]. */
+    private val undoCommitsToRefuse = AtomicInteger(0)
+
+    /** How many undo-file writes this install has refused. Test-only; see [commitUndo]. */
+    private val undoCommitsRefused = AtomicInteger(0)
 
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

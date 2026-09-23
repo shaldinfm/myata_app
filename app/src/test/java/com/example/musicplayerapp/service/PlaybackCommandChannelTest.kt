@@ -861,21 +861,21 @@ class PlaybackCommandChannelTest {
      *    that command is newer than the state it would be restoring;
      *  - the obligation to promote to foreground is part of the per-command pass
      *    (`prepare`), not a snapshot taken before it;
-     *  - and the drain has exactly one caller, on the service's start path, which is
-     *    what makes "one head at a time" a property of the main thread rather than
-     *    something a second thread could interleave with.
+     *  - and the drain has exactly one caller - the pass the service's start path drives -
+     *    which is what makes "one head at a time" a property of the main thread rather
+     *    than something a second thread could interleave with.
      */
     @Test
     fun `the service applies pending commands before it evaluates the sticky restore`() {
         val service = source("service/MediaPlayerService.kt")
 
-        val drain = service.indexOf("inbox.drain(prepare = ::prepareHeadCommand)")
+        val drain = service.indexOf("pass.run(inbox, prepare = ::prepareHeadCommand)")
         val stillPending = service.indexOf("val stillPending = inbox.pending()")
         val guard = service.indexOf("if (stillPending.isEmpty()) {")
         val restore = service.indexOf("restorePlaybackIntent(\"sticky_restart\")")
         val deferral = service.indexOf("\"PLAYBACK_INTENT_DEFERRED\"")
 
-        assertTrue("the start path drains the inbox", drain >= 0)
+        assertTrue("the start path drains the inbox, through the pass", drain >= 0)
         assertTrue("and reads the queue again afterwards", stillPending > drain)
         assertTrue("the sticky restore is decided on what is left", guard > stillPending)
         assertTrue("and only runs when nothing is left", restore > guard)
@@ -887,7 +887,7 @@ class PlaybackCommandChannelTest {
             "the foreground obligation is part of the per-command pass, not a snapshot " +
                 "taken before it",
             service.contains("private fun prepareHeadCommand(") &&
-                service.contains("inbox.drain(prepare = ::prepareHeadCommand)"),
+                service.contains("pass.run(inbox, prepare = ::prepareHeadCommand)"),
         )
         assertTrue(
             "and the pass asks about each head before it runs it",
@@ -895,9 +895,10 @@ class PlaybackCommandChannelTest {
         )
 
         assertEquals(
-            "one pass, on the start path: no other thread may take the same head",
+            "one pass, on the start path, and it is the pass class that runs it: no other " +
+                "thread may take the same head",
             1,
-            Regex("""inbox\.drain\(""").findAll(service).count(),
+            Regex("""inbox\.drain\(""").findAll(source("service/PlaybackCommandPass.kt")).count(),
         )
     }
 
@@ -933,7 +934,8 @@ class PlaybackCommandChannelTest {
         assertTrue("the consuming end reads the inbox", service.contains("inbox.pending()"))
         assertTrue(
             "and hands it to the one pass that acknowledges",
-            service.contains("inbox.drain(prepare = ::prepareHeadCommand) {"),
+            service.contains("pass.run(inbox, prepare = ::prepareHeadCommand)") &&
+                source("service/PlaybackCommandPass.kt").contains("inbox.drain(prepare = prepare) {"),
         )
     }
 

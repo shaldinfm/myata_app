@@ -19,14 +19,14 @@ class ProfileAvatarsTest {
     // ==================== the set ====================
 
     @Test
-    fun `24 avatars, keyed myata-01 to myata-24 in grid reading order`() {
-        assertEquals((1..24).map { "myata-%02d".format(it) }, ProfileAvatars.all.map { it.key })
-        assertEquals((1..24).toList(), ProfileAvatars.all.map { it.number })
+    fun `24 avatars, keyed myata-24 to myata-01 in reversed grid reading order`() {
+        assertEquals((24 downTo 1).map { "myata-%02d".format(it) }, ProfileAvatars.all.map { it.key })
+        assertEquals((24 downTo 1).toList(), ProfileAvatars.all.map { it.number })
     }
 
     @Test
     fun `each key maps to the drawable exported from its own cell`() {
-        val expected = listOf(
+        val expectedInAvatarNumberOrder = listOf(
             R.drawable.avatar_myata_01, R.drawable.avatar_myata_02, R.drawable.avatar_myata_03,
             R.drawable.avatar_myata_04, R.drawable.avatar_myata_05, R.drawable.avatar_myata_06,
             R.drawable.avatar_myata_07, R.drawable.avatar_myata_08, R.drawable.avatar_myata_09,
@@ -36,8 +36,17 @@ class ProfileAvatarsTest {
             R.drawable.avatar_myata_19, R.drawable.avatar_myata_20, R.drawable.avatar_myata_21,
             R.drawable.avatar_myata_22, R.drawable.avatar_myata_23, R.drawable.avatar_myata_24,
         )
-        assertEquals(expected, ProfileAvatars.all.map { it.drawable })
+        assertEquals(expectedInAvatarNumberOrder.reversed(), ProfileAvatars.all.map { it.drawable })
         assertEquals(24, ProfileAvatars.all.map { it.drawable }.toSet().size)
+    }
+
+    @Test
+    fun `reordered display leaves saved keys paired with their original artwork`() {
+        assertEquals(R.drawable.avatar_myata_01, ProfileAvatars.resolve("myata-01")?.drawable)
+        assertEquals(R.drawable.avatar_myata_06, ProfileAvatars.resolve("myata-06")?.drawable)
+        assertEquals(R.drawable.avatar_myata_24, ProfileAvatars.resolve("myata-24")?.drawable)
+        assertEquals("myata-24", ProfileAvatars.all.first().key)
+        assertEquals("myata-01", ProfileAvatars.all.last().key)
     }
 
     @Test

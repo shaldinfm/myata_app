@@ -111,11 +111,13 @@ class ProfileAvatarTest {
                     View.GONE,
                     activity.visibility(R.id.bottomNavView),
                 )
-                assertEquals((1..24).map { "myata-%02d".format(it) }, activity.cells().map { it.tag })
+                assertEquals((24 downTo 1).map { "myata-%02d".format(it) }, activity.cells().map { it.tag })
                 assertEquals(
-                    (1..24).map { "Аватар $it из 24" },
+                    (24 downTo 1).map { "Аватар $it из 24" },
                     activity.cells().map { it.contentDescription.toString() },
                 )
+                assertEquals("myata-24", activity.cells().first().tag)
+                assertEquals("myata-01", activity.cells().last().tag)
                 assertTrue("nothing ringed", activity.cells().none { it.isSelected })
                 assertEquals(View.VISIBLE, activity.visibility(R.id.avatar_current_initial))
                 assertEquals(View.GONE, activity.visibility(R.id.avatar_current_image))
@@ -310,11 +312,11 @@ class ProfileAvatarTest {
     /**
      * 24 avatars in six rows do not fit above the fold on a phone, and the picker scrolls
      * rather than shrinking. This proves the scroll actually reaches the bottom: after
-     * scrolling, the whole of `myata-24` and the whole of `Сохранить` are on screen, and
+     * scrolling, the whole of `myata-01` and the whole of `Сохранить` are on screen, and
      * choosing and saving from there works.
      */
     @Test
-    fun j_the_last_row_and_save_are_reachable_by_scrolling() {
+    fun j_the_reversed_last_row_and_save_are_reachable_by_scrolling() {
         withMainActivity {
             openAccountCard()
             openPicker()
@@ -329,28 +331,28 @@ class ProfileAvatarTest {
             }
             on { activity ->
                 val last = activity.cells().last()
-                assertEquals("myata-24", last.tag)
-                assertTrue("myata-24 is wholly on screen", activity.wholeOnScreen(last))
+                assertEquals("myata-01", last.tag)
+                assertTrue("myata-01 is wholly on screen", activity.wholeOnScreen(last))
                 assertTrue(
                     "Сохранить is wholly on screen",
                     activity.wholeOnScreen(activity.findViewById(R.id.avatar_save)),
                 )
             }
 
-            tapCell("myata-24")
+            tapCell("myata-01")
             tap(R.id.avatar_save)
-            await("the profile with myata-24") { activity ->
+            await("the profile with myata-01") { activity ->
                 activity.currentDestinationIdOrNull() == R.id.profile_authenticated &&
                     activity.visibility(R.id.profile_account_avatar_image) == View.VISIBLE
             }
             on { activity ->
                 assertEquals(
-                    "Ваш аватар: Аватар 24 из 24",
+                    "Ваш аватар: Аватар 1 из 24",
                     activity.findViewById<View>(R.id.profile_account_avatar).contentDescription,
                 )
             }
         }
-        assertEquals(listOf("myata-24"), auth.avatarUpdates)
+        assertEquals(listOf("myata-01"), auth.avatarUpdates)
     }
 
     /**

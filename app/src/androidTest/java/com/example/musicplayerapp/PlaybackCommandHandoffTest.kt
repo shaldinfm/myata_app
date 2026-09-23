@@ -16,6 +16,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.example.musicplayerapp.data.BootIdentity
 import com.example.musicplayerapp.data.PlaybackIntentStore
 import com.example.musicplayerapp.data.SleepTimerStore
+import com.example.musicplayerapp.data.TransactionalUndoPrefs
 import com.example.musicplayerapp.data.Streams
 import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.service.PlaybackCommand
@@ -77,6 +78,7 @@ class PlaybackCommandHandoffTest {
 
     private var scenario: ActivityScenario<MainActivity>? = null
     private var controllerFuture: com.google.common.util.concurrent.ListenableFuture<MediaController>? = null
+    private var undoDevice: UndoDevice? = null
 
     @Before
     fun setUp() {
@@ -113,6 +115,8 @@ class PlaybackCommandHandoffTest {
             (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(PLACEHOLDER_ID)
         }
         releaseController()
+        SleepTimerStore.setUndoRawForTest(null)
+        undoDevice = null
         SleepTimerStore.clearForTest(context)
         PlaybackIntentStore.clearForTest(context)
         inbox.clearForTest()
@@ -397,12 +401,11 @@ class PlaybackCommandHandoffTest {
      * the listener pressed had not happened: nothing put the timer back, and there was no
      * record left to try again.
      *
-     * The refusal is staged on the store's own seam ([SleepTimerStore.failUndoCommitsForTest]),
+     * The refusal is staged below the transaction using a memory-first raw fake,
      * and what is asserted first is the pair that has to survive it: the record is still
-     * waiting and the snapshot is still there to be consumed. Then the service goes away -
-     * the state that survives is the durable pair, not this instance's memory - and the next
-     * legitimate start retries the same record, puts the same deadline back, and consumes the
-     * snapshot exactly once.
+     * waiting and the snapshot is still there to be consumed. A later service start
+     * retries the same record, puts the same deadline back, and consumes the snapshot
+     * exactly once. JVM tests separately recreate the process view from the fake file.
      */
     @Test
     fun an_undo_whose_snapshot_could_not_be_consumed_is_not_acknowledged() {
@@ -413,7 +416,13 @@ class PlaybackCommandHandoffTest {
         ServiceUtils.sendSleepTimerCommand(context, SleepTimerContract.ACTION_CANCEL)
         awaitCancelledSnapshot(armed.deadlineElapsedMs)
 
-        SleepTimerStore.failUndoCommitsForTest(1)
+        undoDevice = UndoDevice(
+            context.getSharedPreferences(SleepTimerStore.UNDO_FILE, Context.MODE_PRIVATE).all
+                .mapNotNull { (key, value) -> value?.let { key to it } }.toMap(),
+        ).also {
+            it.failedCommits = 1
+            SleepTimerStore.setUndoRawForTest(it)
+        }
         val undo = inbox.enqueue(PlaybackCommand.of(SleepTimerContract.ACTION_UNDO))
         assertNotNull("the undo record must be written", undo)
         bareStart()
@@ -991,10 +1000,36 @@ class PlaybackCommandHandoffTest {
     private fun awaitRefusedUndoCommit(timeoutMs: Long = COMMAND_TIMEOUT_MS) {
         val deadline = SystemClock.uptimeMillis() + timeoutMs
         while (SystemClock.uptimeMillis() < deadline) {
-            if (SleepTimerStore.refusedUndoCommitsForTest() >= 1) return
+            if ((undoDevice?.refused ?: 0) >= 1 && (undoDevice?.committed ?: 0) >= 1) return
             Thread.sleep(POLL_MS)
         }
         fail("the undo's consumption was never attempted within ${timeoutMs}ms")
+    }
+
+    /** Android's process map changes before a refused file write is reported. */
+    private class UndoDevice(initial: Map<String, Any>) : TransactionalUndoPrefs.Raw {
+        private val file = initial.toMutableMap()
+        private val process = initial.toMutableMap()
+        var failedCommits = 0
+        @Volatile var refused = 0
+        @Volatile var committed = 0
+
+        @Synchronized override fun read(): Map<String, Any> = process.toMap()
+
+        @Synchronized override fun edit(changes: Map<String, Any?>): Boolean {
+            for ((key, value) in changes) {
+                if (value == null) process.remove(key) else process[key] = value
+            }
+            if (failedCommits > 0) {
+                failedCommits--
+                refused++
+                return false
+            }
+            file.clear()
+            file.putAll(process)
+            committed++
+            return true
+        }
     }
 
     /**

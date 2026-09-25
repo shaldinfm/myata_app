@@ -16,9 +16,10 @@ import java.util.concurrent.TimeUnit
  * hosts chain to roots that older Android system trust stores do not carry:
  *
  *   radiomyata.ru         -> ISRG Root X1            (system store: Android 7.1.1+)
- *   radio.dline-media.com -> GlobalSign Root CA - R6 (system store: recent Android only)
+ *   radio.dline-media.com -> GlobalSign Root R46 (system store: Android 14+),
+ *                            GlobalSign Root CA - R6 (system store: recent Android only)
  *
- * Both roots are bundled in res/raw and declared as extra trust anchors in
+ * These roots are bundled in res/raw and declared as extra trust anchors in
  * res/xml/network_security_config.xml. That config is applied by the platform to
  * every connection - OkHttp, HttpsURLConnection, Media3 and WebView alike - so no
  * per-client TLS code is needed. It is honoured from API 24, which is this

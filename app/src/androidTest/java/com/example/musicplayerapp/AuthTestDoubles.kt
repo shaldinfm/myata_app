@@ -518,6 +518,32 @@ internal class RecordingSyncApi : ReactionSyncApi {
         }
         return outcome
     }
+
+    /** Every insert-if-absent, as (listener, track key). */
+    val inserts = mutableListOf<Pair<String, String>>()
+
+    /**
+     * `ON CONFLICT DO NOTHING` against [adoptedBy]: a track the listener already holds
+     * is left exactly as it is. The statement is atomic, so an [onReconcile] failure
+     * for any row writes nothing - as the server refuses the whole batch.
+     */
+    override suspend fun insertIfAbsent(
+        rows: List<TrackReaction>,
+        listenerId: String,
+    ): com.example.musicplayerapp.data.supabase.InsertOutcome {
+        rows.firstNotNullOfOrNull { row -> onReconcile(row.trackKey).takeIf { it !is SyncOutcome.Success } }
+            ?.let { return com.example.musicplayerapp.data.supabase.InsertOutcome.Failed(it) }
+        inserts += rows.map { listenerId to it.trackKey }
+        val account = adoptedBy.getOrPut(listenerId) { linkedMapOf() }
+        val inserted = mutableSetOf<String>()
+        for (row in rows) {
+            if (row.trackKey !in account) {
+                account[row.trackKey] = row.reaction.name
+                inserted += row.trackKey
+            }
+        }
+        return com.example.musicplayerapp.data.supabase.InsertOutcome.Written(inserted)
+    }
 }
 
 /**
@@ -614,6 +640,8 @@ internal object TestIsolation {
         ) = SyncOutcome.AuthUnavailable(WHY)
         override suspend fun retireAllCurrentState(listenerId: String) =
             SyncOutcome.AuthUnavailable(WHY)
+        override suspend fun insertIfAbsent(rows: List<TrackReaction>, listenerId: String) =
+            com.example.musicplayerapp.data.supabase.InsertOutcome.Failed(SyncOutcome.AuthUnavailable(WHY))
 
         override suspend fun fetchReactionsPage(listenerId: String, afterRev: Long, limit: Int) =
             PullPage.Failed(SyncOutcome.AuthUnavailable(WHY))

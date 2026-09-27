@@ -15,6 +15,7 @@ import com.example.musicplayerapp.data.TrackReaction
 import com.example.musicplayerapp.data.supabase.BatchOutcome
 import com.example.musicplayerapp.data.supabase.LastSyncStore
 import com.example.musicplayerapp.data.supabase.PullIdentity
+import com.example.musicplayerapp.data.supabase.InsertOutcome
 import com.example.musicplayerapp.data.supabase.PullPage
 import com.example.musicplayerapp.data.supabase.PullResult
 import com.example.musicplayerapp.data.supabase.ReactionPullEngine
@@ -40,6 +41,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import com.example.musicplayerapp.data.supabase.CollectionScope
 
 /**
  * Reading the account back, on a real database.
@@ -591,6 +593,7 @@ class ReactionPullTest {
             api = push,
             identity = { com.example.musicplayerapp.data.supabase.ListenerIdentity.Available(listener) },
             deletionInFlight = { false },
+            delivery = { CollectionScope.Delivery.AnyIdentity },
         ).drain()
 
         assertEquals(Streams.DEFAULT, push.currentStreams.single())
@@ -771,6 +774,13 @@ private open class FakeRemote(private vararg val rows: RemoteReaction) : Reactio
         retirements++
         return SyncOutcome.Success
     }
+
+    var inserts = 0
+
+    override suspend fun insertIfAbsent(rows: List<TrackReaction>, listenerId: String): InsertOutcome {
+        inserts++
+        return InsertOutcome.Failed(SyncOutcome.Permanent(500, "a read-only pull must never insert"))
+    }
 }
 
 /**
@@ -845,4 +855,7 @@ private class CapturingPushApi : ReactionSyncApi {
 
     override suspend fun fetchReactionsPage(listenerId: String, afterRev: Long, limit: Int): PullPage =
         throw AssertionError("the push must not pull")
+
+    override suspend fun insertIfAbsent(rows: List<TrackReaction>, listenerId: String): InsertOutcome =
+        throw AssertionError("the push must not insert")
 }

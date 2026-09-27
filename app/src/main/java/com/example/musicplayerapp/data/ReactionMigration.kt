@@ -153,6 +153,46 @@ object ReactionMigration {
         }
     }
 
+    /**
+     * Explicit ownership: the scope table and the two parking tables, and one marker.
+     *
+     * The marker is the migration. A v4 database cannot say who its rows belong to -
+     * no column ever recorded it - and a migration cannot read the identity
+     * preferences to guess. So it records `migrated` instead of an owner, and
+     * `CollectionScope` settles it once, at first use, from evidence: an in-place
+     * upgrade with one provable account keeps the rows as that account's, and
+     * anything unprovable (a restored backup, an install that read two accounts) is
+     * parked as unclaimed legacy data rather than handed to whoever signs in first.
+     *
+     * No existing row is read, rewritten or dropped here.
+     */
+    internal const val CREATE_COLLECTION_SCOPE = "CREATE TABLE IF NOT EXISTS `collection_scope` " +
+        "(`id` INTEGER NOT NULL, `scope` TEXT NOT NULL, PRIMARY KEY(`id`))"
+
+    internal const val CREATE_PARKED_REACTION = "CREATE TABLE IF NOT EXISTS `parked_reaction` " +
+        "(`scope` TEXT NOT NULL, `track_key` TEXT NOT NULL, `artist` TEXT NOT NULL, `title` TEXT NOT NULL, " +
+        "`stream` TEXT NOT NULL, `reaction` TEXT NOT NULL, `liked_at` INTEGER, `updated_at` INTEGER NOT NULL, " +
+        "`remote_rev` INTEGER, PRIMARY KEY(`scope`, `track_key`))"
+
+    internal const val CREATE_PARKED_OUTBOX = "CREATE TABLE IF NOT EXISTS `parked_outbox` " +
+        "(`event_id` TEXT NOT NULL, `scope` TEXT NOT NULL, `ord` INTEGER NOT NULL, `track_key` TEXT NOT NULL, " +
+        "`artist` TEXT NOT NULL, `title` TEXT NOT NULL, `stream` TEXT NOT NULL, `event_type` TEXT NOT NULL, " +
+        "`occurred_at` INTEGER NOT NULL, `attempts` INTEGER NOT NULL, `next_attempt_at` INTEGER NOT NULL, " +
+        "`sync_protocol` TEXT NOT NULL, PRIMARY KEY(`event_id`))"
+
+    internal const val CREATE_PARKED_OUTBOX_INDEX =
+        "CREATE INDEX IF NOT EXISTS `index_parked_outbox_scope` ON `parked_outbox` (`scope`)"
+
+    val MIGRATION_4_5: Migration = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(CREATE_COLLECTION_SCOPE)
+            db.execSQL(CREATE_PARKED_REACTION)
+            db.execSQL(CREATE_PARKED_OUTBOX)
+            db.execSQL(CREATE_PARKED_OUTBOX_INDEX)
+            db.execSQL("INSERT OR REPLACE INTO `collection_scope` (`id`, `scope`) VALUES (0, 'migrated')")
+        }
+    }
+
     val MIGRATION_2_3: Migration = object : Migration(2, 3) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL(CREATE_REACTION_OUTBOX)

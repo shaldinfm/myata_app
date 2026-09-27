@@ -67,6 +67,26 @@ import com.example.musicplayerapp.data.Streams
  * code reads `track_reaction.stream == ""` as "unknown", and a value with no meaning
  * would travel back out through the outbox on the listener's next tap.
  *
+ * ## Precedence, in one place
+ *
+ * What a pull leaves on the device, per track, strongest rule first:
+ *
+ * ```
+ * 1. a pending local act (outbox row)      local wins; nothing is touched - except
+ *                                          that the initial restore gives an act with
+ *                                          no baseline this revision as its baseline
+ * 2. the server holds a row                the server wins if its rev is above the
+ *                                          watermark - a restored or stale local row
+ *                                          never outranks it
+ * 3. local row, no rev, server has none    published insert-if-absent first
+ *                                          (LocalOnlyUpload), then adopted back
+ * 4. local row, server returned nothing    left exactly as it is - an empty or short
+ *                                          answer never erases anything
+ * ```
+ *
+ * All of it only for the account the local tables belong to: eligibility brings them
+ * into that account's scope first, and another account's rows never reach a pull.
+ *
  * ## Two locks, two jobs, as everywhere else in this package
  *
  * [SyncLease] excludes the push drain and the identity handoff for the whole run,
@@ -90,6 +110,24 @@ class ReactionPullEngine(
      */
     private val transaction: suspend (suspend () -> Unit) -> Unit,
     private val pageSize: Int = PAGE_SIZE,
+
+    /**
+     * Publishes the account's unconfirmed local rows before the scan, or null for a
+     * pull that only reads.
+     *
+     * Production always supplies one - see [ReactionPull]. It runs after eligibility
+     * and under the same lease, so it uploads only as the account the scan is about
+     * to read, and the scan then adopts what it inserted. Null keeps the engine a pure
+     * read for the suites that assert exactly that.
+     */
+    private val localOnly: LocalOnlyUpload? = null,
+
+    /**
+     * Whether this scan completes the account's **initial** restore on this install -
+     * asked once, after eligibility, with the account's uid. False keeps every pull
+     * exactly as it was. See [applyPage] for what it changes.
+     */
+    private val initialRestore: (uid: String) -> Boolean = { false },
 ) {
 
     /**
@@ -111,6 +149,16 @@ class ReactionPullEngine(
             is PullIdentity.NotEligible -> return PullResult.NotEligible(who.reason)
             is PullIdentity.Unavailable -> return PullResult.AuthUnavailable(who.reason)
         }
+
+        // Before the scan, never after it. An inserted row then comes straight back in
+        // the scan with its revision, and a row the account already held comes back
+        // as the account's version - so either way the device ends the run agreeing
+        // with the server. A failure here is not the pull's failure: the rows stay
+        // local-only and the next run tries again, while the scan below still brings
+        // the account's own state down.
+        val uploaded = localOnly?.run(listenerId)?.inserted ?: 0
+        val rebasing = initialRestore(listenerId)
+        var rebased = 0
 
         var cursor = 0L
         var pages = 0
@@ -140,10 +188,11 @@ class ReactionPullEngine(
                         // The gate is taken here and nowhere near the fetch above.
                         val counts = ReactionWriteGate.withDeliveryStep {
                             var page = PageCounts()
-                            transaction { page = applyPage(rows) }
+                            transaction { page = applyPage(rows, rebasing) }
                             page
                         }
                         applied += counts.applied
+                        rebased += counts.rebased
                         skippedPending += counts.skippedPending
                         skippedStale += counts.skippedStale
 
@@ -166,6 +215,8 @@ class ReactionPullEngine(
                             applied = applied,
                             skippedPending = skippedPending,
                             skippedStale = skippedStale,
+                            uploaded = uploaded,
+                            rebased = rebased,
                         )
                     }
                 }
@@ -207,13 +258,35 @@ class ReactionPullEngine(
      * one is a stored NEUTRAL row with its own revision, and it is what clears a
      * stale local LIKED.
      */
-    private suspend fun applyPage(rows: List<RemoteReaction>): PageCounts {
+    private suspend fun applyPage(rows: List<RemoteReaction>, rebasing: Boolean): PageCounts {
         var applied = 0
         var skippedPending = 0
         var skippedStale = 0
+        var rebased = 0
 
         for (row in rows) {
             if (outbox.countForTrack(row.trackKey) > 0) {
+                // The initial restore, and an act the listener made before it arrived -
+                // typically a tap in the seconds after signing in on a fresh install.
+                // That act was made without knowing the server's state, so it carries
+                // no baseline, and sent as it is the causal guard would answer CONFLICT
+                // and replace the tap with older server state. Instead it is rebased:
+                // this revision becomes its baseline, so it is judged as the newer act
+                // it is. Local state is not touched - the tap stays what the listener
+                // sees - and a track with a known baseline is left alone, because its
+                // act was made against state the device had seen, and a newer revision
+                // there is a change the guard must still protect.
+                //
+                // Only while the initial restore is owed. Afterwards every row this
+                // device holds has been read once, and an unknown baseline is left to
+                // the guard.
+                if (rebasing) {
+                    val pending = reactions.find(row.trackKey)
+                    if (pending != null && pending.remoteRev == null) {
+                        reactions.recordRemoteRev(row.trackKey, row.rev)
+                        rebased++
+                    }
+                }
                 skippedPending++
                 continue
             }
@@ -244,13 +317,14 @@ class ReactionPullEngine(
             applied++
         }
 
-        return PageCounts(applied, skippedPending, skippedStale)
+        return PageCounts(applied, skippedPending, skippedStale, rebased)
     }
 
     private data class PageCounts(
         val applied: Int = 0,
         val skippedPending: Int = 0,
         val skippedStale: Int = 0,
+        val rebased: Int = 0,
     )
 
     companion object {
@@ -306,6 +380,10 @@ sealed interface PullResult {
         val applied: Int,
         val skippedPending: Int,
         val skippedStale: Int,
+        /** Unconfirmed local rows this run published before scanning. See [LocalOnlyUpload]. */
+        val uploaded: Int = 0,
+        /** Pending acts given this scan's revision as their baseline. See [applyPage]. */
+        val rebased: Int = 0,
     ) : PullResult
 
     /** This install is not an account. Nothing was read and nothing is owed. */

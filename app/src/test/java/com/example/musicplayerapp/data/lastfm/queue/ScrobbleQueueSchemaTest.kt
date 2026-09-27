@@ -99,8 +99,10 @@ class ScrobbleQueueSchemaTest {
     }
 
     @Test
-    fun `the Collections database is untouched - still version 4, no migration added`() {
+    fun `the Collections database is not the scrobble queue's - its versions are its own`() {
+        // Version 5 (collection scope and parking) came from the account-collection durability
+        // fix, not from Last.fm. Held to an exact list so a stray schema still shows.
         val app = File("schemas/com.example.musicplayerapp.data.AppDatabase")
-        assertEquals(listOf("2.json", "3.json", "4.json"), app.list()!!.sorted())
+        assertEquals(listOf("2.json", "3.json", "4.json", "5.json"), app.list()!!.sorted())
     }
 }

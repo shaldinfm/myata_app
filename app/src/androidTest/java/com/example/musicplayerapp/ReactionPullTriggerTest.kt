@@ -35,6 +35,7 @@ import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import com.example.musicplayerapp.data.supabase.CollectionScope
 
 /**
  * When the account gets read back, and - just as importantly - when it does not.
@@ -541,7 +542,8 @@ class ReactionPullTriggerTest {
 
         assertEquals(IdentityState.Registered(y), IdentityStore.state(context))
         assertNull("the record must be cleared first", IdentityStore.handoff(context))
-        assertNull("and X's revisions with it", dao.find(track)!!.remoteRev)
+        assertEquals("and X's revisions with it: the adopted baseline replaces them",
+            CollectionScope.ADOPTED_BASELINE, dao.find(track)!!.remoteRev)
         assertEquals(Reaction.LIKED, dao.find(track)!!.reaction)
         assertEquals(listOf("handoff recovery"), fired)
     }
@@ -556,7 +558,7 @@ class ReactionPullTriggerTest {
         com.example.musicplayerapp.data.supabase.IdentityReconciler.reconcile(context, y)
 
         assertNull(IdentityStore.handoff(context))
-        assertNull(dao.find(track)!!.remoteRev)
+        assertEquals(CollectionScope.ADOPTED_BASELINE, dao.find(track)!!.remoteRev)
         assertEquals(mapOf(track to Reaction.LIKED.name), sync.adoptedBy[y])
         assertEquals(listOf("handoff recovery"), fired)
     }
@@ -684,6 +686,7 @@ class ReactionPullTriggerTest {
             api = sync,
             identity = { com.example.musicplayerapp.data.supabase.ListenerIdentity.Available(x) },
             deletionInFlight = { false },
+            delivery = { CollectionScope.Delivery.AnyIdentity },
         ).drain()
 
         // Opening the profile, which reconciles identity on the way.

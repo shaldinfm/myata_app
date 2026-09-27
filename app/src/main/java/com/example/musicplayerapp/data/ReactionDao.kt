@@ -164,6 +164,11 @@ abstract class ReactionDao {
                 reaction = Reaction.LIKED,
                 likedAt = likedAt,
                 updatedAt = now,
+                // The server revision this act builds on - its causal baseline (see
+                // migration 0005). A local act changes what this device thinks, not
+                // what it last saw of the server, so the revision is carried, never
+                // reset; unlike and undislike keep it the same way, as UPDATEs.
+                remoteRev = existing?.remoteRev,
             )
         )
         enqueue(
@@ -358,6 +363,8 @@ abstract class ReactionDao {
                 // liking it again later does not have to invent a position.
                 likedAt = existing?.likedAt,
                 updatedAt = now,
+                // The causal baseline, carried as in likeWithinTransaction.
+                remoteRev = existing?.remoteRev,
             )
         )
         enqueue(
@@ -522,6 +529,28 @@ abstract class ReactionDao {
      */
     @Query("UPDATE track_reaction SET remote_rev = NULL WHERE remote_rev IS NOT NULL")
     abstract suspend fun clearRemoteRevs(): Int
+
+    /**
+     * Opinions this device holds that no server has ever confirmed, and that nothing
+     * is on its way to publish: no recorded revision (or only the adopted baseline,
+     * `CollectionScope.ADOPTED_BASELINE`) and no pending outbox row.
+     *
+     * Chiefly the favourites [ReactionMigration.MIGRATION_1_2] carried over from the
+     * old `favorites` table - that migration deliberately back-filled no events, so
+     * until `LocalOnlyUpload` existed those rows reached the cloud only if an
+     * anonymous identity happened to be handed off, and a direct sign-in left them on
+     * the phone for good. NEUTRAL is left out: "no opinion" is what an absent remote
+     * row already says, and inserting one would only add a tombstone.
+     */
+    @Query(
+        """
+        SELECT * FROM track_reaction
+        WHERE (remote_rev IS NULL OR remote_rev = 0)
+          AND reaction != 'NEUTRAL'
+          AND track_key NOT IN (SELECT track_key FROM reaction_outbox)
+        """
+    )
+    abstract suspend fun localOnly(): List<TrackReaction>
 
     /**
      * Removes every reaction this device holds. **Account deletion only.**

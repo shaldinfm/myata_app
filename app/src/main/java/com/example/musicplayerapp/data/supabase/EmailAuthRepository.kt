@@ -3,6 +3,7 @@ package com.example.musicplayerapp.data.supabase
 import android.content.Context
 import android.util.Log
 import com.example.musicplayerapp.data.AppDatabase
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Registering, signing in and recovering a password - and deciding, each time,
@@ -16,8 +17,9 @@ import com.example.musicplayerapp.data.AppDatabase
  * | state | what a sign-in or registration is |
  * |---|---|
  * | [IdentityState.None] | a plain authentication. Nothing exists to preserve |
- * | [IdentityState.SignedOut] | a plain authentication. Sync resumes as the new uid |
+ * | [IdentityState.SignedOut] | a plain authentication. The Collection resumes if it is the same account; otherwise the previous account's is parked for it - see [CollectionScope] |
  * | [IdentityState.Anonymous] | an **identity handoff**: X is retired, Y adopts |
+ * | [IdentityState.Registered] with no session | sign-in and recovery only: the same as signing in from `SIGNED_OUT` |
  *
  * The third row is the reason this file is not four lines long. Supabase will not
  * turn an anonymous user into a password account in place, so there is no
@@ -106,6 +108,7 @@ object EmailAuthRepository {
             mayAuthenticateDirectly = {
                 it is IdentityState.None || it is IdentityState.SignedOut
             },
+            recoversLostSession = true,
         )
     }
 
@@ -163,6 +166,7 @@ object EmailAuthRepository {
             mayAuthenticateDirectly = {
                 it is IdentityState.None || it is IdentityState.SignedOut
             },
+            recoversLostSession = true,
         )
 
         return when (routed) {
@@ -222,8 +226,16 @@ object EmailAuthRepository {
         if (!cleared) Log.w(TAG, "the session did not clear cleanly; signing out locally anyway")
 
         IdentityStore.signOut(context)
+
+        // The account leaves this device's screens with its session: its rows and
+        // pending acts are parked for it, whole, and the device Collection becomes the
+        // active one. Before the marker is cleared, so a death here is finished by the
+        // startup scope check rather than leaving a signed-out install showing the
+        // account. Waits for a drain in flight: moving rows under one would let its
+        // settlement write this account's server state into the device's rows.
+        CollectionScope.leaveAccount(context)
         IdentityStore.clearAuthAttempt(context)
-        Log.d(TAG, "signed out locally; cloud sync paused, local collection untouched")
+        Log.d(TAG, "signed out locally; the account's collection is parked for it")
 
         return AuthResult.Success(uid)
     }
@@ -318,14 +330,30 @@ object EmailAuthRepository {
         api: EmailAuthApi,
         call: suspend () -> AuthResult,
         mayAuthenticateDirectly: (IdentityState) -> Boolean,
+        recoversLostSession: Boolean = false,
     ): AuthResult {
         val decision = SyncLease.withExclusive {
+            // An unresolved account deletion owns this install until it finishes, and
+            // its cleanup assumes the account being deleted is the one on disk.
+            // Authenticating anyone - even the same account - in the meantime would
+            // hand that cleanup a different install to act on. Refused here, not only
+            // by the guest screen hiding its buttons.
+            if (IdentityStore.deletionInFlight(context)) {
+                Log.w(TAG, "$what refused: an account deletion is unresolved")
+                return@withExclusive Route.Settled(
+                    AuthResult.Failed(AuthFailure.Unknown(detail = "an account deletion is unresolved"))
+                )
+            }
+
             when (val fresh = IdentityStore.state(context)) {
                 // An identity to preserve. Decided here, performed outside - see above.
                 is IdentityState.Anonymous -> Route.ViaHandoff(fresh.uid)
 
                 else ->
-                    if (mayAuthenticateDirectly(fresh)) {
+                    if (
+                        mayAuthenticateDirectly(fresh) ||
+                        (recoversLostSession && lostItsSession(api, fresh))
+                    ) {
                         Route.Settled(directHoldingLease(context, attempt, call))
                     } else {
                         Route.Settled(undefined(what, fresh))
@@ -359,6 +387,40 @@ object EmailAuthRepository {
         return result
     }
 
+    /**
+     * `REGISTERED(X)` on disk with no session at all: the account this install
+     * believes it is, with nothing left to prove it.
+     *
+     * A token revoked or expired on the server, a session store that failed to load,
+     * or - before the identity and session files were excluded from backup - a
+     * restore that brought the identity back with a refresh token already spent
+     * elsewhere. The profile routes such an install to the guest screen, because it
+     * can prove nothing; and until this existed the guest screen's sign-in was refused
+     * as "not a defined transition from Registered", which left the install with no
+     * way back.
+     *
+     * Signing in from here is the same act as signing in from `SIGNED_OUT(X)`: a
+     * direct authentication, with the local Collection resumed if it is X again and
+     * X's parked for X if it is somebody else (see [CollectionScope]). A session that *is*
+     * present - for X, or for another uid, which is reconciliation's to settle - is
+     * not this case, and keeps its refusal.
+     *
+     * The restore is awaited first, so a sign-in racing the startup session load
+     * cannot mistake "not loaded yet" for "none" - with a ceiling, because this runs
+     * holding [SyncLease] and a restore that never settles must not hold every sync
+     * with it. Past the ceiling the session is read as it stands.
+     */
+    private suspend fun lostItsSession(api: EmailAuthApi, state: IdentityState): Boolean {
+        if (state !is IdentityState.Registered) return false
+        runCatching { withTimeoutOrNull(RESTORE_CEILING_MS) { api.awaitSessionRestored() } }
+        val session = runCatching { api.currentUid() }.getOrNull()
+        if (session == null) Log.w(TAG, "registered on disk with no session; allowing authentication again")
+        return session == null
+    }
+
+    /** How long [lostItsSession] waits for the startup session restore. */
+    private const val RESTORE_CEILING_MS = 3_000L
+
     /** What [route] concluded while it held the lease. */
     private sealed interface Route {
         data class Settled(val result: AuthResult) : Route
@@ -383,10 +445,19 @@ object EmailAuthRepository {
         attempt: AuthAttempt,
         call: suspend () -> AuthResult,
     ): AuthResult {
+        // Read before anything changes it: only an install that was never an account
+        // adopts its device Collection (see CollectionScope.enterAccountHoldingLease).
+        val neverAnAccount = IdentityStore.state(context) is IdentityState.None
         IdentityStore.markAuthAttempt(context, attempt)
 
         return when (val result = call()) {
             is AuthResult.Success -> {
+                // The local Collection follows the account before the identity is
+                // committed: resumed if this is the account it already belongs to,
+                // adopted if this install was never an account, parked for its owner
+                // if it is somebody else's. A death between the two is repaired by reconciliation,
+                // whose promotion makes the same idempotent call.
+                CollectionScope.enterAccountHoldingLease(context, result.uid, adoptDevice = neverAnAccount)
                 IdentityStore.markRegistered(context, result.uid)
                 IdentityStore.clearAuthAttempt(context)
                 // Rows that accumulated while this install was signed out - or before
@@ -513,6 +584,7 @@ object EmailAuthRepository {
             api = ReactionSyncBackend.api(context),
             identity = { ReactionSyncBackend.identity(context) },
             deletionInFlight = { IdentityStore.deletionInFlight(context) },
+            delivery = { CollectionScope.deliveryHoldingLease(context) },
         )
 
         repeat(DRAIN_PAGES) {
@@ -534,6 +606,7 @@ object EmailAuthRepository {
                 is DrainResult.Waiting,
                 is DrainResult.RetryLater,
                 is DrainResult.Paused,
+                is DrainResult.AwaitingRestore,
                 // An unresolved deletion joins the list for the same reason the others
                 // are on it: it will not resolve inside a registration, and a handoff
                 // that cannot drain must not start. IdentityHandoff.run refuses on the

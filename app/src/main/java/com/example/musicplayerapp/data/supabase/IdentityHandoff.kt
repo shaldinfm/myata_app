@@ -23,7 +23,8 @@ import com.example.musicplayerapp.data.ReactionWriteGate
  *    RLS makes it unreachable afterwards;
  * 4. X's `reaction_events` are never touched - history stays with whoever made it;
  * 5. the local Room Collection is never read destructively and never cleared;
- * 6. adoption writes **current state only**. No synthetic events, ever;
+ * 6. adoption writes **current state only**, and only where the destination holds
+ *    nothing for the track - an existing account reaction wins. No synthetic events;
  * 7. X and Y are never both counted as current state - X is retired before Y exists.
  *
  * ## Ownership boundary
@@ -173,7 +174,11 @@ object IdentityHandoff {
         // death between two separate writes.
         IdentityStore.markHandoffSwitched(context, from, to)
 
-        adopt(context, to, reactions, api)
+        // The device Collection becomes Y's - the genuine anonymous -> account
+        // transition. Were the tables ever another account's, that account's rows
+        // would be parked for it instead, and nothing of them adopted.
+        CollectionScope.enterAccountHoldingLease(context, to, adoptDevice = true)
+        adopt(context, to, reactions, api, intoDestination = true)
         IdentityStore.clearHandoff(context)
         Log.d(TAG, "handoff complete")
         return Result.Switched(to)
@@ -194,34 +199,35 @@ object IdentityHandoff {
         why: String,
     ): Result {
         Log.w(TAG, "handoff rolling back: $why")
-        adopt(context, from, reactions, api)
+        adopt(context, from, reactions, api, intoDestination = false)
         IdentityStore.clearHandoff(context)
         return Result.RolledBack(from, why)
     }
 
     /**
-     * Writes the device's current reactions into [uid] as **current state only**.
+     * Writes the device's current reactions into [uid] as **current state only**,
+     * and only for tracks [uid] holds nothing for.
      *
-     * Idempotent, because every row goes through the same `updated_at`-guarded upsert
-     * the ordinary drain uses. That is what lets a crash part-way through be repaired
-     * by running the whole thing again rather than by recording how far it got.
+     * Insert-if-absent ([LocalOnlyUpload.publish]), never an overwrite. The device's
+     * rows are pre-sign-in guest state, and an established account's existing reaction
+     * wins over it; a track the account has never reacted to takes the device's
+     * opinion. Idempotent: a crash part-way through is repaired by running the whole
+     * thing again, which finds what it already inserted and skips it.
      *
-     * All three states are adopted, NEUTRAL included: since migration 0002 a
-     * withdrawal is a row with its own `updated_at`, and dropping those would hand Y
-     * a state that cannot lose a last-writer-wins comparison it should lose.
+     * All three states are offered, NEUTRAL included, so an account that has never
+     * seen a track learns the device's withdrawal too.
      *
      * **No event is written.** `reaction_events` is history, and none of this is
      * something the listener did just now.
      *
-     * ## The revisions go first
+     * ## Revisions
      *
-     * `track_reaction.remote_rev` records the server revision this device last saw
-     * for a row, and a revision belongs to one listener's copy of that row. By the
-     * time this runs, every value on disk is void: the source identity's remote rows
-     * were deleted before the switch, and the rows written below - into the
-     * destination here, or back into the source on rollback - are given fresh
-     * revisions that this path never learns. Clearing them is how the device stops
-     * claiming a match with rows that are gone.
+     * Into the destination, `CollectionScope.enterAccountHoldingLease` has already
+     * given the adopted device rows `CollectionScope.ADOPTED_BASELINE` ("the account
+     * had no row") and left the account's own unparked rows their revisions; the next
+     * pull records the real ones. On a rollback the rows stay the device's and the
+     * source's revisions are void - its rows were deleted before the switch - so they
+     * are cleared, as before.
      *
      * Nothing else about the local state is touched. The Collection survives a
      * handoff intact, which is the property this whole file exists to protect.
@@ -231,15 +237,22 @@ object IdentityHandoff {
         uid: String,
         reactions: ReactionDao,
         api: ReactionSyncApi,
+        intoDestination: Boolean,
     ) {
-        reactions.clearRemoteRevs()
+        // Into the destination, the scope transition has already given the adopted
+        // device rows CollectionScope.ADOPTED_BASELINE and left the account's own
+        // unparked rows their revisions; clearing them here would turn guest state into
+        // "no baseline yet", which the initial restore rebases over the account's own
+        // reactions. On a rollback the rows stay the device's and X's revisions are
+        // void - X's rows were just deleted - so they are forgotten as before.
+        if (!intoDestination) reactions.clearRemoteRevs()
 
+        // Insert-if-absent, never an overwrite: an established account's existing
+        // reaction wins over the device's pre-sign-in state. Retiring the source first
+        // means a rollback into X finds nothing and rebuilds it whole.
         val rows = reactions.allReactions()
-        var written = 0
-        for (row in rows) {
-            if (api.reconcileCurrentState(row.trackKey, row, uid) is SyncOutcome.Success) written++
-        }
-        Log.d(TAG, "adopted $written/${rows.size} reaction(s) into the destination")
+        val result = LocalOnlyUpload(reactions, api).publish(rows, uid)
+        Log.d(TAG, "adopted ${result.inserted}/${rows.size} reaction(s); ${result.alreadyPresent} already held by the account")
     }
 
     /**
@@ -266,7 +279,8 @@ object IdentityHandoff {
                 // The switch took: a session exists and it is not the source. Finish
                 // what was interrupted rather than undoing it.
                 record.stage == HandoffStage.SWITCHED && sessionUid != null -> {
-                    adopt(context, record.to ?: sessionUid, reactions, api)
+                    CollectionScope.enterAccountHoldingLease(context, record.to ?: sessionUid, adoptDevice = true)
+                    adopt(context, record.to ?: sessionUid, reactions, api, intoDestination = true)
                     IdentityStore.clearHandoff(context)
                     Result.Switched(record.to ?: sessionUid)
                 }
@@ -276,7 +290,8 @@ object IdentityHandoff {
                     // else - the switch succeeded and the process died before the
                     // durable commit. Promote, then adopt.
                     IdentityStore.markHandoffSwitched(context, record.from, sessionUid)
-                    adopt(context, sessionUid, reactions, api)
+                    CollectionScope.enterAccountHoldingLease(context, sessionUid, adoptDevice = true)
+                    adopt(context, sessionUid, reactions, api, intoDestination = true)
                     IdentityStore.clearHandoff(context)
                     Result.Switched(sessionUid)
                 }

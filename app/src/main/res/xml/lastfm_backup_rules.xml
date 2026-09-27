@@ -31,9 +31,31 @@
      there. Its deadline is monotonic, so it is also inert anywhere but the boot it
      was measured on.
 
+   - The account's sign-in state - `supabase_identity` (IdentityStore.FILE: which
+     account this install is), `<applicationId>_preferences` (where supabase-kt's
+     default session manager keeps the access and refresh tokens; nothing else in
+     the app uses the default preferences file) and `myata_last_sync`
+     (LastSyncStore.FILE: what each account has synchronised here). A restored
+     refresh token is one the original install has usually rotated since the
+     snapshot, so it fails; restored beside it, the identity file said "registered"
+     with nothing to prove it. And none of it is true of a new device: an account is
+     signed into, not restored. The account's Collection comes back from the server
+     on sign-in (CollectionScope, LocalOnlyUpload, ReactionPull), not from a backup.
+
+  `myata_database` is deliberately still backed up. It holds the reaction tables,
+  their scope and the parked rows of other scopes (CollectionScopeTables.kt) and
+  nothing else, and for a guest who never signed in it is the only copy of their
+  Collection there is. Every row in a restored copy carries its owner, so it cannot
+  appear or upload under another account (parked until its own account signs in),
+  cannot publish acts without its account signed in (the drain waits), and cannot
+  outrank the server: pulled rows win by revision and unconfirmed rows are published
+  insert-if-absent. A copy written before v5 has no owners and is set aside as
+  unclaimed legacy data rather than adopted (CollectionScope).
+
   Keep the paths in step with PrefsLastfmSessionStore.FILE,
   LastfmQueueDatabase.FILE, PlaybackIntentStore.FILE, PlaybackCommandInbox.FILE,
-  SleepTimerStore.UNDO_FILE and lastfm_data_extraction_rules.xml.
+  SleepTimerStore.UNDO_FILE, IdentityStore.FILE, LastSyncStore.FILE, the
+  applicationId, and lastfm_data_extraction_rules.xml.
 -->
 <full-backup-content>
     <exclude domain="sharedpref" path="lastfm_session.xml" />
@@ -43,4 +65,7 @@
     <exclude domain="sharedpref" path="myata_playback_intent.xml" />
     <exclude domain="sharedpref" path="myata_playback_commands.xml" />
     <exclude domain="sharedpref" path="myata_sleep_timer_undo.xml" />
+    <exclude domain="sharedpref" path="supabase_identity.xml" />
+    <exclude domain="sharedpref" path="dlinemedia.radioplayer.myata_preferences.xml" />
+    <exclude domain="sharedpref" path="myata_last_sync.xml" />
 </full-backup-content>

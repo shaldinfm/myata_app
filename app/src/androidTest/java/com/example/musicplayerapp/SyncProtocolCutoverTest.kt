@@ -33,6 +33,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import com.example.musicplayerapp.data.supabase.CollectionScope
 
 /**
  * The G-A7 protocol cutover, on a real database.
@@ -353,7 +354,10 @@ class SyncProtocolCutoverTest {
 
         val local = reactions.find(trackA)!!
         assertEquals("the pending act must not be overwritten", Reaction.DISLIKED, local.reaction)
-        assertNull("nor may a revision be claimed while an act is owed", local.remoteRev)
+        // The causal baseline (migration 0005) advances to the revision this chain's
+        // own write produced, so the act still owed builds on it instead of
+        // conflicting with it. The local state is what must not move.
+        assertEquals("the baseline is this chain's own write", backend.rows[trackA]!!.rev, local.remoteRev)
         assertEquals("and the act is still owed", 1, outbox.countForTrack(trackA))
     }
 
@@ -647,6 +651,7 @@ class SyncProtocolCutoverTest {
             api = backend,
             identity = { ListenerIdentity.Available(listener) },
             deletionInFlight = { false },
+            delivery = { CollectionScope.Delivery.AnyIdentity },
         ).drain()
 
     /**
@@ -809,6 +814,12 @@ private class FakeAtomicBackend : ReactionSyncApi {
         current: TrackReaction?,
         listenerId: String,
     ) = SyncOutcome.Success
+
+    override suspend fun insertIfAbsent(
+        rows: List<com.example.musicplayerapp.data.TrackReaction>,
+        listenerId: String,
+    ): com.example.musicplayerapp.data.supabase.InsertOutcome =
+        com.example.musicplayerapp.data.supabase.InsertOutcome.Failed(com.example.musicplayerapp.data.supabase.SyncOutcome.AuthUnavailable("a drain never inserts"))
 
     override suspend fun retireAllCurrentState(listenerId: String) = SyncOutcome.Success
 }

@@ -29,6 +29,7 @@ import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import com.example.musicplayerapp.data.supabase.CollectionScope
 
 /**
  * The whole path against the real project: Room -> outbox -> PostgREST -> back.
@@ -123,6 +124,7 @@ class ReactionSyncLiveTest {
         ReactionSyncEngine(
             db.reactionDao(), db.reactionOutboxDao(), api,
             { ListenerIdentity.Available(listener) }, { false },
+            { CollectionScope.Delivery.AnyIdentity },
         )
 
     private suspend fun remoteState(key: String): JsonObject? =

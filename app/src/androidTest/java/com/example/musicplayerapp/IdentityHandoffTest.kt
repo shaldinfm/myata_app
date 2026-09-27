@@ -14,6 +14,7 @@ import com.example.musicplayerapp.data.TrackKey
 import com.example.musicplayerapp.data.TrackReaction
 import com.example.musicplayerapp.data.supabase.BatchOutcome
 import com.example.musicplayerapp.data.supabase.HandoffStage
+import com.example.musicplayerapp.data.supabase.CollectionScope
 import com.example.musicplayerapp.data.supabase.IdentityHandoff
 import com.example.musicplayerapp.data.supabase.IdentityState
 import com.example.musicplayerapp.data.supabase.IdentityStore
@@ -72,6 +73,10 @@ class IdentityHandoffTest {
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
         dao = db.reactionDao()
         outbox = db.reactionOutboxDao()
+        // The handoff moves the Collection's scope through CollectionScope, which asks
+        // AppDatabase for the database - the same one the handoff is handed here, as in
+        // production. Without this it would act on the app's real database instead.
+        AppDatabase.overrideForInstrumentation(db)
         api = HandoffBackend()
         IdentityStore.clearForTest(context)
         IdentityStore.adoptAnonymous(context, x)
@@ -79,6 +84,7 @@ class IdentityHandoffTest {
 
     @After
     fun close() {
+        AppDatabase.overrideForInstrumentation(null)
         db.close()
         IdentityStore.clearForTest(context)
     }
@@ -118,8 +124,11 @@ class IdentityHandoffTest {
 
         assertTrue("$result", result is IdentityHandoff.Result.Switched)
         val row = dao.find(depeche)!!
-        assertNull(
+        // Not X's revision: the adopted baseline, "the account had no row" - so the
+        // row is inserted into Y only where Y holds nothing (see CollectionScope).
+        assertEquals(
             "a revision belonging to the retired identity is not a fact about the new one",
+            CollectionScope.ADOPTED_BASELINE,
             row.remoteRev,
         )
         assertEquals("and the Collection is not what a handoff moves", Reaction.LIKED, row.reaction)
@@ -451,11 +460,12 @@ class IdentityHandoffTest {
         val result = IdentityHandoff.recover(context, sessionUid = y, reactions = dao, api = api)
 
         assertEquals(IdentityHandoff.Result.Switched(y), result)
-        assertNull(
+        assertEquals(
             "a revision belonging to the retired identity is not a fact about the new one",
+            CollectionScope.ADOPTED_BASELINE,
             dao.find(depeche)!!.remoteRev,
         )
-        assertNull(dao.find(cave)!!.remoteRev)
+        assertEquals(CollectionScope.ADOPTED_BASELINE, dao.find(cave)!!.remoteRev)
         assertNull("and only then is the handoff complete", IdentityStore.handoff(context))
 
         // The Collection is not what a handoff moves, and recovery is not an exception.
@@ -591,6 +601,24 @@ private class HandoffBackend : ReactionSyncApi {
             adoptedBy.getOrPut(listenerId) { linkedMapOf() }[trackKey] = current.reaction.name
         }
         return outcome
+    }
+
+    /** The adoption's write: insert-if-absent against [adoptedBy], atomic like the server's. */
+    override suspend fun insertIfAbsent(
+        rows: List<com.example.musicplayerapp.data.TrackReaction>,
+        listenerId: String,
+    ): com.example.musicplayerapp.data.supabase.InsertOutcome {
+        rows.firstNotNullOfOrNull { row -> onReconcile(row.trackKey).takeIf { it !is SyncOutcome.Success } }
+            ?.let { return com.example.musicplayerapp.data.supabase.InsertOutcome.Failed(it) }
+        val account = adoptedBy.getOrPut(listenerId) { linkedMapOf() }
+        val inserted = mutableSetOf<String>()
+        for (row in rows) {
+            if (row.trackKey !in account) {
+                account[row.trackKey] = row.reaction.name
+                inserted += row.trackKey
+            }
+        }
+        return com.example.musicplayerapp.data.supabase.InsertOutcome.Written(inserted)
     }
 
     override suspend fun retireAllCurrentState(listenerId: String): SyncOutcome {

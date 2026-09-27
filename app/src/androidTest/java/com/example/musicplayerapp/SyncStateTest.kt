@@ -23,6 +23,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import com.example.musicplayerapp.data.supabase.CollectionScope
 
 /**
  * What this install can honestly say about its own synchronisation.
@@ -227,6 +228,7 @@ class SyncStateTest {
             api = sync,
             identity = { com.example.musicplayerapp.data.supabase.ListenerIdentity.Available(x) },
             deletionInFlight = { false },
+            delivery = { CollectionScope.Delivery.AnyIdentity },
         ).drain()
 
         assertTrue("$result", result is com.example.musicplayerapp.data.supabase.DrainResult.Drained)
@@ -271,6 +273,7 @@ class SyncStateTest {
             api = sync,
             identity = { com.example.musicplayerapp.data.supabase.ListenerIdentity.Available(x) },
             deletionInFlight = { false },
+            delivery = { CollectionScope.Delivery.AnyIdentity },
         )
 
         val applied = engine().drain()

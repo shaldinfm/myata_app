@@ -12,9 +12,7 @@ import com.example.musicplayerapp.data.AppDatabase
  * here is the part that has to know about Android and about this app's particular
  * seams; what lives there is the part worth testing exhaustively.
  *
- * **Nothing calls this yet.** When a pull runs - after a sign-in, on an authenticated
- * app start, behind a manual refresh - is G-A7d's decision, and wiring a trigger here
- * would make the primitive impossible to exercise without one.
+ * Called by [ReactionPullTrigger]; see there for when.
  */
 object ReactionPull {
 
@@ -31,12 +29,15 @@ object ReactionPull {
 
         val database = AppDatabase.getDatabase(app)
 
+        val api = ReactionSyncBackend.api(app)
         val result = ReactionPullEngine(
             reactions = database.reactionDao(),
             outbox = database.reactionOutboxDao(),
-            api = ReactionSyncBackend.api(app),
+            api = api,
             eligibility = { eligibility(app) },
             transaction = { block -> database.withTransaction(block) },
+            localOnly = LocalOnlyUpload(database.reactionDao(), api),
+            initialRestore = { uid -> !LastSyncStore.isInitialRestoreComplete(app, uid) },
         ).pull()
 
         // Recorded here rather than inside the engine, so the algorithm never needs a
@@ -58,6 +59,11 @@ object ReactionPull {
             // have. It exists so that "there is an account" and "this device has
             // actually restored it" stop being the same question.
             LastSyncStore.markInitialRestoreComplete(app, result.uid)
+
+            // Acts the drain held for this restore (CollectionScope.Delivery.AwaitingRestore)
+            // are rebased and may go now. Counts the outbox first; schedules nothing
+            // when it is empty.
+            ReactionSyncScheduler.onAppStart(app)
         }
 
         return result
@@ -113,6 +119,15 @@ object ReactionPull {
         if (session != state.uid) {
             return PullIdentity.Unavailable("the restored session is not this install's account")
         }
+
+        // The install is this account - the disk says so and the server's session
+        // agrees - so the local tables are brought into its scope before a row is
+        // read or published. Normally a no-op: the authentication that made this
+        // install the account already did it. It matters after a process death between
+        // the two, and it is what guarantees another account's rows are parked before
+        // the local-only upload looks for rows to publish. Called holding the lease the
+        // engine took, which is why it is the HoldingLease variant.
+        CollectionScope.enterAccountHoldingLease(context, state.uid, adoptDevice = false)
 
         return PullIdentity.Eligible(state.uid)
     }

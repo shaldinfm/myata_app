@@ -2,6 +2,10 @@ package com.example.musicplayerapp.data.supabase
 
 import android.content.Context
 import android.content.SharedPreferences
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import android.util.Log
 import androidx.core.content.edit
 
@@ -44,8 +48,15 @@ object IdentityStore {
 
     private const val TAG = "SupabaseAuth"
 
-    /** Same file the legacy marker used, so an upgrade reads its own history. */
-    private const val PREFS = "supabase_identity"
+    /**
+     * Same file the legacy marker used, so an upgrade reads its own history.
+     *
+     * Public so the backup rules can be checked against it. It is excluded from
+     * backup and device transfer: an identity restored without the session that
+     * proves it is the "registered, but no session" state, and restored with an old
+     * session it is a refresh token somebody else's install may already have spent.
+     */
+    const val FILE = "supabase_identity"
 
     /** The pre-G-A2 marker. Still written; never the source of truth once state exists. */
     private const val KEY_LEGACY_UID = "listener_uid"
@@ -519,6 +530,23 @@ object IdentityStore {
         }
     }
 
+    /**
+     * The persisted identity, now and after every change to it.
+     *
+     * Surfaces that must not show an account's rows to someone who is not that
+     * account (the Collection, the PLAYER's reaction) combine this with the active
+     * collection scope - see `CollectionScope.visibility`.
+     */
+    fun stateFlow(context: Context): Flow<IdentityState> = callbackFlow {
+        val prefs = prefs(context)
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+            trySend(state(context))
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        trySend(state(context))
+        awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }.distinctUntilChanged()
+
     private val DELETION_KEYS =
         setOf(KEY_DELETION_STAGE, KEY_DELETION_REQUEST_ID, KEY_DELETION_UID)
 
@@ -583,7 +611,7 @@ object IdentityStore {
     }
 
     private fun prefs(context: Context) =
-        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 }
 
 /**

@@ -75,6 +75,17 @@ class ReactionSyncEngine(
      * is the unsafe direction and exactly the bug this parameter exists to prevent.
      */
     private val deletionInFlight: suspend () -> Boolean,
+    /**
+     * Who the local Collection lets this run deliver as - see [CollectionScope].
+     *
+     * Asked **before** [identity], because asking identity is what can mint an
+     * anonymous user: an install whose rows belong to an account it is not signed in
+     * as must neither create a new identity for them nor send them under one.
+     * Not defaulted, for the reason [deletionInFlight] is not: the permissive answer
+     * is the unsafe one, and a drain that forgot to ask would publish one account's
+     * acts under another's session.
+     */
+    private val delivery: suspend () -> CollectionScope.Delivery,
     private val now: () -> Long = { System.currentTimeMillis() },
     private val batchSize: Int = BATCH_SIZE,
 ) {
@@ -117,8 +128,31 @@ class ReactionSyncEngine(
             return DrainResult.Waiting(outbox.earliestAttemptAt() ?: now())
         }
 
+        // Whose rows these are, before anybody is asked who we are. A Collection owned
+        // by an account this install is not signed in as waits exactly as a signed-out
+        // one does: nothing read, nothing counted, nothing minted.
+        val scope = delivery()
+        if (scope is CollectionScope.Delivery.Blocked) {
+            Log.d(TAG, "not draining: ${scope.reason}")
+            return DrainResult.Paused
+        }
+        if (scope is CollectionScope.Delivery.AwaitingRestore) {
+            // Nothing read, nothing counted, nothing sent: the rows keep their place
+            // and the initial restore releases them.
+            Log.d(TAG, "not draining: the account's initial restore has not completed")
+            return DrainResult.AwaitingRestore(scope.uid)
+        }
+
         val listenerId = when (val who = identity()) {
-            is ListenerIdentity.Available -> who.uid
+            is ListenerIdentity.Available ->
+                if (scope is CollectionScope.Delivery.Only && who.uid != scope.uid) {
+                    // The session is somebody other than the Collection's account. Not
+                    // this batch's fault and not permanent: identity reconciliation
+                    // settles which one is right, and nothing is sent until it has.
+                    return DrainResult.RetryLater("the session is not the collection's account")
+                } else {
+                    who.uid
+                }
 
             // Deliberately signed out. Not a failure, and emphatically not something
             // to retry: no row is read, no attempt is counted, nothing is parked, and
@@ -309,7 +343,7 @@ class ReactionSyncEngine(
             // this device's own write, so adopting its revision is recording what we
             // just did rather than accepting somebody else's state.
             is BatchOutcome.Applied -> {
-                settle(trackKey, events, answer.row)
+                settle(trackKey, events, answer.row, ownWrite = true)
                 TrackOutcome.Delivered(events.size)
             }
 
@@ -318,7 +352,19 @@ class ReactionSyncEngine(
             // carry a newer row, because another device can have moved the track
             // since. No new revision was created and none is asked for.
             is BatchOutcome.AlreadyApplied -> {
-                settle(trackKey, events, answer.row)
+                settle(trackKey, events, answer.row, ownWrite = false)
+                TrackOutcome.Delivered(events.size)
+            }
+
+            // The server moved on after this chain's baseline: another device, or the
+            // website, changed the track while these acts waited. The server's state
+            // wins. The events are history on the server now and settle here like
+            // any delivered batch - a conflict is an answer, not a failure, and is
+            // never retried. An act tapped *during* this call is still pending and is
+            // judged against the server's current revision on the next run.
+            is BatchOutcome.Conflict -> {
+                Log.i(TAG, "a newer server state won over ${events.size} queued act(s) on ${trackKey.take(8)}")
+                settle(trackKey, events, answer.row, ownWrite = false)
                 TrackOutcome.Delivered(events.size)
             }
 
@@ -358,11 +404,10 @@ class ReactionSyncEngine(
      *
      * Step 3's condition is what stops an answer overwriting an act the listener can
      * see. A row still pending is a local mutation the server has not been told
-     * about, and by policy that wins - not because the returned state is provably
-     * older, which across devices is not knowable, but because a genuine local act
-     * is not something a settlement may quietly undo. Recording the revision alone
-     * would be no better: a rev is a claim that local state matches that server row,
-     * and while a mutation is outstanding it does not.
+     * about, and by policy that wins over a *settlement* - the server's causal guard
+     * (migration 0005) is what decides whether it may win over the server's state.
+     * For that guard the revision is recorded after our own APPLIED write even while
+     * something is pending: it is the baseline the pending act builds on.
      *
      * A null [row] means the track has no remote row at all - data removal, in
      * practice - and there is nothing to adopt. The rows still settle: their events
@@ -372,9 +417,10 @@ class ReactionSyncEngine(
         trackKey: String,
         events: List<ReactionOutboxEntry>,
         row: RemoteReaction?,
+        ownWrite: Boolean,
     ) {
         ReactionWriteGate.withDeliveryStep {
-            settleWithinTransaction(trackKey, events.map { it.eventId }, row)
+            settleWithinTransaction(trackKey, events.map { it.eventId }, row, ownWrite)
         }
     }
 
@@ -382,11 +428,23 @@ class ReactionSyncEngine(
         trackKey: String,
         eventIds: List<String>,
         row: RemoteReaction?,
+        ownWrite: Boolean,
     ) {
         outbox.deleteAll(eventIds)
 
         if (row == null) return
-        if (outbox.countForTrack(trackKey) > 0) return
+        if (outbox.countForTrack(trackKey) > 0) {
+            // Something was tapped during the call and is still owed. Local state is
+            // left alone - by policy the pending act wins over a settlement - and the
+            // causal baseline advances only past this chain's own write: an APPLIED
+            // row is our revision, and the act still owed builds on it, so it must not
+            // conflict with it. After a CONFLICT or an ALREADY_APPLIED the row may be
+            // another device's newer state, which this device has not adopted; the
+            // pending act keeps its old baseline and is judged against that state on
+            // the next run - where the server's newer state wins.
+            if (ownWrite) reactions.recordRemoteRev(trackKey, row.rev)
+            return
+        }
 
         val local = reactions.find(trackKey) ?: return
         if (local.reaction == row.reaction && local.updatedAt == row.updatedAt) {
@@ -571,6 +629,12 @@ sealed interface DrainResult {
      * check happens before the batch is touched.
      */
     data object Paused : DrainResult
+
+    /**
+     * The account's rows are held until this install has read the account back once.
+     * See [CollectionScope.Delivery.AwaitingRestore]. Nothing was read or sent.
+     */
+    data class AwaitingRestore(val uid: String) : DrainResult
 
     /**
      * A permanent account deletion is unresolved on this install.

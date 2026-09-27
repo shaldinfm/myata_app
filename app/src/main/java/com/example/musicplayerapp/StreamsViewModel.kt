@@ -12,6 +12,7 @@ import android.net.NetworkCapabilities
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
+import com.example.musicplayerapp.data.supabase.CollectionScope
 import com.example.musicplayerapp.data.supabase.ReactionSyncScheduler
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
@@ -60,6 +61,7 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.util.concurrent.TimeUnit
 
@@ -668,8 +670,13 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         val trackKey = TrackKey.of(artist, song)
         if (trackKey != null) {
             favoriteObservationJob = viewModelScope.launch {
-                reactionDao.observeReaction(trackKey).collectLatest {
-                    // No row and NEUTRAL are the same thing to a reader.
+                // No row and NEUTRAL are the same thing to a reader - and so are an
+                // account's rows while this install is not signed in as it (see
+                // CollectionScope.visibility).
+                combine(
+                    reactionDao.observeReaction(trackKey),
+                    CollectionScope.visibility(context),
+                ) { reaction, visible -> if (visible) reaction else null }.collectLatest {
                     _currentReaction.postValue(it ?: Reaction.NEUTRAL)
                 }
             }
@@ -715,6 +722,10 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         val trackKey = TrackKey.of(artist, song) ?: return
 
         viewModelScope.launch {
+            // Lands in the rows this install may see: a tap made while an absent
+            // account's rows are still active settles the scope first, so it becomes
+            // the device's, never the account's.
+            CollectionScope.prepareLocalWrite(context)
             val from = reactionDao.find(trackKey)?.reaction ?: Reaction.NEUTRAL
             val to = target(from)
 

@@ -58,7 +58,12 @@ import androidx.core.content.edit
  */
 object LastSyncStore {
 
-    private const val PREFS = "myata_last_sync"
+    /**
+     * The preferences file. Public so the backup rules can be checked against it:
+     * this is a statement about accounts on this install, and it is excluded from
+     * backup and device transfer - see `lastfm_backup_rules.xml`.
+     */
+    const val FILE = "myata_last_sync"
 
     private const val KEY_UPLOAD_PREFIX = "last_upload_"
     private const val KEY_PULL_PREFIX = "last_pull_"
@@ -173,6 +178,25 @@ object LastSyncStore {
     }
 
     /**
+     * Every account this install has read back at least once.
+     *
+     * Only a registered account's completed pull writes these keys - an anonymous
+     * identity is never pulled - so this is evidence of which *accounts* have held
+     * this install's Collection, which is the question `CollectionScope` needs
+     * answered for a database that predates its owner row. Upload keys are left out
+     * on purpose: an anonymous identity writes those too, and an install that was
+     * anonymous before registering is the ordinary path, not an ambiguous one.
+     */
+    fun accountsReadHere(context: Context): Set<String> =
+        prefs(context).all.keys.mapNotNullTo(mutableSetOf()) { key ->
+            when {
+                key.startsWith(KEY_PULL_PREFIX) -> key.removePrefix(KEY_PULL_PREFIX)
+                key.startsWith(KEY_RESTORED_PREFIX) -> key.removePrefix(KEY_RESTORED_PREFIX)
+                else -> null
+            }
+        }
+
+    /**
      * Test-only: return this install to never-synced, for every account.
      *
      * Clears the whole file rather than named keys: the per-account keys are not
@@ -187,5 +211,5 @@ object LastSyncStore {
         recordUploadSuccess(context, uid, at)
 
     private fun prefs(context: Context) =
-        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 }

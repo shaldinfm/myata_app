@@ -5,6 +5,8 @@ import android.content.Context
 import com.example.musicplayerapp.data.lastfm.LastfmBackend
 import android.os.Bundle
 import androidx.test.runner.AndroidJUnitRunner
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import com.example.musicplayerapp.data.ReactionOutboxEntry
 import com.example.musicplayerapp.data.TrackReaction
 import com.example.musicplayerapp.data.supabase.AccountInfo
@@ -96,6 +98,29 @@ class MyataTestRunner : AndroidJUnitRunner() {
         super.onCreate(arguments)
     }
 
+    /**
+     * Holds the first test until the app's own startup work has finished.
+     *
+     * `MyataApplication` settles the Collection's scope in the background, and that
+     * work reads the database and takes `SyncLease`. Left to overlap the first tests,
+     * it acted on whatever database a test had just installed and made that test's
+     * own pull or drain answer Busy. On the instrumentation thread, never the main
+     * one, and bounded so a hung startup fails a test rather than the whole run.
+     */
+    override fun onStart() {
+        // onStart runs on its own thread and can begin before the Application exists,
+        // when there is no startup work to wait for yet.
+        applicationCreated.await(15, java.util.concurrent.TimeUnit.SECONDS)
+        runBlocking {
+            withTimeoutOrNull(15_000) {
+                com.example.musicplayerapp.data.supabase.IdentityReconciler.startupWork?.join()
+            }
+        }
+        super.onStart()
+    }
+
+    private val applicationCreated = java.util.concurrent.CountDownLatch(1)
+
     override fun callApplicationOnCreate(app: Application) {
         // The last instant before MyataApplication.onCreate runs, and therefore
         // before it schedules a drain. Asserting here rather than in newApplication
@@ -109,6 +134,7 @@ class MyataTestRunner : AndroidJUnitRunner() {
             "the live Last.fm gate was not installed before the Application started"
         }
         super.callApplicationOnCreate(app)
+        applicationCreated.countDown()
     }
 }
 
@@ -133,6 +159,12 @@ private object OfflineReactionSyncApi : ReactionSyncApi {
         current: TrackReaction?,
         listenerId: String,
     ): SyncOutcome = SyncOutcome.AuthUnavailable(WHY)
+
+    override suspend fun insertIfAbsent(
+        rows: List<com.example.musicplayerapp.data.TrackReaction>,
+        listenerId: String,
+    ): com.example.musicplayerapp.data.supabase.InsertOutcome =
+        com.example.musicplayerapp.data.supabase.InsertOutcome.Failed(com.example.musicplayerapp.data.supabase.SyncOutcome.AuthUnavailable("live Supabase is disabled for this instrumentation run"))
 
     override suspend fun retireAllCurrentState(listenerId: String): SyncOutcome =
         SyncOutcome.AuthUnavailable(WHY)

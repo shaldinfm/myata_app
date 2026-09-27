@@ -25,9 +25,16 @@
   The armed-timer record keeps its own backup story; only the undo affordance is
   excluded. See lastfm_backup_rules.xml.
 
+  The account's sign-in state - `supabase_identity`, supabase-kt's session in
+  `<applicationId>_preferences`, and `myata_last_sync` - is excluded from both
+  sections too: tokens and "which account is this" belong to one install, and an
+  account is signed into on a new device, not transferred to it. `myata_database`
+  stays included in both. See lastfm_backup_rules.xml for the reasoning on each.
+
   Keep the paths in step with PrefsLastfmSessionStore.FILE,
   LastfmQueueDatabase.FILE, PlaybackIntentStore.FILE, PlaybackCommandInbox.FILE,
-  SleepTimerStore.UNDO_FILE and lastfm_backup_rules.xml.
+  SleepTimerStore.UNDO_FILE, IdentityStore.FILE, LastSyncStore.FILE, the
+  applicationId, and lastfm_backup_rules.xml.
 -->
 <data-extraction-rules>
     <cloud-backup>
@@ -38,6 +45,9 @@
         <exclude domain="sharedpref" path="myata_playback_intent.xml" />
         <exclude domain="sharedpref" path="myata_playback_commands.xml" />
         <exclude domain="sharedpref" path="myata_sleep_timer_undo.xml" />
+        <exclude domain="sharedpref" path="supabase_identity.xml" />
+        <exclude domain="sharedpref" path="dlinemedia.radioplayer.myata_preferences.xml" />
+        <exclude domain="sharedpref" path="myata_last_sync.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="lastfm_session.xml" />
@@ -47,5 +57,8 @@
         <exclude domain="sharedpref" path="myata_playback_intent.xml" />
         <exclude domain="sharedpref" path="myata_playback_commands.xml" />
         <exclude domain="sharedpref" path="myata_sleep_timer_undo.xml" />
+        <exclude domain="sharedpref" path="supabase_identity.xml" />
+        <exclude domain="sharedpref" path="dlinemedia.radioplayer.myata_preferences.xml" />
+        <exclude domain="sharedpref" path="myata_last_sync.xml" />
     </device-transfer>
 </data-extraction-rules>

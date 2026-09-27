@@ -9,10 +9,12 @@ import com.example.musicplayerapp.data.ArtworkPriority
 import com.example.musicplayerapp.data.FavoriteTrack
 import com.example.musicplayerapp.data.FeedbackRepository
 import com.example.musicplayerapp.data.ReactionEvent
+import com.example.musicplayerapp.data.supabase.CollectionScope
 import com.example.musicplayerapp.data.supabase.ReactionSyncScheduler
 import com.example.musicplayerapp.data.TrackKey
 import com.example.musicplayerapp.SecureNetModule
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -35,8 +37,15 @@ class FavoritesViewModel(application: Application) : AndroidViewModel(applicatio
      *
      * NEUTRAL and DISLIKED rows are not in it. A track whose Like was withdrawn is
      * not in the Collection, and neither is one that was disliked.
+     *
+     * Empty whenever the active rows belong to an account this install is not
+     * signed in as - see [CollectionScope.visibility]. The rows are parked for that
+     * account moments later; this makes sure nobody sees them in between.
      */
-    val favorites: Flow<List<FavoriteTrack>> = reactionDao.likedTracks()
+    val favorites: Flow<List<FavoriteTrack>> =
+        combine(reactionDao.likedTracks(), CollectionScope.visibility(appContext)) { rows, visible ->
+            if (visible) rows else emptyList()
+        }
 
     /**
      * Whether this track is in the Collection. False for a track nobody has reacted
@@ -47,7 +56,9 @@ class FavoritesViewModel(application: Application) : AndroidViewModel(applicatio
      */
     fun isFavorite(artist: String, track: String): Flow<Boolean> {
         val trackKey = TrackKey.of(artist, track) ?: return flowOf(false)
-        return reactionDao.isLiked(trackKey)
+        return combine(reactionDao.isLiked(trackKey), CollectionScope.visibility(appContext)) { liked, visible ->
+            liked && visible
+        }
     }
     
     /**
@@ -62,6 +73,7 @@ class FavoritesViewModel(application: Application) : AndroidViewModel(applicatio
      */
     fun removeFavorite(track: FavoriteTrack) {
         viewModelScope.launch {
+            CollectionScope.prepareLocalWrite(appContext)
             ReactionEvent.forUnlike(reactionDao.unlike(track.trackKey))?.let { event ->
                 feedbackRepository.reportFeedback(track.artist, track.track, track.stream, event)
                 ReactionSyncScheduler.onReactionCommitted(appContext)
@@ -93,6 +105,7 @@ class FavoritesViewModel(application: Application) : AndroidViewModel(applicatio
      */
     fun restoreFavorite(track: FavoriteTrack) {
         viewModelScope.launch {
+            CollectionScope.prepareLocalWrite(appContext)
             val restored = reactionDao.like(
                 trackKey = track.trackKey,
                 artist = track.artist,

@@ -447,6 +447,10 @@ class EmailAuthRepositoryTest {
     @Test
     fun signing_into_a_second_account_from_a_first_is_refused() = runBlocking {
         IdentityStore.markRegistered(context, y)
+        // Genuinely signed in: a live session for y. Registered with *no* session is
+        // the recoverable state, which may authenticate again - see
+        // CollectionDurabilityTest.f_*.
+        auth.session = y
 
         val result = EmailAuthRepository.signIn(context, "other@example.com", "s3cret!")
 

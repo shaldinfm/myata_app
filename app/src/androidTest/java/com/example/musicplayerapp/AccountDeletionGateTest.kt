@@ -32,6 +32,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import com.example.musicplayerapp.data.supabase.CollectionScope
 
 /**
  * The deletion marker, and everything it closes.
@@ -240,6 +241,7 @@ class AccountDeletionGateTest {
             api = sync,
             identity = { ListenerIdentity.Available(x) },
             deletionInFlight = { true },
+            delivery = { CollectionScope.Delivery.AnyIdentity },
         ).drain()
 
         assertTrue("$result", result is DrainResult.DeletionInProgress)
@@ -354,6 +356,7 @@ class AccountDeletionGateTest {
             api = sync,
             identity = { ListenerIdentity.Available(x) },
             deletionInFlight = { IdentityStore.deletionInFlight(context) },
+            delivery = { CollectionScope.Delivery.AnyIdentity },
         ).drain()
 
         assertTrue("$result", result is DrainResult.DeletionInProgress)

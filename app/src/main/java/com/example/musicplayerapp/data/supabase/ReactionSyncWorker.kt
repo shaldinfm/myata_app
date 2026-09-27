@@ -74,6 +74,8 @@ class ReactionSyncWorker(
             // The identity boundary, reached only once the engine has established
             // that there is something to own.
             identity = { ReactionSyncBackend.identity(applicationContext) },
+            // Whose rows these are. Asked inside the drain's lease, before identity.
+            delivery = { CollectionScope.deliveryHoldingLease(applicationContext) },
         )
 
         return when (val result = runCatching { engine.drain() }.getOrElse { failed ->
@@ -133,6 +135,17 @@ class ReactionSyncWorker(
                 // what will schedule the drain. The rows are untouched.
                 Log.d(TAG, "cloud sync paused: signed out")
                 Result.success()
+            }
+
+            is DrainResult.AwaitingRestore -> {
+                // The acts wait for the account's first completed pull. Ask for it -
+                // here, after the drain has released the lease the pull needs - and
+                // come back on the ordinary backoff, so a pull that failed on a bad
+                // network is retried rather than waited for until the next start. A
+                // completed pull schedules the drain itself.
+                Log.d(TAG, "holding the account's acts until its initial restore completes")
+                ReactionPullTrigger.requestInBackground(applicationContext, "acts await the initial restore")
+                Result.retry()
             }
 
             is DrainResult.DeletionInProgress -> {

@@ -30,6 +30,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import com.example.musicplayerapp.data.supabase.CollectionScope
 
 /**
  * The deletion flow end to end, without a server.
@@ -360,6 +361,7 @@ class AccountDeletionFlowTest {
             api = sync,
             identity = { ListenerIdentity.Available(x) },
             deletionInFlight = { IdentityStore.deletionInFlight(context) },
+            delivery = { CollectionScope.Delivery.AnyIdentity },
         ).drain()
 
         assertTrue("$drain", drain is DrainResult.DeletionInProgress)

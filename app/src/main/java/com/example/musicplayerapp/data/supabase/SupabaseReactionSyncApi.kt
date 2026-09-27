@@ -218,6 +218,12 @@ class SupabaseReactionSyncApi(private val context: Context) : ReactionSyncApi {
             put("p_title", current.title)
             put("p_stream", current.stream)
             put("p_updated_at", ReactionSyncWire.timestamp(current.updatedAt))
+            // The causal baseline (migration 0005): the revision this device last saw
+            // for the track, which the pull does not advance while acts are pending -
+            // so the whole pending chain is judged against the state it began from.
+            // Null when the device has seen no server row for it.
+            val baseRev = current.remoteRev
+            if (baseRev != null) put("p_base_rev", baseRev) else put("p_base_rev", JsonNull)
         }
 
         return runCatching {
@@ -225,6 +231,60 @@ class SupabaseReactionSyncApi(private val context: Context) : ReactionSyncApi {
                 .decodeAs<JsonObject>()
             readOutcome(answer)
         }.getOrElse { BatchOutcome.Failed(classifyFailure(it)) }
+    }
+
+    /**
+     * `ON CONFLICT (listener_id, track_key) DO NOTHING`, and nothing else.
+     *
+     * Deliberately not [reconcileCurrentState]: its first half is an UPDATE guarded by
+     * this device's `updated_at`, so a phone whose clock runs ahead could replace a
+     * genuinely newer server row with a favourite that has sat unpublished for months.
+     * An ignore-duplicates insert has no such half. It needs only the INSERT policy,
+     * and the representation it returns holds exactly the rows it inserted - which is
+     * how an inserted track is told from one the account already held.
+     *
+     * Every object carries the same keys, `liked_at` included (null unless LIKED):
+     * PostgREST refuses a bulk insert whose objects disagree about their columns.
+     */
+    override suspend fun insertIfAbsent(rows: List<TrackReaction>, listenerId: String): InsertOutcome {
+        if (rows.isEmpty()) return InsertOutcome.Written(emptySet())
+        val db = postgrest ?: return InsertOutcome.Failed(SyncOutcome.AuthUnavailable("no supabase client"))
+
+        val session = runCatching {
+            SupabaseModule.client(context)?.auth?.currentUserOrNull()?.id
+        }.getOrNull()
+        ownershipVerdict(session, listenerId)?.let { return InsertOutcome.Failed(it) }
+
+        val payload = rows.map { row ->
+            buildJsonObject {
+                put("listener_id", listenerId)
+                put("track_key", row.trackKey)
+                put("artist", row.artist)
+                put("title", row.title)
+                put("reaction", ReactionSyncWire.remoteReaction(row.reaction))
+                put("stream", row.stream)
+                put("updated_at", ReactionSyncWire.timestamp(row.updatedAt))
+                // The schema holds liked_at present iff LIKED; the trigger would
+                // derive it from updated_at, but the local value is the true one.
+                if (row.reaction == Reaction.LIKED) {
+                    put("liked_at", ReactionSyncWire.timestamp(row.likedAt ?: row.updatedAt))
+                } else {
+                    put("liked_at", JsonNull)
+                }
+            }
+        }
+
+        return runCatching {
+            val written = db.from(ReactionSyncWire.TABLE_REACTIONS).upsert(payload) {
+                onConflict = "listener_id,track_key"
+                ignoreDuplicates = true
+                select()
+            }.decodeList<JsonObject>()
+
+            InsertOutcome.Written(
+                written.mapNotNullTo(mutableSetOf()) { it["track_key"]?.jsonPrimitive?.contentOrNull }
+            )
+        }.getOrElse { InsertOutcome.Failed(classifyFailure(it)) }
     }
 
     /**
@@ -240,6 +300,8 @@ class SupabaseReactionSyncApi(private val context: Context) : ReactionSyncApi {
             "APPLIED" -> row?.let { BatchOutcome.Applied(it) }
                 ?: BatchOutcome.Failed(SyncOutcome.Permanent(200, "APPLIED without a row"))
             "ALREADY_APPLIED" -> BatchOutcome.AlreadyApplied(row)
+            "CONFLICT" -> row?.let { BatchOutcome.Conflict(it) }
+                ?: BatchOutcome.Failed(SyncOutcome.Permanent(200, "CONFLICT without a row"))
             else -> BatchOutcome.Failed(SyncOutcome.Permanent(200, "unknown outcome"))
         }
     }

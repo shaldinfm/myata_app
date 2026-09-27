@@ -5,6 +5,7 @@ import android.util.Log
 import com.example.musicplayerapp.data.AppDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
@@ -86,11 +87,26 @@ object IdentityReconciler {
      * registering when the process died - so reconciliation runs immediately
      * afterwards, on the same coroutine, before anything can read the interim state.
      */
+    /**
+     * The work [startupInBackground] launched, for the instrumentation runner to wait
+     * on before the first test: it moves rows between scopes under [SyncLease], and a
+     * test that has already installed its own database must not share either with it.
+     * Nothing in `src/main` reads it.
+     */
+    @Volatile
+    internal var startupWork: Job? = null
+
     fun startupInBackground(context: Context) {
-        if (!SupabaseConfig.isConfigured) return
+        if (!SupabaseConfig.isConfigured) {
+            // No accounts are possible, but a database can still need settling - a
+            // migrated one, or an account's rows from a restored backup - before the
+            // screens may show it.
+            startupWork = CollectionScope.ensureScopeInBackground(context)
+            return
+        }
 
         val app = context.applicationContext
-        CoroutineScope(Dispatchers.IO).launch {
+        startupWork = CoroutineScope(Dispatchers.IO).launch {
             runCatching {
                 val sessionUid = ListenerSession.restore(app)
                 reconcile(app, sessionUid)
@@ -105,6 +121,11 @@ object IdentityReconciler {
                 // Deliberately here and not inside `reconcile`, which is also called
                 // when somebody opens their profile. Opening a screen is not one of
                 // the four moments a pull is allowed to happen.
+                // The active Collection follows who this install provably is, before
+                // the account is read back: an account whose session is gone is parked,
+                // one whose session is here is brought back.
+                CollectionScope.ensureScope(app)
+
                 ReactionPullTrigger.requestInBackground(app, "app start")
             }.onFailure { Log.w(TAG, "identity reconciliation failed: ${it.message}") }
         }
@@ -162,7 +183,7 @@ object IdentityReconciler {
             // Never had an identity, yet a session exists. With an attempt pending
             // this is a direct registration or sign-in that died before its commit.
             is IdentityState.None ->
-                if (attempt != null) promote(context, sessionUid, "$attempt was interrupted")
+                if (attempt != null) promote(context, sessionUid, "$attempt was interrupted", neverAnAccount = true)
                 else Outcome.Consistent
 
             // Anonymous, and an attempt is pending. This is the same interrupted
@@ -172,7 +193,7 @@ object IdentityReconciler {
             // exactly wrong when there is. The uids usually match here - the
             // correction is to the *kind*, not the identity.
             is IdentityState.Anonymous ->
-                if (attempt != null) promote(context, sessionUid, "$attempt was interrupted")
+                if (attempt != null) promote(context, sessionUid, "$attempt was interrupted", neverAnAccount = true)
                 else Outcome.Consistent
 
             is IdentityState.SignedOut -> when {
@@ -416,8 +437,18 @@ object IdentityReconciler {
      * One `commit()` for the state and the uid together - [IdentityStore.markRegistered]
      * writes both - so a death inside this method cannot leave the pair torn.
      */
-    private fun promote(context: Context, uid: String, why: String): Outcome {
+    private suspend fun promote(
+        context: Context,
+        uid: String,
+        why: String,
+        neverAnAccount: Boolean = false,
+    ): Outcome {
         Log.d(TAG, "reconciling upward to the session's identity: $why")
+        // The Collection follows the identity, before the identity is committed - the
+        // same order and the same idempotent call as a direct authentication, which is
+        // the step a death may have interrupted. Takes SyncLease itself: nothing on
+        // this path holds it.
+        CollectionScope.enterAccount(context, uid, adoptDevice = neverAnAccount)
         IdentityStore.markRegistered(context, uid)
         IdentityStore.clearAuthAttempt(context)
         // Rows that could not be sent while the identity was unsettled now have an

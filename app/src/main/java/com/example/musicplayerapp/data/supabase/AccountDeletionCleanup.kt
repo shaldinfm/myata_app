@@ -122,8 +122,27 @@ internal object AccountDeletionCleanup {
         ReactionWriteGate.withDeliveryStep {
             // 2a. One transaction, so a death cannot empty one table and leave the other.
             database.withTransaction {
-                val events = database.reactionOutboxDao().clearAll()
-                val reactions = database.reactionDao().clearAll()
+                val scopes = database.collectionScopeDao()
+                val deleted = CollectionScope.Scope.Account(uid)
+
+                // Only this account's rows, wherever they are. The active tables are
+                // cleared only when they are provably its own - never another
+                // account's, the device's or unclaimed legacy rows - and the device
+                // Collection parked earlier becomes active again, as after a sign-out.
+                val active = CollectionScope.activeScopeWithinTransaction(app, database)
+                var events = 0
+                var reactions = 0
+                if (active == deleted) {
+                    events = database.reactionOutboxDao().clearAll()
+                    reactions = database.reactionDao().clearAll()
+                    scopes.unparkReactions(CollectionScope.Scope.Device.key)
+                    scopes.unparkOutbox(CollectionScope.Scope.Device.key)
+                    scopes.deleteParkedOutbox(CollectionScope.Scope.Device.key)
+                    scopes.deleteParkedReactions(CollectionScope.Scope.Device.key)
+                    scopes.setScope(CollectionScope.Scope.Device.key)
+                }
+                events += scopes.deleteParkedOutbox(deleted.key)
+                reactions += scopes.deleteParkedReactions(deleted.key)
                 Log.d(TAG, "account deletion: cleared $events pending event(s), $reactions reaction(s)")
             }
 

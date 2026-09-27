@@ -103,6 +103,23 @@ interface EmailAuthApi {
     suspend fun prepareSession() {}
 
     /**
+     * The uid of the session this device has **stored**, whether or not it is usable
+     * right now - or null when nothing is stored.
+     *
+     * Not [currentUid]. A registered listener who opens the app offline with an expired
+     * access token has a stored session the plugin cannot refresh yet, and
+     * [currentUid] answers null for them; treating that as "no session" would hide
+     * their own Collection every time they are offline. A stored session disappears
+     * only when it is signed out or the server refuses its refresh token - the two
+     * cases where the account really has left this device. `CollectionScope` parks an
+     * account's rows on exactly that evidence.
+     *
+     * The default is for implementations with no separate storage: what is live is
+     * what is stored.
+     */
+    suspend fun storedSessionUid(): String? = currentUid()
+
+    /**
      * Who the live session says this device is, or null when there is no session.
      *
      * The uid alone is not enough for the authenticated profile: it shows a name and

@@ -117,6 +117,11 @@ class LastfmLinkTest {
      * `PlaybackCommandChannelTest` own the reasoning for the first two, and
      * `SleepTimerStoreTest` for the snapshot. Anything added to those files without
      * being added here fails, which is the point.
+     *
+     * The last three are the account's sign-in state - identity, supabase-kt's session
+     * in the default preferences file, and per-account sync history. They are not
+     * device-local in the same sense, but they are never restorable: the reasoning is
+     * `CollectionScope`'s and `AccountBackupRulesTest` holds it.
      */
     private val deviceLocalExcludes = listOf(
         "sharedpref:${PrefsLastfmSessionStore.FILE}.xml",
@@ -126,6 +131,9 @@ class LastfmLinkTest {
         "sharedpref:${PlaybackIntentStore.FILE}.xml",
         "sharedpref:${PlaybackCommandInbox.FILE}.xml",
         "sharedpref:${SleepTimerStore.UNDO_FILE}.xml",
+        "sharedpref:${com.example.musicplayerapp.data.supabase.IdentityStore.FILE}.xml",
+        "sharedpref:${com.example.musicplayerapp.BuildConfig.APPLICATION_ID}_preferences.xml",
+        "sharedpref:${com.example.musicplayerapp.data.supabase.LastSyncStore.FILE}.xml",
     )
 
     @Test

@@ -29,6 +29,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import com.example.musicplayerapp.data.supabase.CollectionScope
 
 /**
  * A fake backend that behaves the way the real one was observed to behave.
@@ -164,6 +165,12 @@ private class FakeBackend : ReactionSyncApi {
     }
 
     /** Retirement: every row this listener owns, gone in one call. */
+    override suspend fun insertIfAbsent(
+        rows: List<com.example.musicplayerapp.data.TrackReaction>,
+        listenerId: String,
+    ): com.example.musicplayerapp.data.supabase.InsertOutcome =
+        com.example.musicplayerapp.data.supabase.InsertOutcome.Failed(com.example.musicplayerapp.data.supabase.SyncOutcome.AuthUnavailable("a drain never inserts"))
+
     override suspend fun retireAllCurrentState(listenerId: String): SyncOutcome {
         listenerSeen = listenerId
         val outcome = onRetire(listenerId)
@@ -223,6 +230,7 @@ class ReactionSyncEngineTest {
         api = backend,
         identity = { identityCalls++; identity },
         deletionInFlight = { false },
+        delivery = { CollectionScope.Delivery.AnyIdentity },
         now = { clock },
         batchSize = batchSize,
     )
@@ -885,7 +893,7 @@ class ReactionSyncEngineTest {
             }
             val result = ReactionSyncEngine(
                 first.reactionDao(), first.reactionOutboxDao(), offline, { ListenerIdentity.Available(listener) },
-                { false }, { 5_000L },
+                { false }, { CollectionScope.Delivery.AnyIdentity }, { 5_000L },
             ).drain()
 
             assertTrue(result is DrainResult.RetryLater)
@@ -902,7 +910,7 @@ class ReactionSyncEngineTest {
             val online = FakeBackend()
             val result = ReactionSyncEngine(
                 second.reactionDao(), second.reactionOutboxDao(), online, { ListenerIdentity.Available(listener) },
-                { false },
+                { false }, { CollectionScope.Delivery.AnyIdentity },
                 // Past the 30s backoff the first run recorded.
                 { 5_000L + 60_000L },
             ).drain()

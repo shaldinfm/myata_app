@@ -531,6 +531,17 @@ class SupabaseEmailAuthApi(
     override suspend fun currentUid(): String? =
         runCatching { client?.auth?.currentUserOrNull()?.id }.getOrNull()
 
+    /**
+     * The session manager's own copy. supabase-kt keeps a session it failed to refresh
+     * for a network reason in storage (status `RefreshFailure`), and deletes it on sign
+     * out or when the server refuses the refresh token - so storage, not the live
+     * status, says whether the account is still on this device.
+     */
+    override suspend fun storedSessionUid(): String? = runCatching {
+        val auth = client?.auth ?: return@runCatching null
+        auth.currentUserOrNull()?.id ?: auth.sessionManager.loadSession()?.user?.id
+    }.getOrNull()
+
     override suspend fun signOutLocal(): Boolean {
         val auth = client?.auth ?: return false
 

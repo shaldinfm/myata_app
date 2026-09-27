@@ -81,6 +81,7 @@ class ReactionMigrationTest {
                 ReactionMigration.MIGRATION_1_2,
                 ReactionMigration.MIGRATION_2_3,
                 ReactionMigration.MIGRATION_3_4,
+                ReactionMigration.MIGRATION_4_5,
             )
             .build()
 

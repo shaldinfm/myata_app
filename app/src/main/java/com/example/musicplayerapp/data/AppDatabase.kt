@@ -24,6 +24,12 @@ import androidx.room.RoomDatabase
  * server-assigned revision this device last observed. Both are additive and
  * [ReactionMigration.MIGRATION_3_4] reads no existing row.
  *
+ * Version 5 adds explicit ownership: `collection_scope` (whose Collection the two
+ * reaction tables hold) and `parked_reaction` / `parked_outbox` (every other owner's
+ * rows and pending acts) - see [CollectionScopeRow]. [ReactionMigration.MIGRATION_4_5]
+ * creates them and marks the database as migrated, so `CollectionScope` settles the
+ * owner of pre-v5 rows once, from evidence, before anything syncs.
+ *
  * The two reaction tables answer different questions and neither substitutes for the
  * other: `track_reaction` is what a listener currently thinks, `reaction_outbox` is
  * what they did and the backend has not been told yet.
@@ -37,8 +43,14 @@ import androidx.room.RoomDatabase
  * change is visible in review rather than implicit in a diff of annotations.
  */
 @Database(
-    entities = [TrackReaction::class, ReactionOutboxEntry::class],
-    version = 4,
+    entities = [
+        TrackReaction::class,
+        ReactionOutboxEntry::class,
+        CollectionScopeRow::class,
+        ParkedReaction::class,
+        ParkedOutboxEntry::class,
+    ],
+    version = 5,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -46,6 +58,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun reactionDao(): ReactionDao
 
     abstract fun reactionOutboxDao(): ReactionOutboxDao
+
+    abstract fun collectionScopeDao(): CollectionScopeDao
 
     companion object {
         @Volatile
@@ -87,6 +101,7 @@ abstract class AppDatabase : RoomDatabase() {
                         ReactionMigration.MIGRATION_1_2,
                         ReactionMigration.MIGRATION_2_3,
                         ReactionMigration.MIGRATION_3_4,
+                        ReactionMigration.MIGRATION_4_5,
                     )
                     .build()
                 INSTANCE = instance

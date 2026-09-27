@@ -138,6 +138,41 @@ interface ReactionSyncApi {
      * `reaction_events` is untouched. History stays with the identity that made it.
      */
     suspend fun retireAllCurrentState(listenerId: String): SyncOutcome
+
+    /**
+     * Writes each of [rows] as [listenerId]'s current state for its track **only if
+     * that account holds no row for the track at all**. Never an update.
+     *
+     * The upload half of `LocalOnlyUpload`: opinions this device holds that no server
+     * has confirmed - chiefly favourites migrated from the old table, which were never
+     * given outbox events. Insert-if-absent is the whole safety argument. Whatever the
+     * account already holds for a track - a Like from another device, a stored
+     * NEUTRAL withdrawal - is newer information than a row that has sat unpublished on
+     * this phone, and this call cannot touch it. The pull that follows then adopts the
+     * server's row, so the server wins locally too.
+     *
+     * One statement for the whole list, so a server-side refusal of any row refuses
+     * them all; the caller narrows a refused batch down to the row responsible. No
+     * event is written - nothing here is something the listener did just now.
+     *
+     * Like [applyBatch], the implementation refuses unless the session it holds is
+     * exactly [listenerId]: RLS would refuse a mismatch anyway, but as a 403 that
+     * reads like a permanent fault rather than the identity question it is.
+     */
+    suspend fun insertIfAbsent(rows: List<TrackReaction>, listenerId: String): InsertOutcome
+}
+
+/** What [ReactionSyncApi.insertIfAbsent] did. */
+sealed interface InsertOutcome {
+
+    /**
+     * The statement landed. [inserted] are the track keys the account did not hold
+     * and now does; every other row's track was already held and was left alone.
+     */
+    data class Written(val inserted: Set<String>) : InsertOutcome
+
+    /** The call did not land. Classified exactly as every other remote write is. */
+    data class Failed(val outcome: SyncOutcome) : InsertOutcome
 }
 
 /**
@@ -163,6 +198,15 @@ sealed interface BatchOutcome {
      * are settled, and **no new revision was created**.
      */
     data class AlreadyApplied(val row: RemoteReaction?) : BatchOutcome
+
+    /**
+     * The server's state for the track moved on independently of this device - its
+     * revision is neither the baseline the batch was built on ([TrackReaction.remoteRev])
+     * nor one this batch's own earlier acts produced. Nothing was written to current
+     * state; the events were kept as history and marked, so a retry answers
+     * [AlreadyApplied]. [row] is the server's state, which wins.
+     */
+    data class Conflict(val row: RemoteReaction) : BatchOutcome
 
     /** The call did not land. Classified exactly as every other remote write is. */
     data class Failed(val outcome: SyncOutcome) : BatchOutcome

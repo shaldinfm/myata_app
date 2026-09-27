@@ -14,6 +14,7 @@ Supabase. Neither reporting path waits on the other and neither can fail the oth
 |---|---|---|
 | **`0003_rev_and_atomic_apply.sql`** | `4ac40f03a1e93d862f61864a034a72b480fa8abe21ad04388803b11bb778b37f` | **PASS** (`verdict.overall = true`) |
 | **`0004_account_deletion.sql`** | `a641e694550791e66e63a27a12d39ae712e6faa8ed35a8ada2ac197b37031b97` | **PASS** (see below) |
+| `0005_causal_guard.sql` | - | **NOT APPLIED.** Must be applied before any client that sends `p_base_rev` ships; see [the causal guard](#a-queued-act-never-overwrites-a-newer-server-state) |
 
 Each file named above, as it stands in this repository, is the exact file that was
 executed, byte for byte - which is why `.gitattributes` pins the migration directory
@@ -78,6 +79,172 @@ The **direct `reactions` INSERT/UPDATE policies deliberately remain**. Installed
 pre-G-A7 clients write the table directly and must keep working for the whole
 rollout; revoking them in favour of RPC-only writes is a separate, later hardening
 step, and must not happen until the old population has drained.
+
+## Whose Collection it is, and why a reinstall now restores it
+
+One registered account has one Collection, and it lives in the account on the server.
+The same account sees the same Collection on any phone, after a reinstall, after Clear
+Data and sign-in, and from any future client. The local Room tables are a cache of it,
+plus that account's own unsynced acts.
+
+Before this, reinstalling gave inconsistent results. Liked rows that had never had an
+outbox event (chiefly favourites migrated from the 3.6.4 `favorites` table) were never
+uploaded after a direct sign-in, so a reinstall lost them. Meanwhile Auto Backup
+restored whatever daily snapshot it had taken.
+
+**Ownership (Room v5).** The active tables (`track_reaction`, `reaction_outbox`) hold
+exactly one scope, recorded in `collection_scope`. Every other scope's rows and pending
+acts are *parked* in `parked_reaction` / `parked_outbox`, each stamped with its owner:
+
+| scope | whose |
+|---|---|
+| `device` | this install's own guest / anonymous Collection |
+| `account:<uid>` | exactly one account's rows and unsynced acts |
+| `legacy` | pre-v5 rows whose owner cannot be proven. Never active, never uploaded |
+
+`CollectionScope.enterAccount` is the only way the active scope changes:
+
+| active | entering account U |
+|---|---|
+| U | resume. Nothing moves |
+| account X | park X intact, bring U's parked rows back |
+| device | park it, bring U's back. **Adopt** the device rows into U only if this install was never an account before this authentication (identity `None`, or the anonymous handoff). A track U already holds locally keeps U's row, and the device's row and acts for it stay parked. Adopted rows carry the baseline `0` ("U had no row"), so on the server they land only where U holds nothing (see below). Nothing is overwritten or deleted |
+
+When the account leaves, its rows and pending acts are parked under `account:U` and the
+parked device Collection (or an empty one) becomes active. That covers an explicit
+sign-out, a stored session that is gone (signed out elsewhere, or refused by the
+server), and a restored database whose account isn't signed in here. A guest never sees
+or changes an account's rows, and a guest's likes are the device's. Signing back into U
+does not adopt them.
+
+So signing into Z never shows, uploads or deletes Y's rows. Signing back into Y brings
+them back, with Y's pending acts in their original order, still bound to Y. Switching
+needs no network.
+
+`CollectionScope.ensureScope` keeps the active scope in step with who the install
+provably is: a registered identity plus a *stored* session. An offline listener whose
+token can't be refreshed yet keeps their session in storage, and their Collection. It
+runs at every start and after sign-out. The Collection screen and the PLAYER's
+reaction additionally combine with `CollectionScope.visibility`, so they show nothing
+of an account that isn't the signed-in one even before the rows have moved. A local
+write first calls `prepareLocalWrite`.
+
+Entering an account runs at every point an install becomes one: direct sign-in,
+registration, recovery, the anonymous handoff and its recovery, reconciliation's
+promotion, and pull eligibility. Sign-in and recovery are refused while an account
+deletion is unresolved. The drain asks `CollectionScope` before it asks who it is. It never sends
+a scope's rows under another session, and it mints no anonymous identity for an
+account's rows. Account deletion removes that account's parked rows, and its active
+rows only when the active scope is provably that account. It never removes another
+account's, the device's or legacy rows.
+
+**Pre-v5 databases.** `MIGRATION_4_5` marks the database `migrated` instead of guessing
+an owner. The first use settles it from evidence:
+
+| evidence | pre-v5 rows become |
+|---|---|
+| fresh install, never upgraded in place (`firstInstallTime == lastUpdateTime`): the database came from a backup or device transfer, and its identity did not | `legacy` |
+| upgraded in place: handoff pending, or no account | `device` |
+| upgraded in place: registered or signed out as U, and U is the only account this install ever pulled | U's |
+| upgraded in place, but another account was pulled here too | `legacy` |
+
+No account adopts `legacy` rows automatically. They are kept so that a future,
+explicitly confirmed import can offer them. That needs a product decision and UI, and
+neither exists yet.
+
+**Local-only upload.** Before every pull, `LocalOnlyUpload` publishes the *active
+account's* rows that have no revision and no pending act. It uses a batched
+insert-if-absent (`ON CONFLICT (listener_id, track_key) DO NOTHING`): never an update,
+and no events. A refused batch is retried row by row, so one bad row stays local and
+doesn't block the rest. The scan that follows then adopts the account's version of
+every track.
+
+**Precedence per track, strongest first:**
+
+1. A pending local act wins.
+2. A server row above the local watermark wins, even over a restored or clock-ahead
+   local row.
+3. An unconfirmed local row is published if the account has none.
+4. An empty or short server answer erases nothing.
+
+**Registered without a session** (for example, a revoked token): sign-in and recovery
+are allowed again, the same as signing in from `SIGNED_OUT`.
+
+**Backup.** `supabase_identity`, supabase-kt's session in
+`<applicationId>_preferences`, and `myata_last_sync` are excluded from Auto Backup and
+device transfer. A restored refresh token has usually already been rotated. Restoring
+it alongside the identity file produced the "registered, no session" dead end. The
+restoring app's exclusions also apply at restore time, so these files don't come back
+from older snapshots either (verified on API 36).
+
+`myata_database` is **retained** on purpose. For a guest it is the only copy of their
+Collection, and every row in a v5 copy carries its owner. A v4 copy is settled as
+`legacy` by the table above.
+
+## A queued act never overwrites a newer server state
+
+One account has one Collection across every phone and the website, so the order that
+matters is the order in which states reached the server, not the order in which
+requests arrive. A Like tapped on an offline phone and delivered weeks later must not
+land on top of a Dislike recorded elsewhere in between. Migration 0003 wrote state
+unconditionally for any unseen event; migration 0005 adds a causal guard.
+
+- **The baseline.** Each batch carries `p_base_rev`: the server revision this device
+  last saw for the track (`track_reaction.remote_rev`). Local acts carry it unchanged
+  (like and dislike no longer reset it). The pull doesn't advance it while acts are
+  pending, and the drain sends all of a track's pending acts in one batch. So a whole
+  offline chain (LIKE, UNLIKE, LIKE) is judged against the state it began from, and its
+  own acts never conflict with each other.
+- **Our own write advances it.** After an `APPLIED` answer the revision is recorded
+  even if something was tapped during the call, so that act builds on this chain's
+  write instead of conflicting with it.
+- **The server decides, atomically.** It applies if the row is absent, at the
+  baseline, or at a revision this batch's own already-applied events produced (an
+  answer lost in transit). Otherwise it answers `CONFLICT`: nothing is written to
+  `reactions`, the events stay in history, and they are marked
+  (`reaction_event_applications.state_applied = false`). A retry is then
+  `ALREADY_APPLIED`.
+- **The client resolves, it doesn't retry.** On `CONFLICT` the batch's outbox rows
+  settle, and the server's row is adopted if nothing else is pending for the track.
+  An act tapped during a conflicting call keeps the old baseline, so it conflicts on
+  its next run and the server's newer state wins.
+
+No device clock takes part. Rollout: apply 0005 first; installed 3.6.6 clients keep
+calling the unchanged 8-argument function and behave as before. A client that sends
+`p_base_rev` to a database without 0005 gets PGRST202 and parks its outbox until the
+migration lands.
+
+**Acts before the account's initial restore.** On a fresh install, a reinstall or after
+Clear Data, a tap made before the first pull of the account completes has no baseline:
+the device has never seen the server's row. Sent as it is, it would get `CONFLICT` and
+be replaced by the older server state. So until `LastSyncStore.isInitialRestoreComplete`
+is true for the account, the drain holds the account's acts (`AwaitingRestore`). The
+tap stays visible locally. The worker asks for the pull and retries on its usual backoff,
+so a restore that failed on a bad network is retried.
+
+The pull that completes the initial restore **rebases** each pending track that has no
+baseline onto the revision it reads. The listener's new act is then judged as the newer
+act it is, and wins; local state is untouched. A completed restore schedules the held
+acts at once. Later pulls never rebase, so an unknown baseline after the restore is still
+judged by the guard.
+
+**Guest state adopted at sign-in never overwrites the account.** Rows adopted from the
+device carry `CollectionScope.ADOPTED_BASELINE` (`0`; server revisions start at 1), not
+`null`:
+- a pending guest act is judged against "no row": it applies only if the account has
+  nothing for the track, and otherwise gets `CONFLICT`, so the account's reaction wins;
+- guest state with no pending act is published by the insert-if-absent upload;
+- the anonymous handoff now adopts with that same insert-if-absent write, instead of the
+  old `updated_at`-guarded upsert.
+
+The initial restore rebases only `null`, which is reserved for acts made after signing
+in.
+
+Not covered, and unchanged: pre-cutover LEGACY outbox rows (the two-call path, guarded by
+`updated_at`). Once an account's restore is
+complete, a row whose revision this device never learned (`remote_rev` null) while the
+server holds one is still judged a conflict. That can happen only in the short window
+after a handoff or a device adoption, before the next pull.
 
 ## What the app can say about its own syncing
 
@@ -357,8 +524,9 @@ no row: nothing delivered, no `attempts` incremented, no `next_attempt_at` moved
 | rows | untouched, retried later | untouched, wait for sign-in |
 
 Fresh reactions still commit to Room and the outbox while paused — the Collection is
-local and was never the cloud's copy. They go out on the next drain after an explicit
-sign-in. See `docs/SUPABASE-FOUNDATION.md` for the state machine itself.
+local and was never the cloud's copy. They go out on the next drain after signing back
+into the same account. Signing into a different account parks them for this one; see
+[Whose Collection it is](#whose-collection-it-is-and-why-a-reinstall-now-restores-it). See `docs/SUPABASE-FOUNDATION.md` for the state machine itself.
 
 ## Retry and failure policy
 

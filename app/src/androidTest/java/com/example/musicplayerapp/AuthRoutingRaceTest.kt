@@ -31,6 +31,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import com.example.musicplayerapp.data.supabase.CollectionScope
 
 /**
  * The two races around authenticating while a drain is in flight.
@@ -120,6 +121,7 @@ class AuthRoutingRaceTest {
                 api = backend,
                 identity = { ListenerIdentity.Available(x) },
                 deletionInFlight = { false },
+                delivery = { CollectionScope.Delivery.AnyIdentity },
             ).drain()
         }
         withTimeout(10_000) { inFlight.await() }
@@ -243,7 +245,10 @@ class AuthRoutingRaceTest {
         assertTrue("nothing to retire", sync.retirements.isEmpty())
     }
 
-    /** **C.** A settled `SignedOut` still authenticates directly, resuming rather than restoring. */
+    /**
+     * **C.** A settled `SignedOut` still authenticates directly. As another account it
+     * is isolated: X's Collection is not carried into Y (see `CollectionScope`).
+     */
     @Test
     fun c_stable_signed_out_authenticates_directly() = runBlocking {
         dao.like(track, "Artist", "Title", "myata", likedAt = 1_000L)
@@ -256,7 +261,8 @@ class AuthRoutingRaceTest {
         assertTrue("$result", result is AuthResult.Success)
         assertEquals(IdentityState.Registered(y), IdentityStore.state(context))
         assertTrue("a signed-out install has nothing to retire", sync.retirements.isEmpty())
-        assertEquals("and its Collection is untouched", Reaction.LIKED, dao.find(track)!!.reaction)
+        assertNull("and X's Collection is not shown as Y's", dao.find(track))
+        assertTrue("nor published into Y", sync.inserts.none { it.first == y })
     }
 
     /** **C.** A settled `Anonymous` still hands off, exactly as before. */
@@ -291,8 +297,10 @@ class AuthRoutingRaceTest {
     @Test
     fun the_lease_is_never_left_held() = runBlocking {
         IdentityStore.markRegistered(context, x)
+        auth.session = x
 
-        // Registered is undefined for sign-in: the route refuses under the lease.
+        // Registered with a live session is undefined for sign-in: the route refuses
+        // under the lease. (Without one it is the recoverable state and would sign in.)
         val refused = EmailAuthRepository.signIn(context, "a@example.com", "password")
         assertTrue("$refused", refused is AuthResult.Failed)
 
@@ -334,6 +342,12 @@ private class BlockingBatchApi(
         current: com.example.musicplayerapp.data.TrackReaction?,
         listenerId: String,
     ) = com.example.musicplayerapp.data.supabase.SyncOutcome.Success
+
+    override suspend fun insertIfAbsent(
+        rows: List<com.example.musicplayerapp.data.TrackReaction>,
+        listenerId: String,
+    ): com.example.musicplayerapp.data.supabase.InsertOutcome =
+        com.example.musicplayerapp.data.supabase.InsertOutcome.Failed(com.example.musicplayerapp.data.supabase.SyncOutcome.AuthUnavailable("this fake does not publish local-only rows"))
 
     override suspend fun retireAllCurrentState(listenerId: String) =
         com.example.musicplayerapp.data.supabase.SyncOutcome.Success

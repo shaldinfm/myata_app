@@ -18,6 +18,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
+import com.example.musicplayerapp.ui.Motion
+import com.example.musicplayerapp.ui.profile.ProfileEntry
 import com.example.musicplayerapp.ui.CollectionOverflowMenu
 import com.example.musicplayerapp.adapters.FavoritesAdapter
 import com.example.musicplayerapp.data.FavoriteTrack
@@ -42,6 +44,9 @@ class FavoritesFragment : Fragment() {
     private lateinit var viewModel: FavoritesViewModel
     private lateinit var adapter: FavoritesAdapter
     private var currentFavorites: List<FavoriteTrack> = emptyList()
+
+    /** Whether this view last drew the empty frame; null before its first list. */
+    private var shownEmpty: Boolean? = null
 
     /** One in-flight cover lookup per row, cancelled when its row is recycled. */
     private val artworkJobs = mutableMapOf<FavoriteTrack, Job>()
@@ -162,7 +167,16 @@ class FavoritesFragment : Fragment() {
             viewModel.favorites.collectLatest { favorites ->
                 currentFavorites = favorites
 
-                if (favorites.isEmpty()) {
+                // The first list a view receives is drawn as it is - the screen is
+                // already fading in around it. A later flip between the two frames
+                // (the last track removed, the first one added) fades the arriving
+                // frame in rather than cutting to it.
+                val empty = favorites.isEmpty()
+                val flipped = shownEmpty != null && shownEmpty != empty
+                shownEmpty = empty
+                if (flipped) Motion.reveal(if (empty) binding.emptyState else binding.rvFavorites)
+
+                if (empty) {
                     binding.rvFavorites.visibility = View.GONE
                     binding.emptyState.visibility = View.VISIBLE
                     // The frozen empty frame hides the overflow: with nothing in
@@ -205,7 +219,7 @@ class FavoritesFragment : Fragment() {
         // profile never mints an anonymous uid.
         // Same control, same destination as HOME's - see MainFragment.
         binding.profileEntry.root.setOnClickListener {
-            findNavController().navigate(R.id.settings)
+            findNavController().navigate(R.id.settings, null, Motion.screenFade())
         }
 
 
@@ -303,6 +317,7 @@ class FavoritesFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        shownEmpty = null
         overflowMenu.dismiss()
         // viewLifecycleOwner's scope cancels the jobs themselves; this drops the
         // entries, which outlive the view because the map does not belong to it.
@@ -332,8 +347,13 @@ class FavoritesFragment : Fragment() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        (activity as MainActivity).binding.bottomNavView.visibility = View.VISIBLE
+    override fun onStart() {
+        super.onStart()
+        (activity as MainActivity).showBottomNav()
+        // The empty frame's profile control is HOME's, painted by the same code:
+        // the account's avatar rather than the layout's glyph for a signed-in
+        // listener. Painted while hidden too, so it is right the moment the last
+        // track goes.
+        (binding.profileEntry.root as? android.widget.ImageView)?.let { ProfileEntry.bind(this, it) }
     }
 }

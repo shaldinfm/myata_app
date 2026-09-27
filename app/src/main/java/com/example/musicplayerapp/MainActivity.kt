@@ -24,6 +24,7 @@ import com.example.musicplayerapp.databinding.ActivityMainBinding
 import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.service.PlaybackLog
 import com.example.musicplayerapp.ui.MiniPlayer
+import com.example.musicplayerapp.ui.Motion
 import com.example.musicplayerapp.ui.MyataTypography
 import com.example.musicplayerapp.ui.NavScreen
 import com.google.firebase.crashlytics.FirebaseCrashlytics
@@ -49,7 +50,7 @@ class MainActivity : AppCompatActivity() {
      * first frame already has it and there is no hidden-to-visible step to see.
      */
     fun showBottomNav() {
-        binding.bottomNavView.visibility = android.view.View.VISIBLE
+        Motion.reveal(binding.bottomNavView)
     }
 
     // Non-null since androidx.activity 1.9.0, which arrived with the Supabase
@@ -105,7 +106,7 @@ class MainActivity : AppCompatActivity() {
             
             if (navController != null) {
                 if (navController.currentDestination?.id != R.id.player) {
-                    navController.navigate(R.id.player)
+                    navController.navigate(R.id.player, null, Motion.screenFade())
                 }
             }
         } else if (intent.action != null && intent.action != Intent.ACTION_MAIN) {
@@ -295,85 +296,65 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.navHostFragment) as androidx.navigation.fragment.NavHostFragment
         val navController = navHostFragment.navController
 
-        // profile-guest is a pushed destination and the frame has no bottom bar, so
-        // the bar follows the destination rather than being toggled by whichever
-        // screen happened to open the profile. Doing it here also means Back
-        // restores it without any of the three entry points having to remember to.
+        // The chrome follows the screen that is actually on screen, not the
+        // NavController's intent to show one. The destination listener fires
+        // synchronously inside navigate()/popBackStack(), while the fragment
+        // transaction that brings the screen is only committed - it runs on a later
+        // main-thread message, and a popped screen inflates its view from scratch
+        // there. Applying the chrome from the listener alone therefore drew at least
+        // one frame of the next screen's chrome over the previous screen: Back from
+        // Settings showed the Mini Player and the bar over Settings, and HOME
+        // arrived after them.
         //
-        // GONE, not INVISIBLE: the Mini Player is constrained to the bar's top
-        // edge, and a GONE view collapses to a point at its own position, which
-        // drops the player to the screen bottom rather than leaving it floating
-        // above a 76dp hole.
-        //
-        // Split mode owns the bar too and sets it directly; the two do not fight,
-        // because split mode is not entered while the profile is open.
+        // So it is applied when both are true - this is the current destination,
+        // and that destination's fragment has a view - whichever becomes true last.
+        // A predictive Back that is cancelled lands back on a destination whose
+        // view never went away, so the listener alone puts the chrome back.
+        val navHostFragments = navHostFragment.childFragmentManager
         navController.addOnDestinationChangedListener { _, destination, _ ->
-            // The two auth screens joined the profile here at G-A4c1. Their frames
-            // have no bottom bar either, and they are reached only from the profile,
-            // so the bar would otherwise appear for the length of a sign-in and
-            // vanish again - offering four destinations to somebody in the middle of
-            // typing a password.
-            // settings and settings-appearance joined them at G1, for the same
-            // reason and from the same place: neither frozen frame has a bottom
-            // bar, and settings is now what the 40x40 header control opens, so the
-            // bar would otherwise be present on the parent of a screen that hides
-            // it and absent on the child.
-            // The screen identity every "which screen am I on" question is
-            // answered from, written here and nowhere else.
-            //
-            // It used to be written by the four bottom-bar fragments about
-            // themselves, which meant the pushed screens - none of which wrote
-            // anything - left it naming the screen the listener had come from.
-            // That is what kept the Mini Player up over Profile and Settings.
-            // Deriving it from the destination removes the class of bug rather
-            // than the instance: see NavScreen for the default that makes a
-            // destination nobody has thought about hide the pill on its own.
-            viewModel.currentFragmentLiveData.value = screenKeyOf(destination.id)
-
-            val hidesBottomBar = destination.id == R.id.profile ||
-                destination.id == R.id.profile_authenticated ||
-                // profile_avatar joined them at G6a: its frames have a back band and
-                // no bottom bar, like the profile it is pushed from.
-                destination.id == R.id.profile_avatar ||
-                destination.id == R.id.auth_sign_in ||
-                destination.id == R.id.auth_create_account ||
-                // auth_recovery was left out when the other two auth screens
-                // joined at G-A4c1. Its frozen frame has no bottom bar either and
-                // it is reached only from sign-in, so it was the one auth screen
-                // that still offered four destinations mid-password-reset.
-                destination.id == R.id.auth_recovery ||
-                destination.id == R.id.settings ||
-                destination.id == R.id.settings_appearance ||
-                // report_problem joined them at G3, for the same reason: the five
-                // frozen report frames have a back band and no bottom bar, and it
-                // is pushed from the player as well as from settings - so the bar
-                // would otherwise be present over one door's copy of the screen and
-                // absent over the other's.
-                destination.id == R.id.report_problem ||
-                // broadcast_history joined them at G4b. The four frozen history
-                // frames have a back band and no bottom bar, like report's.
-                destination.id == R.id.broadcast_history ||
-                // settings_lastfm joined them at G6b P3a. Its frozen frame has a
-                // back band and no bottom bar, like settings_appearance beside it.
-                // Note this list is opt-in, unlike the Mini Player: NavScreen's
-                // PUSHED default hides the pill for a new destination on its own,
-                // but the bar needs a line here - LastfmEntryPointTest caught the
-                // screen shipping with four destinations under it.
-                destination.id == R.id.settings_lastfm
-
-            binding.bottomNavView.visibility =
-                if (hidesBottomBar) android.view.View.GONE
-                else android.view.View.VISIBLE
+            val onScreen = navHostFragments.fragments.any { fragment ->
+                fragment.view != null && !fragment.isRemoving && hosts(fragment, destination)
+            }
+            if (onScreen) applyShellChrome(destination)
         }
+        //
+        // Two moments count as "has a view": the view being created, and the
+        // fragment starting. The second is for a Back that arrives while the
+        // previous transition is still running - the screen being returned to has
+        // not finished animating out, so its view is reused rather than created
+        // again, and only its start says it is back (measured on API 24: started
+        // 4ms after the pop, resumed only ~270ms later, once Settings' exit
+        // animation had ended). Both fire inside the transaction, before the next
+        // frame, and applying twice changes nothing.
+        navHostFragments.registerFragmentLifecycleCallbacks(
+            object : FragmentManager.FragmentLifecycleCallbacks() {
+                override fun onFragmentViewCreated(
+                    fm: FragmentManager,
+                    f: Fragment,
+                    v: android.view.View,
+                    savedInstanceState: Bundle?,
+                ) = applyIfHosting(f)
+
+                override fun onFragmentStarted(fm: FragmentManager, f: Fragment) = applyIfHosting(f)
+
+                private fun applyIfHosting(f: Fragment) {
+                    val destination = navController.currentDestination ?: return
+                    if (hosts(f, destination)) applyShellChrome(destination)
+                }
+            },
+            false,
+        )
 
 
-        val navOptions = androidx.navigation.NavOptions.Builder()
-            .setPopUpTo(R.id.home, false) // Pop up to home, but don't pop home itself
-            .setLaunchSingleTop(true)     // Don't create multiple instances of the same fragment
-            .setEnterAnim(R.anim.fade_in)
-            .setExitAnim(R.anim.fade_out)
-            .build()
-            
+        // The pop animations are part of it now. Without them the HOME tab - a
+        // popBackStack, not a navigate - and system Back from a tab cut straight to
+        // the screen underneath while every other move between tabs crossfaded.
+        val navOptions = Motion.screenFade(
+            androidx.navigation.NavOptions.Builder()
+                .setPopUpTo(R.id.home, false) // Pop up to home, but don't pop home itself
+                .setLaunchSingleTop(true)     // Don't create multiple instances of the same fragment
+        )
+
         // The frozen 3.6.6 design has four destinations, and Donate is not one of
         // them: donation lives inside "О нас", which hands it to YooMoney rather
         // than running a payment screen of its own. There is no fifth destination
@@ -422,6 +403,88 @@ class MainActivity : AppCompatActivity() {
                 navController.navigate(R.id.info, null, navOptions)
             }
         }
+    }
+
+    /** Whether [fragment] is the screen [destination] puts in the nav host. */
+    private fun hosts(fragment: Fragment, destination: androidx.navigation.NavDestination): Boolean =
+        (destination as? androidx.navigation.fragment.FragmentNavigator.Destination)
+            ?.className == fragment.javaClass.name
+
+    /**
+     * The shell's half of arriving at [destination]: the screen key every "which
+     * screen am I on" question reads - the Mini Player and the bar's active pill
+     * among them - and whether the bottom bar is there at all. Called once the
+     * destination's view exists; see the listener in onCreate for why.
+     */
+    private fun applyShellChrome(destination: androidx.navigation.NavDestination) {
+        // The screen identity every "which screen am I on" question is
+        // answered from, written here and nowhere else.
+        //
+        // It used to be written by the four bottom-bar fragments about
+        // themselves, which meant the pushed screens - none of which wrote
+        // anything - left it naming the screen the listener had come from.
+        // That is what kept the Mini Player up over Profile and Settings.
+        // Deriving it from the destination removes the class of bug rather
+        // than the instance: see NavScreen for the default that makes a
+        // destination nobody has thought about hide the pill on its own.
+        viewModel.currentFragmentLiveData.value = screenKeyOf(destination.id)
+
+        // profile-guest is a pushed destination and the frame has no bottom bar, so
+        // the bar follows the destination rather than being toggled by whichever
+        // screen happened to open the profile. Doing it here also means Back
+        // restores it without any of the three entry points having to remember to.
+        //
+        // GONE, not INVISIBLE: the Mini Player is constrained to the bar's top
+        // edge, and a GONE view collapses to a point at its own position, which
+        // drops the player to the screen bottom rather than leaving it floating
+        // above a 76dp hole.
+        //
+        // Split mode owns the bar too and sets it directly; the two do not fight,
+        // because split mode is not entered while the profile is open.
+        // The two auth screens joined the profile here at G-A4c1. Their frames
+        // have no bottom bar either, and they are reached only from the profile,
+        // so the bar would otherwise appear for the length of a sign-in and
+        // vanish again - offering four destinations to somebody in the middle of
+        // typing a password.
+        // settings and settings-appearance joined them at G1, for the same
+        // reason and from the same place: neither frozen frame has a bottom
+        // bar, and settings is now what the 40x40 header control opens, so the
+        // bar would otherwise be present on the parent of a screen that hides
+        // it and absent on the child.
+        val hidesBottomBar = destination.id == R.id.profile ||
+            destination.id == R.id.profile_authenticated ||
+            // profile_avatar joined them at G6a: its frames have a back band and
+            // no bottom bar, like the profile it is pushed from.
+            destination.id == R.id.profile_avatar ||
+            destination.id == R.id.auth_sign_in ||
+            destination.id == R.id.auth_create_account ||
+            // auth_recovery was left out when the other two auth screens
+            // joined at G-A4c1. Its frozen frame has no bottom bar either and
+            // it is reached only from sign-in, so it was the one auth screen
+            // that still offered four destinations mid-password-reset.
+            destination.id == R.id.auth_recovery ||
+            destination.id == R.id.settings ||
+            destination.id == R.id.settings_appearance ||
+            // report_problem joined them at G3, for the same reason: the five
+            // frozen report frames have a back band and no bottom bar, and it
+            // is pushed from the player as well as from settings - so the bar
+            // would otherwise be present over one door's copy of the screen and
+            // absent over the other's.
+            destination.id == R.id.report_problem ||
+            // broadcast_history joined them at G4b. The four frozen history
+            // frames have a back band and no bottom bar, like report's.
+            destination.id == R.id.broadcast_history ||
+            // settings_lastfm joined them at G6b P3a. Its frozen frame has a
+            // back band and no bottom bar, like settings_appearance beside it.
+            // Note this list is opt-in, unlike the Mini Player: NavScreen's
+            // PUSHED default hides the pill for a new destination on its own,
+            // but the bar needs a line here - LastfmEntryPointTest caught the
+            // screen shipping with four destinations under it.
+            destination.id == R.id.settings_lastfm
+
+        // Shown with the same fade as the screen arriving under it, hidden at once
+        // with the screen that is leaving.
+        Motion.setShown(binding.bottomNavView, !hidesBottomBar)
     }
 
     /**

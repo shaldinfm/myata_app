@@ -3,13 +3,13 @@ package com.example.musicplayerapp
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.VectorDrawable
 import android.widget.ImageView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.musicplayerapp.data.NowPlayingArtwork
 import com.example.musicplayerapp.ui.CoverArt
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -17,19 +17,18 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * What is actually on screen the instant the track changes (G5a).
+ * What is on screen the instant the track changes.
  *
- * [com.example.musicplayerapp.data.NowPlayingArtworkTest] pins which cover a
- * track is entitled to; this pins the frame. The bug was never in the URL the
- * ViewModel held - it was that the view kept displaying the previous track's
- * bitmap while the next one loaded, because `noPlaceholder` leaves whatever is
- * there until a load completes. So what is inspected here is the state
- * *immediately* after the call, before any load can have finished: at that moment
- * the previous cover must already be gone.
+ * The owner's rule since the UI polish pass: previous cover -> the next cover has
+ * decoded -> crossfade -> next cover. The placeholder is never an in-between frame;
+ * it stands only where there genuinely is no cover - nothing shown yet, NO_IMAGE,
+ * or a failed load. (This inverts G5a, which dropped the cover the instant the URL
+ * changed and produced the old -> plate -> new flash.)
  *
- * The previous cover is a [ColorDrawable] so it is unmistakable. No network is
- * needed and none is waited for - the URLs are unreachable on purpose, and what
- * they eventually do is not what is being tested.
+ * The previous cover is a [ColorDrawable] so it is unmistakable, and the
+ * placeholder is the vector `artwork_placeholder`, so "is the plate up" is "is a
+ * VectorDrawable drawn". The cover URLs are unreachable on purpose: what is tested
+ * is the frame immediately after the call, before any load can finish.
  *
  * Picasso must be called on the main thread, so the render happens there; the
  * assertions are made back on the test thread, because an assertion that fails
@@ -40,6 +39,7 @@ class CoverArtTransitionTest {
 
     private val coverA = "https://example.invalid/a.jpg"
     private val coverB = "https://example.invalid/b.jpg"
+    private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
 
     /** What one [CoverArt.render] call left behind. */
     private class Frame(
@@ -48,12 +48,7 @@ class CoverArtTransitionTest {
         val loaded: String?,
     )
 
-    /**
-     * Puts a stand-in for A's cover in a fresh view, renders [img] over it, and
-     * reports what the view holds the moment the call returns.
-     */
-    private fun renderOverACover(img: String?, loaded: String?): Frame {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
+    private fun renderOver(img: String?, loaded: String?): Frame {
         lateinit var frame: Frame
         instrumentation.runOnMainSync {
             val view = ImageView(instrumentation.targetContext)
@@ -66,54 +61,75 @@ class CoverArtTransitionTest {
         return frame
     }
 
-    /**
-     * The track changed and the new cover has not loaded yet. This is the frame
-     * the owner asked about: B's metadata is on screen, so A's artwork must not be.
-     */
+    /** The new cover is loading: the previous one stays until it has decoded. */
     @Test
-    fun theNewTracksFrameNeverShowsTheOldTracksCover() {
-        val frame = renderOverACover(img = coverB, loaded = coverA)
+    fun theNextCoverLoadsUnderThePreviousOneWithNoPlaceholderFrame() {
+        val frame = renderOver(img = coverB, loaded = coverA)
 
         assertEquals("the view is now bound to B's cover", coverB, frame.loaded)
-        assertNotNull("something is drawn - the plate", frame.drawn)
-        assertTrue(
-            "A's cover was still on screen under B's metadata",
-            frame.drawn !== frame.previous && frame.drawn !is ColorDrawable,
-        )
+        assertSame("the placeholder came up between two covers", frame.previous, frame.drawn)
     }
 
-    /**
-     * The common case: the track changed and no lookup has answered yet, so the
-     * ViewModel publishes no cover at all.
-     */
+    /** The common case: a new track whose lookup has not answered yet. */
     @Test
-    fun aTrackWithNoCoverYetDropsThePreviousOne() {
-        val frame = renderOverACover(img = null, loaded = coverA)
+    fun aPendingLookupKeepsThePreviousCover() {
+        val frame = renderOver(img = null, loaded = coverA)
 
-        assertNull("nothing is bound", frame.loaded)
-        assertNotNull(frame.drawn)
-        assertTrue("the previous cover was left up", frame.drawn !== frame.previous)
+        assertEquals("the previous cover is still the one on screen", coverA, frame.loaded)
+        assertSame("the placeholder came up while the lookup ran", frame.previous, frame.drawn)
     }
 
-    /** A lookup that finished and found nothing reads the same way as "not yet". */
+    /** The resolver looked and found nothing: this track really has no cover. */
     @Test
-    fun theNoCoverMarkerAlsoDropsThePreviousOne() {
-        val frame = renderOverACover(img = NowPlayingArtwork.NO_IMAGE, loaded = coverA)
+    fun noCoverForTheTrackShowsThePlaceholder() {
+        val frame = renderOver(img = NowPlayingArtwork.NO_IMAGE, loaded = coverA)
 
         assertNull(frame.loaded)
-        assertTrue("the previous cover was left up", frame.drawn !== frame.previous)
+        assertTrue("the placeholder is not up", frame.drawn is VectorDrawable)
+    }
+
+    /** Nothing has been shown yet: the first frame of a session is the placeholder. */
+    @Test
+    fun theFirstLoadShowsThePlaceholder() {
+        val frame = renderOver(img = null, loaded = null)
+
+        assertNull(frame.loaded)
+        assertTrue("the placeholder is not up", frame.drawn is VectorDrawable)
     }
 
     /**
-     * The other half of the rule. A metadata tick that repeats the current track
-     * must leave its cover alone - taking it down and loading it again is what
-     * would make the artwork blink every few seconds.
+     * A metadata tick that repeats the current track must leave its cover alone -
+     * taking it down and loading it again is what would make the artwork blink.
      */
     @Test
     fun repeatingTheSameCoverLeavesTheViewUntouched() {
-        val frame = renderOverACover(img = coverA, loaded = coverA)
+        val frame = renderOver(img = coverA, loaded = coverA)
 
         assertEquals(coverA, frame.loaded)
         assertSame("the cover already up was replaced", frame.previous, frame.drawn)
+    }
+
+    /** A cover that cannot load gives way to the placeholder and is forgotten. */
+    @Test
+    fun aFailedLoadReturnsToThePlaceholder() {
+        var failed = false
+        lateinit var view: ImageView
+        instrumentation.runOnMainSync {
+            view = ImageView(instrumentation.targetContext)
+            // Laid out, so the fit() load has a size and starts at once.
+            view.layout(0, 0, 100, 100)
+            view.setImageDrawable(ColorDrawable(Color.MAGENTA))
+            CoverArt.render(view, "file:///data/local/tmp/myata-no-such-cover.png", coverA) {
+                failed = true
+            }
+        }
+
+        val deadline = System.currentTimeMillis() + 10_000
+        var plate = false
+        while (System.currentTimeMillis() < deadline && !plate) {
+            Thread.sleep(25)
+            instrumentation.runOnMainSync { plate = failed && view.drawable is VectorDrawable }
+        }
+        assertTrue("the failed load did not bring the placeholder back", plate)
     }
 }

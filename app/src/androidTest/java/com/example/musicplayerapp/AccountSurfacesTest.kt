@@ -193,6 +193,37 @@ class AccountSurfacesTest {
         assertEquals(listOf("myata-09"), auth.avatarUpdates)
     }
 
+    // ==================== the same control on ABOUT US ====================
+
+    /**
+     * ABOUT US draws HOME's control, painted by the same code (ProfileEntry), so a
+     * signed-in listener sees their avatar there too - not the layout's glyph it
+     * showed until the UI polish pass.
+     */
+    @Test
+    fun h2_about_us_shows_the_same_avatar_as_home() {
+        signedIn(avatar = "myata-07")
+        withMainActivity {
+            awaitEntry("myata-07")
+            tap(R.id.nav_item_info)
+            await("ABOUT US with the account's avatar") { activity ->
+                activity.currentDestinationIdOrNull() == R.id.info &&
+                    activity.findViewById<View>(R.id.profile_entry)?.tag == "myata-07"
+            }
+        }
+    }
+
+    @Test
+    fun h3_a_guest_keeps_the_generic_control_on_about_us() {
+        withMainActivity {
+            awaitHome()
+            tap(R.id.nav_item_info)
+            await("ABOUT US") { it.currentDestinationIdOrNull() == R.id.info }
+            Thread.sleep(500)
+            on { assertGeneric(it) }
+        }
+    }
+
     // ==================== another device changed it ====================
 
     @Test

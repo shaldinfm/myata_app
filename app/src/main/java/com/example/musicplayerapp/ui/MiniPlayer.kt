@@ -140,10 +140,8 @@ class MiniPlayer(
     }
 
     private fun loadArtwork(url: String?) {
-        // The player screen's rule, called the same way: the cover comes down as
-        // soon as the track's does, and the plate stands until the next one has
-        // decoded. Before G5a this kept the previous cover up through a track
-        // change, which is the pill's half of recon issue B.
+        // The player screen's rule, called the same way: see CoverArt for when the
+        // previous cover gives way and when the placeholder is shown.
         loadedArtworkUrl = CoverArt.render(views.miniPlayerArtwork, url, loadedArtworkUrl) {
             loadedArtworkUrl = null
         }
@@ -162,6 +160,9 @@ class MiniPlayer(
             inSplitMode = vm.isInSplitMode.value == true,
             hasPlaybackSession = vm.hasPlaybackSession.value == true,
         )
-        views.root.visibility = if (show) View.VISIBLE else View.GONE
+        // Fades in with the screen it arrives on - the shell only publishes the
+        // screen key once that screen's view exists - and leaves with the screen
+        // that is going. Visibility itself changes at once either way.
+        Motion.setShown(views.root, show)
     }
 }

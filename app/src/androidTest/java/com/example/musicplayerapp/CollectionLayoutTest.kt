@@ -97,13 +97,37 @@ class CollectionLayoutTest {
             expect(where, "list leading inset", leftInRoot(list) + list.paddingStart, dp(16))
             expect(where, "bottom clearance", list.paddingBottom, dp(154))
 
-            // The trailing action's 48dp box on the 16 margin, which puts the 4x16
-            // dot column's centre at 350 against the frozen 352.
+            // Widget.Myata.HeaderAction on the shared header grid (UI polish pass):
+            // a 48dp target centred where the 40dp profile control is centred -
+            // 36dp from the right edge, 32dp down the band - so the empty and
+            // populated headers' trailing controls share one centre, and PLAYER's
+            // overflow sits on the same point.
             expect(where, "overflow size", overflow.width, dp(48))
             expect(
-                where, "overflow trailing edge",
-                root.width - (leftInRoot(overflow) + overflow.width), dp(16),
+                where, "overflow centre from the right edge",
+                root.width - (leftInRoot(overflow) + overflow.width / 2), dp(36),
             )
+            expect(where, "overflow centre y in the band",
+                topInRoot(overflow) - topInRoot(header) + overflow.height / 2, dp(32))
+            val profile = root.findViewById<View>(R.id.profile_entry)
+            profile.visibility = View.VISIBLE
+            overflow.visibility = View.GONE
+            root.measure(
+                View.MeasureSpec.makeMeasureSpec(root.width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(root.height, View.MeasureSpec.EXACTLY),
+            )
+            root.layout(0, 0, root.width, root.height)
+            expect(
+                where, "profile control centre from the right edge (the empty header's)",
+                root.width - (leftInRoot(profile) + profile.width / 2), dp(36),
+            )
+            profile.visibility = View.GONE
+            overflow.visibility = View.VISIBLE
+            root.measure(
+                View.MeasureSpec.makeMeasureSpec(root.width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(root.height, View.MeasureSpec.EXACTLY),
+            )
+            root.layout(0, 0, root.width, root.height)
 
             expect(where, "title colour", title.currentTextColor, colour(ctx, R.color.text_heading))
             expect(where, "subtitle colour", subtitle.currentTextColor, colour(ctx, R.color.text_secondary))

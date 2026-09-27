@@ -15,7 +15,7 @@ import com.example.musicplayerapp.ui.HistoryRowTypography
 import com.example.musicplayerapp.ui.RowActionTouchTarget
 import com.example.musicplayerapp.data.HistoryTrack
 import com.google.android.material.imageview.ShapeableImageView
-import com.squareup.picasso.Picasso
+import com.example.musicplayerapp.ui.CoverArt
 import java.util.concurrent.Executor
 
 /**
@@ -74,6 +74,9 @@ class PlayerHistoryAdapter(
         @VisibleForTesting
         @Volatile
         var diffExecutorForTest: Executor? = null
+
+        /** The rows' plate: the PLAYER's theme-aware placeholder. */
+        private val PLATE = R.drawable.artwork_placeholder
     }
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -87,6 +90,9 @@ class PlayerHistoryAdapter(
 
         /** The track this holder is currently bound to, for late artwork. */
         var boundTo: HistoryTrack? = null
+
+        /** Which cover this holder is showing or loading - see coverKey. */
+        var coverKey: String? = null
 
         init {
             // History-local text metrics, typography "B" since G4b: the title 16sp
@@ -143,6 +149,13 @@ class PlayerHistoryAdapter(
         holder.tvArtist.text = track.artist
         holder.action?.setOnClickListener { onFindTrack?.invoke(track) }
 
+        // The same play rebound - a content change, which DiffCallback keeps on
+        // this holder - keeps the cover it already has instead of flashing the
+        // plate and loading it again.
+        val key = coverKey(track)
+        if (holder.coverKey == key) return
+        holder.coverKey = key
+
         // Back to the branded plate first: a recycled holder still carries the
         // previous row's cover. The plate is also what stays when the lookup finds
         // nothing, so a row never reads as a blank tile.
@@ -152,15 +165,7 @@ class PlayerHistoryAdapter(
             // The answer arrives after a round trip, by which time the holder may
             // have been rebound to a different track. Only paint if it has not.
             if (holder.boundTo != track || url.isNullOrBlank()) return@artworkFor
-            Picasso.get()
-                .load(url)
-                // Picasso's default placeholder is "nothing", which would take the
-                // plate down while the cover loads.
-                .noPlaceholder()
-                .error(R.drawable.zaglushka_logo)
-                .fit()
-                .centerCrop()
-                .into(holder.artwork)
+            CoverArt.loadRow(holder.artwork, url, PLATE) { holder.coverKey = null }
         }
     }
 
@@ -168,14 +173,15 @@ class PlayerHistoryAdapter(
         super.onViewRecycled(holder)
         holder.boundTo?.let(cancelArtwork)
         holder.boundTo = null
+        holder.coverKey = null
         plate(holder)
     }
 
-    /** The designed fallback, the same plate the PLAYER's own cover falls back to. */
-    private fun plate(holder: ViewHolder) {
-        Picasso.get().cancelRequest(holder.artwork)
-        holder.artwork.setImageResource(R.drawable.zaglushka_logo)
-    }
+    /** The designed fallback, the same theme-aware plate the PLAYER's own cover uses. */
+    private fun plate(holder: ViewHolder) = CoverArt.clearRow(holder.artwork, PLATE)
+
+    /** Which cover a play needs: the same artist and title need the same one. */
+    private fun coverKey(track: HistoryTrack): String = "${track.artist}${track.title}"
 
     /**
      * The same identity [HistoryAdapter] uses: a play is identified by when it
@@ -187,5 +193,9 @@ class PlayerHistoryAdapter(
 
         override fun areContentsTheSame(oldItem: HistoryTrack, newItem: HistoryTrack): Boolean =
             oldItem == newItem
+
+        // Rebind a changed row in place rather than crossfading it with a second
+        // holder that starts from the plate.
+        override fun getChangePayload(oldItem: HistoryTrack, newItem: HistoryTrack): Any = Unit
     }
 }

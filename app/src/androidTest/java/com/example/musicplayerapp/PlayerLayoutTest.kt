@@ -148,79 +148,37 @@ class PlayerLayoutTest {
                     "${(inactiveSwing * 100).roundToInt()}%)"
             }
 
-            // The trailing slot now holds the control it was reserving (G2), and
-            // holds it in exactly the box the Space occupied - which is what keeps
-            // the label centred where the frozen frame centres it. The assertion is
-            // inverted deliberately rather than deleted: what it guarded before was
-            // "nothing may be drawn here yet", and what it guards now is "whatever
-            // is drawn here may not resize the slot".
+            // ## The overflow is on the shared header grid - UI polish pass
+            //
+            // Widget.Myata.HeaderAction: a 48dp target whose glyph centre is 32dp
+            // below the content top and 36dp from the right edge - the centre of
+            // HOME's, ABOUT US's and COLLECTION's trailing control, so the button
+            // no longer moves between screens. Supersedes G4a, which followed the
+            // frozen frame to 36dp down and 38.02 from the right.
             //
             // G1a's withdrawn attempt hung Настройки on this control. That is still
             // ruled out, by SettingsEntryTest and by the menu itself: this is the
             // player's own actions, and Settings is reached from the HOME header.
-            expect(where, "trailing action slot width", reserved.width, dp(32))
-            expect(where, "trailing action slot height", reserved.height, dp(39))
-
-            // ## The ellipsis sits where its own frozen frame draws it - G4a
-            //
-            // `Mobile Header (Subtle)` is 47 tall at y=16, and its ellipsis ink is
-            // a 4x16 at (8,8) of a 20x39 `Button` whose `Button:margin` sits at y=4
-            // - ink centre 4 + 8 + 8 = 20 in the header, 3.5 above the button's own
-            // centre. COLLECTION's `Header - TopAppBar` lifts its ellipsis by the
-            // same 3.5 inside its button, so the two share a lift and a trailing
-            // anchor and differ only by their headers' heights.
-            //
-            // G3 instead lifted this glyph 15dp onto the HOME Profile control's 32dp
-            // line - a deliberate cross-screen alignment, asserted here until G4a.
-            // The frozen file does not draw it there, and G4a follows the file: see
-            // `header_overflow_glyph_lift` in dimens.xml for the full measurement
-            // and for how to restore G3 if that call is reversed.
-            //
-            // Still padding, so the box itself does not move: `reserved`'s own y
-            // and size are asserted above and unchanged, which keeps the touch
-            // target and the popup anchor where they were. What is asserted here is
-            // where the glyph is *drawn* - with `scaleType=center` that is the
-            // centre of the content box.
-            val glyphCentre = topIn(reserved, header) + reserved.paddingTop +
-                (reserved.height - reserved.paddingTop - reserved.paddingBottom) / 2f
-            expect(where, "overflow glyph centre in the header", glyphCentre, dp(20))
-            expect(
-                where, "overflow glyph centre from the player top",
-                topIn(header, shell) + glyphCentre, dp(36),
-            )
-
-            // And the box is where it always was - stated separately so a future
-            // change that moved the box instead of the glyph fails here rather than
-            // silently shrinking the target or dragging the popup with it.
-            expect(where, "trailing action slot y", topIn(reserved, header), dp(4))
-            expect(where, "trailing action slot ends 16 from the right",
-                leftIn(reserved, shell) + reserved.width, dp(widthDp - 16))
-
-            // ## The pressed circle is centred on the glyph, not on the box
-            //
-            // The glyph is placed by padding, and padding does not move a
-            // background: `selectableItemBackgroundBorderless` centred its circle
-            // on the 32x39 box, 6 right of and 3.5 below the dots. The ripple is
-            // measured where it is actually drawn - its own bounds after a real
-            // draw pass - against where the glyph is drawn, on both axes.
-            val glyphCentreX = reserved.paddingLeft +
-                (reserved.width - reserved.paddingLeft - reserved.paddingRight) / 2f
-            val glyphCentreY = reserved.paddingTop +
-                (reserved.height - reserved.paddingTop - reserved.paddingBottom) / 2f
-            // The dots themselves stay where G4a put them: 38.02 from the right.
+            expect(where, "overflow target width", reserved.width, dp(48))
+            expect(where, "overflow target height", reserved.height, dp(48))
+            // scaleType=center with no padding: the glyph is drawn at the box centre.
+            expect(where, "overflow glyph centre y",
+                topIn(reserved, shell) + reserved.height / 2f, dp(32))
             expect(where, "overflow glyph centre x",
-                leftIn(reserved, shell) + glyphCentreX, dp(widthDp - 38.02f))
+                leftIn(reserved, shell) + reserved.width / 2f, dp(widthDp - 36))
+            if (reserved.paddingLeft + reserved.paddingTop + reserved.paddingRight + reserved.paddingBottom != 0) {
+                findings += "$where: the header overflow is padded, which moves the glyph off the target's centre"
+            }
+
+            // The pressed circle is centred on the glyph.
             val ripple = pressedCircle(reserved)
             if (ripple == null) {
                 findings += "$where: the header overflow has no ripple to press"
             } else {
-                expect(where, "pressed circle centre x", ripple.bounds.exactCenterX(), glyphCentreX, tolerance = 1f)
-                expect(where, "pressed circle centre y", ripple.bounds.exactCenterY(), glyphCentreY, tolerance = 1f)
-                expect(where, "pressed circle radius", ripple.radius, dp(20), tolerance = 1f)
-                // A borderless ripple the view cannot project is clipped to the
-                // 32-wide box, which would cut the 40 circle's sides off.
+                expect(where, "pressed circle centre x", ripple.bounds.exactCenterX(), reserved.width / 2f, tolerance = 1f)
+                expect(where, "pressed circle centre y", ripple.bounds.exactCenterY(), reserved.height / 2f, tolerance = 1f)
                 if (!reserved.background.isProjected) {
-                    findings += "$where: the pressed circle is not projected and is clipped to the 32dp box"
+                    findings += "$where: the pressed circle is not projected and is clipped to the box"
                 }
             }
             if (!reserved.hasOnClickListeners()) {
@@ -230,7 +188,7 @@ class PlayerLayoutTest {
                 findings += "$where: the header overflow has no content description"
             }
 
-            // The label is centred because both ends reserve a slot.
+            // The label is centred across the row; the overflow is drawn over it, not in it.
             val labelCentre = leftIn(label, header) + label.width / 2
             expect(where, "header label centred", labelCentre, header.width / 2f)
             requireOneLine(label, "$where/header label")

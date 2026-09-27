@@ -522,8 +522,8 @@ class MyataStreamFragment() : Fragment() {
         // What is on screen belongs to the view, not to the fragment. A push from
         // the PLAYER (Report Problem, История эфира) destroys this view but keeps
         // the instance, and the view that comes back inflates with the plate. Left
-        // set, the URL would tell CoverArt that cover is already up, and the plate
-        // would stand until the next track.
+        // set, the URL would tell CoverArt that cover is already up, and the
+        // placeholder would stand until the next track.
         currentImageUrl = null
         historyRenderGeneration++
         super.onDestroyView()
@@ -566,20 +566,19 @@ class MyataStreamFragment() : Fragment() {
             currentImageUrl = null
             binding.mainAuthor.text = getString(R.string.slogan_placeholder)
             binding.mainSong.text = getString(R.string.brand_name)
-            binding.photo.setImageResource(R.drawable.zaglushka_logo)
-            binding.photo.alpha = 1f
+            CoverArt.showPlaceholder(binding.photo)
             return
         }
 
         binding.mainSong.text = it.song
         binding.mainAuthor.text = artist
 
-        // The cover the ViewModel says belongs to *this* track, and nothing else.
-        // A track change arrives here with no cover yet - the lookup for it has
-        // only just started - and CoverArt puts the plate up for it rather than
-        // leaving the finished track's artwork standing under the new title
-        // (G5 recon, issue B). It is the same call the Mini Player makes, so the
-        // two surfaces cannot disagree about when a cover comes down.
+        // The cover the ViewModel says belongs to *this* track. A track change
+        // arrives here with no cover yet - its lookup has only just started - and
+        // CoverArt keeps the previous cover up until the new one has decoded, then
+        // crossfades; the placeholder only stands where there is no cover at all.
+        // It is the same call the Mini Player makes, so the two surfaces cannot
+        // disagree about when a cover changes.
         currentImageUrl = CoverArt.render(binding.photo, it.img, currentImageUrl) {
             currentImageUrl = null
         }

@@ -290,14 +290,11 @@ class TvPlayerFragment : Fragment() {
 
         // Handle Album Art
         //
-        // Rendering is the phone's rule, not a TV one: CoverArt takes the previous
-        // track's cover down as soon as the artwork answer changes and stands the
-        // plate up until the new cover has decoded, so a finished track's artwork
-        // can never sit under the new title while its lookup runs. This fragment
-        // used to keep whatever bitmap was on the view and only replace it when
-        // Picasso delivered the next one, which is the one way TV could show a
-        // cover for a track that is no longer playing - same resolver, same URL,
-        // different paint rule.
+        // Rendering is the phone's rule, not a TV one: CoverArt keeps the previous
+        // cover up while the next track's lookup runs and crossfades once the new
+        // cover has decoded; the plate comes up only when the resolver found
+        // nothing or the load failed. Same resolver, same URL, same paint rule as
+        // the phone - only the plate itself is TV's own.
         //
         // What stays TV-only is what happens *with* the bitmap: the ambient
         // background is still derived from it, and now from the image the view is
@@ -308,6 +305,7 @@ class TvPlayerFragment : Fragment() {
             view = binding.ivAlbumArt,
             img = state.img,
             loaded = currentImageUrl,
+            placeholder = R.drawable.zaglushka_logo,
             onLoaded = { bitmap ->
                 if (_binding != null) extractColorsAndApply(bitmap)
             },
@@ -327,11 +325,11 @@ class TvPlayerFragment : Fragment() {
             // previous track's extraction.
             animateAmbient(TvAmbientPolicy.FALLBACK)
         } else if (hadNoCover) {
-            // Pending artwork on a just-announced track. The cover is already down
-            // (CoverArt did that); the background deliberately stays as it is until
-            // the new cover's own colours arrive, which is what stops it flickering
-            // once per poll.
-            Log.d("TvPlayerFragment", "Waiting for the artwork lookup - plate is up")
+            // Pending artwork on a just-announced track. The previous cover stays up
+            // (CoverArt does that) and so does its background, until the new
+            // cover's own colours arrive - which is what stops it flickering once
+            // per poll.
+            Log.d("TvPlayerFragment", "Waiting for the artwork lookup - previous cover stays")
         }
     }
 

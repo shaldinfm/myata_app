@@ -22,6 +22,12 @@
     <color name="background">#0F253E</color>
     <color name="surface">#142D47</color>
     <color name="surface_container">#1C4771</color>
+    <!--
+      Behind the station mark in drawable/artwork_placeholder.
+      Dark: `surface_container`, the recessed tile role - the same #1C4771 the
+      full-screen history plate already uses - instead of the old white square.
+    -->
+    <color name="artwork_placeholder_background">@color/surface_container</color>
     <color name="navigation_container">#142D47</color>
     <color name="menu_surface">#142D47</color>
     <color name="text_primary">#F5F7FA</color>

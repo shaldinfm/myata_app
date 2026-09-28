@@ -5,7 +5,6 @@ import android.graphics.drawable.ColorDrawable
 import android.view.ContextThemeWrapper
 import android.view.View
 import android.widget.FrameLayout
-import androidx.core.content.ContextCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.musicplayerapp.adapters.PlayerHistoryAdapter
@@ -92,6 +91,25 @@ class PlayerHistoryArtworkFallbackTest {
         }
     }
 
+    /**
+     * A content change rebinds the same play on the same holder (DiffCallback's
+     * change payload). It must keep the cover it has, not flash the plate and
+     * load it again - the list half of the UI polish pass's placeholder rule.
+     */
+    @Test
+    fun rebinding_the_same_play_keeps_its_cover() = forEachRow { row ->
+        main { row.answer(first, goodUrl) }
+        await("the cover to load") { row.holder.artwork.drawable != null && !isPlate(row) }
+        main {
+            val cover = row.holder.artwork.drawable
+            val lookups = row.requests.size
+            row.requests.clear()
+            row.adapter.bindViewHolder(row.holder, 0)
+            assertTrue("the rebound row went back to the plate", row.holder.artwork.drawable === cover)
+            assertTrue("the rebound row looked its cover up again (had $lookups)", row.requests.isEmpty())
+        }
+    }
+
     // ==================== harness ====================
 
     private inner class Row(layout: Int) {
@@ -137,10 +155,11 @@ class PlayerHistoryArtworkFallbackTest {
         }
     }
 
-    private fun isPlate(row: Row): Boolean {
-        val plate = ContextCompat.getDrawable(context, R.drawable.zaglushka_logo)!!.constantState
-        return row.holder.artwork.drawable?.constantState == plate
-    }
+    // The plate is the vector artwork_placeholder and every cover is a bitmap.
+    // Vector drawables do not share state between inflations, so identity cannot
+    // be compared; the drawable's kind can.
+    private fun isPlate(row: Row): Boolean =
+        row.holder.artwork.drawable is android.graphics.drawable.VectorDrawable
 
     private fun assertPlate(row: Row, moment: String) {
         assertTrue("the branded plate is not up $moment", isPlate(row))

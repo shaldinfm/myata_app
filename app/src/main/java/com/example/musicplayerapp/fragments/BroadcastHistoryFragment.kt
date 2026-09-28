@@ -23,6 +23,7 @@ import com.example.musicplayerapp.data.HistoryTrack
 import com.example.musicplayerapp.databinding.FragmentBroadcastHistoryBinding
 import com.example.musicplayerapp.ui.FindTrackQuery
 import com.example.musicplayerapp.ui.HistoryScreenState
+import com.example.musicplayerapp.ui.Motion
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -59,6 +60,9 @@ class BroadcastHistoryFragment : Fragment() {
 
     /** Outstanding cover lookups, by row, so a recycled row can withdraw its own. */
     private val artworkJobs = mutableMapOf<HistoryTrack, Job>()
+
+    /** The frame this view last drew; null before its first. */
+    private var drawnState: HistoryScreenState? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -124,6 +128,7 @@ class BroadcastHistoryFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        drawnState = null
         artworkJobs.values.forEach { it.cancel() }
         artworkJobs.clear()
         binding.historyList.adapter = null
@@ -140,10 +145,22 @@ class BroadcastHistoryFragment : Fragment() {
             failed = vm.historyFailed.value == true,
         )
 
-        b.historyList.isVisible = state == HistoryScreenState.CONTENT
-        b.historySkeleton.isVisible = state == HistoryScreenState.LOADING
-        b.historyEmpty.isVisible = state == HistoryScreenState.EMPTY
-        b.historyError.isVisible = state == HistoryScreenState.ERROR
+        // The skeleton giving way to rows (or to the empty / error frame) fades the
+        // arriving frame in. The first state a view draws is drawn as it is: the
+        // screen is already fading in around it.
+        val changed = drawnState != null && drawnState != state
+        drawnState = state
+        val frames = mapOf(
+            HistoryScreenState.CONTENT to b.historyList,
+            HistoryScreenState.LOADING to b.historySkeleton,
+            HistoryScreenState.EMPTY to b.historyEmpty,
+            HistoryScreenState.ERROR to b.historyError,
+        )
+        for ((frameState, frame) in frames) {
+            if (frameState != state) frame.isVisible = false
+            else if (changed) Motion.reveal(frame)
+            else frame.isVisible = true
+        }
 
         rows.submitList(tracks)
         footer.shownCount = tracks.size

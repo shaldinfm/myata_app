@@ -36,6 +36,11 @@
     <color name="background">#F8F9FA</color>
     <color name="surface">#FFFFFF</color>
     <color name="surface_container">#F8F9FA</color>
+    <!--
+      Behind the station mark in drawable/artwork_placeholder.
+      Light: `surface`, the white the old PNG plate carried.
+    -->
+    <color name="artwork_placeholder_background">@color/surface</color>
     <color name="navigation_container">#EDEEEF</color>
     <color name="menu_surface">#F8F9FA</color>
     <color name="text_primary">#191C1D</color>

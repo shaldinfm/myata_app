@@ -4,7 +4,6 @@ import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.view.View
 import android.widget.ImageView
-import androidx.core.content.ContextCompat
 import androidx.navigation.fragment.NavHostFragment
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -148,8 +147,8 @@ class PlayerArtworkReturnTest {
     /** A drawable that is neither nothing nor the branded plate. */
     private fun showsCover(photo: ImageView): Boolean {
         val drawn = photo.drawable ?: return false
-        val plate = ContextCompat.getDrawable(photo.context, R.drawable.zaglushka_logo)?.constantState
-        return drawn.constantState != plate
+        // The plate is the vector artwork_placeholder; a cover is a bitmap.
+        return drawn !is android.graphics.drawable.VectorDrawable
     }
 
     private fun playerFragment(activity: MainActivity): PlayerFragment? =

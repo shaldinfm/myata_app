@@ -84,7 +84,7 @@
                         android:layout_height="match_parent"
                         android:contentDescription="@string/player_artwork"
                         android:scaleType="centerCrop"
-                        android:src="@drawable/zaglushka_logo" />
+                        android:src="@drawable/artwork_placeholder" />
                 </com.google.android.material.card.MaterialCardView>
             </com.example.musicplayerapp.ui.SoftShadowFrame>
 

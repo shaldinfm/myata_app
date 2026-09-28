@@ -25,9 +25,8 @@
         android:background="@color/background">
 
         <!--
-          Header row, 358x47 at 16. The label is centred because both ends reserve
-          a slot: the frozen leading Button is hidden, and the trailing overflow is
-          reserved but not drawn - see player_header_action.
+          Header row, 358x47 at 16, with the label centred across it. The trailing
+          overflow is not inside the row any more - see player_header_action below.
         -->
         <FrameLayout
             android:id="@+id/player_header"
@@ -58,54 +57,31 @@
                 android:textAllCaps="true"
                 android:textAppearance="@style/TextAppearance.Myata.Onest.Regular.12_16"
                 android:textColor="@color/player_header_label" />
-
-            <!--
-              The frozen overflow control, in the box that was reserved for it.
-
-              Canonical `PLAYER` > `Mobile Header (Subtle)` > the trailing
-              `Button:margin`, 32.02x39 at x=325.98 - the same 32x39 the Space
-              occupied, so the label stays centred exactly where it was and nothing
-              frozen moves. `PlayerLayoutTest` measures that rather than trusting it.
-
-              ## The glyph is lifted onto the app's shared header line
-
-              PLAYER's header is a different frozen component from every other
-              section's, and the two disagree: a control centred in this 47dp row at
-              y=16 lands at 39.5, while one centred in the 64dp `Header - TopAppBar`
-              that HOME, COLLECTION and ABOUT US use lands at 32. Measured, the
-              ellipsis sat 19.5px below the Profile control on the same device.
-
-              `paddingBottom` lifts the drawn glyph the 7.5dp onto 32 and moves
-              nothing else: the 32x39 box keeps its position, so the touch target and
-              the popup's anchor are exactly as they were. dimens.xml carries the
-              arithmetic. Padding does not move a background, so the pressed
-              circle is inset by the same amounts in bg_player_header_action.
-
-              It opens `Menu / Плеер` with **one** row, Таймер сна. The other
-              three - Найти трек, Сообщить о проблеме, История эфира - do not
-              exist, and are absent rather than drawn inert: see
-              menu_player_overflow.xml, which sets out why three greyed rows would
-              be worse than three missing ones.
-
-              G1 left this slot empty because the menu would then have been "a menu
-              with one *unrelated* row" - it was being asked to carry Настройки,
-              which is not one of the player's actions. Таймер сна is one of the
-              four. Settings is still reached from the HOME header and is still not
-              on this menu. See docs/SETTINGS-APPEARANCE-3.6.6.md and
-              docs/SLEEP-TIMER-3.6.6.md.
-            -->
-            <ImageView
-                android:id="@+id/player_header_action"
-                android:layout_width="@dimen/player_header_action_width"
-                android:layout_height="@dimen/player_header_action_height"
-                android:layout_gravity="end|center_vertical"
-                android:background="@drawable/bg_player_header_action"
-                android:contentDescription="@string/player_overflow_description"
-                android:paddingBottom="@dimen/header_overflow_glyph_lift"
-                android:paddingEnd="@dimen/player_header_action_glyph_inset_end"
-                android:scaleType="center"
-                android:src="@drawable/ic_player_overflow" />
         </FrameLayout>
+
+        <!--
+          The overflow control: `Menu / Плеер` - Таймер сна, and Найти трек /
+          Сообщить о проблеме / История эфира where available (menu_player_overflow).
+
+          Widget.Myata.HeaderAction, the one trailing header control the app has
+          (UI polish pass). It is placed on the section-header grid rather than
+          inside this screen's 47dp row: a 48dp target whose centre is 32dp below
+          the content top and 36dp from the right edge - exactly where HOME, ABOUT
+          US and COLLECTION put their trailing control. Before, PLAYER's ellipsis
+          sat at 36dp and COLLECTION's at 28.5dp, 2dp left of the profile
+          control's column, so the same button moved between screens.
+
+          Drawn over the header row, not in it, so the centred label does not move.
+        -->
+        <ImageView
+            android:id="@+id/player_header_action"
+            style="@style/Widget.Myata.HeaderAction"
+            android:layout_marginTop="@dimen/header_action_margin_top"
+            android:layout_marginEnd="@dimen/header_action_margin_end_screen"
+            android:contentDescription="@string/player_overflow_description"
+            android:src="@drawable/ic_player_overflow"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <!--
           `swipe`: which of MYATA / GOLD / XTRA is showing.

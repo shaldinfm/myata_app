@@ -11,38 +11,26 @@ import android.view.ViewGroup
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.Observer
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
 import android.widget.ImageView
-import com.example.musicplayerapp.data.supabase.AccountRefresh
-import com.example.musicplayerapp.data.supabase.EmailAuthBackend
-import com.example.musicplayerapp.data.supabase.IdentityState
-import com.example.musicplayerapp.data.supabase.IdentityStore
-import com.example.musicplayerapp.data.supabase.AccountInfo
-import com.example.musicplayerapp.data.supabase.KnownAccount
 import com.example.musicplayerapp.data.supabase.StartupAccountGate
-import com.example.musicplayerapp.ui.HomeGreeting
-import com.example.musicplayerapp.ui.profile.ProfileAccount
-import com.example.musicplayerapp.ui.profile.ProfileAvatar
-import com.example.musicplayerapp.ui.profile.ProfileAvatars
+import com.example.musicplayerapp.ui.profile.ProfileEntry
 import com.example.musicplayerapp.StreamsViewModel
 import com.example.musicplayerapp.adapters.PlaylistAdapter
 import com.example.musicplayerapp.data.MyataPlaylist
 import com.example.musicplayerapp.databinding.FragmentMainBinding
 import com.example.musicplayerapp.ui.HomePlaylistSection
 import com.example.musicplayerapp.ui.HomePlaylistsState
+import com.example.musicplayerapp.ui.Motion
 import com.example.musicplayerapp.service.MediaPlayerService
 import com.example.musicplayerapp.utils.ServiceUtils
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 
-/** HOME's profile control while the account is unresolved - see MainFragment.showNeutralHeader. */
-internal const val NEUTRAL_TAG = "account-unresolved"
+/** HOME's profile control while the account is unresolved - see ProfileEntry.Header.Unresolved. */
+internal const val NEUTRAL_TAG = ProfileEntry.NEUTRAL_TAG
 
 class MainFragment : Fragment() {
 
@@ -60,6 +48,9 @@ class MainFragment : Fragment() {
      * HOME safe to exist before that is true.
      */
     private lateinit var playlistAdapter: PlaylistAdapter
+
+    /** The playlist section state this view last drew; null before its first. */
+    private var drawnPlaylistState: HomePlaylistsState? = null
 
 
     override fun onCreateView(
@@ -140,21 +131,21 @@ class MainFragment : Fragment() {
             vm.switchStream("myata")
             findNavController().navigate(R.id.player, Bundle().apply {
                 putInt(CURRENT_ITEM, 0)
-            })
+            }, Motion.screenFade())
         }
 
         binding.goldStreamBanner.setOnClickListener {
             vm.switchStream("gold")
             findNavController().navigate(R.id.player, Bundle().apply {
                 putInt(CURRENT_ITEM, 1)
-            })
+            }, Motion.screenFade())
         }
 
         binding.xtraStreamBanner.setOnClickListener {
             vm.switchStream("myata_hits")
             findNavController().navigate(R.id.player, Bundle().apply {
                 putInt(CURRENT_ITEM, 2)
-            })
+            }, Motion.screenFade())
         }
 
         vm.isInSplitMode.observe(viewLifecycleOwner, Observer {
@@ -174,7 +165,7 @@ class MainFragment : Fragment() {
         // to where the design puts it - `Row / Профиль`, the first row of the
         // frozen settings frame, which calls the same ProfileRoute this used to.
         binding.profileEntry.root.setOnClickListener {
-            findNavController().navigate(R.id.settings)
+            findNavController().navigate(R.id.settings, null, Motion.screenFade())
         }
 
         StartupAccountGate.addListener(onStartupGateSettled)
@@ -183,12 +174,19 @@ class MainFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        drawnPlaylistState = null
         StartupAccountGate.removeListener(onStartupGateSettled)
         super.onDestroyView()
     }
 
-    override fun onResume() {
-
+    // onStart, not onResume. Every navigation crossfades, and a fragment coming
+    // back through a transition is held at STARTED until its enter animation has
+    // finished - 250ms of HOME fading in with the layout's "Привет!" and glyph
+    // before the header it should have. onStart runs inside the transaction, so
+    // the first frame already carries the account. It still runs on every return
+    // to HOME, from another screen or from the background.
+    override fun onStart() {
+        super.onStart()
 
         if (!vm.isInSplitMode.value!!){
             // Ask the shell rather than poking the bar directly. onResume runs
@@ -211,8 +209,6 @@ class MainFragment : Fragment() {
         renderGreeting()
 
         // MediaController automatically syncs state when re-connected
-
-        super.onResume()
     }
 
     /**
@@ -243,127 +239,32 @@ class MainFragment : Fragment() {
      * reading. The layout's own header is showing meanwhile, and a guest never waits.
      */
     private fun renderGreeting() {
-        // Whatever this process already knows, in the frame the view appears: the account it
-        // verified, a definitive guest, or - a registered install whose session is not known
-        // yet - a neutral header that claims neither. Never the layout's guest default for
-        // somebody who may be signed in. On a cold start StartupAccountGate has already filled
-        // this in before the splash let HOME be drawn.
-        paintKnownHeader()
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            val context = requireContext()
-            val state = withContext(Dispatchers.IO) { IdentityStore.state(context) }
-            // One session read for both halves of the header, and none for a guest.
-            val read: Result<AccountInfo?>? = if (state is IdentityState.Registered) {
-                withContext(Dispatchers.IO) {
-                    runCatching {
-                        val api = EmailAuthBackend.api(context)
-                        api.awaitSessionRestored()
-                        api.currentAccount()
-                    }
-                }
-            } else null
-
-            if (view == null || !::binding.isInitialized) return@launch
-            when {
-                state !is IdentityState.Registered -> {
-                    KnownAccount.forget()
-                    showHeader(null, null)
-                }
-                // The restore or the read failed: that says nothing about who this is, so the
-                // header keeps what it shows - the account, or neutral - until a read settles.
-                read == null || read.isFailure -> Unit
-                else -> {
-                    val account = read.getOrNull()
-                    if (account != null && account.uid == state.uid) KnownAccount.remember(account)
-                    else KnownAccount.markAbsent(state.uid)
-                    showHeader(HomeGreeting.name(state) { account }, HomeGreeting.avatar(state) { account })
-                }
-            }
-
-            // G6a: at most once a minute, bring the session's copy of the account up to date
-            // with the server, so an avatar or name changed on another device reaches HOME
-            // without a new sign-in. Null - offline, a guest, nothing newer - keeps the header.
-            val refreshed = withContext(Dispatchers.IO) {
-                runCatching {
-                    AccountRefresh.refresh(context.applicationContext, AccountRefresh.HOME_MIN_INTERVAL_MS)
-                }.getOrNull()?.let { account ->
-                    val current = IdentityStore.state(context)
-                    HomeGreeting.name(current) { account } to HomeGreeting.avatar(current) { account }
-                }
-            } ?: return@launch
-            if (view == null || !::binding.isInitialized) return@launch
-            showHeader(refreshed.first, refreshed.second)
-        }
+        ProfileEntry.bind(this, profileIcon() ?: return, ::showGreeting)
     }
 
     /** The startup gate settled: repaint before the splash lets the first frame through. */
     private val onStartupGateSettled: () -> Unit = {
-        if (view != null && ::binding.isInitialized) paintKnownHeader()
-    }
-
-    /**
-     * The header from what this process knows, synchronously. See [renderGreeting].
-     *
-     * One `SharedPreferences` read on the main thread, already loaded by the startup gate.
-     */
-    private fun paintKnownHeader() {
-        val state = IdentityStore.state(requireContext())
-        val known = KnownAccount.of(state)
-        when {
-            state !is IdentityState.Registered -> showHeader(null, null)
-            known != null ->
-                showHeader(ProfileAccount.displayName(known.displayName), ProfileAvatars.resolve(known.avatarId))
-            KnownAccount.isAbsent(state) -> showHeader(null, null)
-            else -> showNeutralHeader()
+        if (view != null && ::binding.isInitialized) {
+            val header = ProfileEntry.known(requireContext())
+            profileIcon()?.let { ProfileEntry.paint(it, header) }
+            showGreeting(header)
         }
     }
 
-    /**
-     * Neither `Привет!` nor a name, and neither the glyph nor an avatar: the account is not
-     * known yet. The greeting keeps its line so nothing moves when it arrives, and the control
-     * keeps its disc and its route to Settings.
-     */
-    private fun showNeutralHeader() {
-        binding.homeGreeting.visibility = View.INVISIBLE
-        val icon = binding.profileEntry.root as? ImageView ?: return
-        icon.setImageDrawable(null)
-        icon.scaleType = ImageView.ScaleType.FIT_CENTER
-        icon.setBackgroundResource(R.drawable.bg_profile_entry)
-        icon.clipToOutline = false
-        icon.tag = NEUTRAL_TAG
-    }
+    private fun profileIcon(): ImageView? = binding.profileEntry.root as? ImageView
 
-    private fun showHeader(name: String?, avatar: ProfileAvatar?) {
-        binding.homeGreeting.visibility = View.VISIBLE
+    /**
+     * The greeting half of the header, from the same [ProfileEntry.Header] the
+     * control is painted from. An unresolved account keeps the greeting's line but
+     * shows nothing on it, so nothing moves when the name arrives.
+     */
+    private fun showGreeting(header: ProfileEntry.Header) {
+        val name = (header as? ProfileEntry.Header.Account)?.name
+        binding.homeGreeting.visibility =
+            if (header == ProfileEntry.Header.Unresolved) View.INVISIBLE else View.VISIBLE
         binding.homeGreeting.text =
             if (name == null) getString(R.string.home_greeting)
             else getString(R.string.home_greeting_named, name)
-        showProfileEntry(avatar)
-    }
-
-    /**
-     * HOME's 40x40 profile control: the account's avatar when it has one, the generic
-     * person glyph otherwise (owner decision, G6a). Only HOME changes - ABOUT US and the
-     * empty COLLECTION keep the glyph - and the control's size, hit target and routing to
-     * Settings are the include's, untouched.
-     */
-    private fun showProfileEntry(avatar: ProfileAvatar?) {
-        val icon = binding.profileEntry.root as? ImageView ?: return
-        if (avatar != null) {
-            icon.setImageResource(avatar.drawable)
-            icon.scaleType = ImageView.ScaleType.CENTER_CROP
-            // No disc behind the artwork: its anti-aliased rim would show as a fringe.
-            icon.background = null
-            ProfileAvatarFragment.clipToCircle(icon)
-            icon.tag = avatar.key
-        } else {
-            icon.setImageResource(R.drawable.ic_profile_entry)
-            icon.scaleType = ImageView.ScaleType.FIT_CENTER
-            icon.setBackgroundResource(R.drawable.bg_profile_entry)
-            icon.clipToOutline = false
-            icon.tag = null
-        }
     }
 
 
@@ -388,12 +289,24 @@ class MainFragment : Fragment() {
             return
         }
 
+        val state = HomePlaylistsState.of(
+            state = vm.playlistsState.value,
+            itemCount = vm.playlistList.value?.size ?: 0,
+            isOnline = vm.isOnline(),
+        )
+        // A section that changes state while HOME is on screen - the row arriving
+        // after the loading line, an error giving way to a retry - fades its new
+        // content in. Its first state is drawn as it is: the screen is already
+        // fading in around it.
+        val changed = drawnPlaylistState != null && drawnPlaylistState != state
+        drawnPlaylistState = state
+        if (changed) {
+            if (state == HomePlaylistsState.POPULATED) Motion.reveal(binding.playlists)
+            else if (state.isStatus) Motion.reveal(binding.playlistState)
+        }
+
         HomePlaylistSection.apply(
-            state = HomePlaylistsState.of(
-                state = vm.playlistsState.value,
-                itemCount = vm.playlistList.value?.size ?: 0,
-                isOnline = vm.isOnline(),
-            ),
+            state = state,
             heading = binding.playlistString,
             row = binding.playlists,
             status = binding.playlistState,

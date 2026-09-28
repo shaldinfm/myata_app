@@ -163,8 +163,13 @@ class SettingsFragment : Fragment() {
         return binding.root
     }
 
-    override fun onResume() {
-        super.onResume()
+    // onStart rather than onResume: a screen arriving through the crossfade is held
+    // at STARTED until its enter animation ends, so values painted on resume showed
+    // the layout's defaults («Не вошли», «Системная») for the length of the fade.
+    // onStart runs inside the transaction - the first frame has the real values -
+    // and still on every return, from a subpage or from the background.
+    override fun onStart() {
+        super.onStart()
 
         // Synchronous: one SharedPreferences lookup, which is a hash-map read after
         // the first load. Nothing about the appearance is remote.

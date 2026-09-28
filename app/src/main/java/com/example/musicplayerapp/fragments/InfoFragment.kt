@@ -12,6 +12,9 @@ import androidx.navigation.fragment.findNavController
 import androidx.lifecycle.Observer
 import com.example.musicplayerapp.MainActivity
 import com.example.musicplayerapp.R
+import com.example.musicplayerapp.ui.Motion
+import com.example.musicplayerapp.ui.profile.ProfileEntry
+import android.widget.ImageView
 import com.example.musicplayerapp.StreamsViewModel
 import com.example.musicplayerapp.databinding.FragmentInfoBinding
 import com.example.musicplayerapp.ui.AboutLinks
@@ -25,6 +28,9 @@ import androidx.core.content.res.ResourcesCompat
 class InfoFragment : Fragment() {
 
     private lateinit var vm: StreamsViewModel
+
+    /** The header's profile control, painted on every resume - see onResume. */
+    private var profileIcon: ImageView? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -172,7 +178,7 @@ class InfoFragment : Fragment() {
             }
             else{
 //                binding.bottomStreams.visibility = View.VISIBLE
-                (activity as MainActivity).binding.bottomNavView.visibility = View.VISIBLE
+                (activity as MainActivity).showBottomNav()
                 binding.aboutHeader.visibility = View.VISIBLE
             }
         })
@@ -184,15 +190,27 @@ class InfoFragment : Fragment() {
         // the two headers' identical glyph to two different screens would be a
         // worse answer than either one alone.
         binding.profileEntry.root.setOnClickListener {
-            findNavController().navigate(R.id.settings)
+            findNavController().navigate(R.id.settings, null, Motion.screenFade())
         }
+        profileIcon = binding.profileEntry.root as? ImageView
 
 
         return binding.root
     }
 
-    override fun onResume() {
-        super.onResume()
+    override fun onStart() {
+        super.onStart()
+        // The same control HOME draws, painted by the same code: the account's
+        // avatar, the glyph for a guest, and a neutral disc while the account is
+        // unresolved. On every start, like HOME - onStart rather than onResume so
+        // it is in the first frame of the crossfade, not painted after it - and so
+        // an avatar changed on the profile screen is here when Back arrives.
+        profileIcon?.let { ProfileEntry.bind(this, it) }
+    }
+
+    override fun onDestroyView() {
+        profileIcon = null
+        super.onDestroyView()
     }
 
     /**

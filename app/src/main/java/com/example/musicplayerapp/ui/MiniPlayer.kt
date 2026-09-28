@@ -29,8 +29,8 @@ class MiniPlayer(
     private val onOpenPlayer: () -> Unit,
 ) {
 
-    /** Last URL handed to Picasso, so a metadata tick does not reload the same art. */
-    private var loadedArtworkUrl: String? = null
+    /** The pill's track - title, artist and cover shown as one unit (CoverArt.NowPlaying). */
+    private val artwork = CoverArt.NowPlaying(views.miniPlayerArtwork)
 
     fun bind(owner: LifecycleOwner) {
         views.miniPlayerPlayPause.setOnClickListener { vm.togglePlayPause() }
@@ -86,11 +86,14 @@ class MiniPlayer(
             isBuffering = vm.isBuffering.value == true,
         )
 
-        views.miniPlayerTitle.text = state.title
-        views.miniPlayerArtist.text = state.artist
-
         renderControl(state.control)
-        loadArtwork(state.artworkUrl)
+
+        // The text goes up with its cover, never under the previous track's: see
+        // CoverArt.NowPlaying - the same call the player screen makes.
+        artwork.present(state.artworkUrl) {
+            views.miniPlayerTitle.text = state.title
+            views.miniPlayerArtist.text = state.artist
+        }
     }
 
     /**
@@ -139,16 +142,6 @@ class MiniPlayer(
         )
     }
 
-    private fun loadArtwork(url: String?) {
-        // The player screen's rule, called the same way: the cover comes down as
-        // soon as the track's does, and the plate stands until the next one has
-        // decoded. Before G5a this kept the previous cover up through a track
-        // change, which is the pill's half of recon issue B.
-        loadedArtworkUrl = CoverArt.render(views.miniPlayerArtwork, url, loadedArtworkUrl) {
-            loadedArtworkUrl = null
-        }
-    }
-
     /**
      * The contract lives in [MiniPlayerVisibility]; this only feeds it the three
      * live inputs. Split-screen is the one condition that comes from the app
@@ -162,6 +155,9 @@ class MiniPlayer(
             inSplitMode = vm.isInSplitMode.value == true,
             hasPlaybackSession = vm.hasPlaybackSession.value == true,
         )
-        views.root.visibility = if (show) View.VISIBLE else View.GONE
+        // Fades in with the screen it arrives on - the shell only publishes the
+        // screen key once that screen's view exists - and leaves with the screen
+        // that is going. Visibility itself changes at once either way.
+        Motion.setShown(views.root, show)
     }
 }

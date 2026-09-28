@@ -18,7 +18,6 @@ import com.example.musicplayerapp.ui.CoverArt
 import com.example.musicplayerapp.ui.tv.TvAmbientPalette
 import com.example.musicplayerapp.ui.tv.TvAmbientPolicy
 import com.example.musicplayerapp.ui.tv.TvAmbientSwatch
-import com.squareup.picasso.Picasso
 
 class TvPlayerFragment : Fragment() {
 
@@ -30,13 +29,23 @@ class TvPlayerFragment : Fragment() {
     
     // Track previous track info to avoid re-animating unchanged content
     private var previousTrackInfo: String = ""
-    private var currentImageUrl: String? = null
+    /** The album art, on the phone's rule (CoverArt.NowPlaying); one per view. */
+    private var cover: CoverArt.NowPlaying? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentTvPlayerBinding.inflate(inflater, container, false)
+        cover = CoverArt.NowPlaying(
+            view = binding.ivAlbumArt,
+            placeholder = R.drawable.zaglushka_logo,
+            onLoaded = { bitmap -> if (_binding != null) extractColorsAndApply(bitmap) },
+            // The load failed, so no palette is coming for this track: the plate
+            // is what the viewer gets, and the background goes to the brand field
+            // rather than staying on the previous track's colours.
+            onLoadFailed = { if (_binding != null) animateAmbient(TvAmbientPolicy.FALLBACK) },
+        )
         return binding.root
     }
 
@@ -290,36 +299,20 @@ class TvPlayerFragment : Fragment() {
 
         // Handle Album Art
         //
-        // Rendering is the phone's rule, not a TV one: CoverArt takes the previous
-        // track's cover down as soon as the artwork answer changes and stands the
-        // plate up until the new cover has decoded, so a finished track's artwork
-        // can never sit under the new title while its lookup runs. This fragment
-        // used to keep whatever bitmap was on the view and only replace it when
-        // Picasso delivered the next one, which is the one way TV could show a
-        // cover for a track that is no longer playing - same resolver, same URL,
-        // different paint rule.
+        // Rendering is the phone's rule, not a TV one - see CoverArt.NowPlaying:
+        // a cached cover swaps with the crossfade, anything else puts the plate up
+        // until the cover is here. Same resolver, same URL, same paint rule as the
+        // phone - only the plate itself is TV's own.
         //
         // What stays TV-only is what happens *with* the bitmap: the ambient
         // background is still derived from it, and now from the image the view is
         // actually showing rather than from a second full-resolution copy.
         val hadNoCover = NowPlayingArtwork.coverUrl(state.img) == null
 
-        currentImageUrl = CoverArt.render(
-            view = binding.ivAlbumArt,
-            img = state.img,
-            loaded = currentImageUrl,
-            onLoaded = { bitmap ->
-                if (_binding != null) extractColorsAndApply(bitmap)
-            },
-        ) {
-            // The plate is already up; dropping the URL is what lets a later state
-            // try the same cover again instead of treating it as already on screen.
-            currentImageUrl = null
-            // The lookup failed, so no palette is coming for this track: the plate
-            // is what the viewer gets, and the background goes to the brand field
-            // rather than staying on the previous track's colours.
-            if (_binding != null) animateAmbient(TvAmbientPolicy.FALLBACK)
-        }
+        // The text above has its own fade, so only the cover goes through the
+        // presenter: it never stands the previous track's art up once a new
+        // track's cover is not local, and swaps straight to a cached one.
+        cover?.present(state.img) {}
 
         if (state.img == NowPlayingArtwork.NO_IMAGE) {
             // The resolver looked and found nothing: the plate is up, so the
@@ -327,10 +320,10 @@ class TvPlayerFragment : Fragment() {
             // previous track's extraction.
             animateAmbient(TvAmbientPolicy.FALLBACK)
         } else if (hadNoCover) {
-            // Pending artwork on a just-announced track. The cover is already down
-            // (CoverArt did that); the background deliberately stays as it is until
-            // the new cover's own colours arrive, which is what stops it flickering
-            // once per poll.
+            // Pending artwork on a just-announced track. The plate is up (CoverArt
+            // does that); the background deliberately stays as it is until the new
+            // cover's own colours arrive, which is what stops it flickering once
+            // per poll.
             Log.d("TvPlayerFragment", "Waiting for the artwork lookup - plate is up")
         }
     }
@@ -388,11 +381,11 @@ class TvPlayerFragment : Fragment() {
         binding.tvTrackInfo.animate().cancel()
         binding.ivAlbumArt.animate().cancel()
         // The load itself belongs to the shared renderer, which cancels on the view.
-        Picasso.get().cancelRequest(binding.ivAlbumArt)
+        cover?.reset()
+        cover = null
         // The drift and any palette crossfade belong to the view; this is the
         // explicit end of them, alongside the detach that follows.
         binding.viewAmbient.stopAmbient()
-        currentImageUrl = null
         previousTrackInfo = ""
         super.onDestroyView()
         _binding = null

@@ -229,19 +229,6 @@
     -->
     <dimen name="collection_subtitle_min_height">20dp</dimen>
 
-    <!--
-      Trailing header action - the frozen 3-dot overflow, `Button:margin` with a
-      4x16 dot column inside.
-
-      Figma left-aligns a 20-wide button inside a 32.02-wide "margin" wrapper
-      whose right edge is on the 16 margin, which leaves 20 of slack and puts the
-      glyph centre at x=352. A 48dp touch target - the platform minimum, and what
-      the trailing slot needs to be tappable at all - with its right edge on the
-      same 16 margin puts that centre at 350. Two dp, against a wrapper that is
-      slack by construction and against HOME and ABOUT US, which put their own
-      trailing action flush on the margin.
-    -->
-    <dimen name="collection_header_action_size">48dp</dimen>
 
     <!--
       Track row card, frozen `Track Item N`: 358x98, r24, 16 auto-layout padding
@@ -406,60 +393,25 @@
     -->
     <dimen name="player_margin">16dp</dimen>
     <dimen name="player_header_height">47dp</dimen>
-    <!-- Reserved trailing slot: the frozen overflow control's box, drawn empty
-         because every action behind it belongs to a later phase. -->
-    <dimen name="player_header_action_width">32dp</dimen>
-    <dimen name="player_header_action_height">39dp</dimen>
     <!--
-      Where the two ellipsis glyphs are drawn - G4a, measured rather than derived.
+      The trailing header control - the three-dot overflow on PLAYER and
+      COLLECTION, Widget.Myata.HeaderAction - on one grid (UI polish pass).
 
-      **What the frozen file actually says.** Both controls put their 4x16 ink in
-      the same place horizontally and lift it by the same amount inside their own
-      button:
+      Its centre is the 40dp profile control's centre on HOME, ABOUT US and the
+      empty COLLECTION: 32dp below the content top (the middle of the 64dp
+      `Header - TopAppBar`) and 36dp from the right edge (16 margin + 20). The
+      owner asked for the button to stop moving between screens, which supersedes
+      G4a: the frozen frames draw PLAYER's ellipsis at 36dp and COLLECTION's at
+      28.5dp, both 38.02 from the right, and the app followed them.
 
-          PLAYER      `Mobile Header (Subtle)` 358x47 at (16,16)
-                      Button:margin 32.02 at x=325.98  -> ends 16 from the frame
-                      Button 20x39, ink 4x16 at (8,8)
-                      ink centre  x = 351.98  (38.02 from the 390 frame's right)
-                                  y = 20 in the 47 header, box centre 23.5 -> 3.5 up
-
-          COLLECTION  `Header - TopAppBar` 390x64 at (0,0)
-                      Button:margin 32.02 at x=341.98  -> ends 16 from the frame
-                      Button 20x39 at y=12.5, ink 4x16 at (8,8)
-                      ink centre  x = 351.98  (38.02 from the right - identical)
-                                  y = 28.5 in the 64 header, box centre 32 -> 3.5 up
-
-      So the trailing anchor IS shared and the lift IS shared; only the header
-      heights differ, which is why the two glyphs sit at different heights on
-      screen and must.
-
-      **What was rendered before, measured on API 24 at 420dpi:**
-
-          PLAYER      ink centre 31.81dp from the right edge   (6.2 too far right)
-          COLLECTION  ink centre 39.81dp from the right edge   (1.8 too far left)
-                      -> the two were 8.00dp apart, which is the visible defect
-
-      **This supersedes a G3 decision.** G3 lifted the PLAYER ellipsis by 15dp to
-      put it on the HOME Profile control's 32dp line - a deliberate cross-screen
-      alignment, recorded here as owner-decided. The frozen file does not draw it
-      there: it draws 3.5 above the button's own centre, the same as COLLECTION's.
-      G4a follows the file, and the two screens are never on screen together for
-      the cross-screen line to be seen. `player_header_action_glyph_lift` back to
-      15 restores G3 if that call is reversed.
-
-      The moves are padding, so both touch targets, their positions and the
-      popups' anchors are untouched and only the drawn glyph moves.
-
-          lift        box 39 tall, content 39 - 7 = 32, centre 3.5 above box centre
-          player x    box 32 ending 16 from the right, centre 32 - 12.04/2 -> 38.02
-          coll.  x    box 48 ending 16 from the right, centre 40 - 3.96/2  -> 38.02
+          size            48 - the platform minimum touch target
+          in a 16-padded band      end margin 16 - 4 = 12 -> centre 12 + 24 = 36
+          on the screen edge       end margin 12, top 32 - 24 = 8
     -->
-    <dimen name="header_overflow_glyph_lift">7dp</dimen>
-    <dimen name="player_header_action_glyph_inset_end">12.04dp</dimen>
-    <!-- The PLAYER overflow's pressed circle: 40 across, centred on the glyph
-         by bg_player_header_action rather than on the padded box. -->
-    <dimen name="player_header_action_ripple_radius">20dp</dimen>
-    <dimen name="collection_overflow_glyph_inset_start">3.96dp</dimen>
+    <dimen name="header_action_size">48dp</dimen>
+    <dimen name="header_action_margin_end_in_band">-4dp</dimen>
+    <dimen name="header_action_margin_end_screen">12dp</dimen>
+    <dimen name="header_action_margin_top">8dp</dimen>
     <!-- The swipe dots abut the header row: it ends at 63 and they start at 63.
          They end at 73 and the page starts at 79, so 6 between. -->
     <!--

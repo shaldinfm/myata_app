@@ -44,8 +44,8 @@
         tools:showIn="@layout/activity_main">
 
         <!--
-          48x48 r8, image CROP. `zaglushka_logo` is the placeholder the player
-          screen already falls back to, so an idle pill and an idle player agree.
+          48x48 r8, image CROP. `artwork_placeholder` is the placeholder the player
+          screen falls back to too, so an idle pill and an idle player agree.
         -->
         <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/mini_player_artwork"
@@ -53,7 +53,7 @@
             android:layout_height="@dimen/mini_player_artwork_size"
             android:contentDescription="@string/mini_player_artwork"
             android:scaleType="centerCrop"
-            android:src="@drawable/zaglushka_logo"
+            android:src="@drawable/artwork_placeholder"
             app:shapeAppearanceOverlay="@style/ShapeAppearance.Myata.Artwork48" />
 
         <LinearLayout

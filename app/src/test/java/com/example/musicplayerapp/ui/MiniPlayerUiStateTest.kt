@@ -156,9 +156,10 @@ class MiniPlayerUiStateTest {
     /**
      * G5a, the pill's half: the projection carries the artwork of the state it is
      * given and has none of its own to fall back on, so a track change that has
-     * not resolved a cover yet shows no cover - never the one before it. The
-     * frame that follows from this is pinned by CoverArtTransitionTest, which is
-     * the same call the player screen makes.
+     * not resolved a cover yet carries no URL - never the previous track's. What
+     * the view draws meanwhile (the previous cover, until the next one decodes)
+     * is CoverArt's decision, pinned by CoverArtTransitionTest - the same call the
+     * player screen makes.
      */
     @Test
     fun `a track change with no cover yet shows none, not the previous track's`() {

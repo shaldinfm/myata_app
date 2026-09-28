@@ -1,119 +1,149 @@
 package com.example.musicplayerapp
 
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.TransitionDrawable
+import android.graphics.drawable.VectorDrawable
 import android.widget.ImageView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.musicplayerapp.data.NowPlayingArtwork
 import com.example.musicplayerapp.ui.CoverArt
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * What is actually on screen the instant the track changes (G5a).
+ * The current track is shown as a pair - its title and artist with its own cover
+ * or with the placeholder - and never as the new track's text over the previous
+ * track's cover (owner's rule, UI polish pass).
  *
- * [com.example.musicplayerapp.data.NowPlayingArtworkTest] pins which cover a
- * track is entitled to; this pins the frame. The bug was never in the URL the
- * ViewModel held - it was that the view kept displaying the previous track's
- * bitmap while the next one loaded, because `noPlaceholder` leaves whatever is
- * there until a load completes. So what is inspected here is the state
- * *immediately* after the call, before any load can have finished: at that moment
- * the previous cover must already be gone.
+ * [CoverArt.NowPlaying] binds the text through the `apply` it is given, so the
+ * pair is observable directly: [Surface.text] is what `apply` last wrote, and the
+ * drawable is what the view shows (the top layer while a crossfade runs).
  *
- * The previous cover is a [ColorDrawable] so it is unmistakable. No network is
- * needed and none is waited for - the URLs are unreachable on purpose, and what
- * they eventually do is not what is being tested.
+ * Covers are local resource URIs, which Picasso decodes off the main thread
+ * without a network - "on disk" in the rule's terms. An `example.invalid` URL
+ * is "not local": the offline-only first attempt misses.
  *
- * Picasso must be called on the main thread, so the render happens there; the
- * assertions are made back on the test thread, because an assertion that fails
- * inside `runOnMainSync` takes the process down instead of failing the test.
+ * Picasso must be called on the main thread, so every call happens there; the
+ * assertions are made back on the test thread.
  */
 @RunWith(AndroidJUnit4::class)
 class CoverArtTransitionTest {
 
-    private val coverA = "https://example.invalid/a.jpg"
-    private val coverB = "https://example.invalid/b.jpg"
+    private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
+    private val pkg get() = instrumentation.targetContext.packageName
+    private val coverA get() = "android.resource://$pkg/${R.drawable.zaglushka_1_img}"
+    private val coverB get() = "android.resource://$pkg/${R.drawable.zaglushka_3_img}"
+    private val remote = "https://example.invalid/not-cached.jpg"
 
-    /** What one [CoverArt.render] call left behind. */
-    private class Frame(
-        val previous: Drawable,
-        val drawn: Drawable?,
-        val loaded: String?,
-    )
+    private inner class Surface {
+        lateinit var view: ImageView
+        lateinit var cover: CoverArt.NowPlaying
+        @Volatile var text: String? = null
 
-    /**
-     * Puts a stand-in for A's cover in a fresh view, renders [img] over it, and
-     * reports what the view holds the moment the call returns.
-     */
-    private fun renderOverACover(img: String?, loaded: String?): Frame {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        lateinit var frame: Frame
-        instrumentation.runOnMainSync {
-            val view = ImageView(instrumentation.targetContext)
-            val previous = ColorDrawable(Color.MAGENTA)
-            view.setImageDrawable(previous)
-
-            val result = CoverArt.render(view, img, loaded)
-            frame = Frame(previous = previous, drawn = view.drawable, loaded = result)
+        init {
+            main {
+                view = ImageView(instrumentation.targetContext)
+                view.layout(0, 0, 120, 120) // fit() needs a size
+                view.setImageResource(R.drawable.artwork_placeholder)
+                cover = CoverArt.NowPlaying(view)
+            }
         }
-        return frame
+
+        fun present(img: String?, title: String) = main { cover.present(img) { text = title } }
+
+        fun shown(): Drawable? {
+            var d: Drawable? = null
+            main { d = view.drawable }
+            return (d as? TransitionDrawable)?.let { it.getDrawable(it.numberOfLayers - 1) } ?: d
+        }
+
+        fun showsCover() = shown() is BitmapDrawable
+        fun showsPlaceholder() = shown() is VectorDrawable
     }
 
-    /**
-     * The track changed and the new cover has not loaded yet. This is the frame
-     * the owner asked about: B's metadata is on screen, so A's artwork must not be.
-     */
-    @Test
-    fun theNewTracksFrameNeverShowsTheOldTracksCover() {
-        val frame = renderOverACover(img = coverB, loaded = coverA)
-
-        assertEquals("the view is now bound to B's cover", coverB, frame.loaded)
-        assertNotNull("something is drawn - the plate", frame.drawn)
-        assertTrue(
-            "A's cover was still on screen under B's metadata",
-            frame.drawn !== frame.previous && frame.drawn !is ColorDrawable,
-        )
+    /** A surface already showing track A with its cover. */
+    private fun onTrackA(): Surface = Surface().apply {
+        present(coverA, "A")
+        await("A with its cover") { text == "A" && showsCover() }
     }
 
-    /**
-     * The common case: the track changed and no lookup has answered yet, so the
-     * ViewModel publishes no cover at all.
-     */
     @Test
-    fun aTrackWithNoCoverYetDropsThePreviousOne() {
-        val frame = renderOverACover(img = null, loaded = coverA)
+    fun aLocalCoverGoesUpTogetherWithItsTrack() {
+        val s = onTrackA()
+        val coverOfA = s.shown()
 
-        assertNull("nothing is bound", frame.loaded)
-        assertNotNull(frame.drawn)
-        assertTrue("the previous cover was left up", frame.drawn !== frame.previous)
+        s.present(coverB, "B")
+        // Until B's cover has decoded, A is still up - text and cover, a true pair.
+        assertEquals("B's text went up before its cover", "A", s.text)
+        assertSame(coverOfA, s.shown())
+
+        await("B with its cover") { s.text == "B" && s.showsCover() && s.shown() !== coverOfA }
     }
 
-    /** A lookup that finished and found nothing reads the same way as "not yet". */
     @Test
-    fun theNoCoverMarkerAlsoDropsThePreviousOne() {
-        val frame = renderOverACover(img = NowPlayingArtwork.NO_IMAGE, loaded = coverA)
+    fun aCoverThatIsNotLocalPutsTheTextUpOverThePlaceholder() {
+        val s = onTrackA()
 
-        assertNull(frame.loaded)
-        assertTrue("the previous cover was left up", frame.drawn !== frame.previous)
+        s.present(remote, "B")
+        await("B's text") { s.text == "B" }
+        assertTrue("B's text is over A's cover", s.showsPlaceholder())
     }
 
-    /**
-     * The other half of the rule. A metadata tick that repeats the current track
-     * must leave its cover alone - taking it down and loading it again is what
-     * would make the artwork blink every few seconds.
-     */
     @Test
-    fun repeatingTheSameCoverLeavesTheViewUntouched() {
-        val frame = renderOverACover(img = coverA, loaded = coverA)
+    fun aPendingLookupShowsTheNewTrackOverThePlaceholder() {
+        val s = onTrackA()
 
-        assertEquals(coverA, frame.loaded)
-        assertSame("the cover already up was replaced", frame.previous, frame.drawn)
+        s.present(null, "B")
+        assertEquals("B", s.text)
+        assertTrue("B's text is over A's cover", s.showsPlaceholder())
+    }
+
+    @Test
+    fun noCoverForTheTrackShowsThePlaceholder() {
+        val s = onTrackA()
+
+        s.present(NowPlayingArtwork.NO_IMAGE, "B")
+        assertEquals("B", s.text)
+        assertTrue(s.showsPlaceholder())
+    }
+
+    /** A metadata tick, or a new track on the same release: nothing reloads. */
+    @Test
+    fun theSameCoverSwitchesTheTextAtOnceAndLeavesTheCover() {
+        val s = onTrackA()
+        val coverOfA = s.shown()
+
+        s.present(coverA, "A2")
+        assertEquals("A2", s.text)
+        assertSame("the cover already up was replaced", coverOfA, s.shown())
+    }
+
+    /** A superseded track never goes up: only the latest one's text is applied. */
+    @Test
+    fun aTrackSupersededWhileItsCoverLoadsNeverGoesUp() {
+        val s = onTrackA()
+
+        s.present(coverB, "B")
+        s.present(null, "C")
+        assertEquals("C", s.text)
+        Thread.sleep(500)
+        assertEquals("B arrived after C", "C", s.text)
+        assertTrue(s.showsPlaceholder())
+    }
+
+    private fun main(block: () -> Unit) = instrumentation.runOnMainSync(block)
+
+    private fun await(what: String, timeoutMs: Long = 10_000, check: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            if (check()) return
+            Thread.sleep(20)
+        }
+        throw AssertionError("timed out waiting for $what")
     }
 }

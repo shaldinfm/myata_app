@@ -19,24 +19,24 @@
         <action
             android:id="@+id/action_mainFragment_to_playerFragment"
             app:destination="@id/player"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
         <action
             android:id="@+id/action_mainFragment_to_infoFragment"
             app:destination="@id/info"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
         <action
             android:id="@+id/action_mainFragment_to_streamsFragment"
             app:destination="@id/streams"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
     </fragment>
     <fragment
         android:id="@+id/player"
@@ -45,24 +45,24 @@
         <action
             android:id="@+id/action_playerFragment_to_streamsFragment"
             app:destination="@id/streams"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
         <action
             android:id="@+id/action_playerFragment_to_mainFragment"
             app:destination="@id/home"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
         <action
             android:id="@+id/action_playerFragment_to_infoFragment"
             app:destination="@id/info"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
         <!--
           `Menu / Плеер` > `Сообщить о проблеме` (G3). The other three actions here
           are bottom-bar moves between root tabs; this one pushes, so Back returns
@@ -72,10 +72,10 @@
         <action
             android:id="@+id/action_playerFragment_to_report_problem"
             app:destination="@id/report_problem"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
         <!--
           `Menu / Плеер` > `История эфира` (G4b). A push like the report action, so
           Back returns to the player. launchSingleTop so a second tap that lands
@@ -86,10 +86,10 @@
             android:id="@+id/action_playerFragment_to_broadcast_history"
             app:destination="@id/broadcast_history"
             app:launchSingleTop="true"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
     </fragment>
     <fragment
         android:id="@+id/info"
@@ -98,24 +98,24 @@
         <action
             android:id="@+id/action_infoFragment_to_playerFragment"
             app:destination="@id/player"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
         <action
             android:id="@+id/action_infoFragment_to_mainFragment"
             app:destination="@id/home"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
         <action
             android:id="@+id/action_infoFragment_to_streamsFragment"
             app:destination="@id/streams"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
     </fragment>
     <fragment
         android:id="@+id/favorites"
@@ -124,24 +124,24 @@
         <action
             android:id="@+id/action_favoritesFragment_to_playerFragment"
             app:destination="@id/player"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
         <action
             android:id="@+id/action_favoritesFragment_to_mainFragment"
             app:destination="@id/home"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
         <action
             android:id="@+id/action_favoritesFragment_to_infoFragment"
             app:destination="@id/info"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
     </fragment>
     <!--
       settings 2517:2758 / 2517:3725 and settings-appearance 2517:2817 /
@@ -169,24 +169,24 @@
         <action
             android:id="@+id/action_settings_to_settings_appearance"
             app:destination="@id/settings_appearance"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
         <action
             android:id="@+id/action_settings_to_report_problem"
             app:destination="@id/report_problem"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
         <action
             android:id="@+id/action_settings_to_settings_lastfm"
             app:destination="@id/settings_lastfm"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
     </fragment>
 
     <!--
@@ -274,17 +274,17 @@
         <action
             android:id="@+id/action_profile_to_auth_sign_in"
             app:destination="@id/auth_sign_in"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
         <action
             android:id="@+id/action_profile_to_auth_create_account"
             app:destination="@id/auth_create_account"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
         <!--
           G-A8d. The one way back up, and it exists for exactly one situation: this
           screen was showing the pending-deletion presentation, the deletion was then
@@ -303,10 +303,10 @@
             app:destination="@id/profile_authenticated"
             app:popUpTo="@id/profile"
             app:popUpToInclusive="true"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
     </fragment>
 
     <!--
@@ -339,19 +339,19 @@
             app:destination="@id/profile_authenticated"
             app:popUpTo="@id/profile"
             app:popUpToInclusive="true"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
         <action
             android:id="@+id/action_auth_sign_in_to_auth_create_account"
             app:destination="@id/auth_create_account"
             app:popUpTo="@id/auth_sign_in"
             app:popUpToInclusive="true"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
         <!--
           Recovery is the one auth link that does NOT pop what it came from. The two
           cross-links above swap one form for another and Back should skip the one the
@@ -362,10 +362,10 @@
         <action
             android:id="@+id/action_auth_sign_in_to_auth_recovery"
             app:destination="@id/auth_recovery"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
     </fragment>
 
     <!--
@@ -387,10 +387,10 @@
             app:destination="@id/profile_authenticated"
             app:popUpTo="@id/profile"
             app:popUpToInclusive="true"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
     </fragment>
 
     <fragment
@@ -402,19 +402,19 @@
             app:destination="@id/profile_authenticated"
             app:popUpTo="@id/profile"
             app:popUpToInclusive="true"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
         <action
             android:id="@+id/action_auth_create_account_to_auth_sign_in"
             app:destination="@id/auth_sign_in"
             app:popUpTo="@id/auth_create_account"
             app:popUpToInclusive="true"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
     </fragment>
 
     <!--
@@ -439,10 +439,10 @@
             app:destination="@id/profile"
             app:popUpTo="@id/profile_authenticated"
             app:popUpToInclusive="true"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
         <!--
           G6a. `Row / Аватар` pushes the picker; Back and `Сохранить` both pop to this
           screen. Single top, and the row also checks the current destination, so a
@@ -452,10 +452,10 @@
             android:id="@+id/action_profile_authenticated_to_profile_avatar"
             app:destination="@id/profile_avatar"
             app:launchSingleTop="true"
-            app:enterAnim="@anim/fade_in"
-            app:exitAnim="@anim/fade_out"
-            app:popEnterAnim="@anim/fade_in"
-            app:popExitAnim="@anim/fade_out" />
+            app:enterAnim="@animator/fade_in"
+            app:exitAnim="@animator/fade_out"
+            app:popEnterAnim="@animator/fade_in"
+            app:popExitAnim="@animator/fade_out" />
     </fragment>
 
     <!--

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The app's one motion duration.
+
+      Every screen change is a crossfade of this length (animator/fade_in and
+      fade_out), and everything that appears alongside a screen - the Mini Player,
+      the bottom bar, a section that has finished loading - fades in over the same
+      time, so nothing arrives on a beat of its own. See ui/Motion.
+
+      All of it runs on Animator, which the platform scales by the system
+      "Animator duration scale": with animations removed in Accessibility or
+      Developer options every one of these completes immediately.
+    -->
+    <integer name="motion_duration_medium">250</integer>
+</resources>

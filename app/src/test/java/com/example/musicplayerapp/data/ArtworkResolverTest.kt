@@ -70,8 +70,14 @@ class ArtworkResolverTest {
             }
         }
 
+        /** Held image downloads wait on this until the test opens it. */
+        var warmGate: CountDownLatch? = null
+
         override suspend fun warmImage(url: String) {
             synchronized(warmed) { warmed += url }
+            warmGate?.let { latch ->
+                while (!latch.await(5, TimeUnit.MILLISECONDS)) delay(5)
+            }
         }
     }
 
@@ -420,6 +426,55 @@ class ArtworkResolverTest {
         assertSame("and it is literally the same object, not a rebuilt one", fresh, cachedResult)
         assertEquals(ArtworkConfidence.MEDIUM, cachedResult.confidence)
         assertEquals(ArtworkSource.ARTIST_IMAGE, cachedResult.source)
+    }
+
+    // ============== one image download per URL ==============
+
+    /**
+     * The ViewModel's warm-up and the playback service's notification bitmap both
+     * wait on the same shared lookup and ask for the same cover the moment it
+     * answers. They must share one download, not race two - the HTTP cache does
+     * not merge concurrent requests for one URL.
+     */
+    @Test
+    fun concurrentWarmsOfOneCoverShareOneDownload() = runBlocking {
+        val provider = FakeProvider { _, _ -> resolved("https://example.test/a.jpg") }
+        val gate = CountDownLatch(1).also { provider.warmGate = it }
+        val resolver = resolver(provider)
+
+        val viewModel = async(Dispatchers.Default) { resolver.warmImage("https://example.test/a.jpg") }
+        withTimeout(5_000) {
+            while (synchronized(provider.warmed) { provider.warmed.isEmpty() }) delay(5)
+        }
+        val service = async(Dispatchers.Default) { resolver.warmImage("https://example.test/a.jpg") }
+        delay(100) // let the second caller reach the resolver while the first download is held
+
+        gate.countDown()
+        withTimeout(5_000) { viewModel.await(); service.await() }
+
+        synchronized(provider.warmed) {
+            assertEquals("one cover, one download", listOf("https://example.test/a.jpg"), provider.warmed.toList())
+        }
+    }
+
+    // ============== known (no lookup) ==============
+
+    /**
+     * What lets the now-playing state publish a track together with its cover: a
+     * synchronous read of the answer already held, and nothing for a track that
+     * has never been asked about - so it never starts a lookup of its own.
+     */
+    @Test
+    fun knownIsTheCachedAnswerAndNeverALookup() = runBlocking {
+        val provider = FakeProvider { _, _ -> resolved("https://example.test/a.jpg") }
+        val resolver = resolver(provider)
+
+        assertNull("nothing is known before a lookup", resolver.known("Artist", "Title"))
+        assertEquals(0, provider.calls.get())
+
+        resolver.resolve("Artist", "Title")
+        assertEquals("https://example.test/a.jpg", resolver.known("Artist", "Title")?.coverUrl)
+        assertEquals("known() asked the provider", 1, provider.calls.get())
     }
 
     // ============== prefetch ==============

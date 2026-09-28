@@ -73,6 +73,7 @@
             android:background="@drawable/bg_collection_row_artwork"
             android:contentDescription="@string/collection_row_artwork"
             android:scaleType="centerCrop"
+            android:src="@drawable/artwork_placeholder"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:shapeAppearanceOverlay="@style/ShapeAppearance.Myata.CollectionRowArtwork" />

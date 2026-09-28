@@ -12,7 +12,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.data.FavoriteTrack
 import com.google.android.material.imageview.ShapeableImageView
-import com.squareup.picasso.Picasso
+import com.example.musicplayerapp.ui.CoverArt
 
 /**
  * Adapter for the COLLECTION list, on the FINAL 3.6.6 row (F3).
@@ -50,6 +50,9 @@ class FavoritesAdapter(
 
         /** The track this holder is currently bound to, for late artwork. */
         var boundTo: FavoriteTrack? = null
+
+        /** The track key whose cover this holder is showing or loading. */
+        var coverKey: String? = null
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -65,20 +68,22 @@ class FavoritesAdapter(
         holder.tvTrack.text = track.track
         holder.tvArtist.text = track.artist.uppercase()
 
-        // Back to the bare plate first: a recycled holder still carries the
-        // previous row's cover, and a lookup that finds nothing never paints.
-        Picasso.get().cancelRequest(holder.artwork)
-        holder.artwork.setImageDrawable(null)
+        // The same track rebound - a content change, which DiffCallback keeps on
+        // this holder - keeps the cover it already has. Resetting it would flash
+        // the placeholder on every row a sync touches.
+        if (holder.coverKey != track.trackKey) {
+            // Back to the placeholder first: a recycled holder still carries the
+            // previous row's cover, and it is also what stays when the lookup finds
+            // nothing - the same plate as every other artwork surface.
+            CoverArt.clearRow(holder.artwork)
+            holder.coverKey = track.trackKey
 
-        artworkFor(track) { url ->
-            // The answer arrives after a round trip, by which time the holder may
-            // have been rebound to a different track. Only paint if it has not.
-            if (holder.boundTo != track || url.isNullOrBlank()) return@artworkFor
-            Picasso.get()
-                .load(url)
-                .fit()
-                .centerCrop()
-                .into(holder.artwork)
+            artworkFor(track) { url ->
+                // The answer arrives after a round trip, by which time the holder may
+                // have been rebound to a different track. Only paint if it has not.
+                if (holder.boundTo != track || url.isNullOrBlank()) return@artworkFor
+                CoverArt.loadRow(holder.artwork, url) { holder.coverKey = null }
+            }
         }
 
         holder.action.setOnClickListener { onActionClick(track) }
@@ -88,8 +93,8 @@ class FavoritesAdapter(
         super.onViewRecycled(holder)
         holder.boundTo?.let(cancelArtwork)
         holder.boundTo = null
-        Picasso.get().cancelRequest(holder.artwork)
-        holder.artwork.setImageDrawable(null)
+        holder.coverKey = null
+        CoverArt.clearRow(holder.artwork)
     }
 
     private class DiffCallback : DiffUtil.ItemCallback<FavoriteTrack>() {
@@ -103,5 +108,10 @@ class FavoritesAdapter(
         override fun areContentsTheSame(oldItem: FavoriteTrack, newItem: FavoriteTrack): Boolean {
             return oldItem == newItem
         }
+
+        // Any payload at all tells the item animator the changed row can be rebound
+        // in place, instead of crossfading it with a second holder that starts from
+        // the placeholder and loads the cover again.
+        override fun getChangePayload(oldItem: FavoriteTrack, newItem: FavoriteTrack): Any = Unit
     }
 }

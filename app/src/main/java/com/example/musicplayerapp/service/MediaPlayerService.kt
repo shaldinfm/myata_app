@@ -42,6 +42,7 @@ import com.example.musicplayerapp.ui.sleeptimer.SleepTimerDuration
 import com.example.musicplayerapp.ui.sleeptimer.SleepTimerState
 import com.google.gson.Gson
 import com.squareup.picasso.Picasso
+import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.*
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
@@ -50,6 +51,8 @@ import java.util.concurrent.TimeUnit
 import android.app.NotificationChannel
 import android.app.NotificationManager
 
+/** Edge of the rendered placeholder cover; see MediaPlayerService.getPlaceholderBitmap. */
+private const val PLACEHOLDER_ARTWORK_PX = 512
 
 /**
  * A stream's media item, labelled with the stream key.
@@ -115,6 +118,13 @@ class MediaPlayerService(): MediaSessionService(){
     // current track was looked up here as well as in the UI. Same answers, same
     // matching - only the ownership of the lookup and its cache changed.
     private val artworkResolver by lazy { com.example.musicplayerapp.data.ArtworkModule.resolver(this) }
+
+    /**
+     * The app's artwork image client - the one Picasso and the ViewModel's warm-up
+     * use, with the artwork disk cache. Used for the notification's cover bitmap
+     * only; every other request of this service stays on [httpClient].
+     */
+    private val artworkImageClient by lazy { com.example.musicplayerapp.data.ArtworkModule.imageClient(this) }
     
     // Image cache for album art
     private val albumArtCache = mutableMapOf<String, Bitmap?>()
@@ -2232,9 +2242,20 @@ class MediaPlayerService(): MediaSessionService(){
         }
     }
 
+    /**
+     * The notification's and lock screen's cover when a track has none: the app's
+     * artwork placeholder, the same one the player draws.
+     *
+     * Rendered from the vector through the service's own context, so it follows
+     * the **system** light/dark mode - the notification is a system surface, and
+     * the app's own appearance setting is local to MainActivity. 512px square is
+     * what the media notification and the session artwork use at most; the old
+     * PNG decoded at the device density came out around 1700px.
+     */
     private fun getPlaceholderBitmap(): Bitmap? {
         return try {
-            android.graphics.BitmapFactory.decodeResource(resources, R.drawable.zaglushka_logo)
+            androidx.core.content.ContextCompat.getDrawable(this, R.drawable.artwork_placeholder)
+                ?.toBitmap(PLACEHOLDER_ARTWORK_PX, PLACEHOLDER_ARTWORK_PX)
         } catch (e: Exception) {
             Log.e("MetadataPolling", "Failed to load placeholder: ${e.message}")
             null
@@ -2266,11 +2287,21 @@ class MediaPlayerService(): MediaSessionService(){
     
     // ============== BITMAP LOADING ==============
     
+    /**
+     * The notification's cover, from the app's shared artwork cache.
+     *
+     * The download goes through [ArtworkResolver.warmImage] - one download per URL,
+     * shared with the ViewModel's warm-up - into the artwork disk cache, and the
+     * bytes are then read back through the same [artworkImageClient]. So the cover
+     * this service finds is on disk by the time its URL reaches the PLAYER and the
+     * Mini Player, which then decode it locally instead of downloading it again.
+     */
     private suspend fun loadAlbumArtBitmap(imageUrl: String): Bitmap? {
+        artworkResolver.warmImage(imageUrl)
         return withContext(Dispatchers.IO) {
             try {
                 val request = Request.Builder().url(imageUrl).build()
-                httpClient.newCall(request).execute().use { response ->
+                artworkImageClient.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) {
                         Log.e("Service", "Failed to download bitmap: ${response.code}")
                         return@use null

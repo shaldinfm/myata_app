@@ -51,7 +51,8 @@ class MyataStreamFragment() : Fragment() {
     lateinit var binding: FragmentMyataStreamBinding
     private lateinit var playerControl: PlayerControl
     var stream: String = "myata"
-    private var currentImageUrl: String? = null  // The cover on the current view; cleared with the view
+    /** The page's track - title, artist and cover as one unit; one per view. */
+    private var cover: CoverArt.NowPlaying? = null
 
     /**
      * Which [renderBroadcastHistory] call is the latest. A populated render only
@@ -118,6 +119,7 @@ class MyataStreamFragment() : Fragment() {
             inflater,
             R.layout.fragment_myata_stream, container, false
         )
+        cover = CoverArt.NowPlaying(binding.photo)
         
         // Initialize FavoritesViewModel (No longer needed here for toggle, but maybe for history?)
         //favoritesViewModel = ViewModelProvider(this)[FavoritesViewModel::class.java]
@@ -521,10 +523,10 @@ class MyataStreamFragment() : Fragment() {
             ?.removeOnLayoutChangeListener(bottomChromeListener)
         // What is on screen belongs to the view, not to the fragment. A push from
         // the PLAYER (Report Problem, История эфира) destroys this view but keeps
-        // the instance, and the view that comes back inflates with the plate. Left
-        // set, the URL would tell CoverArt that cover is already up, and the
-        // placeholder would stand until the next track.
-        currentImageUrl = null
+        // the instance, and the view that comes back inflates with the placeholder
+        // and gets a presenter of its own.
+        cover?.reset()
+        cover = null
         historyRenderGeneration++
         super.onDestroyView()
     }
@@ -559,28 +561,26 @@ class MyataStreamFragment() : Fragment() {
     fun updateUI(it: PlayerState){
         val artist = it.artist
 
+        val presenter = cover ?: return
+
         if (artist.isNullOrBlank()) {
             // Nothing is playing yet, or the metadata is between tracks: the brand
-            // pair and the plate, as before. The plate matters here too - a state
-            // with no metadata must not keep the last track's cover either.
-            currentImageUrl = null
-            binding.mainAuthor.text = getString(R.string.slogan_placeholder)
-            binding.mainSong.text = getString(R.string.brand_name)
-            CoverArt.showPlaceholder(binding.photo)
+            // pair over the placeholder - a state with no metadata must not keep the
+            // last track's cover either.
+            presenter.present(null) {
+                binding.mainAuthor.text = getString(R.string.slogan_placeholder)
+                binding.mainSong.text = getString(R.string.brand_name)
+            }
             return
         }
 
-        binding.mainSong.text = it.song
-        binding.mainAuthor.text = artist
-
-        // The cover the ViewModel says belongs to *this* track. A track change
-        // arrives here with no cover yet - its lookup has only just started - and
-        // CoverArt keeps the previous cover up until the new one has decoded, then
-        // crossfades; the placeholder only stands where there is no cover at all.
-        // It is the same call the Mini Player makes, so the two surfaces cannot
-        // disagree about when a cover changes.
-        currentImageUrl = CoverArt.render(binding.photo, it.img, currentImageUrl) {
-            currentImageUrl = null
+        // The track the ViewModel published, with the cover that belongs to it: the
+        // title and artist go up together with their cover, never under the
+        // previous track's - see CoverArt.NowPlaying. The Mini Player makes the same
+        // call, so the two surfaces cannot disagree.
+        presenter.present(it.img) {
+            binding.mainSong.text = it.song
+            binding.mainAuthor.text = artist
         }
     }
 

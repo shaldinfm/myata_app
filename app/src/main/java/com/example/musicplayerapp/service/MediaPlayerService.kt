@@ -42,6 +42,7 @@ import com.example.musicplayerapp.ui.sleeptimer.SleepTimerDuration
 import com.example.musicplayerapp.ui.sleeptimer.SleepTimerState
 import com.google.gson.Gson
 import com.squareup.picasso.Picasso
+import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.*
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
@@ -50,6 +51,8 @@ import java.util.concurrent.TimeUnit
 import android.app.NotificationChannel
 import android.app.NotificationManager
 
+/** Edge of the rendered placeholder cover; see MediaPlayerService.getPlaceholderBitmap. */
+private const val PLACEHOLDER_ARTWORK_PX = 512
 
 /**
  * A stream's media item, labelled with the stream key.
@@ -2232,9 +2235,20 @@ class MediaPlayerService(): MediaSessionService(){
         }
     }
 
+    /**
+     * The notification's and lock screen's cover when a track has none: the app's
+     * artwork placeholder, the same one the player draws.
+     *
+     * Rendered from the vector through the service's own context, so it follows
+     * the **system** light/dark mode - the notification is a system surface, and
+     * the app's own appearance setting is local to MainActivity. 512px square is
+     * what the media notification and the session artwork use at most; the old
+     * PNG decoded at the device density came out around 1700px.
+     */
     private fun getPlaceholderBitmap(): Bitmap? {
         return try {
-            android.graphics.BitmapFactory.decodeResource(resources, R.drawable.zaglushka_logo)
+            androidx.core.content.ContextCompat.getDrawable(this, R.drawable.artwork_placeholder)
+                ?.toBitmap(PLACEHOLDER_ARTWORK_PX, PLACEHOLDER_ARTWORK_PX)
         } catch (e: Exception) {
             Log.e("MetadataPolling", "Failed to load placeholder: ${e.message}")
             null

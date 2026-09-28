@@ -606,6 +606,11 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
             // previous track's cover here too.
             val identity = NowPlayingArtwork.identityOf(artist, song)
             artworkOwner.announce(streamKey, identity)
+            // A track resolved before reaches the screen with its cover, as in
+            // publishTrack, rather than as "no cover yet" first.
+            if (artworkOwner.current(streamKey) == null) {
+                knownCover(artist, song)?.let { artworkOwner.offer(streamKey, identity, it) }
+            }
 
             // The session's own cover is the service's resolution of this same
             // track, so it counts as an answer for it. A session that has not
@@ -914,6 +919,13 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
      * stand under the new title while a lookup runs (G5 recon, issue B). When the
      * same track is re-announced - the poll and the session both report it - the
      * cover it already owns comes straight back and nothing is looked up again.
+     *
+     * A track the resolver has answered before is published **with** that answer,
+     * in the same state ([knownCover]). Otherwise the screen would get the track
+     * first and its cached cover a message later - two states for one track
+     * change, the first of them "no cover yet" - which is what put the placeholder
+     * up for a split second on an ordinary track change. Only a track nobody has
+     * resolved yet is published without a cover, and looked up.
      */
     private fun publishTrack(
         stream: String,
@@ -921,9 +933,25 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         state: PlayerState,
     ) {
         val identity = NowPlayingArtwork.identityOf(state.artist, state.song)
-        val owned = artworkOwner.announce(stream, identity)
-        live.postValue(state.copy(img = owned))
-        if (owned == null) requestArtwork(stream, live, state, identity)
+        var img = artworkOwner.announce(stream, identity)
+        if (img == null) {
+            knownCover(state.artist, state.song)?.let { known ->
+                if (artworkOwner.offer(stream, identity, known)) img = known
+            }
+        }
+        live.postValue(state.copy(img = img))
+        if (img == null) requestArtwork(stream, live, state, identity)
+    }
+
+    /**
+     * The cover [artist] / [song] is already known to have, with no lookup: a URL,
+     * [NowPlayingArtwork.NO_IMAGE], or null when it has to be looked up. The same
+     * answer [requestArtwork] would arrive at, only without the extra message.
+     */
+    private fun knownCover(artist: String?, song: String?): String? {
+        if (artist.isNullOrBlank() || song.isNullOrBlank()) return NowPlayingArtwork.NO_IMAGE
+        val known = artwork.known(artist, song) ?: return null
+        return known.coverUrl ?: NowPlayingArtwork.NO_IMAGE
     }
 
     /**
@@ -968,9 +996,11 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
                 null
             }
 
-            // The one image the listener is guaranteed to look at: warm its bytes
-            // so the player is not waiting on the download when it paints.
-            artwork.prefetchImage(cover)
+            // The one image the listener is guaranteed to look at. Its bytes are in
+            // the image cache before its URL is published, so the screen's first
+            // attempt finds it on disk and fades it in once - the placeholder stays
+            // up meanwhile, which is right: this track's cover is not here yet.
+            artwork.warmImage(cover)
 
             publishArtwork(stream, live, state, identity, cover ?: NowPlayingArtwork.NO_IMAGE)
         }

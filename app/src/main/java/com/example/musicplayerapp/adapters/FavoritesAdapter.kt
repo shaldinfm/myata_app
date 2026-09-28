@@ -70,18 +70,19 @@ class FavoritesAdapter(
 
         // The same track rebound - a content change, which DiffCallback keeps on
         // this holder - keeps the cover it already has. Resetting it would flash
-        // the bare tile on every row a sync touches.
+        // the placeholder on every row a sync touches.
         if (holder.coverKey != track.trackKey) {
-            // Back to the bare plate first: a recycled holder still carries the
-            // previous row's cover, and a lookup that finds nothing never paints.
-            CoverArt.clearRow(holder.artwork, null)
+            // Back to the placeholder first: a recycled holder still carries the
+            // previous row's cover, and it is also what stays when the lookup finds
+            // nothing - the same plate as every other artwork surface.
+            CoverArt.clearRow(holder.artwork)
             holder.coverKey = track.trackKey
 
             artworkFor(track) { url ->
                 // The answer arrives after a round trip, by which time the holder may
                 // have been rebound to a different track. Only paint if it has not.
                 if (holder.boundTo != track || url.isNullOrBlank()) return@artworkFor
-                CoverArt.loadRow(holder.artwork, url, null) { holder.coverKey = null }
+                CoverArt.loadRow(holder.artwork, url) { holder.coverKey = null }
             }
         }
 
@@ -93,7 +94,7 @@ class FavoritesAdapter(
         holder.boundTo?.let(cancelArtwork)
         holder.boundTo = null
         holder.coverKey = null
-        CoverArt.clearRow(holder.artwork, null)
+        CoverArt.clearRow(holder.artwork)
     }
 
     private class DiffCallback : DiffUtil.ItemCallback<FavoriteTrack>() {
@@ -110,7 +111,7 @@ class FavoritesAdapter(
 
         // Any payload at all tells the item animator the changed row can be rebound
         // in place, instead of crossfading it with a second holder that starts from
-        // the bare tile and loads the cover again.
+        // the placeholder and loads the cover again.
         override fun getChangePayload(oldItem: FavoriteTrack, newItem: FavoriteTrack): Any = Unit
     }
 }

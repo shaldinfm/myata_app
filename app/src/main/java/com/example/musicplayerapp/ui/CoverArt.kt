@@ -1,174 +1,245 @@
 package com.example.musicplayerapp.ui
 
 import androidx.annotation.DrawableRes
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.TransitionDrawable
 import android.widget.ImageView
 import com.example.musicplayerapp.R
 import com.example.musicplayerapp.data.NowPlayingArtwork
 import com.squareup.picasso.Callback
+import com.squareup.picasso.NetworkPolicy
 import com.squareup.picasso.Picasso
 
 /**
- * Draws the current track's cover into one view - the single rule the PLAYER, the
- * Mini Player and the TV player share.
+ * Track artwork, loaded one way everywhere: the PLAYER, the Mini Player and the TV
+ * player through [NowPlaying]; the History and COLLECTION rows through [loadRow].
  *
- * ## What a track change looks like
- *
- * Previous cover -> the next cover has decoded -> a short crossfade -> next cover.
- * The previous valid cover stays up until the next one is actually ready, and the
- * placeholder is never an in-between frame. It is shown only when there genuinely
- * is no cover to show:
- *
- *  - the view has never had one (first load of a session, a freshly inflated view);
- *  - the resolver looked and found nothing ([NowPlayingArtwork.NO_IMAGE]);
- *  - the load failed.
- *
- * This reverses the G5a rule, which took the cover down the instant the URL
- * changed and stood the plate up for the length of the lookup and the decode - the
- * "old cover, plate, new cover" flash on every track change. What G5a guarded
- * against was a finished track's cover standing under the next track for the
- * *whole* track, and that cannot come back: the ViewModel's lookup always ends in
- * either a URL or NO_IMAGE (a failure is published as NO_IMAGE), so "pending" is
- * bounded by one lookup and NO_IMAGE still brings the placeholder up.
- *
- * ## The crossfade
- *
- * Picasso's own: with `noPlaceholder` the view keeps what it is showing, and when
- * the new bitmap arrives from disk or network Picasso fades it in over that
- * drawable. A cover already in the memory cache is swapped in the same frame,
- * which is what a view being re-inflated with the cover it had wants. With system
- * animations removed the fade is skipped ([Motion.enabled]).
- *
- * There is no state here: [render] is told what is currently showing and returns
- * what is showing after it, so each surface keeps its own answer.
+ * The placeholder is [R.drawable.artwork_placeholder] - the station mark on the
+ * theme's surface - wherever a track has no cover to show. It is always inflated
+ * through the view's own context, so it is the activity's theme, including a
+ * night mode the activity set locally (Picasso's `placeholder(res)` / `error(res)`
+ * inflate through the application context and would not be).
  */
 object CoverArt {
 
     /**
-     * Puts the cover for [img] into [view], keeping the previous one up while
-     * the next is on its way.
+     * The current track as one unit: its title, artist and cover change together.
      *
-     * @param img the current track's [com.example.musicplayerapp.data.PlayerState.img]:
-     *   a URL, [NowPlayingArtwork.NO_IMAGE], or null while its lookup runs.
-     * @param loaded what this view is showing, or loading, now - the previous
-     *   return value.
-     * @param onLoaded the decoded cover, for a caller that needs the pixels as
-     *   well as the picture - the TV player takes its ambient background colour
-     *   from exactly this bitmap. It is the image at the view's own size (`fit()`).
-     *   Null for every caller that only wanted the picture.
-     * @param placeholder the plate for this surface. The phone uses the
-     *   theme-aware [R.drawable.artwork_placeholder]; TV keeps its own.
-     * @param onLoadFailed run when the load fails, so the caller can forget the
-     *   URL and let a later state try it again.
-     * @return the URL now on screen (or on its way), or null when the placeholder is up.
+     * A new track is never shown under the previous track's cover, and the
+     * placeholder is never a split-second frame between two covers. What the
+     * listener sees depends only on where the new track's cover is:
+     *
+     *  - **decoded in memory** - text and cover switch in the same frame, the
+     *    cover crossfading over the old one;
+     *  - **on disk** (seen before, or warmed by the ViewModel before it published
+     *    the URL) - the previous track stays up, text and cover together, for the
+     *    local decode only, then both switch with the crossfade. The wait is bounded
+     *    by disk I/O: this load is offline-only and never touches the network;
+     *  - **not local** - text switches at once over the placeholder, and the cover
+     *    fades in when it arrives;
+     *  - **no cover** (lookup still running, [NowPlayingArtwork.NO_IMAGE], or a
+     *    failed load) - text switches over the placeholder.
+     *
+     * The ViewModel keeps the "lookup still running" case to tracks it has never
+     * resolved: a track whose answer is already known is published with its cover
+     * in the same state (StreamsViewModel.publishTrack), so an ordinary track
+     * change never passes through it.
+     *
+     * No timers: every step waits on an event - the state, a decode, a failure.
+     *
+     * @param placeholder this surface's plate; TV keeps its own.
+     * @param onLoaded the decoded cover, for a caller that needs the pixels - TV's
+     *   ambient background. The image at the view's own size (`fit()`).
+     * @param onLoadFailed a cover that could not load; the placeholder is up.
      */
-    fun render(
-        view: ImageView,
-        img: String?,
-        loaded: String?,
-        onLoaded: ((Bitmap) -> Unit)? = null,
-        @DrawableRes placeholder: Int = R.drawable.artwork_placeholder,
-        onLoadFailed: () -> Unit = {},
-    ): String? {
-        val url = NowPlayingArtwork.coverUrl(img)
+    class NowPlaying(
+        private val view: ImageView,
+        @DrawableRes private val placeholder: Int = R.drawable.artwork_placeholder,
+        private val onLoaded: ((Bitmap) -> Unit)? = null,
+        private val onLoadFailed: () -> Unit = {},
+    ) {
+        /** The cover on screen, or null while the placeholder (or nothing yet) is. */
+        private var shown: String? = null
 
-        if (url == null) {
-            if (img == null && loaded != null) {
-                // A new track whose lookup has not answered yet. The previous cover
-                // stays until the answer is here - a URL to fade to, or NO_IMAGE.
-                return loaded
+        /**
+         * Whether this view has shown a track yet. Its first one is drawn as it is -
+         * a freshly inflated view is already fading in with its screen - and only
+         * later changes crossfade.
+         */
+        private var presented = false
+
+        /** A cover being loaded, and the text waiting to go up with it. */
+        private var loading: String? = null
+        private var waiting: (() -> Unit)? = null
+
+        /**
+         * Shows the track whose cover is [img], binding its text with [apply] at
+         * the moment its cover goes up (or its placeholder does).
+         */
+        fun present(img: String?, apply: () -> Unit) {
+            val url = NowPlayingArtwork.coverUrl(img)
+
+            if (url == null) {
+                cancel()
+                apply()
+                // A cover (or a track held for one) gives way to the placeholder; a
+                // placeholder already up stays as it is.
+                if (shown != null) crossfade(view, placeholderDrawable(), animate = presented)
+                shown = null
+                presented = true
+                return
             }
-            // Nothing has ever been shown, or the resolver found nothing.
-            showPlaceholder(view, placeholder)
-            return null
+
+            // The same cover: a metadata tick, or a new track from the same release.
+            if (url == shown && loading == null) {
+                apply()
+                return
+            }
+            // The same cover is already on its way: this text goes up with it,
+            // or now if the text has already been released.
+            if (url == loading) {
+                if (waiting != null) waiting = apply else apply()
+                return
+            }
+
+            cancel()
+            loading = url
+            waiting = apply
+            val before = view.drawable
+
+            // Memory or disk only. A hit is the cover arriving with its text; a miss
+            // is "not local", which must not hold the previous track up.
+            request(url).networkPolicy(NetworkPolicy.OFFLINE).noFade()
+                .into(view, object : Callback {
+                    override fun onSuccess() {
+                        if (loading != url) return
+                        release()
+                        shown = url
+                        loading = null
+                        val cover = view.drawable
+                        if (before != null && cover != null) crossfade(view, cover, from = before, animate = presented)
+                        presented = true
+                        deliver(cover)
+                    }
+
+                    override fun onError(e: Exception?) {
+                        if (loading != url) return
+                        // Not local: the text goes up now, over the placeholder, and
+                        // the cover follows from the network with Picasso's fade.
+                        release()
+                        crossfade(view, placeholderDrawable(), animate = presented)
+                        shown = null
+                        presented = true
+                        fromNetwork(url)
+                    }
+                })
         }
 
-        // The same cover as the one already up: leave it alone. A metadata tick
-        // that repeats the current track must not restart its load, which is what
-        // would make the artwork blink on every poll.
-        if (url == loaded) {
-            view.alpha = 1f
-            return loaded
+        /** The view is gone; the next one starts from nothing. */
+        fun reset() {
+            cancel()
+            shown = null
         }
 
-        // A different cover. The view keeps showing what it has - the previous
-        // cover, or the placeholder - until this one has decoded.
-        val request = Picasso.get()
-            .load(url.toUri())
-            .noPlaceholder()
-            .fit()
-            .centerCrop()
-        if (!Motion.enabled(view.context)) request.noFade()
-
-        view.alpha = 1f
-        request.into(view, object : Callback {
-            override fun onSuccess() {
-                // Picasso's success drawable carries the decoded, `fit()`-sized
-                // image - the same pixels now on screen.
-                if (onLoaded != null) {
-                    (view.drawable as? BitmapDrawable)?.bitmap?.let(onLoaded)
+        private fun fromNetwork(url: String) {
+            val request = request(url)
+            if (!Motion.enabled(view.context)) request.noFade()
+            request.into(view, object : Callback {
+                override fun onSuccess() {
+                    if (loading != url) return
+                    shown = url
+                    loading = null
+                    deliver(view.drawable)
                 }
-            }
 
-            override fun onError(e: Exception?) {
-                // Not Picasso's `error(res)`: that inflates through the
-                // application context, which does not carry the activity's own
-                // night mode, so a Dark app on a Light system got a Light plate.
-                view.setImageResource(placeholder)
-                onLoadFailed()
-            }
-        })
+                override fun onError(e: Exception?) {
+                    if (loading != url) return
+                    loading = null
+                    view.setImageDrawable(placeholderDrawable())
+                    onLoadFailed()
+                }
+            })
+        }
 
-        return url
+        private fun request(url: String) =
+            Picasso.get().load(url.toUri()).noPlaceholder().fit().centerCrop()
+
+        private fun release() {
+            val text = waiting
+            waiting = null
+            text?.invoke()
+        }
+
+        private fun cancel() {
+            Picasso.get().cancelRequest(view)
+            loading = null
+            // A track that was waiting on its cover and has been superseded never
+            // goes up at all; the next one brings its own text.
+            waiting = null
+        }
+
+        private fun deliver(drawable: Drawable?) {
+            val bitmap = ((drawable as? TransitionDrawable)?.let { it.getDrawable(it.numberOfLayers - 1) } ?: drawable)
+                .let { it as? BitmapDrawable }?.bitmap
+            if (bitmap != null) onLoaded?.invoke(bitmap)
+        }
+
+        private fun placeholderDrawable(): Drawable? = ContextCompat.getDrawable(view.context, placeholder)
     }
 
     /**
-     * A list row's cover, loaded the same way as the current track's: whatever
-     * the row shows stays until the cover has decoded, then it fades in.
+     * A list row's cover. The row shows the placeholder until the cover has
+     * decoded, then it fades in. A recycled row belongs to a different track, so it
+     * is reset with [clearRow] on bind; a row rebound to the *same* track should not
+     * be reset at all, which the adapters check before calling either.
      *
-     * Rows differ from [render] in one respect only - a recycled row belongs to a
-     * different track, so it is reset with [clearRow] on bind instead of keeping
-     * the previous cover. A row rebound to the *same* track should not be reset at
-     * all; the adapters check that before calling either.
-     *
-     * @param placeholder the row's plate, or null for a row whose plate is its own
-     *   background (COLLECTION's `surface_container` tile).
-     * @param onFailed run when the load fails, after the plate is back.
+     * @param onFailed run when the load fails, after the placeholder is back.
      */
-    fun loadRow(
-        view: ImageView,
-        url: String,
-        @DrawableRes placeholder: Int?,
-        onFailed: () -> Unit = {},
-    ) {
+    fun loadRow(view: ImageView, url: String, onFailed: () -> Unit = {}) {
         val request = Picasso.get().load(url).noPlaceholder().fit().centerCrop()
         if (!Motion.enabled(view.context)) request.noFade()
         request.into(view, object : Callback {
             override fun onSuccess() = Unit
 
             override fun onError(e: Exception?) {
-                // Through the view's context for the same reason as render's.
-                if (placeholder != null) view.setImageResource(placeholder) else view.setImageDrawable(null)
+                view.setImageResource(R.drawable.artwork_placeholder)
                 onFailed()
             }
         })
     }
 
-    /** Back to the row's plate, with nothing in flight over it. */
-    fun clearRow(view: ImageView, @DrawableRes placeholder: Int?) {
+    /** Back to the placeholder, with nothing in flight over it. */
+    fun clearRow(view: ImageView) {
         Picasso.get().cancelRequest(view)
-        if (placeholder != null) view.setImageResource(placeholder) else view.setImageDrawable(null)
+        view.setImageResource(R.drawable.artwork_placeholder)
     }
 
     /**
-     * The placeholder, with nothing in flight over it. Resolved through the view's
-     * own context, so it is the current theme's plate.
+     * Replaces what [view] shows with [to], crossfading from [from] (by default
+     * what it shows now) over the app's motion duration. Immediate when the system
+     * has animations off or there is nothing to fade from.
      */
-    fun showPlaceholder(view: ImageView, @DrawableRes placeholder: Int = R.drawable.artwork_placeholder) {
-        Picasso.get().cancelRequest(view)
-        view.setImageResource(placeholder)
-        view.alpha = 1f
+    private fun crossfade(
+        view: ImageView,
+        to: Drawable?,
+        from: Drawable? = view.drawable,
+        animate: Boolean = true,
+    ) {
+        val old = (from as? TransitionDrawable)?.let { it.getDrawable(it.numberOfLayers - 1) } ?: from
+        if (!animate || to == null || old == null || old === to || !Motion.enabled(view.context)) {
+            view.setImageDrawable(to)
+            return
+        }
+        val transition = TransitionDrawable(arrayOf(old, to)).apply { isCrossFadeEnabled = true }
+        view.setImageDrawable(transition)
+        val duration = Motion.duration(view.context).toInt()
+        transition.startTransition(duration)
+        // Once the fade has finished, the view holds the cover itself rather than a
+        // two-layer drawable still referencing the previous one.
+        view.postDelayed({ if (view.drawable === transition) view.setImageDrawable(to) }, duration.toLong())
     }
 }

@@ -177,6 +177,30 @@ class ArtworkResolver internal constructor(
     }
 
     /**
+     * The answer already known for this track, without asking anyone: the
+     * resolver's cache, still valid, or null when a lookup is needed.
+     *
+     * Synchronous on purpose. It is what lets the now-playing state publish a track
+     * that has been resolved before together with its cover, in one state, instead
+     * of the track first and its cached cover a message later (StreamsViewModel).
+     */
+    fun known(artist: String?, title: String?): ArtworkRepository.ArtworkResult? =
+        valid(NowPlayingArtwork.identityOf(artist.orEmpty(), title.orEmpty()))
+
+    /**
+     * Downloads a cover's bytes into the image cache and returns once they are
+     * there (or the download failed - this never throws for that).
+     *
+     * The now-playing state awaits this before it publishes a new cover URL, so the
+     * screen's first attempt at the cover finds it on disk and swaps it in once,
+     * rather than racing its own download against this one.
+     */
+    suspend fun warmImage(url: String?) {
+        val target = url?.takeIf { it.startsWith("http") } ?: return
+        runCatching { currentTrackLane.withPermit { repository.warmImage(target) } }
+    }
+
+    /**
      * Warms the image bytes for a cover that is about to be shown.
      *
      * One URL, fire and forget, in the resolver's own scope. It exists because

@@ -11,9 +11,10 @@
   `surface_container` is therefore a choice, and a narrow one: it is the recessed
   container role, it exists in both themes, and it is the only role that
   describes "a surface a piece of content sits in" without claiming to be the
-  content. It shows while ArtworkRepository is resolving a cover from the row's
-  artist and track, and it stays if nothing is found - FavoriteTrack has no
-  artwork of its own to fall back to.
+  content. Since the UI polish pass the row draws the shared artwork_placeholder
+  over it while a cover is resolved and when none is found - the same plate as
+  every other artwork surface - so this only shows at an edge the image does not
+  reach.
 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">

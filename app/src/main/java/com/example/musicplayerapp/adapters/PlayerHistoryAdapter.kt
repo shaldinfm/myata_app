@@ -74,9 +74,6 @@ class PlayerHistoryAdapter(
         @VisibleForTesting
         @Volatile
         var diffExecutorForTest: Executor? = null
-
-        /** The rows' plate: the PLAYER's theme-aware placeholder. */
-        private val PLATE = R.drawable.artwork_placeholder
     }
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -165,7 +162,7 @@ class PlayerHistoryAdapter(
             // The answer arrives after a round trip, by which time the holder may
             // have been rebound to a different track. Only paint if it has not.
             if (holder.boundTo != track || url.isNullOrBlank()) return@artworkFor
-            CoverArt.loadRow(holder.artwork, url, PLATE) { holder.coverKey = null }
+            CoverArt.loadRow(holder.artwork, url) { holder.coverKey = null }
         }
     }
 
@@ -178,7 +175,7 @@ class PlayerHistoryAdapter(
     }
 
     /** The designed fallback, the same theme-aware plate the PLAYER's own cover uses. */
-    private fun plate(holder: ViewHolder) = CoverArt.clearRow(holder.artwork, PLATE)
+    private fun plate(holder: ViewHolder) = CoverArt.clearRow(holder.artwork)
 
     /** Which cover a play needs: the same artist and title need the same one. */
     private fun coverKey(track: HistoryTrack): String = "${track.artist}${track.title}"

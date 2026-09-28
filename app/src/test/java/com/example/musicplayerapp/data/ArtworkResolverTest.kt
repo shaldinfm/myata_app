@@ -422,6 +422,26 @@ class ArtworkResolverTest {
         assertEquals(ArtworkSource.ARTIST_IMAGE, cachedResult.source)
     }
 
+    // ============== known (no lookup) ==============
+
+    /**
+     * What lets the now-playing state publish a track together with its cover: a
+     * synchronous read of the answer already held, and nothing for a track that
+     * has never been asked about - so it never starts a lookup of its own.
+     */
+    @Test
+    fun knownIsTheCachedAnswerAndNeverALookup() = runBlocking {
+        val provider = FakeProvider { _, _ -> resolved("https://example.test/a.jpg") }
+        val resolver = resolver(provider)
+
+        assertNull("nothing is known before a lookup", resolver.known("Artist", "Title"))
+        assertEquals(0, provider.calls.get())
+
+        resolver.resolve("Artist", "Title")
+        assertEquals("https://example.test/a.jpg", resolver.known("Artist", "Title")?.coverUrl)
+        assertEquals("known() asked the provider", 1, provider.calls.get())
+    }
+
     // ============== prefetch ==============
 
     @Test

@@ -29,8 +29,8 @@ class MiniPlayer(
     private val onOpenPlayer: () -> Unit,
 ) {
 
-    /** Last URL handed to Picasso, so a metadata tick does not reload the same art. */
-    private var loadedArtworkUrl: String? = null
+    /** The pill's track - title, artist and cover shown as one unit (CoverArt.NowPlaying). */
+    private val artwork = CoverArt.NowPlaying(views.miniPlayerArtwork)
 
     fun bind(owner: LifecycleOwner) {
         views.miniPlayerPlayPause.setOnClickListener { vm.togglePlayPause() }
@@ -86,11 +86,14 @@ class MiniPlayer(
             isBuffering = vm.isBuffering.value == true,
         )
 
-        views.miniPlayerTitle.text = state.title
-        views.miniPlayerArtist.text = state.artist
-
         renderControl(state.control)
-        loadArtwork(state.artworkUrl)
+
+        // The text goes up with its cover, never under the previous track's: see
+        // CoverArt.NowPlaying - the same call the player screen makes.
+        artwork.present(state.artworkUrl) {
+            views.miniPlayerTitle.text = state.title
+            views.miniPlayerArtist.text = state.artist
+        }
     }
 
     /**
@@ -137,14 +140,6 @@ class MiniPlayer(
                 PlayerControlState.PLAY -> R.string.mini_player_play
             }
         )
-    }
-
-    private fun loadArtwork(url: String?) {
-        // The player screen's rule, called the same way: see CoverArt for when the
-        // previous cover gives way and when the placeholder is shown.
-        loadedArtworkUrl = CoverArt.render(views.miniPlayerArtwork, url, loadedArtworkUrl) {
-            loadedArtworkUrl = null
-        }
     }
 
     /**

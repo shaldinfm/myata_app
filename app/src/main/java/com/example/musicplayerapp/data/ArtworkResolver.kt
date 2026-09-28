@@ -90,6 +90,9 @@ class ArtworkResolver internal constructor(
     private val cached = ConcurrentHashMap<String, Entry>()
     private val inFlight = ConcurrentHashMap<String, Deferred<ArtworkRepository.ArtworkResult>>()
 
+    /** Image downloads in progress, one per URL - see [warmImage]. */
+    private val warming = ConcurrentHashMap<String, Deferred<Unit>>()
+
     /** Consecutive failures across all tracks; a single success clears it. */
     private val consecutiveFailures = AtomicInteger(0)
 
@@ -193,11 +196,34 @@ class ArtworkResolver internal constructor(
      *
      * The now-playing state awaits this before it publishes a new cover URL, so the
      * screen's first attempt at the cover finds it on disk and swaps it in once,
-     * rather than racing its own download against this one.
+     * rather than racing its own download against this one. The playback service
+     * awaits it before decoding the notification's bitmap from the same cache.
+     *
+     * One download per URL at a time: the ViewModel and the service resolve the
+     * same track through the same shared lookup, so both arrive here the moment it
+     * answers, and the HTTP cache does not merge two concurrent requests for one
+     * URL. The second caller waits for the first one's download instead of
+     * starting its own.
      */
     suspend fun warmImage(url: String?) {
         val target = url?.takeIf { it.startsWith("http") } ?: return
-        runCatching { currentTrackLane.withPermit { repository.warmImage(target) } }
+        val download = warming.computeIfAbsent(target) {
+            scope.async {
+                try {
+                    runCatching { currentTrackLane.withPermit { repository.warmImage(target) } }
+                    Unit
+                } finally {
+                    warming.remove(target)
+                }
+            }
+        }
+        try {
+            download.await()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // A failed download is the image not being warm; the caller loads it itself.
+        }
     }
 
     /**
@@ -209,9 +235,7 @@ class ArtworkResolver internal constructor(
      */
     fun prefetchImage(url: String?) {
         val target = url?.takeIf { it.startsWith("http") } ?: return
-        scope.launch {
-            runCatching { currentTrackLane.withPermit { repository.warmImage(target) } }
-        }
+        scope.launch { warmImage(target) }
     }
 
     private suspend fun lookup(

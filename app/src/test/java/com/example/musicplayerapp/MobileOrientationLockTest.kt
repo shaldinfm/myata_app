@@ -79,6 +79,16 @@ class MobileOrientationLockTest {
     }
 
     @Test
+    fun `portrait is optional for device installation`() {
+        val features = manifest().getElementsByTagName("uses-feature")
+        val portrait = (0 until features.length)
+            .map { features.item(it) as Element }
+            .single { name(it) == "android.hardware.screen.portrait" }
+        assertEquals("A phone orientation lock must not exclude fixed-landscape TVs",
+            "false", portrait.getAttributeNS(ANDROID, "required"))
+    }
+
+    @Test
     fun `portrait is the only orientation declared anywhere in the manifest`() {
         val declared = activities()
             .filter { orientation(it).isNotEmpty() }

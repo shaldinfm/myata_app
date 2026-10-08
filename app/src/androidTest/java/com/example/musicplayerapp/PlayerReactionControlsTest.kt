@@ -23,11 +23,12 @@ import kotlin.math.roundToInt
 /**
  * The PLAYER's two reaction controls, drawn for all three states.
  *
- * What the reader can actually see is the tint, because the frozen frame records
- * one glyph per slot and no states. So this asserts the tint each control takes in
- * each state, in both themes and at every shipping width - and, crucially, that
- * **only one control is ever active**, which is a property of the pair rather than
- * of either control.
+ * What the reader can actually see is the glyph and its tint: outlined in the row's own
+ * colour at rest, filled in the active colour when the track carries that reaction. So
+ * this asserts the selected state, the glyph and the tint each control takes in each
+ * state, in both themes and at every shipping width - and, crucially, that **only one
+ * control is ever active**, which is a property of the pair rather than of either
+ * control.
  *
  * It also writes one PNG per state to the app's external files directory. Those are
  * the screenshots in the PR: the row as it is actually rasterised, not a mockup.
@@ -49,7 +50,8 @@ class PlayerReactionControlsTest {
             val inflater = activity.layoutInflater.cloneInContext(themed)
             val theme = if (night) "dark" else "light"
 
-            val likeOn = ContextCompat.getColor(themed, R.color.player_like_active)
+            // Like active is the play/pause surface's own resource, not a colour of its own.
+            val likeOn = ContextCompat.getColor(themed, R.color.primary)
             val dislikeOn = ContextCompat.getColor(themed, R.color.player_dislike_active)
             val likeRest = ContextCompat.getColor(themed, R.color.player_like)
             val dislikeRest = ContextCompat.getColor(themed, R.color.player_control_action)
@@ -86,15 +88,38 @@ class PlayerReactionControlsTest {
                         findings += "$where: isSelected is ${like.isSelected}/${dislike.isSelected}"
                     }
 
-                    // Active has to be visible as active: the old `primary` sat at 1.03:1
-                    // against the rest glyph in light, which is why a saved reaction
-                    // looked like nothing had happened.
-                    if (contrast(likeOn, likeRest) < 1.4 || contrast(dislikeOn, dislikeRest) < 1.4) {
-                        findings += "$where: an active tint is indistinguishable from rest"
+                    // Active has to be visible as active, and the colour cannot be what
+                    // says so: `primary` sits at the rest glyph's luminance in light. The
+                    // shape does - outlined at rest, filled when active.
+                    val liked = state == Reaction.LIKED
+                    val disliked = state == Reaction.DISLIKED
+                    if (PlayerReactionControls.shownIcon(like) !=
+                        if (liked) R.drawable.ic_player_like_filled else R.drawable.ic_player_like
+                    ) {
+                        findings += "$where: like is not showing its ${if (liked) "filled" else "outlined"} glyph"
+                    }
+                    if (PlayerReactionControls.shownIcon(dislike) !=
+                        if (disliked) R.drawable.ic_player_dislike_filled else R.drawable.ic_player_dislike
+                    ) {
+                        findings += "$where: dislike is not showing its ${if (disliked) "filled" else "outlined"} glyph"
+                    }
+
+                    // And as drawn, not only as named: the two glyphs are mirrors, so at
+                    // rest they put down the same ink, and a filled one puts down far more.
+                    val likeInk = inked(like)
+                    val dislikeInk = inked(dislike)
+                    val ratio = likeInk.toDouble() / dislikeInk.coerceAtLeast(1)
+                    val drawnRight = when (state) {
+                        Reaction.LIKED -> ratio > 1.5
+                        Reaction.DISLIKED -> ratio < 1 / 1.5
+                        Reaction.NEUTRAL -> ratio in 0.8..1.25
+                    }
+                    if (!drawnRight) {
+                        findings += "$where: drawn ink like/dislike is $likeInk/$dislikeInk - active is not visibly filled"
                     }
 
                     // Neither control moves or resizes between states - the frozen
-                    // row has one geometry and the reaction is carried by colour.
+                    // row has one geometry, and outlined and filled share one box.
                     if (like.width != dp(49).roundToInt() || dislike.width != dp(49).roundToInt()) {
                         findings += "$where: a slot is ${like.width}x${dislike.width}, not 49dp wide"
                     }
@@ -167,11 +192,13 @@ class PlayerReactionControlsTest {
         PlayerReactionControls.render(like, dislike, state)
     }
 
-    /** WCAG contrast ratio between two opaque colours. */
-    private fun contrast(a: Int, b: Int): Double {
-        val la = androidx.core.graphics.ColorUtils.calculateLuminance(a)
-        val lb = androidx.core.graphics.ColorUtils.calculateLuminance(b)
-        return (maxOf(la, lb) + 0.05) / (minOf(la, lb) + 0.05)
+    /** How many pixels [view] actually paints, drawn on its own over nothing. */
+    private fun inked(view: ImageView): Int {
+        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        view.draw(Canvas(bitmap))
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        return pixels.count { (it ushr 24) > 127 }
     }
 
     private fun layoutPage(

@@ -2,4 +2,6 @@
 <resources>
     <!-- The running tint animator on a PLAYER reaction control - see PlayerReactionControls. -->
     <item name="player_reaction_tint_animator" type="id" />
+    <!-- The glyph a PLAYER reaction control is showing, outlined or filled - see PlayerReactionControls. -->
+    <item name="player_reaction_icon" type="id" />
 </resources>

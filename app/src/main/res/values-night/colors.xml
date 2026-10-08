@@ -79,9 +79,6 @@
     -->
     <color name="player_like">#F5F7FA</color>
 
-    <!-- PLAYER `like`, active: mint in dark (owner decision). Light is blue - see values/colors.xml. -->
-    <color name="player_like_active">#5FD9B4</color>
-
     <!--
       PLAYER control row, trailing action. The frozen `dislike` glyph, which the
       History entry occupies until its own phase - see values/colors.xml.

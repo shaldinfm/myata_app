@@ -81,6 +81,8 @@ class PlayerReactionPressTest {
         val tint = ImageViewCompat.getImageTintList(dislike)?.defaultColor
         assertEquals(colors.dislikeOn, tint)
         assertTrue(dislike.isSelected)
+        assertEquals(R.drawable.ic_player_dislike_filled, PlayerReactionControls.shownIcon(dislike))
+        assertEquals(R.drawable.ic_player_like, PlayerReactionControls.shownIcon(like))
     }
 
     /* ---------------------------------------------------------------- infra -- */
@@ -121,6 +123,16 @@ class PlayerReactionPressTest {
         )
         assertEquals("$where: like selected", state == Reaction.LIKED, like.isSelected)
         assertEquals("$where: dislike selected", state == Reaction.DISLIKED, dislike.isSelected)
+        assertEquals(
+            "$where: like glyph",
+            if (state == Reaction.LIKED) R.drawable.ic_player_like_filled else R.drawable.ic_player_like,
+            PlayerReactionControls.shownIcon(like),
+        )
+        assertEquals(
+            "$where: dislike glyph",
+            if (state == Reaction.DISLIKED) R.drawable.ic_player_dislike_filled else R.drawable.ic_player_dislike,
+            PlayerReactionControls.shownIcon(dislike),
+        )
     }
 
     /** A real PLAYER page, attached on top of MainActivity's content. */
@@ -139,7 +151,7 @@ class PlayerReactionPressTest {
                 like = page.findViewById(R.id.btn_favorite)
                 dislike = page.findViewById(R.id.btn_dislike)
                 colors = Colors(
-                    likeOn = ContextCompat.getColor(activity, R.color.player_like_active),
+                    likeOn = ContextCompat.getColor(activity, R.color.primary),
                     dislikeOn = ContextCompat.getColor(activity, R.color.player_dislike_active),
                     likeRest = ContextCompat.getColor(activity, R.color.player_like),
                     dislikeRest = ContextCompat.getColor(activity, R.color.player_control_action),

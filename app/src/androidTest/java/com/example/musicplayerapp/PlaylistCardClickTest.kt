@@ -47,15 +47,16 @@ class PlaylistCardClickTest {
 
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                row = RecyclerView(activity).apply {
+                val created = RecyclerView(activity).apply {
                     layoutManager = LinearLayoutManager(activity, LinearLayoutManager.HORIZONTAL, false)
                     adapter = PlaylistAdapter { clicked += it }.also { it.submit(samples) }
                     // On top of everything else in the content frame, so the tap
                     // reaches this row and nothing behind it.
                     elevation = 1000f
                 }
+                row = created
                 activity.addContentView(
-                    row,
+                    created,
                     ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT,

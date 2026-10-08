@@ -178,7 +178,7 @@ android {
         // that raised this) and network_security_config only applies from 24.
         minSdk 24
         targetSdk 36
-        versionCode 202615
+        versionCode 202616
         versionName "3.6.7"
 
         // Not the stock runner. MyataTestRunner installs the live-Supabase gate

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The running tint animator on a PLAYER reaction control - see PlayerReactionControls. -->
+    <item name="player_reaction_tint_animator" type="id" />
+</resources>

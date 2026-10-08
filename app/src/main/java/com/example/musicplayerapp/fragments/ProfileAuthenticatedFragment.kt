@@ -253,12 +253,15 @@ class ProfileAuthenticatedFragment : Fragment() {
             val account = withContext(Dispatchers.IO) {
                 val api = EmailAuthBackend.api(requireContext())
                 // The session first: reconciliation needs to be told what restored,
-                // and this reaches nothing that can mint.
-                val sessionUid = api.currentUid()
+                // and this reaches nothing that can mint. The stored one, not the
+                // live one - offline with an expired token, or just back from the
+                // background, the live session is null and the account is still here.
+                // See EmailAuthApi.storedAccount.
+                val sessionUid = api.storedSessionUid()
                 IdentityReconciler.reconcile(requireContext(), sessionUid)
 
                 val state = IdentityStore.state(requireContext())
-                if (state !is IdentityState.Registered) null else api.currentAccount()
+                if (state !is IdentityState.Registered) null else api.storedAccount()
             }
 
             if (account != null) KnownAccount.remember(account) else KnownAccount.forget()

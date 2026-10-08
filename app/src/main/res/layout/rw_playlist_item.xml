@@ -9,6 +9,11 @@
   The frozen `Playlist` frame is 181 tall against a 160 card; the extra 21 holds
   nothing, and the row's own 197 height keeps the section anchored where the
   frozen frame puts it, so it is not reproduced as item padding.
+
+  The card is the clickable view, and PlaylistAdapter listens on the card - not on
+  this FrameLayout. A clickable child consumes the whole touch, so a listener on
+  the root never fired once the card became clickable in the 3.6.6 migration: the
+  ripple played and nothing opened. PlaylistCardLayoutTest pins this.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -17,6 +22,7 @@
     android:layout_marginEnd="@dimen/home_playlist_card_gap">
 
     <com.google.android.material.card.MaterialCardView
+        android:id="@+id/playlist_card"
         style="@style/HomePlaylistCard"
         android:clickable="true"
         android:focusable="true">

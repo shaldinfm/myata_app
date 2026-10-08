@@ -269,7 +269,7 @@ class SettingsFragment : Fragment() {
                 val account = if (!signedIn) {
                     null
                 } else {
-                    runCatching { EmailAuthBackend.api(context).currentAccount() }
+                    runCatching { EmailAuthBackend.api(context).storedAccount() }
                         .getOrNull()
                         ?.takeIf { it.uid == settledUid }
                 }

@@ -39,15 +39,15 @@ import kotlinx.coroutines.withContext
  * The rule is therefore:
  *
  * ```
- * REGISTERED(X)  and  restored session uid == X   ->  profile-authenticated
- * REGISTERED(X)  and  no session                  ->  profile-guest
- * REGISTERED(X)  and  session uid Y != X          ->  reconcile, then re-decide
+ * REGISTERED(X)  and  stored session uid == X     ->  profile-authenticated
+ * REGISTERED(X)  and  no stored session           ->  profile-guest
+ * REGISTERED(X)  and  stored session uid Y != X   ->  reconcile, then re-decide
  * anything else                                   ->  profile-guest
  * ```
  *
  * ## What the check costs, and what it cannot do
  *
- * `currentUid()` reads what the Auth plugin already holds - `currentUserOrNull()` -
+ * `storedSessionUid()` reads what the Auth plugin holds, or else what it has stored,
  * and makes **no request**. Reconciliation is the same call `MyataApplication` makes
  * at startup, so there is one reconciliation algorithm in the app rather than two.
  *
@@ -88,8 +88,13 @@ object ProfileRoute {
 
         if (IdentityStore.state(context) !is IdentityState.Registered) return R.id.profile
 
-        // Local, no network: whatever session the Auth plugin is already holding.
-        val sessionUid = EmailAuthBackend.api(context).currentUid()
+        // Local, no network: the session this device has stored. Stored rather than
+        // live, because the live one is also null while an expired token waits for a
+        // network that is not there, and while the app has been in the background -
+        // and routing those to the guest screen is what read as being thrown out of
+        // the account. Only a sign-out or a refresh token the server refused removes a
+        // stored session. See EmailAuthApi.storedAccount.
+        val sessionUid = EmailAuthBackend.api(context).storedSessionUid()
 
         // The existing contract decides what a disagreement means - including the
         // case where the session belongs to somebody else, which it resolves in the

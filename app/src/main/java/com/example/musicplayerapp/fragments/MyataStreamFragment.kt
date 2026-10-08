@@ -1,16 +1,13 @@
 package com.example.musicplayerapp.fragments
 
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.content.ContextCompat
 import androidx.core.view.doOnPreDraw
 import androidx.core.view.isVisible
-import androidx.core.widget.ImageViewCompat
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
@@ -32,6 +29,7 @@ import com.example.musicplayerapp.ui.BroadcastHistoryState
 import com.example.musicplayerapp.ui.CoverArt
 import com.example.musicplayerapp.ui.PlayerControl
 import com.example.musicplayerapp.ui.PlayerControlState
+import com.example.musicplayerapp.ui.PlayerReactionControls
 import kotlinx.coroutines.Job
 import com.example.musicplayerapp.utils.ServiceUtils
 import android.content.ClipboardManager
@@ -246,44 +244,14 @@ class MyataStreamFragment() : Fragment() {
     
     /**
      * The frozen `like` and `dislike`. One glyph each, always the same 24.5x23.33
-     * in the same place: the frozen frame records a single visual per slot and no
-     * states, so the reaction is carried by the tint and nothing moves.
+     * in the same place; the reaction is carried by the tint and nothing moves.
      *
-     * The active tint is `primary` on either side. That is the app's existing
-     * "this is on" on this row, and the frozen frame gives no second one; painting
-     * a dislike in some other colour would be inventing design language for a
-     * screen that has been given none. They cannot both be on, because one
-     * [Reaction] decides both.
+     * Painted from the track's stored reaction only - see [PlayerReactionControls],
+     * which also owns the active colours and why `primary` stopped being one. They
+     * cannot both be on, because one [Reaction] decides both.
      */
     private fun updateReactionControls(reaction: Reaction) {
-        val liked = reaction == Reaction.LIKED
-        val disliked = reaction == Reaction.DISLIKED
-
-        ImageViewCompat.setImageTintList(
-            binding.btnFavorite,
-            ColorStateList.valueOf(
-                ContextCompat.getColor(
-                    requireContext(),
-                    if (liked) R.color.primary else R.color.player_like,
-                )
-            )
-        )
-        binding.btnFavorite.contentDescription = getString(
-            if (liked) R.string.player_favorite_remove else R.string.player_favorite_add
-        )
-
-        ImageViewCompat.setImageTintList(
-            binding.btnDislike,
-            ColorStateList.valueOf(
-                ContextCompat.getColor(
-                    requireContext(),
-                    if (disliked) R.color.primary else R.color.player_control_action,
-                )
-            )
-        )
-        binding.btnDislike.contentDescription = getString(
-            if (disliked) R.string.player_dislike_remove else R.string.player_dislike_add
-        )
+        PlayerReactionControls.render(binding.btnFavorite, binding.btnDislike, reaction)
     }
 
     /**

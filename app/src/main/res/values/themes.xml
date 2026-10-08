@@ -379,6 +379,8 @@
         <item name="android:layout_width">@dimen/player_action_width</item>
         <item name="android:layout_height">@dimen/player_action_height</item>
         <item name="android:background">?attr/selectableItemBackgroundBorderless</item>
+        <!-- The press micro-animation; independent of the reaction tint. -->
+        <item name="android:stateListAnimator">@animator/player_reaction_press</item>
         <item name="android:scaleType">center</item>
         <item name="android:paddingStart">@dimen/player_action_icon_inset</item>
         <item name="android:paddingEnd">@dimen/player_action_icon_inset</item>

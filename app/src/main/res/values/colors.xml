@@ -228,6 +228,21 @@
     <color name="player_control_action">#42474E</color>
 
     <!--
+      PLAYER `like` and `dislike`, active (owner decision, 3.6.6 patch).
+
+      The reaction used to be carried by `primary` on both controls. In light that is
+      #1C4771 against rest glyphs of #3F4A3C and #42474E - a contrast of 1.03:1 and
+      1.02:1, the same dark grey to the eye - so a Like or Dislike that was saved
+      read as if nothing had happened, and only the touch ripple showed a colour.
+
+      One value per reaction, the same in both themes, so the two states can never
+      be mistaken for each other or for rest. Defined here only; values-night has
+      no override on purpose.
+    -->
+    <color name="player_like_active">#5FD9B4</color>
+    <color name="player_dislike_active">#D95F84</color>
+
+    <!--
       COLLECTION header trailing action - the frozen 3-dot overflow glyph.
 
       Provenance: canonical `COLLECTION` / `COLLECTION_dark`, `Header - TopAppBar

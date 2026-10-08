@@ -132,7 +132,9 @@ object StartupAccountGate {
                     // Null: the restore outlived its own, narrower ceiling.
                     withTimeoutOrNull(restoreCap) {
                         api.awaitSessionRestored()
-                        Result.success(api.currentAccount())
+                        // Stored: a restore whose expired token could not be renewed
+                        // offline settles as RefreshFailure, and is still this account.
+                        Result.success(api.storedAccount())
                     }
                 } catch (e: CancellationException) {
                     throw e

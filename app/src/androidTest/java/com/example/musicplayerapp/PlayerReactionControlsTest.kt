@@ -9,11 +9,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.core.content.ContextCompat
-import androidx.core.widget.ImageViewCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.musicplayerapp.data.Reaction
+import com.example.musicplayerapp.ui.PlayerReactionControls
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -49,7 +49,8 @@ class PlayerReactionControlsTest {
             val inflater = activity.layoutInflater.cloneInContext(themed)
             val theme = if (night) "dark" else "light"
 
-            val primary = ContextCompat.getColor(themed, R.color.primary)
+            val likeOn = ContextCompat.getColor(themed, R.color.player_like_active)
+            val dislikeOn = ContextCompat.getColor(themed, R.color.player_dislike_active)
             val likeRest = ContextCompat.getColor(themed, R.color.player_like)
             val dislikeRest = ContextCompat.getColor(themed, R.color.player_control_action)
 
@@ -64,8 +65,8 @@ class PlayerReactionControlsTest {
                     val likeTint = like.imageTintList?.defaultColor
                     val dislikeTint = dislike.imageTintList?.defaultColor
 
-                    val expectedLike = if (state == Reaction.LIKED) primary else likeRest
-                    val expectedDislike = if (state == Reaction.DISLIKED) primary else dislikeRest
+                    val expectedLike = if (state == Reaction.LIKED) likeOn else likeRest
+                    val expectedDislike = if (state == Reaction.DISLIKED) dislikeOn else dislikeRest
 
                     if (likeTint != expectedLike) {
                         findings += "$where: like tint is $likeTint, expected $expectedLike"
@@ -76,10 +77,20 @@ class PlayerReactionControlsTest {
 
                     // The pair, not the parts: two active controls would say the
                     // listener both likes and dislikes the same track.
-                    val active = listOf(likeTint, dislikeTint).count { it == primary }
+                    val active = listOf(likeTint == likeOn, dislikeTint == dislikeOn).count { it }
                     val expectedActive = if (state == Reaction.NEUTRAL) 0 else 1
                     if (active != expectedActive) {
                         findings += "$where: $active controls read active, expected $expectedActive"
+                    }
+                    if (like.isSelected != (state == Reaction.LIKED) || dislike.isSelected != (state == Reaction.DISLIKED)) {
+                        findings += "$where: isSelected is ${like.isSelected}/${dislike.isSelected}"
+                    }
+
+                    // Active has to be visible as active: the old `primary` sat at 1.03:1
+                    // against the rest glyph in light, which is why a saved reaction
+                    // looked like nothing had happened.
+                    if (contrast(likeOn, likeRest) < 1.4 || contrast(dislikeOn, dislikeRest) < 1.4) {
+                        findings += "$where: an active tint is indistinguishable from rest"
                     }
 
                     // Neither control moves or resizes between states - the frozen
@@ -147,26 +158,20 @@ class PlayerReactionControlsTest {
 
     /* ---------------------------------------------------------------- infra -- */
 
-    /** Exactly what `MyataStreamFragment.updateReactionControls` does. */
+    /**
+     * The same call `MyataStreamFragment.updateReactionControls` makes. Unattached views,
+     * so it paints immediately - the fade only runs on screen.
+     */
+    @Suppress("UNUSED_PARAMETER")
     private fun apply(themed: Context, like: ImageView, dislike: ImageView, state: Reaction) {
-        ImageViewCompat.setImageTintList(
-            like,
-            android.content.res.ColorStateList.valueOf(
-                ContextCompat.getColor(
-                    themed,
-                    if (state == Reaction.LIKED) R.color.primary else R.color.player_like,
-                )
-            )
-        )
-        ImageViewCompat.setImageTintList(
-            dislike,
-            android.content.res.ColorStateList.valueOf(
-                ContextCompat.getColor(
-                    themed,
-                    if (state == Reaction.DISLIKED) R.color.primary else R.color.player_control_action,
-                )
-            )
-        )
+        PlayerReactionControls.render(like, dislike, state)
+    }
+
+    /** WCAG contrast ratio between two opaque colours. */
+    private fun contrast(a: Int, b: Int): Double {
+        val la = androidx.core.graphics.ColorUtils.calculateLuminance(a)
+        val lb = androidx.core.graphics.ColorUtils.calculateLuminance(b)
+        return (maxOf(la, lb) + 0.05) / (minOf(la, lb) + 0.05)
     }
 
     private fun layoutPage(

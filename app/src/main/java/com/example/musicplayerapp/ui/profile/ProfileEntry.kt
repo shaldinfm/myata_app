@@ -82,7 +82,8 @@ object ProfileEntry {
             runCatching {
                 val api = EmailAuthBackend.api(context)
                 api.awaitSessionRestored()
-                api.currentAccount()
+                // Stored, not live: an offline expired token is still this account.
+                api.storedAccount()
             }
         }
         if (read.isFailure) return null

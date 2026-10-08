@@ -13,4 +13,12 @@
       Developer options every one of these completes immediately.
     -->
     <integer name="motion_duration_medium">250</integer>
+
+    <!--
+      PLAYER `like` / `dislike`: the press (scale to 0.92 and back) and the tint
+      change between rest and active. Short on purpose - a confirmation of the tap,
+      not an event of its own. Animator-driven, so the system scale applies too.
+    -->
+    <integer name="player_reaction_press_ms">150</integer>
+    <integer name="player_reaction_tint_ms">160</integer>
 </resources>

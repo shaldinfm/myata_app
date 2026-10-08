@@ -18,6 +18,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -39,6 +40,20 @@ class PlaylistCardClickTest {
         MyataPlaylist(danceMix, Uri.parse("https://example.invalid/dance.jpg")),
         MyataPlaylist(plain, Uri.parse("https://example.invalid/chill.jpg")),
     )
+
+    /**
+     * API 33+ puts a POST_NOTIFICATIONS dialog over the activity on first launch, and
+     * the injected tap is then refused as aimed at a window this process does not own.
+     */
+    @Before
+    fun grantNotifications() {
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            val instrumentation = InstrumentationRegistry.getInstrumentation()
+            instrumentation.uiAutomation.executeShellCommand(
+                "pm grant ${instrumentation.targetContext.packageName} android.permission.POST_NOTIFICATIONS"
+            ).close()
+        }
+    }
 
     @Test
     fun aRealTapOnEachCardDeliversThatCardsPlaylist() {

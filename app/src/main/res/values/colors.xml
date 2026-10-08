@@ -228,25 +228,20 @@
     <color name="player_control_action">#42474E</color>
 
     <!--
-      PLAYER `like` and `dislike`, active (owner decision, 3.6.6 patch).
+      PLAYER `dislike`, active.
 
-      The reaction used to be carried by `primary` on both controls. In light that is
-      #1C4771 against rest glyphs of #3F4A3C and #42474E - a contrast of 1.03:1 and
-      1.02:1, the same dark grey to the eye - so a Like or Dislike that was saved
-      read as if nothing had happened, and only the touch ripple showed a colour.
+      The active state of both reaction controls is carried by shape first: the
+      glyph is outlined at rest and filled when active (PlayerReactionControls).
 
-      Like is blue in light (owner decision). #2F80ED is primary's own hue (214
-      against 210 degrees) lifted to a mid luminance: 2.41:1 against the rest glyph
-      #3F4A3C, which is near-neutral where this is saturated, and 3.67:1 on the
-      #F8F9FA background - above 3:1 for a non-text control. The palette's existing
-      blues (primary, text_heading, menu_outline) all sit at the rest glyph's
-      luminance, which is the bug; myata_accent #00B7CE reads cyan, not blue.
-      Dark overrides it with #5FD9B4 (values-night).
+      Like active has no colour of its own. It is `primary` - the resource the
+      play/pause surface is filled with, #1C4771 light and #5FD9B4 dark (owner
+      decision, 3.6.7). In light that sits at the rest glyph's luminance (1.03:1
+      against #3F4A3C), which is why `primary` on an outlined glyph once read as
+      nothing having happened - and why the fill, not the colour, says "on".
 
       Dislike is #D95F84 in both themes: 2.64:1 against #42474E in light, 3.31:1
       against #F5F7FA in dark. Like and Dislike never share a colour in either.
     -->
-    <color name="player_like_active">#2F80ED</color>
     <color name="player_dislike_active">#D95F84</color>
 
     <!--

@@ -1,7 +1,5 @@
 package com.example.musicplayerapp.fragments
 
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.fragment.app.Fragment
@@ -23,6 +21,7 @@ import com.example.musicplayerapp.adapters.PlaylistAdapter
 import com.example.musicplayerapp.data.MyataPlaylist
 import com.example.musicplayerapp.databinding.FragmentMainBinding
 import com.example.musicplayerapp.ui.HomePlaylistSection
+import com.example.musicplayerapp.ui.PlaylistLink
 import com.example.musicplayerapp.ui.HomePlaylistsState
 import com.example.musicplayerapp.ui.Motion
 import com.example.musicplayerapp.service.MediaPlayerService
@@ -317,9 +316,7 @@ class MainFragment : Fragment() {
     }
 
     private fun onPlaylistClick(playlist: MyataPlaylist){
-        val intent = Intent(Intent.ACTION_VIEW)
-        intent.addCategory(Intent.CATEGORY_BROWSABLE)
-        intent.setData(Uri.parse(playlist.uri))
+        val intent = PlaylistLink.viewIntent(playlist.uri)
         try {
             startActivity(intent)
         } catch (e: android.content.ActivityNotFoundException) {

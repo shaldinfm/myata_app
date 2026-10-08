@@ -181,9 +181,11 @@ class HomePlaylistSectionTest {
             // The old click path looked the position up in playlistList.value!!.
             // Clearing the list and then clicking is exactly the race that used to
             // be a crash: the view is still bound, the source is gone.
-            val child: View? = (row as ViewGroup).getChildAt(0)
+            // The card, not the item root: the card is what listens (see
+            // PlaylistCardClickTest for the real-touch version of that claim).
+            val card: View? = (row as ViewGroup).getChildAt(0)?.findViewById(R.id.playlist_card)
             fragment.vm.playlistList.value = mutableListOf()
-            child?.performClick()   // must be a no-op, not an NPE
+            card?.performClick()   // must be a no-op, not an NPE
         }
     }
 

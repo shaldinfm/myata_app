@@ -92,24 +92,15 @@ class MetadataRepository(private val client: OkHttpClient) {
             val lastModified = connection.lastModified
 
             val br = BufferedReader(InputStreamReader(connection.getInputStream()))
-            val wholeText = br.readText().split(Regex("\\n\\s*\\n"))
+            val wholeText = br.readText()
             br.close()
 
-            val playlists = mutableListOf<MyataPlaylist>()
-            for (entry in wholeText) {
-                if (entry.isNotBlank()) {
-                    val parts = entry.split(Regex("\\s+[—–-]\\s+"))
-                    if (parts.size >= 2) {
-                        val imgUrl = parts[0].trim(' ', '\ufeff', '\n', '\r')
-                        val name = parts[1].trim(' ', '\n', '\r')
-
-                        val version = if (lastModified > 0) lastModified else System.currentTimeMillis()
-                        val urlWithVersion = "$imgUrl?v=$version"
-                        playlists.add(MyataPlaylist(name, Uri.parse(urlWithVersion)))
-                    }
-                }
+            // The link goes through untouched - see PlaylistFeed on why a slug's
+            // hyphen can never be read as the separator.
+            val version = if (lastModified > 0) lastModified else System.currentTimeMillis()
+            PlaylistFeed.parse(wholeText).map { entry ->
+                MyataPlaylist(entry.link, Uri.parse("${entry.image}?v=$version"))
             }
-            playlists
         } catch (e: Exception) {
             Log.e("MetadataRepo", "Error fetching playlists", e)
             emptyList()

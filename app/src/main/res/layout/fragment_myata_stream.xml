@@ -186,9 +186,10 @@
                   The frozen `like`: a filled thumbs-up, 24.5x23.33, 12 from the
                   top of its 49x54 slot. It replaces the heart the app drew here,
                   which had no counterpart in the design at all. The frozen frame
-                  records one visual and no states, so the collection toggle is
-                  carried by the tint - `text_primary` off, `primary` on - and the
-                  geometry never changes.
+                  records one visual and no states, so the reaction is carried by
+                  the tint - `player_like` off, `player_like_active` on, painted by
+                  PlayerReactionControls from the stored reaction - and the geometry
+                  never changes. The press scale is the slot style's own animator.
                 -->
                 <ImageView
                     android:id="@+id/btn_favorite"
@@ -227,10 +228,9 @@
                   Container > Icon`, 24.5x23.33, 12 from the top of a 49x54
                   slot), so the two are one geometry, and the trailing slot no
                   longer needs a style of its own. The colour is the frozen row's
-                  own `player_control_action` at rest and `primary` when the
-                  track is disliked - the same active tint `like` uses, because
-                  the frozen frame records no state for either and inventing a
-                  second one would be design this screen has not been given.
+                  own `player_control_action` at rest and `player_dislike_active`
+                  when the track is disliked (owner decision: `primary` was
+                  indistinguishable from rest in light).
 
                   The History section stays exactly where Phase C put it, inline
                   further down this page; what goes is the shortcut that scrolled

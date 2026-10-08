@@ -238,6 +238,26 @@ internal class FakeEmailAuthApi : EmailAuthApi {
     override suspend fun currentAccount(): AccountInfo? {
         currentAccountCalls++
         accountGate?.await()
+        if (!sessionLive) return null
+        return if (!restored) null else session?.let { AccountInfo(it, accountName, accountEmail, accountAvatar) }
+    }
+
+    /**
+     * Whether the stored [session] is also *live* - what the Auth plugin is holding as
+     * authenticated this instant.
+     *
+     * False models supabase-kt with a session it could not refresh: an access token that
+     * expired while Supabase was unreachable (status `RefreshFailure`, the session kept in
+     * storage and retried), or the app back from the background with the refresh still in
+     * flight. [currentUid] and [currentAccount] answer null; the stored-session reads still
+     * answer. A refresh token the *server* refused is not this - that deletes the stored
+     * session, which is `session = null`.
+     */
+    var sessionLive: Boolean = true
+
+    override suspend fun storedAccount(): AccountInfo? {
+        currentAccountCalls++
+        accountGate?.await()
         return if (!restored) null else session?.let { AccountInfo(it, accountName, accountEmail, accountAvatar) }
     }
 
@@ -277,7 +297,7 @@ internal class FakeEmailAuthApi : EmailAuthApi {
     override suspend fun refreshAccount(): AccountRefreshResult {
         refreshCalls++
         refreshGate?.await()
-        val live = session?.takeIf { restored } ?: return AccountRefreshResult.Unavailable("no session")
+        val live = session?.takeIf { restored && sessionLive } ?: return AccountRefreshResult.Unavailable("no session")
         refreshFailure?.let { return AccountRefreshResult.Unavailable(it.javaClass.simpleName) }
         serverAvatar?.let { accountAvatar = it; serverAvatar = null }
         return AccountRefreshResult.Refreshed(AccountInfo(live, accountName, accountEmail, accountAvatar))
@@ -302,6 +322,11 @@ internal class FakeEmailAuthApi : EmailAuthApi {
     var currentUidCalls: Int = 0
 
     override suspend fun currentUid(): String? {
+        currentUidCalls++
+        return if (restored && sessionLive) session else null
+    }
+
+    override suspend fun storedSessionUid(): String? {
         currentUidCalls++
         return if (restored) session else null
     }

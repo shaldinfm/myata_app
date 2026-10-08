@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PLAYER `like` / `dislike` press: down to 0.92 while pressed, back to 1.0 on release.
+
+  Driven by state_pressed alone. It knows nothing about the reaction, and the reaction
+  tint (PlayerReactionControls) knows nothing about it, so a press can never be what
+  decides the colour the control is left with - the bug this replaced looked exactly
+  like that. The ripple from PlayerLikeSlot's background is unchanged.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <set>
+            <objectAnimator
+                android:duration="@integer/player_reaction_press_ms"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="scaleX"
+                android:valueTo="0.92"
+                android:valueType="floatType" />
+            <objectAnimator
+                android:duration="@integer/player_reaction_press_ms"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="scaleY"
+                android:valueTo="0.92"
+                android:valueType="floatType" />
+        </set>
+    </item>
+    <item>
+        <set>
+            <objectAnimator
+                android:duration="@integer/player_reaction_press_ms"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="scaleX"
+                android:valueTo="1.0"
+                android:valueType="floatType" />
+            <objectAnimator
+                android:duration="@integer/player_reaction_press_ms"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="scaleY"
+                android:valueTo="1.0"
+                android:valueType="floatType" />
+        </set>
+    </item>
+</selector>

@@ -6,6 +6,7 @@ import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.SignOutScope
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.auth.user.UserInfo
 import io.github.jan.supabase.postgrest.exception.PostgrestRestException
 import io.github.jan.supabase.postgrest.postgrest
 import com.example.musicplayerapp.SecureNetModule
@@ -497,19 +498,29 @@ class SupabaseEmailAuthApi(
     }
 
     override suspend fun currentAccount(): AccountInfo? = runCatching {
-        val user = client?.auth?.currentUserOrNull() ?: return null
-        AccountInfo(
-            uid = user.id,
-            // The key the create-account form wrote and the key the Supabase
-            // dashboard displays. `jsonPrimitive.content` rather than `toString()`,
-            // which would hand the screen a quoted JSON string to draw.
-            displayName = user.userMetadata?.get(DISPLAY_NAME)?.jsonPrimitive?.contentOrNull,
-            email = user.email,
-            // `runCatching` below already covers a non-primitive value written by
-            // something else; ProfileAvatars decides what an unknown key means.
-            avatarId = user.userMetadata?.get(AVATAR_ID)?.jsonPrimitive?.contentOrNull,
-        )
+        client?.auth?.currentUserOrNull()?.let(::accountOf)
     }.getOrNull()
+
+    /**
+     * The live session's user, or else the stored one's. The same storage read
+     * [storedSessionUid] makes, for the same reason - see [EmailAuthApi.storedAccount].
+     */
+    override suspend fun storedAccount(): AccountInfo? = runCatching {
+        val auth = client?.auth ?: return@runCatching null
+        (auth.currentUserOrNull() ?: auth.sessionManager.loadSession()?.user)?.let(::accountOf)
+    }.getOrNull()
+
+    private fun accountOf(user: UserInfo): AccountInfo = AccountInfo(
+        uid = user.id,
+        // The key the create-account form wrote and the key the Supabase
+        // dashboard displays. `jsonPrimitive.content` rather than `toString()`,
+        // which would hand the screen a quoted JSON string to draw.
+        displayName = user.userMetadata?.get(DISPLAY_NAME)?.jsonPrimitive?.contentOrNull,
+        email = user.email,
+        // The callers' `runCatching` already covers a non-primitive value written by
+        // something else; ProfileAvatars decides what an unknown key means.
+        avatarId = user.userMetadata?.get(AVATAR_ID)?.jsonPrimitive?.contentOrNull,
+    )
 
     /**
      * `awaitInitialization`: suspends while the plugin's session status is `Initializing`,

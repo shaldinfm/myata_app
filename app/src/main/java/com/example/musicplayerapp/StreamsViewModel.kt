@@ -188,6 +188,8 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
     private val _currentReaction = MutableLiveData(Reaction.NEUTRAL)
     val currentReaction: LiveData<Reaction> = _currentReaction
     private var favoriteObservationJob: Job? = null
+    /** Which track [currentReaction] is about - see [CurrentTrackReaction]. */
+    private val currentTrackReaction = CurrentTrackReaction()
 
     private val client = SecureNetModule.getOkHttpClient(app)
 
@@ -671,8 +673,21 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
         val artist = state?.artist
         val song = state?.song
 
-        favoriteObservationJob?.cancel()
         val trackKey = TrackKey.of(artist, song)
+
+        // The same track republished by a metadata poll: its observation is already
+        // running and already showing the right reaction. Restarting it is what used
+        // to let a cancelled observation's late answer land on the controls.
+        val changed = currentTrackReaction.onTrack(trackKey)
+        if (!changed && favoriteObservationJob?.isActive == true) return
+
+        favoriteObservationJob?.cancel()
+        // A different track starts from nothing, never from the previous track's
+        // reaction. Its own arrives from Room a moment later. No key means nothing to
+        // react to: a stream between tracks, or the jingle sentinel - TrackKey.of
+        // refuses both.
+        if (changed) _currentReaction.value = Reaction.NEUTRAL
+
         if (trackKey != null) {
             favoriteObservationJob = viewModelScope.launch {
                 // No row and NEUTRAL are the same thing to a reader - and so are an
@@ -681,15 +696,15 @@ class StreamsViewModel(app: Application, private val savedStateHandle: SavedStat
                 combine(
                     reactionDao.observeReaction(trackKey),
                     CollectionScope.visibility(context),
-                ) { reaction, visible -> if (visible) reaction else null }.collectLatest {
-                    _currentReaction.postValue(it ?: Reaction.NEUTRAL)
-                }
+                ) { reaction, visible -> currentTrackReaction.shown(trackKey, reaction, visible) }
+                    .collectLatest { shown ->
+                        // Set, not posted: this runs on the main thread, so the value
+                        // lands now - straight after the local write, with no server
+                        // in between - and cannot outlive the job that read it. Null
+                        // is an answer about a track that is no longer playing.
+                        if (shown != null) _currentReaction.value = shown
+                    }
             }
-        } else {
-            // No key means nothing to react to: a stream between tracks, or the
-            // jingle sentinel. TrackKey.of refuses both, which is the guard that
-            // used to be spelled out here.
-            _currentReaction.value = Reaction.NEUTRAL
         }
     }
 

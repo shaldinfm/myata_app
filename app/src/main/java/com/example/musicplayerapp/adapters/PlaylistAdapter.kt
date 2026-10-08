@@ -60,8 +60,17 @@ class PlaylistAdapter(
 
         val iv: ImageView = itemView.findViewById(R.id.iv)
 
+        /**
+         * The view that receives the tap. The card is clickable - that is what gives
+         * it its ripple - and a clickable child consumes the whole touch, so a
+         * listener on [itemView] (the FrameLayout around it) never fires. It did
+         * exactly that from the 3.6.6 HOME migration until this was moved here:
+         * every card rippled and none of them opened.
+         */
+        val card: View = itemView.findViewById(R.id.playlist_card)
+
         init {
-            itemView.setOnClickListener {
+            card.setOnClickListener {
                 // bindingAdapterPosition, and a null-returning lookup: a tap can
                 // land in the same frame as a submit(), and NO_POSITION or a stale
                 // index must do nothing rather than throw.

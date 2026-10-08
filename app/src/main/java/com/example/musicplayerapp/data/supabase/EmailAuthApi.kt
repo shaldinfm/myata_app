@@ -136,6 +136,29 @@ interface EmailAuthApi {
     suspend fun currentAccount(): AccountInfo?
 
     /**
+     * The account of the session this device has **stored**, whether or not it is
+     * usable right now - or null when nothing is stored.
+     *
+     * [currentAccount] for screens, as [storedSessionUid] is [currentUid] for the
+     * Collection. The live session goes null whenever the Auth plugin is not holding
+     * an authenticated one *this instant*: an access token that expired while Supabase
+     * could not be reached (supabase-kt keeps that session in storage, status
+     * `RefreshFailure`, and retries), a refresh still in flight, or the app having
+     * been in the background (the plugin parks its status at `Initializing` on
+     * `onStop`). None of those is the listener leaving their account, and every
+     * screen that asked the live session read them as exactly that - Settings said
+     * `Вы не вошли`, the profile opened as a guest, and the listener, unable to sign
+     * in again without the network that was missing, read it as being thrown out.
+     *
+     * A stored session goes only when it is signed out or the server refuses its
+     * refresh token. Anything that **writes** as the account still needs the live
+     * session and asks [currentUid]; this is for deciding what to show.
+     *
+     * The default is for implementations with no separate storage.
+     */
+    suspend fun storedAccount(): AccountInfo? = currentAccount()
+
+    /**
      * Stores the chosen avatar on the account this session authenticates as.
      *
      * `user_metadata.avatar_id`, through the same `updateUser` GoTrue call the password

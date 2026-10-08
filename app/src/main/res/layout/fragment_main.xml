@@ -158,7 +158,7 @@
                       exact ratio, so it shrinks without distorting.
 
                       The row is `home_stream_row_height`, which is the card plus
-                      17 of shadow room at each width; HomeLayoutTest pins it to
+                      26 of shadow room at each width; HomeLayoutTest pins it to
                       that relationship so the pair cannot drift apart.
                     -->
                     <HorizontalScrollView
@@ -177,11 +177,13 @@
                           painted by its SoftShadowFrame *outside* that frame's
                           own bounds - see the class for why that is allowed and
                           what it buys - so any ancestor that still clips would
-                          shave the overhang. The row is 17 taller than its card -
-                          the frozen `Container` 2393:1691's own margin over the
-                          198 one - and it stays 17 at every card size, because
-                          what sets it is where the shadow's tail has faded, not
-                          how big the card is.
+                          shave the overhang. The row itself still clips, so it
+                          is 26 taller than its card - the full reach of the
+                          shadow below it - and it stays 26 at every card size,
+                          because what sets it is where the shadow's tail has
+                          faded, not how big the card is. The frozen `Container`
+                          2393:1691 is 17 taller than the 198 card; the other 9
+                          comes out of the gap under the row.
                         -->
                         <LinearLayout
                             android:layout_width="wrap_content"
@@ -249,7 +251,7 @@
                         android:id="@+id/playlistString"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/home_section_gap"
+                        android:layout_marginTop="@dimen/home_playlists_heading_gap"
                         android:gravity="center_vertical"
                         android:minHeight="@dimen/line_height_montserrat_bold_28_36"
                         android:paddingStart="@dimen/home_margin"

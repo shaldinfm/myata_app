@@ -21,6 +21,8 @@
 -->
 <resources>
     <dimen name="home_section_gap">16dp</dimen>
+    <!-- home_section_gap less the 9 the streams row now holds for its shadow - see values/dimens.xml. -->
+    <dimen name="home_playlists_heading_gap">7dp</dimen>
     <dimen name="home_content_padding_top">16dp</dimen>
     <dimen name="home_playlist_row_height">197dp</dimen>
 </resources>

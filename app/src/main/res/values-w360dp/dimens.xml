@@ -33,5 +33,5 @@
     -->
     <dimen name="home_stream_card_width">286dp</dimen>
     <dimen name="home_stream_card_height">179dp</dimen>
-    <dimen name="home_stream_row_height">196dp</dimen>
+    <dimen name="home_stream_row_height">205dp</dimen>
 </resources>

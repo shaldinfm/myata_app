@@ -137,23 +137,31 @@
     <dimen name="home_stream_card_gap">15dp</dimen>
 
     <!--
-      The streams row: the card plus 17 of room for its drop shadow, which
+      The streams row: the card plus 26 of room for its drop shadow, which
       `SoftShadowFrame` paints outside the card's own bounds.
 
-      17 is not spare space and is the same at every card size. The dominant
-      shadow layer reaches `1.5 * blur + dy` = 26dp below the card, so the row
-      always cuts the tail; 17 cuts it where it is about 3% black, and trimming to
-      10 would cut at roughly 12% instead - a visible hard line under the card.
-      So this shrinks only because the card does, and the height qualifier leaves
-      it alone.
+      26 is not spare space and is the same at every card size: it is how far the
+      dominant shadow layer reaches below the card, `1.5 * blur + dy` = 15 + 11.
+      The row is a scroll container and clips what it draws, so anything less
+      cuts the tail - 17, which this used to be, cut it where it is about 3%
+      black, a faint but straight line under every card in light. So this shrinks
+      only because the card does, and the height qualifier leaves it alone.
+
+      The 9 this added is taken back out of the gap under the row
+      (`home_playlists_heading_gap`), so `Мятные плейлисты` is where it was.
 
       It is one number per width rather than `wrap_content` + a padding because
-      the two round separately: at 2.625x the card's 198 and the slack's 17 land
-      on 520 + 45 = 565px where the row's own 215 lands on 564, and that 1px moves
-      `Мятные плейлисты` off its canonical y. HomeLayoutTest asserts this against
-      `card + 17` at every cell, so the pair cannot drift apart unnoticed.
+      the two round separately. HomeLayoutTest asserts this against `card + 26`
+      at every cell, and the row plus the gap under it against `card + 17 +
+      section gap`, so neither half can drift apart unnoticed.
     -->
-    <dimen name="home_stream_row_height">171dp</dimen>
+    <dimen name="home_stream_row_height">180dp</dimen>
+    <!--
+      Between the streams row and `Мятные плейлисты`: the section gap less the 9
+      of shadow room the row above now carries inside its own height. 3 here, 7
+      at 757dp and up, where the section gap is 16.
+    -->
+    <dimen name="home_playlists_heading_gap">3dp</dimen>
 
     <!--
       `Playlist N > Background`, 160x160 r20, pitch 176 so the gap is 16.

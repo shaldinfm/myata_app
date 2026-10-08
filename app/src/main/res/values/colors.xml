@@ -50,8 +50,9 @@
     <!--
       The colour every frozen drop shadow is drawn in. Black in the file on both
       pages - the dark page's shadows are the same nodes with the same
-      parameters - so this is one value with no dark override, and the per-layer
-      opacity lives in SoftShadowFrame where the file puts it.
+      parameters - and the per-layer opacity lives in SoftShadowFrame where the
+      file puts it. Light is the file's value; dark is the same black at 40%
+      strength, an owner override (values-night).
     -->
     <color name="figma_shadow">#000000</color>
     <color name="primary">#1C4771</color>

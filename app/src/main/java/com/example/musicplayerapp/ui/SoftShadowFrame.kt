@@ -83,8 +83,12 @@ class SoftShadowFrame @JvmOverloads constructor(
      * One Figma `DROP_SHADOW`, in dp and in the file's own terms.
      *
      * [blur] is Figma's blur value, not a radius: Figma's blur B is a Gaussian
-     * whose standard deviation is B/2, and `BlurMaskFilter` takes that sigma - so
-     * the halving happens once, here, rather than at every call site.
+     * whose standard deviation is B/2. `BlurMaskFilter` does not take a sigma - it
+     * takes a radius, which the platform turns into one as
+     * `0.57735 * radius + 0.5` - so [blurRadius] inverts that, once, rather than
+     * at every call site. Handing it B/2 directly drew every shadow with about
+     * 60% of its sigma: the same darkness under the edge and a shorter fall-off,
+     * which read as a band rather than a shadow.
      */
     private data class Layer(
         val dx: Float,
@@ -157,6 +161,10 @@ class SoftShadowFrame @JvmOverloads constructor(
 
     private fun dp(v: Float) = v * resources.displayMetrics.density
 
+    /** The `BlurMaskFilter` radius, in px, whose sigma is Figma blur [blurDp]'s - see [Layer]. */
+    private fun blurRadius(blurDp: Float): Float =
+        maxOf((dp(blurDp / 2f) - 0.5f) / 0.57735f, 0.1f)
+
     private fun rebuildMask(w: Int, h: Int) {
         mask?.recycle()
         mask = null
@@ -199,7 +207,7 @@ class SoftShadowFrame @JvmOverloads constructor(
             // Alpha only - the colour is applied when the mask is blitted, so a
             // layer's own opacity has to live in the mask itself.
             p.color = Color.argb((l.alpha * 255).toInt(), 0, 0, 0)
-            p.maskFilter = if (l.blur > 0f) BlurMaskFilter(dp(l.blur / 2f), BlurMaskFilter.Blur.NORMAL) else null
+            p.maskFilter = if (l.blur > 0f) BlurMaskFilter(blurRadius(l.blur), BlurMaskFilter.Blur.NORMAL) else null
             c.drawRoundRect(rect, maxOf(r + s, 0f), maxOf(r + s, 0f), p)
         }
         mask = bmp

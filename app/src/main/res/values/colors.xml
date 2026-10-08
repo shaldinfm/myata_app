@@ -235,11 +235,18 @@
       1.02:1, the same dark grey to the eye - so a Like or Dislike that was saved
       read as if nothing had happened, and only the touch ripple showed a colour.
 
-      One value per reaction, the same in both themes, so the two states can never
-      be mistaken for each other or for rest. Defined here only; values-night has
-      no override on purpose.
+      Like is blue in light (owner decision). #2F80ED is primary's own hue (214
+      against 210 degrees) lifted to a mid luminance: 2.41:1 against the rest glyph
+      #3F4A3C, which is near-neutral where this is saturated, and 3.67:1 on the
+      #F8F9FA background - above 3:1 for a non-text control. The palette's existing
+      blues (primary, text_heading, menu_outline) all sit at the rest glyph's
+      luminance, which is the bug; myata_accent #00B7CE reads cyan, not blue.
+      Dark overrides it with #5FD9B4 (values-night).
+
+      Dislike is #D95F84 in both themes: 2.64:1 against #42474E in light, 3.31:1
+      against #F5F7FA in dark. Like and Dislike never share a colour in either.
     -->
-    <color name="player_like_active">#5FD9B4</color>
+    <color name="player_like_active">#2F80ED</color>
     <color name="player_dislike_active">#D95F84</color>
 
     <!--

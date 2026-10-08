@@ -16,5 +16,5 @@
 <resources>
     <dimen name="home_stream_card_width">316dp</dimen>
     <dimen name="home_stream_card_height">198dp</dimen>
-    <dimen name="home_stream_row_height">215dp</dimen>
+    <dimen name="home_stream_row_height">224dp</dimen>
 </resources>

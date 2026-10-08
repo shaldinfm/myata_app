@@ -25,6 +25,12 @@ import kotlin.math.roundToInt
  *   Мятные плейлисты     y=363   playlists row  y=415, 197 tall, cards 160x160
  *   Main                 ends at 628
  *
+ * One of those is spent differently here than in the file. The frozen streams
+ * `Container` is 215 - the card plus 17 - but the row is a scroll container and
+ * clips, and the card's shadow reaches 26 below it. So the row is the card plus 26
+ * and the gap under it is 9 less: the card, `Мятные плейлисты` and everything below
+ * are exactly where the frame puts them, which is what is asserted.
+ *
  * **Those still hold, and where they hold is now part of the assertion.** HOME is
  * responsive on both axes: the frozen design is what a device at or above the
  * size it was drawn for gets, and smaller ones get a documented reduction of it.
@@ -107,6 +113,18 @@ class HomeLayoutTest {
     /** The card one resource bucket holds, in dp. */
     private data class StreamCardBucket(val widthDp: Int, val heightDp: Int)
 
+    private companion object {
+        /**
+         * How far the stream card's shadow reaches below the card, in dp: the
+         * dominant layer in `SoftShadowFrame` is offset 11 down with blur 10, and
+         * a blur is visually done by 1.5x its value.
+         */
+        const val STREAM_SHADOW_REACH = 11 + 15
+
+        /** What the frozen `Container` holds under the card: 215 against 198. */
+        const val FROZEN_STREAM_SLACK = 17
+    }
+
     private val findings = mutableListOf<String>()
     private val log = mutableListOf<String>()
 
@@ -186,7 +204,7 @@ class HomeLayoutTest {
             if (widthDp >= designWidthDp && canonicalHeight) {
                 expect(where, "Наши потоки y", topInRoot(streamsHeading), dp(80))
                 expect(where, "streams row y", topInRoot(streams), dp(132))
-                expect(where, "streams row height", streams.height, dp(215))
+                expect(where, "streams row height", streams.height, dp(198 + STREAM_SHADOW_REACH))
                 expect(where, "playlists row height", playlists.height, dp(197))
             }
             if (widthDp == designWidthDp && canonicalHeight) {
@@ -196,11 +214,22 @@ class HomeLayoutTest {
 
             /* ---- the rules, at every cell ---- */
 
-            // The streams row is the card plus the shadow slack, which is 17 at
-            // every size - it is sized by where the shadow's tail has faded, not
-            // by the card - so this also pins that the slack was not spent.
-            expect(where, "streams row height", streams.height, dp(cardH + 17))
+            // The streams row is the card plus the room its shadow needs, which is
+            // the same at every size - it is sized by how far the shadow reaches,
+            // not by the card. The row clips, so less than the reach is a tail cut
+            // off in a straight line under the card.
+            expect(where, "streams row height", streams.height, dp(cardH + STREAM_SHADOW_REACH))
             expect(where, "playlists row height", playlists.height, dp(playlistRow))
+
+            // And the room is not extra height on the page: what the row holds
+            // beyond the frozen 17 comes out of the gap under it, so the heading
+            // sits where it always did - the card, the frozen 17 and one section
+            // gap below the top of the row.
+            expect(where, "Мятные плейлисты below the streams row's top",
+                topInRoot(playlistHeading) - topInRoot(streams), dp(cardH + FROZEN_STREAM_SLACK + gap))
+            expect(where, "gap under the streams row",
+                topInRoot(playlistHeading) - (topInRoot(streams) + streams.height),
+                dp(gap - (STREAM_SHADOW_REACH - FROZEN_STREAM_SLACK)))
 
             // `Мятные плейлисты` is the longest heading in the app and wraps to two
             // lines below 360dp - recorded by TypographyWidthSweepTest as expected,

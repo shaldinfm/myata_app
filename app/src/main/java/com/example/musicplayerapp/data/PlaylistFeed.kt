@@ -36,7 +36,7 @@ object PlaylistFeed {
             if (entry.isBlank()) continue
             val parts = entry.split(FIELD_SEPARATOR)
             if (parts.size < 2) continue
-            val image = parts[0].trim(' ', '﻿', '\n', '\r')
+            val image = parts[0].trim(' ', '\ufeff', '\n', '\r')
             val link = parts[1].trim(' ', '\n', '\r')
             entries += Entry(link = link, image = image)
         }

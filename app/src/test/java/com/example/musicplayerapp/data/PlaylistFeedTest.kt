@@ -75,7 +75,7 @@ class PlaylistFeedTest {
 
     @Test
     fun `windows line endings, a BOM and blank padding leave the link intact`() {
-        val feed = "﻿https://radiomyata.ru/covers/dance.jpg — $danceMix\r\n\r\n" +
+        val feed = "\ufeffhttps://radiomyata.ru/covers/dance.jpg — $danceMix\r\n\r\n" +
             "https://radiomyata.ru/covers/chill.jpg — https://links.radiomyata.ru/playlists/?slug=chill\r\n"
 
         val entries = PlaylistFeed.parse(feed)
